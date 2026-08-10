@@ -1,0 +1,10 @@
+{
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Spec workflow",
+      "description": "Create and defend a shared spec set with your agent.",
+      "skills": ["new-project", "next-iteration"]
+    }
+  ]
+}

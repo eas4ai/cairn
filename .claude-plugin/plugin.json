@@ -1,0 +1,8 @@
+{
+  "name": "same-page",
+  "version": "0.1.0",
+  "description": "Cooperative spec workflow: /new_project scaffolds a complete spec set through confirmed understanding; /next_iteration routes new ideas to the next iteration; a drift gate audits sessions against the contract.",
+  "author": { "name": "Shawn" },
+  "skills": ["./skills/new-project", "./skills/next-iteration"],
+  "hooks": "./hooks/hooks.json"
+}

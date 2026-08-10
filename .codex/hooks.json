@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/spec-drift-gate.mjs",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

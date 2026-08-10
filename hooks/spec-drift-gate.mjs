@@ -1,0 +1,78 @@
+#!/usr/bin/env node
+// Same Page spec-drift gate. One-shot completion gate: when a session
+// finishes in a project that has a Same Page spec set, block once (exit 2)
+// and demand a self-audit against the iteration contract. No spec set, or
+// already fired this session, or anything unexpected -> exit 0 (fail open;
+// a gate that wedges sessions is worse than a gate that misses one).
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+function specProjects(root) {
+  const specsDir = join(root, "docs", "specs");
+  if (!existsSync(specsDir)) return [];
+  return readdirSync(specsDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((name) => existsSync(join(specsDir, name, "00-overview.md")));
+}
+
+function currentIteration(root, project) {
+  const dir = join(root, "docs", "specs", project, "iterations");
+  if (!existsSync(dir)) return null;
+  const nums = readdirSync(dir)
+    .filter((f) => /^\d+\.md$/.test(f))
+    .sort();
+  if (nums.length === 0) return null;
+  return join("docs", "specs", project, "iterations", nums[nums.length - 1]);
+}
+
+function auditPrompt(root, projects) {
+  const contracts = projects
+    .map((p) => currentIteration(root, p))
+    .filter(Boolean);
+  const contractLine = contracts.length
+    ? contracts.join(", ")
+    : "none found -- note that absence in your report";
+  return [
+    "Same Page drift gate: before finishing, audit this session against the spec set.",
+    `Current iteration contract(s): ${contractLine}`,
+    "1. Does the session's work stay within the current iteration contract?",
+    "2. Was any out-of-contract work performed? If so, surface it to the user",
+    "   and capture it (spec decisions log or iterations/next/) -- never",
+    "   silently ship it, never silently discard it.",
+    "3. Did the work make any touched spec untrue (update it), and did new",
+    "   terms enter the conversation that belong in the glossary (add them)?",
+    "Make any needed corrections, then finish. This gate fires once per session.",
+  ].join("\n");
+}
+
+function main() {
+  let input = {};
+  try {
+    input = JSON.parse(readFileSync(0, "utf8"));
+  } catch {
+    process.exit(0);
+  }
+  const root = typeof input.cwd === "string" && input.cwd ? input.cwd : process.cwd();
+  let projects = [];
+  try {
+    projects = specProjects(root);
+  } catch {
+    process.exit(0);
+  }
+  if (projects.length === 0) process.exit(0);
+  const sessionId = String(input.session_id || "unknown").replace(/[^\w-]/g, "_");
+  const stateDir = process.env.SAME_PAGE_STATE_DIR || tmpdir();
+  const marker = join(stateDir, `same-page-gate-${sessionId}`);
+  if (existsSync(marker)) process.exit(0);
+  try {
+    writeFileSync(marker, new Date().toISOString());
+  } catch {
+    process.exit(0);
+  }
+  process.stderr.write(auditPrompt(root, projects) + "\n");
+  process.exit(2);
+}
+
+main();

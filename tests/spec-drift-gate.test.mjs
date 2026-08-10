@@ -90,3 +90,24 @@ test("uses cwd field from hook input when provided", () => {
   });
   expect(r.status).toBe(2);
 });
+
+// Robustness: iterations as plain file (ENOTDIR) must not crash; gate functions with degraded prompt.
+test("exits 2 (not 1) when iterations is a plain file, not a directory", () => {
+  const root = mkdtempSync(join(tmpdir(), "same-page-proj-"));
+  const specDir = join(root, "docs", "specs", "demo");
+  mkdirSync(specDir, { recursive: true });
+  writeFileSync(join(specDir, "00-overview.md"), "# Demo -- Overview\n");
+  // Create iterations as a PLAIN FILE instead of directory -> would cause ENOTDIR on readdirSync
+  writeFileSync(join(specDir, "iterations"), "not a directory");
+
+  const stateDir = tempStateDir();
+  const r = runHook({
+    cwd: root,
+    stateDir,
+    input: { session_id: "s_file" },
+  });
+  // Should exit 2 (block), not 1 (crash)
+  expect(r.status).toBe(2);
+  // Should handle gracefully, showing "none found" since iterations path is corrupt
+  expect(r.stderr).toContain("none found");
+});

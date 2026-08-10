@@ -20,11 +20,16 @@ function specProjects(root) {
 function currentIteration(root, project) {
   const dir = join(root, "docs", "specs", project, "iterations");
   if (!existsSync(dir)) return null;
-  const nums = readdirSync(dir)
-    .filter((f) => /^\d+\.md$/.test(f))
-    .sort();
-  if (nums.length === 0) return null;
-  return join("docs", "specs", project, "iterations", nums[nums.length - 1]);
+  try {
+    const nums = readdirSync(dir)
+      .filter((f) => /^\d+\.md$/.test(f))
+      .sort();
+    if (nums.length === 0) return null;
+    return join("docs", "specs", project, "iterations", nums[nums.length - 1]);
+  } catch {
+    // If iterations exists but is not readable or not a directory, treat as no iterations
+    return null;
+  }
 }
 
 function auditPrompt(root, projects) {
@@ -48,31 +53,38 @@ function auditPrompt(root, projects) {
 }
 
 function main() {
-  let input = {};
   try {
-    input = JSON.parse(readFileSync(0, "utf8"));
+    let input = {};
+    try {
+      input = JSON.parse(readFileSync(0, "utf8"));
+    } catch {
+      process.exit(0);
+    }
+    const root = typeof input.cwd === "string" && input.cwd ? input.cwd : process.cwd();
+    let projects = [];
+    try {
+      projects = specProjects(root);
+    } catch {
+      process.exit(0);
+    }
+    if (projects.length === 0) process.exit(0);
+    const sessionId = String(input.session_id || "unknown").replace(/[^\w-]/g, "_");
+    const stateDir = process.env.SAME_PAGE_STATE_DIR || tmpdir();
+    const marker = join(stateDir, `same-page-gate-${sessionId}`);
+    if (existsSync(marker)) process.exit(0);
+    // Build audit prompt BEFORE writing marker, so any error does not strand a marker
+    const prompt = auditPrompt(root, projects);
+    try {
+      writeFileSync(marker, new Date().toISOString());
+    } catch {
+      process.exit(0);
+    }
+    process.stderr.write(prompt + "\n");
+    process.exit(2);
   } catch {
+    // Fail open: any unexpected error exits 0
     process.exit(0);
   }
-  const root = typeof input.cwd === "string" && input.cwd ? input.cwd : process.cwd();
-  let projects = [];
-  try {
-    projects = specProjects(root);
-  } catch {
-    process.exit(0);
-  }
-  if (projects.length === 0) process.exit(0);
-  const sessionId = String(input.session_id || "unknown").replace(/[^\w-]/g, "_");
-  const stateDir = process.env.SAME_PAGE_STATE_DIR || tmpdir();
-  const marker = join(stateDir, `same-page-gate-${sessionId}`);
-  if (existsSync(marker)) process.exit(0);
-  try {
-    writeFileSync(marker, new Date().toISOString());
-  } catch {
-    process.exit(0);
-  }
-  process.stderr.write(auditPrompt(root, projects) + "\n");
-  process.exit(2);
 }
 
 main();

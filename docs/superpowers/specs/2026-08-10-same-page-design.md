@@ -91,7 +91,7 @@ Secondary driver: scope creep. It is addressed two ways --
 Sibling to `best-practices-agent-package`: same philosophy, independently
 installable, the sibling untouched. Built in the repository formerly named
 `project_documentation_templates` (renamed `same-page`, GitHub
-`entrepeneur4lyf/same-page`), which this package supersedes -- the year-old
+`eas4ai/same-page`), which this package supersedes -- the year-old
 templates are raw material and remain in git history.
 
 Structured as an Agent Skills repository, distributed with the skills CLI

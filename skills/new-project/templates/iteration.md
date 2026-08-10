@@ -12,7 +12,7 @@ One line each: spec reference -> what "shipped" means for it.
 
 Explicitly not in this iteration. Naming exclusions is what makes the In
 list a contract. Ideas that arrive mid-iteration land in iterations/next/
-via /next_iteration, never here.
+via /next-iteration, never here.
 
 ## Definition of done
 

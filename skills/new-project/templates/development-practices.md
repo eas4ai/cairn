@@ -13,7 +13,7 @@ developer's own working rules. A repository copy overrides this file.
 
 The spec is the scope. "Out of scope" and "deferred" are developer verdicts,
 never model verdicts: the model surfaces, the developer decides. New ideas
-route to next-iteration capture (/next_iteration), not into the current
+route to next-iteration capture (/next-iteration), not into the current
 build.
 
 ## Completeness

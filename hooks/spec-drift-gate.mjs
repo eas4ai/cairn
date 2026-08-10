@@ -4,28 +4,37 @@
 // and demand a self-audit against the iteration contract. No spec set, or
 // already fired this session, or anything unexpected -> exit 0 (fail open;
 // a gate that wedges sessions is worse than a gate that misses one).
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, writeFileSync, writeSync } from "node:fs";
+import { isAbsolute, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 
+function specsDir(root) {
+  return process.env.SAME_PAGE_SPECS_DIR
+    ? isAbsolute(process.env.SAME_PAGE_SPECS_DIR)
+      ? process.env.SAME_PAGE_SPECS_DIR
+      : join(root, process.env.SAME_PAGE_SPECS_DIR)
+    : join(root, "docs", "specs");
+}
+
 function specProjects(root) {
-  const specsDir = join(root, "docs", "specs");
-  if (!existsSync(specsDir)) return [];
-  return readdirSync(specsDir, { withFileTypes: true })
+  const dir = specsDir(root);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)
-    .filter((name) => existsSync(join(specsDir, name, "00-overview.md")));
+    .filter((name) => existsSync(join(dir, name, "00-overview.md")));
 }
 
 function currentIteration(root, project) {
-  const dir = join(root, "docs", "specs", project, "iterations");
+  const base = specsDir(root);
+  const dir = join(base, project, "iterations");
   if (!existsSync(dir)) return null;
   try {
     const nums = readdirSync(dir)
       .filter((f) => /^\d+\.md$/.test(f))
       .sort();
     if (nums.length === 0) return null;
-    return join("docs", "specs", project, "iterations", nums[nums.length - 1]);
+    return join(relative(root, base), project, "iterations", nums[nums.length - 1]);
   } catch {
     // If iterations exists but is not readable or not a directory, treat as no iterations
     return null;
@@ -79,7 +88,7 @@ function main() {
     } catch {
       process.exit(0);
     }
-    process.stderr.write(prompt + "\n");
+    writeSync(2, prompt + "\n");
     process.exit(2);
   } catch {
     // Fail open: any unexpected error exits 0

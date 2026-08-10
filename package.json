@@ -2,7 +2,7 @@
   "name": "same-page",
   "version": "0.1.0",
   "private": true,
-  "description": "Cooperative spec workflow skills: /new_project and /next_iteration put model and developer on the same page.",
+  "description": "Cooperative spec workflow skills: /new-project and /next-iteration put model and developer on the same page.",
   "repository": {
     "type": "git",
     "url": "https://github.com/eas4ai/same-page"

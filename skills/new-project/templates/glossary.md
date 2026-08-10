@@ -48,7 +48,7 @@ _Avoid_: slippage, staleness
 
 ## Project terms
 
-Added during Stage 1 of /new_project and whenever a new term earns its
+Added during Stage 1 of /new-project and whenever a new term earns its
 place. Group under subheadings when natural clusters emerge.
 
 ## Relationships

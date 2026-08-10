@@ -24,8 +24,8 @@ The skills CLI installs both skills (templates ride inside) into your
 agent's native skill directory; -g targets the user-level directory. The
 Claude Code plugin additionally registers the spec-drift gate
 automatically. For Codex, the gate is registered via .codex/hooks.json.
-Agents with neither hooks nor skills follow docs/WORKFLOW.md, referenced
-from the scaffolded working agreement.
+Agents with neither hooks nor skills follow docs/WORKFLOW.md in this
+package.
 
 ## Local development install
 

@@ -4,9 +4,9 @@ Conventions for agents working on the Same Page package itself.
 
 ## What this repo is
 
-Same Page is an Agent Skills package: /new_project scaffolds a cooperative
+Same Page is an Agent Skills package: /new-project scaffolds a cooperative
 spec set (ara2-style numbered domain specs behind a 00-overview keystone)
-through a staged, confirm-back conversation; /next_iteration captures
+through a staged, confirm-back conversation; /next-iteration captures
 mid-development ideas as next-iteration specs instead of scope creep. A
 spec-drift completion gate (hooks/spec-drift-gate.mjs) audits sessions
 against the iteration contract. Design spec:

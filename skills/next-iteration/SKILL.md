@@ -3,7 +3,7 @@ name: next-iteration
 description: Scope-creep valve for spec-driven projects. Use when a new feature idea or scope-affecting request surfaces mid-development in a project with a Same Page spec set (docs/specs/), including when you notice out-of-contract work yourself -- it captures the idea as a properly-formed next-iteration spec instead of expanding the current build. Also use to close an iteration and negotiate the next contract.
 ---
 
-# /next_iteration -- the scope-creep valve
+# /next-iteration -- the scope-creep valve
 
 A new idea does not enter the current build. It becomes a well-formed spec
 for the next iteration, written with full context. You may invoke this

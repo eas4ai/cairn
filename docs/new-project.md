@@ -1,4 +1,4 @@
-# /new_project
+# /new-project
 
 ## What it does
 

@@ -6,12 +6,16 @@ import { tmpdir } from "node:os";
 
 const HOOK = new URL("../hooks/spec-drift-gate.mjs", import.meta.url).pathname;
 
-function runHook({ cwd, stateDir, input }) {
+function runHook({ cwd, stateDir, input, specsDir }) {
   return spawnSync("node", [HOOK], {
     cwd,
     input: JSON.stringify(input),
     encoding: "utf8",
-    env: { ...process.env, SAME_PAGE_STATE_DIR: stateDir },
+    env: {
+      ...process.env,
+      SAME_PAGE_STATE_DIR: stateDir,
+      ...(specsDir ? { SAME_PAGE_SPECS_DIR: specsDir } : {}),
+    },
   });
 }
 
@@ -110,4 +114,20 @@ test("exits 2 (not 1) when iterations is a plain file, not a directory", () => {
   expect(r.status).toBe(2);
   // Should handle gracefully, showing "none found" since iterations path is corrupt
   expect(r.stderr).toContain("none found");
+});
+
+// SAME_PAGE_SPECS_DIR override: spec set at a non-default location must still be found.
+test("exits 2 when spec set lives under SAME_PAGE_SPECS_DIR override", () => {
+  const root = mkdtempSync(join(tmpdir(), "same-page-proj-"));
+  const specDir = join(root, "custom", "specs", "demo");
+  mkdirSync(specDir, { recursive: true });
+  writeFileSync(join(specDir, "00-overview.md"), "# Demo -- Overview\n");
+
+  const r = runHook({
+    cwd: root,
+    stateDir: tempStateDir(),
+    input: { session_id: "s_specs_override" },
+    specsDir: "custom/specs",
+  });
+  expect(r.status).toBe(2);
 });

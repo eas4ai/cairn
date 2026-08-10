@@ -4,7 +4,7 @@ description: Guided documentation workflow that puts model and developer on the 
 disable-model-invocation: true
 ---
 
-# /new_project -- the Same Page workflow
+# /new-project -- the Same Page workflow
 
 You are guiding a developer through creating a complete spec set. The goal
 is mutual agreement on terms, direction, and goals -- the model's
@@ -52,11 +52,15 @@ calibration.
 ## Stage 1 -- Shared vocabulary -> glossary.md
 
 Copy templates/glossary.md to docs/specs/<project-name>/glossary.md (create
-the directory; confirm the location with the user). The working vocabulary
-arrives pre-seeded. Then name the project's own terms: propose the 5-15
-terms you expect to matter, define each in the project's sense TOGETHER,
-one at a time, and record them in the exemplar format (bold term, tight
-definition, Avoid line). Terms enter only after confirmed understanding.
+the directory; confirm the location with the user). The default docs/specs/
+path is what the drift gate reads; if the developer chooses a different
+location, tell them the gate needs SAME_PAGE_SPECS_DIR set to that path in
+its hook environment, and record the choice in the working agreement. The
+working vocabulary arrives pre-seeded. Then name the project's own terms:
+propose the 5-15 terms you expect to matter, define each in the project's
+sense TOGETHER, one at a time, and record them in the exemplar format (bold
+term, tight definition, Avoid line). Terms enter only after confirmed
+understanding.
 
 ## Stage 2 -- Direction -> 00-overview.md, first pass
 
@@ -109,5 +113,5 @@ DEVELOPMENT_PRACTICES.md always, BEST_PRACTICES.md only if present.
 ## Closing
 
 Summarize what exists and where. Remind the developer: new ideas go through
-/next_iteration; the drift gate will audit sessions against
+/next-iteration; the drift gate will audit sessions against
 iterations/001.md.

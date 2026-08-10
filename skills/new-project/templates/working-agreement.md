@@ -24,7 +24,7 @@ Read both before working.
 ## Scope and re-anchor rules
 
 - The current iteration contract is docs/specs/project-name/iterations/NNN.md.
-  Work outside it is captured via /next_iteration -- surfaced and staged,
+  Work outside it is captured via /next-iteration -- surfaced and staged,
   never implemented ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec
   and confirm the change deliberately before acting. Scope-affecting

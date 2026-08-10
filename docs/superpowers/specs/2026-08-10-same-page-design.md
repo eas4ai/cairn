@@ -40,10 +40,10 @@ spec/plan pairs, `REMAINING-WORK.md` backlog, vendored `reference/` docs) are
 the proven shapes this package generalizes.
 
 Secondary driver: scope creep. It is addressed two ways --
-1. **Complete specifications from the beginning** (the `/new_project` workflow).
+1. **Complete specifications from the beginning** (the `/new-project` workflow).
 2. **A pressure valve for new ideas**: specifications for the *next* iteration,
    written context-aware of the current project, instead of ad-hoc expansion of
-   the current build (`/next_iteration`).
+   the current build (`/next-iteration`).
 
 ## Goals
 
@@ -51,7 +51,7 @@ Secondary driver: scope creep. It is addressed two ways --
   guiding development after the start.
 - Put model and developer on the same page: shared vocabulary, confirmed
   understanding, explicit scope.
-- Establish a per-developer baseline on the first `/new_project` run:
+- Establish a per-developer baseline on the first `/new-project` run:
   `BEST_PRACTICES.md` (universal discipline, from the sibling package) plus
   `DEVELOPMENT_PRACTICES.md` (the developer's rules of the road), loaded by
   every project's working agreement thereafter.
@@ -110,7 +110,7 @@ same-page/
   skills.sh.json                 Groupings for the repo's skills.sh page
   skills/
     new-project/
-      SKILL.md                   The guided documentation workflow (/new_project),
+      SKILL.md                   The guided documentation workflow (/new-project),
                                  including the baseline check + onboarding stage
       templates/                 development-practices seed, glossary,
                                  00-overview, ux, domain-spec (numbered),
@@ -118,13 +118,13 @@ same-page/
                                  (index block); ADR entry format embedded in
                                  the overview and domain-spec templates
     next-iteration/
-      SKILL.md                   The scope-creep valve (/next_iteration);
+      SKILL.md                   The scope-creep valve (/next-iteration);
                                  carries inline fallback structure if
                                  new-project's templates are not co-installed
   hooks/spec-drift-gate.mjs      Spec-anchored completion gate (Bun or Node)
   tests/spec-drift-gate.test.mjs Gate test suite (run with bun test)
   .claude-plugin/
-    plugin.json                  Claude Code plugin: 3 skills + hook
+    plugin.json                  Claude Code plugin: 2 skills + hook
     marketplace.json             Single-plugin marketplace fallback
   .codex/hooks.json              Drift-gate registration for Codex
   .agents/
@@ -145,16 +145,16 @@ globally (`npx skills add -g`) as the user prefers.
 ## Onboarding -- the two baseline documents
 
 Onboarding is not a separate skill. It is a conditional stage inside
-`/new_project`, triggered by a **modification check**: the
+`/new-project`, triggered by a **modification check**: the
 `DEVELOPMENT_PRACTICES.md` seed ships with a `status: default` marker in its
-frontmatter, and `/new_project` reads it at Stage 0.
+frontmatter, and `/new-project` reads it at Stage 0.
 
 - **Absent or `status: default`** -> the onboarding conversation runs first
   (harvest and confirm, below). Completing it flips the marker to
   `status: personalized` with a date.
 - **User declines** -> the marker records `status: defaults-accepted`; the
   defaults function as-is (see "Functional by default") and no future
-  `/new_project` run re-asks.
+  `/new-project` run re-asks.
 - **`status: personalized` or `defaults-accepted`** -> the baseline stage is
   skipped entirely; the workflow proceeds straight to the project stages.
 
@@ -245,7 +245,7 @@ have universal defaults -- their content *is* the project -- so their version
 of the principle is structure plus worked examples, never bracketed
 placeholders.
 
-## The guided workflow -- `/new_project`
+## The guided workflow -- `/new-project`
 
 The heart of the package. Not "interview, then fill templates" -- a staged
 conversation with binding rules, where each stage ends in a confirmed artifact
@@ -322,7 +322,7 @@ Which domain specs (or sections within them) are IN iteration one, an
 explicit OUT list, and definition of done. Then the workflow writes the index block into the project's
 `CLAUDE.md`/`AGENTS.md`: a working agreement (Suprnova pattern) pointing at
 the spec set, the standing instruction that out-of-scope work is captured via
-`/next_iteration` rather than implemented ad hoc, and -- if the project has
+`/next-iteration` rather than implemented ad hoc, and -- if the project has
 them -- the concrete verification commands. The working agreement references
 both baseline documents from onboarding -- `DEVELOPMENT_PRACTICES.md` and, when
 the sibling package is installed, `BEST_PRACTICES.md` -- and works standalone
@@ -332,7 +332,7 @@ The working agreement also carries the **re-anchor rule** for every future
 session: when incoming direction contradicts a confirmed spec, return to the
 spec and confirm the change deliberately before acting on it. Scope-affecting
 directives that arrive in the heat of a moment are captured (decision log or
-`/next_iteration`) and decided calmly, never absorbed reactively. This
+`/next-iteration`) and decided calmly, never absorbed reactively. This
 protects both parties: the user from decisions made in their worst moments,
 the model from steering by signals that were never really direction.
 
@@ -361,7 +361,7 @@ they affect.
 (shared ADR entry format), cross-cutting decisions land in the overview's,
 and rationale lives next to what it justifies.
 
-## The scope-creep valve -- `/next_iteration`
+## The scope-creep valve -- `/next-iteration`
 
 When a new idea surfaces mid-development -- from the user or the model -- it
 does not enter the current build. The skill:
@@ -374,7 +374,7 @@ does not enter the current build. The skill:
    context-aware: which existing components it touches, what it conflicts
    with, what it depends on.
 
-Closing an iteration is a `/new_project`-lite conversation: promote and
+Closing an iteration is a `/new-project`-lite conversation: promote and
 negotiate `next/` specs into `iterations/002.md`, carry or cut, re-confirm
 scope. (This formalizes the pattern that grew organically as Suprnova's
 `REMAINING-WORK.md`.)
@@ -428,16 +428,16 @@ production.
   `.agents/install-block.md` and are copied verbatim wherever they appear
   (exemplar convention).
 - **Claude Code plugin channel**: `.claude-plugin/plugin.json` ships the
-  three skills plus the drift-gate hook, so plugin installation registers
+  two skills plus the drift-gate hook, so plugin installation registers
   the hook automatically; `marketplace.json` makes the repo its own
   single-plugin marketplace as a fallback route. `claude plugin validate .
   --strict` gates manifest changes.
 - **Local development**: `scripts/link-skills.sh` symlinks skills into the
   local harness directories so a `git pull` keeps installs current.
-- Skills double as slash commands: `/new_project`, `/next_iteration`.
-- **Invocation discipline** (exemplar convention): `/new_project` is
+- Skills double as slash commands: `/new-project`, `/next-iteration`.
+- **Invocation discipline** (exemplar convention): `/new-project` is
   user-invoked only (`disable-model-invocation: true`).
-  `/next_iteration` is also model-invocable on purpose: when the model
+  `/next-iteration` is also model-invocable on purpose: when the model
   detects out-of-contract work mid-session, it can open the valve itself --
   the conversational counterpart of the drift gate.
 - **Hook boundary, stated honestly**: the drift gate registers where hook

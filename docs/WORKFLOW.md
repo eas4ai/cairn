@@ -1,7 +1,7 @@
 # The Same Page workflow (tool-neutral)
 
-For agents without a skill system: this is the /new_project and
-/next_iteration process as plain instructions. Agents with skills installed
+For agents without a skill system: this is the /new-project and
+/next-iteration process as plain instructions. Agents with skills installed
 follow their SKILL.md; this document states the same contract.
 
 ## Principles

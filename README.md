@@ -40,11 +40,10 @@ glossary still hold. Registered automatically by the Claude Code plugin;
 
 ## Relationship to best-practices-agent-package
 
-Same Page is the sibling of
-best-practices-agent-package:
-that package is universal production discipline (the 13-rule floor and its
-completion gate); this one is spec development and scope fidelity. They
-compose; each works alone.
+Same Page is the sibling of best-practices-agent-package: that package is
+universal production discipline (the 13-rule floor and its completion
+gate); this one is spec development and scope fidelity. They compose; each
+works alone.
 
 ## Development
 

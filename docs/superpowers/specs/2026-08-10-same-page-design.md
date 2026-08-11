@@ -121,7 +121,7 @@ same-page/
       SKILL.md                   The scope-creep valve (/next-iteration);
                                  carries inline fallback structure if
                                  new-project's templates are not co-installed
-  hooks/spec-drift-gate.mjs      Spec-anchored completion gate (Bun or Node)
+  skills/new-project/scripts/spec-drift-gate.mjs      Spec-anchored completion gate (Bun or Node)
   tests/spec-drift-gate.test.mjs Gate test suite (run with bun test)
   .claude-plugin/
     plugin.json                  Claude Code plugin: 2 skills + hook
@@ -379,13 +379,16 @@ negotiate `next/` specs into `iterations/002.md`, carry or cut, re-confirm
 scope. (This formalizes the pattern that grew organically as Suprnova's
 `REMAINING-WORK.md`.)
 
-## The drift gate -- `hooks/spec-drift-gate.mjs`
+## The drift gate -- `skills/new-project/scripts/spec-drift-gate.mjs`
 
 Ships in v1, modeled on the *behavior* of the sibling's
 `todo_complete_gate.py` but written as dependency-free JavaScript that runs
 under Bun or Node unchanged. Registered on completion events: `TaskCompleted`
-and `Stop` for Claude Code (delivered by the plugin, or skill-carried hooks
-per the Agent Skills spec), `Stop` for Codex via `.codex/hooks.json`.
+and `Stop` for Claude Code (registered by the plugin at install, or offered
+by /new-project's first-run setup for skills-CLI installs -- the gate script
+ships inside the new-project skill's scripts/ directory, since the core
+Agent Skills spec defines no hooks frontmatter), `Stop` for Codex via
+`.codex/hooks.json`.
 One-time per session via a state marker so it cannot loop.
 
 When a session reaches completion in a project that has a spec set, the hook
@@ -441,7 +444,8 @@ production.
   detects out-of-contract work mid-session, it can open the valve itself --
   the conversational counterpart of the drift gate.
 - **Hook boundary, stated honestly**: the drift gate registers where hook
-  systems exist -- Claude Code (via the plugin or skill-carried hooks),
+  systems exist -- Claude Code (via the plugin, or /new-project's offered
+registration for skills-CLI installs),
   Codex (`.codex/hooks.json`), and other hook-capable agents per the Agent
   Skills spec. Everywhere else, the working agreement and specs carry the
   contract unassisted, with `docs/WORKFLOW.md` as the tool-neutral statement

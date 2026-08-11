@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/hooks/spec-drift-gate.mjs\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/skills/new-project/scripts/spec-drift-gate.mjs\"",
             "timeout": 15
           }
         ]

@@ -11,6 +11,31 @@ is mutual agreement on terms, direction, and goals -- the model's
 information and the developer's experience meeting as equals. Templates for
 every artifact are in this skill's templates/ directory.
 
+## Setup -- the drift gate
+
+This skill ships Same Page's completion gate at scripts/spec-drift-gate.mjs
+(inside this skill's installed directory). It audits each session once, at
+completion, in any project with a spec set. Before Stage 0, check that it
+is registered:
+
+- Installed as the Claude Code plugin: the plugin already registers it;
+  skip this section.
+- Installed via the skills CLI into Claude Code: if the project's
+  .claude/settings.json does not already register spec-drift-gate.mjs,
+  offer to add it -- create the file if absent, append to existing hooks
+  arrays, never overwrite unrelated entries. Use this shape, replacing
+  SKILL_DIR with this skill's installed directory as an absolute path:
+
+  {"hooks": {"TaskCompleted": [{"hooks": [{"type": "command", "command":
+  "node \"SKILL_DIR/scripts/spec-drift-gate.mjs\"", "timeout": 15}]}],
+  "Stop": [{"hooks": [{"type": "command", "command":
+  "node \"SKILL_DIR/scripts/spec-drift-gate.mjs\"", "timeout": 15}]}]}}
+
+- Codex: offer the same command on Stop in .codex/hooks.json.
+- If the developer declines, continue without it and note the decline in
+  the working agreement at Stage 6: the workflow functions unassisted, the
+  contract carried by instructions alone.
+
 ## Standing rules (all stages)
 
 1. Surface interpretations; never silently resolve ambiguity. When you meet

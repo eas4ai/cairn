@@ -18,4 +18,4 @@ Global install (available in every project):
 ## Codex (drift gate)
 
 Copy .codex/hooks.json into the target repo, or merge its Stop entry into
-an existing one, and vendor hooks/spec-drift-gate.mjs alongside.
+an existing one, and vendor skills/new-project/scripts/spec-drift-gate.mjs alongside.

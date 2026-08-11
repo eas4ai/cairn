@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/spec-drift-gate.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/new-project/scripts/spec-drift-gate.mjs\"",
             "timeout": 15
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/spec-drift-gate.mjs\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/new-project/scripts/spec-drift-gate.mjs\"",
             "timeout": 15
           }
         ]

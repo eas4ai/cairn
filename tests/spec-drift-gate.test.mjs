@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const HOOK = new URL("../hooks/spec-drift-gate.mjs", import.meta.url).pathname;
+const HOOK = new URL("../skills/new-project/scripts/spec-drift-gate.mjs", import.meta.url).pathname;
 
 function runHook({ cwd, stateDir, input, specsDir }) {
   return spawnSync("node", [HOOK], {

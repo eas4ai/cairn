@@ -32,11 +32,14 @@ tool-neutral process (for agents without skills): docs/WORKFLOW.md.
 
 ## The drift gate
 
-hooks/spec-drift-gate.mjs audits each session once at completion, in any
+skills/new-project/scripts/spec-drift-gate.mjs audits each session once at completion, in any
 project with a spec set: did work stay inside the iteration contract, was
 out-of-contract work surfaced and captured, do touched specs and the
-glossary still hold. Registered automatically by the Claude Code plugin;
-.codex/hooks.json covers Codex; dependency-free, runs under node or bun.
+glossary still hold. The script ships inside the new-project skill, so
+every install channel carries it: the Claude Code plugin registers it
+automatically, /new-project offers registration on first run for
+skills-CLI installs, and .codex/hooks.json covers Codex. Dependency-free,
+runs under node or bun.
 
 ## Relationship to best-practices-agent-package
 

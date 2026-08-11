@@ -35,7 +35,9 @@ tool-neutral process (for agents without skills): docs/WORKFLOW.md.
 skills/new-project/scripts/spec-drift-gate.mjs audits each session once at completion, in any
 project with a spec set: did work stay inside the iteration contract, was
 out-of-contract work surfaced and captured, do touched specs and the
-glossary still hold. The script ships inside the new-project skill, so
+glossary still hold, and the rule 13 self-evaluation from the
+best-practices ruleset (referencing the nearest BEST_PRACTICES.md, with
+the rule's own text embedded as fallback). The script ships inside the new-project skill, so
 every install channel carries it: the Claude Code plugin registers it
 automatically, /new-project offers registration on first run for
 skills-CLI installs, and .codex/hooks.json covers Codex. Dependency-free,

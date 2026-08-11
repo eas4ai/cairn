@@ -15,7 +15,8 @@ every artifact are in this skill's templates/ directory.
 
 This skill ships Same Page's completion gate at scripts/spec-drift-gate.mjs
 (inside this skill's installed directory). It audits each session once, at
-completion, in any project with a spec set. Before Stage 0, check that it
+completion, in any project with a spec set -- scope, spec fidelity, and the
+rule 13 production self-evaluation. Before Stage 0, check that it
 is registered:
 
 - Installed as the Claude Code plugin: the plugin already registers it;

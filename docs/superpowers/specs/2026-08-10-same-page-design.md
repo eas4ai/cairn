@@ -402,11 +402,18 @@ self-audit before finishing:
    shipped, never silently discarded.
 3. Did the work make any touched spec untrue (drift check), and did new terms
    enter the conversation that belong in the glossary?
+4. The rule 13 self-evaluation: you are delivering production software --
+   do not deliver work you know to be deficient. The prompt references the
+   nearest `BEST_PRACTICES.md` (repository copy first, then
+   `~/.claude/BEST_PRACTICES.md`, mirroring the sibling's precedence) and
+   embeds the rule's own text when no ruleset is found, so the
+   self-evaluation happens even without the sibling installed.
 
 If the project has no spec set, the hook does nothing (mirroring the
-sibling's no-todo-list behavior). The two gates compose when both packages
-are installed: the sibling's rule-13 gate audits production quality, this one
-audits scope and spec fidelity.
+sibling's no-todo-list behavior). When the sibling package's own hook is
+also registered, the audits overlap harmlessly -- each gate fires once per
+session; the sibling audits the full 13 rules on todo completion, this one
+audits scope, spec fidelity, and the release gate.
 
 ## What does not carry forward from the old templates
 

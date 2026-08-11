@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Same Page spec-drift gate. One-shot completion gate: when a session
 // finishes in a project that has a Same Page spec set, block once (exit 2)
-// and demand a self-audit against the iteration contract. No spec set, or
-// already fired this session, or anything unexpected -> exit 0 (fail open;
-// a gate that wedges sessions is worse than a gate that misses one).
+// and demand a self-audit against the iteration contract and the
+// production ruleset (rule 13). No spec set, or already fired this
+// session, or anything unexpected -> exit 0 (fail open; a gate that
+// wedges sessions is worse than a gate that misses one).
 import { existsSync, readdirSync, readFileSync, writeFileSync, writeSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 import { tmpdir } from "node:os";
@@ -41,6 +42,23 @@ function currentIteration(root, project) {
   }
 }
 
+function bestPracticesPath(root) {
+  // Mirrors the sibling best-practices package's precedence: a repository
+  // copy wins over the user-level copy.
+  try {
+    const repoCopy = join(root, "BEST_PRACTICES.md");
+    if (existsSync(repoCopy)) return repoCopy;
+    const home = process.env.HOME || "";
+    if (home) {
+      const userCopy = join(home, ".claude", "BEST_PRACTICES.md");
+      if (existsSync(userCopy)) return userCopy;
+    }
+  } catch {
+    // Fall through to the embedded rule text.
+  }
+  return null;
+}
+
 function auditPrompt(root, projects) {
   const contracts = projects
     .map((p) => currentIteration(root, p))
@@ -48,6 +66,21 @@ function auditPrompt(root, projects) {
   const contractLine = contracts.length
     ? contracts.join(", ")
     : "none found -- note that absence in your report";
+  const rulesetPath = bestPracticesPath(root);
+  const ruleThirteen = rulesetPath
+    ? [
+        `4. Rule 13 self-evaluation (${rulesetPath}): you are delivering`,
+        "   production software -- do not deliver work you know to be",
+        "   deficient. Review the session's work against every rule in that",
+        "   ruleset and answer honestly: would you make revisions? If yes,",
+        "   make them before finishing.",
+      ]
+    : [
+        "4. Rule 13 self-evaluation: you are delivering production software",
+        "   -- do not deliver work you know to be deficient (incomplete,",
+        "   unverified, internally inconsistent). Answer honestly: would you",
+        "   make revisions? If yes, make them before finishing.",
+      ];
   return [
     "Same Page drift gate: before finishing, audit this session against the spec set.",
     `Current iteration contract(s): ${contractLine}`,
@@ -57,6 +90,7 @@ function auditPrompt(root, projects) {
     "   silently ship it, never silently discard it.",
     "3. Did the work make any touched spec untrue (update it), and did new",
     "   terms enter the conversation that belong in the glossary (add them)?",
+    ...ruleThirteen,
     "Make any needed corrections, then finish. This gate fires once per session.",
   ].join("\n");
 }

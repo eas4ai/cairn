@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 
 const HOOK = new URL("../skills/new-project/scripts/spec-drift-gate.mjs", import.meta.url).pathname;
 
-function runHook({ cwd, stateDir, input, specsDir }) {
+function runHook({ cwd, stateDir, input, specsDir, home }) {
   return spawnSync("node", [HOOK], {
     cwd,
     input: JSON.stringify(input),
@@ -15,6 +15,7 @@ function runHook({ cwd, stateDir, input, specsDir }) {
       ...process.env,
       SAME_PAGE_STATE_DIR: stateDir,
       ...(specsDir ? { SAME_PAGE_SPECS_DIR: specsDir } : {}),
+      ...(home ? { HOME: home } : {}),
     },
   });
 }
@@ -130,4 +131,36 @@ test("exits 2 when spec set lives under SAME_PAGE_SPECS_DIR override", () => {
     specsDir: "custom/specs",
   });
   expect(r.status).toBe(2);
+});
+
+// Rule 13: the audit carries the production self-evaluation, referencing
+// the nearest BEST_PRACTICES.md (repo copy wins) when one exists.
+test("audit includes rule 13 referencing project BEST_PRACTICES.md when present", () => {
+  const cwd = tempProject({ withSpecs: true });
+  writeFileSync(join(cwd, "BEST_PRACTICES.md"), "# BEST_PRACTICES\n");
+  const emptyHome = mkdtempSync(join(tmpdir(), "same-page-home-"));
+  const r = runHook({
+    cwd,
+    stateDir: tempStateDir(),
+    input: { session_id: "s6" },
+    home: emptyHome,
+  });
+  expect(r.status).toBe(2);
+  expect(r.stderr).toContain("Rule 13");
+  expect(r.stderr).toContain(join(cwd, "BEST_PRACTICES.md"));
+});
+
+// Rule 13 fallback: no ruleset found anywhere -> the rule's own text is
+// embedded so the self-evaluation still happens.
+test("audit includes embedded rule 13 self-evaluation when no ruleset found", () => {
+  const emptyHome = mkdtempSync(join(tmpdir(), "same-page-home-"));
+  const r = runHook({
+    cwd: tempProject({ withSpecs: true }),
+    stateDir: tempStateDir(),
+    input: { session_id: "s7" },
+    home: emptyHome,
+  });
+  expect(r.status).toBe(2);
+  expect(r.stderr).toContain("Rule 13 self-evaluation");
+  expect(r.stderr).toContain("deficient");
 });

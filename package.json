@@ -1,6 +1,6 @@
 {
   "name": "same-page",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Cooperative spec workflow skills: /new-project, /existing-project, and /next-iteration put model and developer on the same page.",
   "repository": {

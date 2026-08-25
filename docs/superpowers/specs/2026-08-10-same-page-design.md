@@ -533,8 +533,10 @@ production.
   `.agents/install-block.md` and are copied verbatim wherever they appear
   (exemplar convention).
 - **Claude Code plugin channel**: `.claude-plugin/plugin.json` ships the
-  two skills plus the drift-gate hook, so plugin installation registers
-  the hook automatically; `marketplace.json` makes the repo its own
+  three skills, and Claude Code loads the repository's `hooks/hooks.json`
+  on its own (the manifest must not reference it a second time, or the
+  hook fails to load as a duplicate), so plugin installation registers
+  the drift gate automatically; `marketplace.json` makes the repo its own
   single-plugin marketplace as a fallback route. `claude plugin validate .
   --strict` gates manifest changes.
 - **Local development**: `scripts/link-skills.sh` symlinks skills into the

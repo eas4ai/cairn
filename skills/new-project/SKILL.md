@@ -69,10 +69,13 @@ Note whether BEST_PRACTICES.md exists (sibling package); reference it in
 Stage 6 only if present.
 
 Then orientation. First look at the directory: if it already holds a
-codebase (source, manifests, tests), stop here and switch to
-/existing-project, which adopts it from evidence -- this workflow designs
-software that does not exist yet, and running it over existing code
-documents intent nobody specified. Otherwise: what kind of project (app,
+codebase (source, manifests, tests) or a spec set (docs/specs/<name>/
+00-overview.md, or the SAME_PAGE_SPECS_DIR location), stop here and
+switch to /existing-project, which adopts the code from evidence and
+verifies an existing spec set against it -- this workflow designs
+software that does not exist yet; over existing code it documents intent
+nobody specified, and over an existing spec set it overwrites agreed
+specs. Otherwise: what kind of project (app,
 CLI, library, service); what documentation depth is warranted (a weekend
 tool gets 00-overview plus one domain spec; a product gets the full set).
 Confirm the calibration.

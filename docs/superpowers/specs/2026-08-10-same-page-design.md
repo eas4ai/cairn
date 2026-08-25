@@ -278,10 +278,10 @@ followed.
 **Stage 0 -- Orientation.**
 Runs the baseline modification check first (see Onboarding above), inserting
 the onboarding conversation when the developer's baseline is absent or still
-default. Then: if the directory already holds a codebase, hand off to
-`/existing-project` (below); this workflow designs software that does not
-exist yet. Otherwise: what kind of project; what documentation depth is
-warranted.
+default. Then: if the directory already holds a codebase or a spec set,
+hand off to `/existing-project` (below); this workflow designs software
+that does not exist yet, and must not overwrite agreed specs. Otherwise:
+what kind of project; what documentation depth is warranted.
 
 **Stage 1 -- Shared vocabulary -> `glossary.md`.**
 Name and define the domain's terms in the project's sense, before they are

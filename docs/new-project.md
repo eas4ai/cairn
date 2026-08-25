@@ -19,10 +19,11 @@ Q: Do I have to do the onboarding?
 A: No. Decline it and the shipped defaults apply; it never re-asks.
 
 Q: Does it work on existing code?
-A: It hands off. When Stage 0 finds a codebase it switches to
-/existing-project, which reads the code first, drafts observed specs from
-evidence, and asks you to correct -- the same spec set, reached from the
-other direction.
+A: It hands off. When Stage 0 finds a codebase, or a spec set that
+already exists, it switches to /existing-project, which reads the code
+first, drafts observed specs from evidence or verifies the existing ones,
+and asks you to correct -- the same spec set, reached from the other
+direction.
 
 Q: How big does my project need to be?
 A: Any size. Depth is calibrated in Stage 0; a small tool gets a keystone

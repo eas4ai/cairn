@@ -4,7 +4,7 @@
     {
       "title": "Spec workflow",
       "description": "Create and defend a shared spec set with your agent.",
-      "skills": ["new-project", "next-iteration"]
+      "skills": ["new-project", "existing-project", "next-iteration"]
     }
   ]
 }

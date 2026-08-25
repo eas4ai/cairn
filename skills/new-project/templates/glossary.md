@@ -46,6 +46,17 @@ Any divergence between an artifact and reality -- in code, specs, or
 vocabulary.
 _Avoid_: slippage, staleness
 
+**Observed**:
+Spec text drafted from reading the code: what the system does, cited,
+not yet confirmed by the developer as what it should do. Not contract.
+_Avoid_: documented (says nothing about confirmation), as designed
+
+**Agreed**:
+Spec text the developer has confirmed describes both what the system does
+and what it should do. Only Agreed sections enter an iteration contract.
+_Avoid_: approved (implies a process this methodology does not have),
+final
+
 ## Project terms
 
 Added during Stage 1 of /new-project and whenever a new term earns its

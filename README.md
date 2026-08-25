@@ -25,17 +25,20 @@ Details and Codex setup: docs/INSTALLATION.md.
 | Skill | What it does |
 |---|---|
 | [new-project](skills/new-project/SKILL.md) | Staged, confirm-back workflow that scaffolds a complete spec set: glossary, keystone overview, ux spec, numbered domain specs, conventions, iteration contract. Onboards your development practices once. User-invoked. |
+| [existing-project](skills/existing-project/SKILL.md) | Gets an agent up to speed on a codebase that already exists: cited recon report, glossary from the code's own names, observed specs for the work's blast radius (or verification of an existing spec set against the code), documentation gap list, and the session's work prepared as one feature or one defect -- a first contract, or a staged spec through /next-iteration when a contract exists. Observed stays distinct from agreed. User-invoked. |
 | [next-iteration](skills/next-iteration/SKILL.md) | Scope-creep valve: captures new ideas as staged next-iteration specs instead of expanding the current build; negotiates iteration close. Model-invocable by design. |
 
-Human-facing guides: docs/new-project.md, docs/next-iteration.md. The
-tool-neutral process (for agents without skills): docs/WORKFLOW.md.
+Human-facing guides: docs/new-project.md, docs/existing-project.md,
+docs/next-iteration.md. The tool-neutral process (for agents without
+skills): docs/WORKFLOW.md.
 
 ## The drift gate
 
 skills/new-project/scripts/spec-drift-gate.mjs audits each session once at completion, in any
 project with a spec set: did work stay inside the iteration contract, was
 out-of-contract work surfaced and captured, do touched specs and the
-glossary still hold, and the rule 13 self-evaluation from the
+glossary still hold, was any still-Observed spec section relied on as
+contract, and the rule 13 self-evaluation from the
 best-practices ruleset (referencing the nearest BEST_PRACTICES.md, with
 the rule's own text embedded as fallback). The script ships inside the new-project skill, so
 every install channel carries it: the Claude Code plugin registers it

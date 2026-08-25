@@ -10,8 +10,8 @@ written. Onboards your development practices once, on first run.
 
 ## When to reach for it
 
-Starting a new project; adopting an agent on an existing codebase that has
-no specs; standardizing how your team documents projects.
+Starting a new project; standardizing how your team documents projects.
+For a codebase that already exists, reach for /existing-project.
 
 ## Common questions
 
@@ -19,8 +19,10 @@ Q: Do I have to do the onboarding?
 A: No. Decline it and the shipped defaults apply; it never re-asks.
 
 Q: Does it work on existing code?
-A: Yes. The workflow reads code, manifests, and docs first, drafts from
-evidence, and asks you to correct -- it does not interview you from zero.
+A: It hands off. When Stage 0 finds a codebase it switches to
+/existing-project, which reads the code first, drafts observed specs from
+evidence, and asks you to correct -- the same spec set, reached from the
+other direction.
 
 Q: How big does my project need to be?
 A: Any size. Depth is calibrated in Stage 0; a small tool gets a keystone

@@ -13,8 +13,12 @@ counterpart of the drift gate.
 ## Capture
 
 1. Read the project's glossary.md, 00-overview.md, the current iteration
-   contract (highest-numbered docs/specs/<name>/iterations/NNN.md), and the
-   domain spec(s) the idea touches.
+   contract (highest-numbered docs/specs/<name>/iterations/NNN.md), the
+   domain spec(s) the idea touches, and recon.md if one exists. If this is
+   your first session in a codebase you have not read, and the idea is
+   the work you were opened to do, stop: /existing-project gets you up to
+   speed and hands the work back here with the recon and verified specs
+   as context. A staged spec written before that is written from priors.
 2. Confirm-back loop, in miniature: state your understanding of the idea in
    your own words -- what it is, which domain owns it, what it touches,
    conflicts with, and depends on. Let the developer correct until

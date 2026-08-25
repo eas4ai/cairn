@@ -20,10 +20,12 @@ an existing one, and vendor skills/new-project/scripts/spec-drift-gate.mjs along
 
 ## What lands where
 
-The skills CLI installs both skills into your agent's native skill
-directory (templates and the drift-gate script ride inside the
-new-project skill); -g targets the user-level directory. On its first
-run, /new-project offers to register the gate for your project. The
+The skills CLI installs all three skills into your agent's native skill
+directory (the spec-set templates and the drift-gate script ride inside
+the new-project skill; existing-project carries its own recon and defect
+templates); -g targets the user-level directory. On its first run,
+/new-project or /existing-project offers to register the gate for your
+project. The
 Claude Code plugin registers the gate automatically at install. For
 Codex, the gate is registered via .codex/hooks.json.
 Agents with neither hooks nor skills follow docs/WORKFLOW.md in this

@@ -117,6 +117,13 @@ same-page/
                                  conventions, iteration, working agreement
                                  (index block); ADR entry format embedded in
                                  the overview and domain-spec templates
+    existing-project/
+      SKILL.md                   The adoption workflow (/existing-project):
+                                 recon from evidence, observed specs,
+                                 documentation gap, one-feature or
+                                 one-defect contract
+      templates/                 recon report, defect record (the spec set
+                                 reuses new-project's templates)
     next-iteration/
       SKILL.md                   The scope-creep valve (/next-iteration);
                                  carries inline fallback structure if
@@ -124,7 +131,7 @@ same-page/
   skills/new-project/scripts/spec-drift-gate.mjs      Spec-anchored completion gate (Bun or Node)
   tests/spec-drift-gate.test.mjs Gate test suite (run with bun test)
   .claude-plugin/
-    plugin.json                  Claude Code plugin: 2 skills + hook
+    plugin.json                  Claude Code plugin: 3 skills + hook
     marketplace.json             Single-plugin marketplace fallback
   .codex/hooks.json              Drift-gate registration for Codex
   .agents/
@@ -271,11 +278,10 @@ followed.
 **Stage 0 -- Orientation.**
 Runs the baseline modification check first (see Onboarding above), inserting
 the onboarding conversation when the developer's baseline is absent or still
-default. Then: what kind of project; what already exists (for an existing
-repo, read code, manifests, and any docs *before* asking anything); what
-documentation depth is warranted. For existing codebases the workflow drafts
-from evidence and asks the user to correct, rather than interviewing from
-zero.
+default. Then: if the directory already holds a codebase, hand off to
+`/existing-project` (below); this workflow designs software that does not
+exist yet. Otherwise: what kind of project; what documentation depth is
+warranted.
 
 **Stage 1 -- Shared vocabulary -> `glossary.md`.**
 Name and define the domain's terms in the project's sense, before they are
@@ -308,8 +314,7 @@ from the other, with `ux.md` holding the map; a small project is
 The overview's second pass, now that domains exist: system architecture, tech
 choices and their rationale, cross-cutting requirements, the spec map,
 revision policy, and completion criteria. Plus `conventions.md` --
-implementation standards and patterns. For existing codebases, largely
-extracted then confirmed. Then **reference leveling, on by default**: vendor
+implementation standards and patterns. Then **reference leveling, on by default**: vendor
 authoritative upstream docs for the chosen stack into a `reference/`
 directory, so future sessions consult sources, not memory. (Pattern proven in
 Suprnova's `reference/` of vendored Laravel docs.) The developer can decline
@@ -336,6 +341,91 @@ directives that arrive in the heat of a moment are captured (decision log or
 protects both parties: the user from decisions made in their worst moments,
 the model from steering by signals that were never really direction.
 
+## The adoption workflow -- `/existing-project`
+
+The same spec set, reached from the other direction. `/new-project` once
+claimed to cover existing codebases through its Stage 0 evidence-first
+rule, but what it then ran was the full spec-writing conversation: it
+documented the whole project before any work could start, and it wrote
+retro-documentation in the voice of design intent, which misstates a
+codebase nobody specified. It also left the drift gate inert exactly
+where scope discipline matters most, since the gate activates only when
+`00-overview.md` exists. Adoption is therefore its own user-invoked skill
+(ADR 0006).
+
+Two sources of truth, kept apart: the code says what the system does; the
+developer says what it should do. The model drafts from the first and the
+developer corrects. Standing rules are `/new-project`'s five plus three:
+every statement about the codebase carries a path (a claim without
+evidence is a question, not a finding), observed is not agreed, and drift
+is a finding, never a quiet fix.
+
+Two entry paths, decided in Stage 0. Path A, no spec set: write observed
+specs and the first contract. Path B, a spec set exists: verify it
+against the code, record the drift, extend where the work needs, and
+route the work through `/next-iteration`. On Path B the valve is not
+opened until Stages 0 through 3 are done -- a staged spec written before
+recon is written from priors, not from the project.
+
+**Stage 0 -- Baseline and recon.** The baseline check; on Path B, the spec
+set read before the code so its vocabulary governs. Then reading before
+asking: manifests, entry points, schema, tests, CI, other docs, recent
+history (on Path B, every commit since the specs were last revised -- the
+window where drift lives). Output is `recon.md` in the spec set, four
+cited buckets: exists, documented (on Path B, the spec and section),
+contradicted (docs or specs versus code, both sides cited -- the bucket
+that pays for the exercise), unverified. Depth is calibrated by the work,
+not the codebase: the developer names the feature or defect, the model
+traces its blast radius, and only that radius is documented or verified
+to domain depth. Documenting everything first is the failure mode the
+stage exists to prevent.
+
+**Stage 1 -- Vocabulary from the code.** Path A: glossary terms drafted
+from the identifiers that exist. Path B: the existing glossary wins;
+only renames, missing terms, and collisions are drafted. The code's names
+win over the model's synonyms; collisions are logged as flagged
+ambiguities.
+
+**Stage 2 -- Observed specs, or verification.** Path A: `00-overview.md`
+and one domain spec per domain in the radius, written in the designed
+shape (normative language, acceptance criteria) so that confirmation is a
+status change rather than a rewrite, and marked
+`Status: Observed (as-built; unconfirmed)`. Path B: each spec section in
+the radius is reported as holds, drifted (raised with both sides cited;
+the developer rules whether the spec is revised in place and logged, or
+the code is wrong and a defect record follows), still observed from a
+previous pass, or missing (written as observed). Both paths: the
+developer confirms observed sections one by one; confirmed sections carry
+`Agreed: date`. When the developer says the code is wrong, the observed
+text stays as the record of what is, and the intent becomes a defect
+record or a staged next-iteration spec. Inferred intent is never written
+as agreed. Only Agreed sections may enter an iteration contract's In list,
+and the drift gate's audit asks whether Observed text was relied on as
+contract.
+
+**Stage 3 -- The documentation gap.** Undocumented behavior, contradicted
+docs, untested behavior the work depends on, and (Path B) staged specs
+the code has since overtaken, listed in `recon.md` under Gaps with
+evidence; the developer decides which close now. Gaps outside the radius
+are recorded, never closed in-session; the list is documentation debt,
+promoted or cut at iteration close like staged specs. `conventions.md` is
+written from (Path A) or verified against (Path B) the checks the project
+actually runs.
+
+**Stage 4 -- The work.** With no contract: `iterations/001.md` (In: the
+Agreed sections the work changes; Out: every other domain; done:
+acceptance criteria plus the project's own checks green). With a
+contract: work already in its In list proceeds under it; anything else --
+the usual case for a feature or defect that arrived after the contract
+was agreed -- goes through `/next-iteration`, whose capture now has the
+recon and verified specs as context and whose iteration-close step
+promotes it into the next contract. A defect on either branch gets a
+first-class artifact: `defects/<slug>.md` with reproduction, evidence,
+the Agreed section it violates, root cause when known, and the regression
+test the fix ships with -- failing before, passing after, as part of
+done. Then the working agreement block, naming which specs are still
+Observed and that Observed sections are not contract.
+
 ## The spec set
 
 All plain markdown, written into the target project's
@@ -355,6 +445,8 @@ they affect.
 | `conventions.md` | Implementation standards, naming, file-organization rules, patterns, verification commands. |
 | `iterations/NNN.md` | Scope contract per iteration: IN list (domain spec/section refs), explicit OUT list, definition of done. |
 | `iterations/next/` | Staged specs for the next iteration (see below). |
+| `recon.md` | Written by `/existing-project` only: the cited recon report (exists, documented, contradicted, unverified) plus the Gaps list that is the project's documentation debt. |
+| `defects/<slug>.md` | Written by `/existing-project` for a remediation: observed behavior with reproduction, expected behavior with the Agreed section it violates, root cause when known, the regression test the fix ships with. |
 
 `ux.md` owns the map; domain specs own the streets. There is no central
 `decisions.md`: every spec carries its own "Decisions and revisions" log
@@ -402,7 +494,10 @@ self-audit before finishing:
    shipped, never silently discarded.
 3. Did the work make any touched spec untrue (drift check), and did new terms
    enter the conversation that belong in the glossary?
-4. The rule 13 self-evaluation: you are delivering production software --
+4. Was any spec section still marked Observed relied on as contract? If so,
+   confirm it with the developer and mark it Agreed, or keep that work out
+   of the contract.
+5. The rule 13 self-evaluation: you are delivering production software --
    do not deliver work you know to be deficient. The prompt references the
    nearest `BEST_PRACTICES.md` (repository copy first, then
    `~/.claude/BEST_PRACTICES.md`, mirroring the sibling's precedence) and
@@ -444,9 +539,11 @@ production.
   --strict` gates manifest changes.
 - **Local development**: `scripts/link-skills.sh` symlinks skills into the
   local harness directories so a `git pull` keeps installs current.
-- Skills double as slash commands: `/new-project`, `/next-iteration`.
-- **Invocation discipline** (exemplar convention): `/new-project` is
-  user-invoked only (`disable-model-invocation: true`).
+- Skills double as slash commands: `/new-project`, `/existing-project`,
+  `/next-iteration`.
+- **Invocation discipline** (exemplar convention): `/new-project` and
+  `/existing-project` are user-invoked only
+  (`disable-model-invocation: true`).
   `/next-iteration` is also model-invocable on purpose: when the model
   detects out-of-contract work mid-session, it can open the valve itself --
   the conversational counterpart of the drift gate.
@@ -471,8 +568,11 @@ registration for skills-CLI installs),
 - A new project can go from empty directory to a complete, mutually-confirmed
   spec set in one guided session, with the developer never having to know the
   taxonomy in advance.
-- An existing codebase can be retro-documented the same way, with the model
-  drafting from evidence and the user correcting.
+- An agent opened in an existing codebase can, in one session, produce a
+  cited recon report, observed specs for the work's blast radius, a
+  documentation gap list, and a contract for one feature or one defect --
+  without documenting the whole codebase first and without any observed
+  text being mistaken for agreed intent.
 - Mid-development ideas reliably land in `iterations/next/` instead of the
   current build.
 - A session in a spec'd project cannot complete without passing the drift
@@ -491,3 +591,16 @@ registration for skills-CLI installs),
 
 None. Name: Same Page (`same-page`). Reference leveling: vendors by default,
 declinable per project.
+
+## Revisions
+
+- 2026-08-25 -- Added `/existing-project` as the adoption workflow (ADR
+  0006), with two entry paths: no spec set (observed specs, first
+  contract) and spec set exists (verify against the code, then route the
+  work through `/next-iteration`). `/new-project` hands off to it when it
+  finds a codebase and no longer claims to retro-document;
+  `/next-iteration` points back to it for a first session in an unread
+  codebase. Added the Observed / Agreed status convention to the
+  glossary's working vocabulary, `recon.md` and `defects/<slug>.md` to
+  the spec set, and item 4 (Observed text relied on as contract) to the
+  drift gate's audit.

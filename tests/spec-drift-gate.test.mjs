@@ -63,6 +63,19 @@ test("exits 2 with audit prompt when spec set exists and no marker", () => {
   expect(r.stderr).toContain("docs/specs/demo/iterations/001.md");
 });
 
+// Observed specs (from /existing-project) are not contract: the audit
+// must ask whether unconfirmed text was relied on.
+test("audit asks about Observed spec sections", () => {
+  const r = runHook({
+    cwd: tempProject({ withSpecs: true, withIteration: true }),
+    stateDir: tempStateDir(),
+    input: { session_id: "s_observed" },
+  });
+  expect(r.status).toBe(2);
+  expect(r.stderr).toContain("Observed (as-built; unconfirmed)");
+  expect(r.stderr).toContain("mark it Agreed");
+});
+
 // False-block guard: the gate fires once per session, never loops.
 test("exits 0 on second run in same session (marker present)", () => {
   const cwd = tempProject({ withSpecs: true });

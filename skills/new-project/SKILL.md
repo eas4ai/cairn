@@ -1,6 +1,6 @@
 ---
 name: new-project
-description: Guided documentation workflow that puts model and developer on the same page -- scaffolds a complete ara2-style spec set (glossary, keystone overview, ux, numbered domain specs, conventions, iteration contract) through a staged, confirm-back conversation. Use at the start of a new project or to retro-document an existing codebase.
+description: Guided documentation workflow that puts model and developer on the same page -- scaffolds a complete ara2-style spec set (glossary, keystone overview, ux, numbered domain specs, conventions, iteration contract) through a staged, confirm-back conversation. Use at the start of a new project. For a codebase that already exists, use /existing-project instead.
 disable-model-invocation: true
 ---
 
@@ -68,12 +68,14 @@ First, the baseline modification check. Locate DEVELOPMENT_PRACTICES.md
 Note whether BEST_PRACTICES.md exists (sibling package); reference it in
 Stage 6 only if present.
 
-Then orientation: what kind of project (app, CLI, library, service); what
-already exists -- for an existing repo, read code, manifests, and docs
-BEFORE asking anything, then draft from evidence and ask the user to
-correct; what documentation depth is warranted (a weekend tool gets
-00-overview plus one domain spec; a product gets the full set). Confirm the
-calibration.
+Then orientation. First look at the directory: if it already holds a
+codebase (source, manifests, tests), stop here and switch to
+/existing-project, which adopts it from evidence -- this workflow designs
+software that does not exist yet, and running it over existing code
+documents intent nobody specified. Otherwise: what kind of project (app,
+CLI, library, service); what documentation depth is warranted (a weekend
+tool gets 00-overview plus one domain spec; a product gets the full set).
+Confirm the calibration.
 
 ## Stage 1 -- Shared vocabulary -> glossary.md
 

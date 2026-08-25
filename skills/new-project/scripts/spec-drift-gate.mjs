@@ -69,14 +69,14 @@ function auditPrompt(root, projects) {
   const rulesetPath = bestPracticesPath(root);
   const ruleThirteen = rulesetPath
     ? [
-        `4. Rule 13 self-evaluation (${rulesetPath}): you are delivering`,
+        `5. Rule 13 self-evaluation (${rulesetPath}): you are delivering`,
         "   production software -- do not deliver work you know to be",
         "   deficient. Review the session's work against every rule in that",
         "   ruleset and answer honestly: would you make revisions? If yes,",
         "   make them before finishing.",
       ]
     : [
-        "4. Rule 13 self-evaluation: you are delivering production software",
+        "5. Rule 13 self-evaluation: you are delivering production software",
         "   -- do not deliver work you know to be deficient (incomplete,",
         "   unverified, internally inconsistent). Answer honestly: would you",
         "   make revisions? If yes, make them before finishing.",
@@ -90,6 +90,9 @@ function auditPrompt(root, projects) {
     "   silently ship it, never silently discard it.",
     "3. Did the work make any touched spec untrue (update it), and did new",
     "   terms enter the conversation that belong in the glossary (add them)?",
+    "4. Was any spec section still marked Observed (as-built; unconfirmed)",
+    "   relied on as contract? If so, say so: confirm it with the developer",
+    "   and mark it Agreed, or keep that work out of the contract.",
     ...ruleThirteen,
     "Make any needed corrections, then finish. This gate fires once per session.",
   ].join("\n");

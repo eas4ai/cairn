@@ -1,3 +1,5 @@
+![Same Page -- cooperative spec workflow for coding agents](assets/card.jpg)
+
 # Same Page
 
 Cooperative spec workflow for coding agents. Models contain information;

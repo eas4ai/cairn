@@ -1,3 +1,5 @@
+![Same Page -- cooperative spec workflow for coding agents](../assets/card.jpg)
+
 # Same Page -- The Manual
 
 This manual explains how Same Page works and why each part is shaped

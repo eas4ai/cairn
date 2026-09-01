@@ -1,9 +1,16 @@
 # Same Page
 
 Cooperative spec workflow for coding agents. Models contain information;
-developers carry experience -- Same Page levels the two into mutual
-agreement on terms, direction, and goals, recorded in specs that every
-future session inherits.
+developers carry experience. Same Page levels the two into agreement on
+terms, direction, and goals, written into specs that every future session
+inherits and that the tooling holds to.
+
+The loop: agree on vocabulary before anything is specified; write each
+requirement in a controlled language so it says exactly one checkable
+thing; confirm every agreed requirement with the state that would violate
+it; record what the code proves about each requirement, honestly; and
+audit every session against the current scope contract before it ends.
+docs/MANUAL.md explains each step in detail on one worked example.
 
 ## Install
 
@@ -28,44 +35,41 @@ Details and Codex setup: docs/INSTALLATION.md.
 | [existing-project](skills/existing-project/SKILL.md) | Gets an agent up to speed on a codebase that already exists: cited recon report, glossary from the code's own names, observed specs for the work's blast radius (or verification of an existing spec set against the code), documentation gap list, and the session's work prepared as one feature or one defect -- a first contract, or a staged spec through /next-iteration when a contract exists. Observed stays distinct from agreed. User-invoked. |
 | [next-iteration](skills/next-iteration/SKILL.md) | Scope-creep valve: captures new ideas as staged next-iteration specs instead of expanding the current build; negotiates iteration close, confirming a falsifier for each promoted requirement. Model-invocable by design. |
 
-Human-facing guides: docs/new-project.md, docs/existing-project.md,
-docs/next-iteration.md. The tool-neutral process (for agents without
-skills): docs/WORKFLOW.md.
+## What ships with them
 
-## The drift gate
+- **The spec set.** Plain markdown under docs/specs/<project>/: a
+  glossary, a keystone overview, a ux spec, numbered domain specs,
+  conventions, iteration contracts, and the evidence map. Manual,
+  chapter 2.
+- **Same Page Technical English.** The controlled language for
+  requirements: exactly one of MUST, MUST NOT, or MAY per sentence, the
+  actor named, the condition first, permanent identifiers. Manual,
+  chapter 4.
+- **The standard dictionary.** The vocabulary where model priors and
+  developer intent split, identical in every project unless the
+  developer records a ruling on an entry. Manual, chapter 3.
+- **The language check.** skills/new-project/scripts/language-check.mjs
+  reads a spec set, reports every deterministic language finding and
+  every evidence-map inconsistency, and never writes. Manual, chapter 7.
+- **The evidence map.** conformance.md: for each agreed requirement, its
+  coverage, the method that produced the evidence, and the evidence
+  itself, or an honest Uncovered. Manual, chapter 6.
+- **The drift gate.** skills/new-project/scripts/spec-drift-gate.mjs
+  audits each session once at completion against the iteration
+  contract, the specs, the glossary, the language, and the map. Manual,
+  chapter 7.
 
-skills/new-project/scripts/spec-drift-gate.mjs audits each session once at completion, in any
-project with a spec set: did work stay inside the iteration contract, was
-out-of-contract work surfaced and captured, do touched specs and the
-glossary still hold, was any still-Observed spec section relied on as
-contract, did normative text pass the language check and does the
-evidence map still tell the truth, and the rule 13 self-evaluation from the
-best-practices ruleset (referencing the nearest BEST_PRACTICES.md, with
-the rule's own text embedded as fallback). The script ships inside the new-project skill, so
-every install channel carries it: the Claude Code plugin registers it
-automatically, /new-project offers registration on first run for
-skills-CLI installs, and .codex/hooks.json covers Codex. Dependency-free,
-runs under node or bun.
+## Read next
 
-## The language check
-
-Normative spec text is written in Same Page Technical English: one
-obligation per sentence, exactly one of MUST, MUST NOT, or MAY, the
-actor named, the condition first, requirement identifiers where the
-spec declares a prefix. skills/new-project/scripts/language-check.mjs
-is the deterministic half of the check -- it verifies the language,
-the evidence map (conformance.md), which ties every Agreed requirement
-identifier to its coverage, the method that produced the evidence, and
-the evidence itself, or to an honest Uncovered, and the standard
-dictionary: the glossary's working vocabulary is identical in every
-project unless the developer has recorded a ruling on an entry, and
-any change without one is reported. Run it on demand:
-
-    node skills/new-project/scripts/language-check.mjs docs/specs/<project>
-
-It reads, reports, and exits nonzero on findings; it never writes. The
-semantic half (terms used in two senses, misleading referents) is the
-model's job in-session, with every fix confirmed before it lands.
+- docs/MANUAL.md -- how Same Page works, in detail, on one worked
+  example.
+- docs/new-project.md, docs/existing-project.md, docs/next-iteration.md
+  -- one page per skill.
+- docs/WORKFLOW.md -- the process as plain instructions, for agents
+  without a skill system.
+- docs/superpowers/specs/ -- the normative specs: the package design,
+  the language (LANG rules), and the language check and evidence map
+  (CONF rules).
 
 ## Relationship to best-practices-agent-package
 
@@ -76,7 +80,7 @@ works alone.
 
 ## Development
 
-    bun test                             # drift-gate + language-check suites
+    bun test                             # every suite in tests/
     claude plugin validate . --strict    # plugin manifests
     ./scripts/link-skills.sh             # local symlink install
 

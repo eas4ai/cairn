@@ -2,7 +2,8 @@
 
 For agents without a skill system: this is the /new-project and
 /next-iteration process as plain instructions. Agents with skills installed
-follow their SKILL.md; this document states the same contract.
+follow their SKILL.md; this document states the same contract. The
+reasoning behind each step, on a worked example, is in docs/MANUAL.md.
 
 ## Principles
 

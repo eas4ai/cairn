@@ -121,6 +121,10 @@ recorded in .agents/invocation.md and in SKILL.md frontmatter.
   generation session with the developer ruling each one.
 - Every edit to normative spec text is followed by the self-hosting check
   and a "Decisions and revisions" entry in the spec that changed.
+- docs/MANUAL.md explains; the specs legislate. The manual cites LANG and
+  CONF identifiers, and tests/manual-identifiers.test.mjs fails if a cited
+  identifier is undefined or withdrawn, so a change to a rule's identifier
+  or meaning is followed by a manual update in the same change.
 
 ## Sync rules (three-file rule)
 

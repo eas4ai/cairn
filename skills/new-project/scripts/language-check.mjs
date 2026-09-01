@@ -18,6 +18,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------- lexicon
 
@@ -830,6 +831,122 @@ function gitRootFor(p) {
 
 // ---------------------------------------------------------------- main
 
+// ---------------------------------------------------------------- standard dictionary
+
+// CONF-014: the glossary's Working vocabulary section is the standard
+// dictionary, shipped in the glossary template beside this script and
+// identical in every project by default. A project changes a standard
+// entry only by a recorded ruling: a "_Ruling_:" line inside the entry.
+// An entry that differs without one is drift and is reported; an entry
+// with one is listed as information, so the deviation stays visible.
+const STANDARD_HEADING = "## Working vocabulary";
+const RESTORE_HINT =
+  "Restore the entry from the shipped glossary template, or record the project's ruling on it with a _Ruling_: line (date -- reason).";
+
+function stripTrailingBlank(lines) {
+  const out = [...lines];
+  while (out.length && out[out.length - 1] === "") out.pop();
+  return out;
+}
+
+function standardSection(text) {
+  const lines = text.split("\n").map((l) => l.replace(/\s+$/, ""));
+  const start = lines.indexOf(STANDARD_HEADING);
+  if (start < 0) return null;
+  let end = lines.findIndex((l, i) => i > start && /^## /.test(l));
+  if (end < 0) end = lines.length;
+  return { start, lines: stripTrailingBlank(lines.slice(start, end)) };
+}
+
+// Entries: a "**Term**:" line and every line up to the next blank line.
+// The _Ruling_: line is kept apart from the body so a ruled entry still
+// compares on its wording.
+function parseEntries(section) {
+  const entries = new Map();
+  let cur = null;
+  section.lines.forEach((raw, i) => {
+    const term = /^\*\*(.+?)\*\*\s*:/.exec(raw);
+    if (term) {
+      cur = { term: term[1].trim(), body: [raw], ruling: null, line: section.start + i + 1 };
+      entries.set(cur.term.toLowerCase(), cur);
+      return;
+    }
+    if (!cur) return;
+    if (raw === "") {
+      cur = null;
+      return;
+    }
+    const ruling = /^_Ruling_\s*:\s*(.+)$/.exec(raw);
+    if (ruling) cur.ruling = ruling[1].trim();
+    else cur.body.push(raw);
+  });
+  return entries;
+}
+
+function checkStandardDictionary(report, glossaryPath, rel) {
+  const templatePath = join(dirname(fileURLToPath(import.meta.url)), "..", "templates", "glossary.md");
+  if (!existsSync(templatePath)) {
+    report.info("glossary template not found beside the script: standard-dictionary check (CONF-014) skipped.");
+    return;
+  }
+  const shipped = standardSection(readFileSync(templatePath, "utf8"));
+  if (!shipped) {
+    report.info("shipped glossary template has no Working vocabulary section: standard-dictionary check (CONF-014) skipped.");
+    return;
+  }
+  const local = standardSection(readFileSync(glossaryPath, "utf8"));
+  if (!local) {
+    report.add(
+      rel,
+      null,
+      "STANDARD DICTIONARY MISSING",
+      "Glossary has no Working vocabulary section. (LANG-011, CONF-014)",
+      "Copy the section verbatim from the shipped glossary template; project terms go under Project terms."
+    );
+    return;
+  }
+  const shippedEntries = parseEntries(shipped);
+  const localEntries = parseEntries(local);
+  for (const [key, s] of shippedEntries) {
+    const l = localEntries.get(key);
+    if (!l) {
+      report.add(
+        rel,
+        null,
+        `STANDARD DICTIONARY DRIFT: ${s.term}`,
+        "Standard dictionary entry is missing. (LANG-011, CONF-014)",
+        RESTORE_HINT
+      );
+      continue;
+    }
+    if (s.body.join("\n") === l.body.join("\n")) continue;
+    if (l.ruling) {
+      report.info(`standard term ruled for this project: ${l.term} -- ${l.ruling}`);
+      continue;
+    }
+    let j = 0;
+    while (j < s.body.length && j < l.body.length && s.body[j] === l.body[j]) j++;
+    const context = l.body[j] ?? `(missing: ${s.body[j]})`;
+    report.add(
+      `${rel}:${l.line + Math.min(j, l.body.length - 1)}`,
+      context,
+      `STANDARD DICTIONARY DRIFT: ${l.term}`,
+      "Entry differs from the shipped standard dictionary and carries no ruling. (LANG-011, CONF-014)",
+      RESTORE_HINT
+    );
+  }
+  for (const [key, l] of localEntries) {
+    if (shippedEntries.has(key)) continue;
+    report.add(
+      `${rel}:${l.line}`,
+      l.body[0],
+      `NOT A STANDARD TERM: ${l.term}`,
+      "Working vocabulary holds a term the shipped standard dictionary does not define. (LANG-011, CONF-014)",
+      "Move the entry under Project terms."
+    );
+  }
+}
+
 function main() {
   const args = process.argv.slice(2).filter((a) => a !== "--");
   let targets = args;
@@ -850,8 +967,10 @@ function main() {
   const specDirs = [...new Set(files.map((f) => dirname(f)))];
   let glossary = null;
   const glossaryPath = specDirs.map((d) => join(d, "glossary.md")).find((p) => existsSync(p));
-  if (glossaryPath) glossary = parseGlossary(glossaryPath);
-  else report.info("no glossary.md in scanned set: Avoid-term check (CONF-006) skipped.");
+  if (glossaryPath) {
+    glossary = parseGlossary(glossaryPath);
+    checkStandardDictionary(report, glossaryPath, relative(process.cwd(), glossaryPath) || glossaryPath);
+  } else report.info("no glossary.md in scanned set: Avoid-term check (CONF-006) skipped.");
 
   const corpus = { files: [], glossary };
   for (const f of files) {

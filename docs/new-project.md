@@ -43,4 +43,6 @@ and the evidence itself.
 
 Sessions stop re-litigating settled decisions; new sessions load the
 working agreement and act consistently; disagreements about what a term
-means end with a glossary entry instead of a rewrite.
+means end with a glossary entry instead of a rewrite. The standard
+dictionary reads the same in every project you run this in, and where
+you ruled a term differently, the ruling sits on the entry.

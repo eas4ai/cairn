@@ -37,7 +37,9 @@ question is a comprehension test as much as a record.
   (onboard once if absent or default -- see the development-practices
   template); read existing code and docs before asking anything; calibrate
   documentation depth with the developer.
-- Stage 1, vocabulary: seed glossary.md; define project terms together.
+- Stage 1, vocabulary: seed glossary.md; agree to the standard dictionary
+  (a project changes a standard entry only by a recorded ruling on it);
+  define project terms together.
 - Stage 2, direction: 00-overview.md first pass -- purpose, principles,
   supported and excluded scope.
 - Stage 3, interaction: ux.md -- interaction model, journeys, surface map,
@@ -77,7 +79,8 @@ is not opened until recon and verification are done.
 - Stage 1, vocabulary from the code: with no glossary, draft terms from
   the identifiers that exist; with one, check its terms against the code
   and draft only renames, missing terms, and collisions. The code's names
-  win; the developer corrects.
+  win; the developer corrects. Either way the standard dictionary is
+  present and agreed, and changed only by a recorded ruling on the entry.
 - Stage 2, observed specs or verification: with no spec set,
   00-overview.md and one domain spec per domain in the radius, written in
   the designed shape -- Same Page Technical English, identified

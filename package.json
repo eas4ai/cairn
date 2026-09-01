@@ -1,6 +1,6 @@
 {
   "name": "same-page",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "Cooperative spec workflow skills: /new-project, /existing-project, and /next-iteration put model and developer on the same page. A drift gate and a language check keep the specs true.",
   "repository": {

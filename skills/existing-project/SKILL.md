@@ -140,7 +140,16 @@ already exist: type and struct names, table names, route names, module
 and package names, configuration keys. The code's name for a thing wins
 over the synonym you would have chosen.
 
-Path B: the glossary exists and wins. Check its terms against the code:
+Path B: the glossary exists and wins for the project's own terms. When it
+lacks the Working vocabulary section, add that section verbatim from the
+template and present it for agreement: the standard dictionary is
+identical in every project by default, a project changes an entry only
+by a recorded ruling (a _Ruling_: line on the entry, date -- reason), and
+the language check reports any change without one. If a standard term is
+ambiguous in this codebase -- it collides with a name the code already
+uses, or its definition does not fit -- say so before proceeding, and
+record the resolution under Flagged ambiguities. Check the glossary's
+terms against the code:
 a term whose code identifier has been renamed, a code concept inside the
 blast radius with no glossary entry, a term the docs and the code name
 differently. Draft entries or revisions for those only.

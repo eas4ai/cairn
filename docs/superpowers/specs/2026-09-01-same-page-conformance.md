@@ -137,6 +137,18 @@ subsections, plus any section marked with the "Normative." line.
 code spans, and fenced code blocks as mention, not use (LANG-062).
 The script MUST NOT report findings from mentions.
 
+[CONF-014] When a "Working vocabulary" entry in `glossary.md` differs
+from the entry shipped in the glossary template beside the script and
+carries no `_Ruling_:` line, the script MUST report the difference.
+When the section or a shipped entry is missing, or when the section
+holds an entry the template does not, the script MUST report it. This
+enforces LANG-011 across projects: the standard dictionary gives every
+project one sense of each term by default, and a project changes that
+sense only by a ruling the developer has recorded on the entry. When
+an entry carries a `_Ruling_:` line, the script MUST list the ruling
+as information rather than report it. When the template is not beside
+the script, the script MUST say so rather than pass silently.
+
 ### Pass two -- judgment (the model, in-session)
 
 The findings a script cannot make honestly: a term used in two senses
@@ -334,10 +346,14 @@ repo's sync rules:
 
 ## Acceptance criteria
 
-- Every deterministic check (CONF-001 through CONF-013) cites the
+- Every deterministic check (CONF-001 through CONF-014) cites the
   LANG rule it enforces, and running the script on this spec and the
   language spec together reports zero findings: the interlock closes
   and both specs stand under their own check.
+- A glossary whose "Working vocabulary" entry differs from the shipped
+  template without a ruling, or lacks the section or an entry, is
+  reported; the shipped section passes, and a ruled entry passes with
+  the ruling listed.
 - The script is dependency-free, runs under Node and Bun unchanged,
   never writes, and its test suite covers the two failure modes of
   any gate: a false pass (slop flows through) and a false block
@@ -359,6 +375,21 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-01 -- CONF-014: the glossary's Working vocabulary entries
+  are compared with the shipped template. The language spec's decision
+  to ship the standard dictionary inside the glossary template stands;
+  what was missing was enforcement, since every project's copy was
+  editable and nothing compared it, and the template's own intro
+  invited revising entries in place. The developer agrees to the
+  standard terms at Stage 1 and may rule a term differently for the
+  project; the ruling lives on the entry as a `_Ruling_:` line, so an
+  agreed deviation is visible to the check and an unrecorded one is
+  drift. The model states an ambiguous standard term before building
+  on it, and the resolution is recorded under Flagged ambiguities.
+  Alternatives rejected: a separate frozen dictionary file (a second
+  terminology surface, when the comparison gives the same guarantee
+  with one); a dictionary no project may change (forces the standard
+  sense onto a project whose domain already owns the word).
 - 2026-09-01 -- A `glossary.md` joins the package's own specs so the
   self-hosting run of the check exercises CONF-006. Until then the
   Avoid-term check was skipped on the very specs that define it, and

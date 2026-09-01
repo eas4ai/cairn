@@ -51,7 +51,11 @@ writes.
    open-ended, one question per message.
 2. Confirm understanding in your own words before writing any artifact.
    Parroting hides misunderstanding; restating exposes it.
-3. New terms get glossary entries the moment they emerge, at any stage.
+3. New terms get glossary entries the moment they emerge, at any stage,
+   under Project terms. The Working vocabulary section is the standard
+   dictionary, identical in every project by default; a project changes
+   an entry only by a recorded ruling (a _Ruling_: line on the entry),
+   and the language check reports any change without one.
 4. A stage never closes on unconfirmed understanding.
 5. Depth is calibrated in Stage 0, never assumed.
 6. Normative spec text is written in Same Page Technical English: one
@@ -111,7 +115,15 @@ the directory; confirm the location with the user). The default docs/specs/
 path is what the drift gate reads; if the developer chooses a different
 location, tell them the gate needs SAME_PAGE_SPECS_DIR set to that path in
 its hook environment, and record the choice in the working agreement. The
-working vocabulary arrives pre-seeded. Then name the project's own terms:
+working vocabulary arrives pre-seeded: it is the standard dictionary,
+and the developer agrees to it before anything is built on it. Present
+it as a whole and ask which terms they would rule differently for this
+project; record each ruling as a _Ruling_: line on that entry (date --
+reason). If a standard term is ambiguous in this project -- it collides
+with a domain term, or its definition does not fit -- say so before
+proceeding, and record the resolution under Flagged ambiguities. The
+language check reports any change to a standard entry that carries no
+ruling. Then name the project's own terms:
 propose the 5-15 terms you expect to matter, define each in the project's
 sense TOGETHER, one at a time, and record them in the exemplar format (bold
 term, tight definition, Avoid line). Terms enter only after confirmed

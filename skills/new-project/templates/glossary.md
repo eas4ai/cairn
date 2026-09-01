@@ -2,14 +2,21 @@
 
 Canonical language for this project. Definitions are written in this
 project's sense; when a term here conflicts with a model's prior, this file
-wins. Entries are revised in place as understanding deepens -- never left
-stale. A term enters only after both parties have confirmed the meaning.
+wins. The Working vocabulary section is the standard dictionary shipped by
+Same Page: identical in every project by default, and agreed to by the
+developer at Stage 1. A project changes a standard entry only by a
+recorded ruling, and the language check reports any change without one.
+Project entries below it are revised in place as understanding deepens --
+never left stale. A term enters only after both parties have confirmed
+the meaning.
 
 Entry format: bold term, tight one-or-two-sentence definition of what the
 term IS, then an Avoid line listing rejected synonyms. An Avoid term with
 a parenthetical qualifier is banned only under that condition; an
 unqualified Avoid term is banned outright in normative text and the
-language check enforces it.
+language check enforces it. A ruling on a standard entry is one more line
+inside that entry, date then reason, for example
+"_Ruling_: 2026-09-01 -- verification here means the developer ran it".
 
 ## Working vocabulary
 

@@ -73,7 +73,10 @@ headings Capabilities, Acceptance criteria, Cross-cutting requirements,
 In, Out, Definition of done, Expected behavior, plus any section whose
 first line is "Normative.". Backticks, quotes, and fences are mentions,
 not uses, so a rule can name `MUST` without stating an obligation. It
-reads glossary.md `_Avoid_:` lines to flag banned terms, uses git history
+reads glossary.md `_Avoid_:` lines to flag banned terms, compares the
+glossary's Working vocabulary entries with the template beside the script
+(the standard dictionary: identical in every project unless an entry
+carries a developer's `_Ruling_:` line), uses git history
 to detect removed identifiers, and validates conformance.md, the evidence
 map: four columns Requirement | Coverage | Method | Evidence, one meaning
 each, with the Asserted/inspected and Uncovered/"-" locks (CONF-045..049).

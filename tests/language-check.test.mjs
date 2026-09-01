@@ -22,17 +22,28 @@ function specDir(files) {
   return dir;
 }
 
+const TEMPLATES = new URL("../skills/new-project/templates", import.meta.url).pathname;
+
+// The Working vocabulary section is the standard dictionary and must be
+// verbatim in every glossary (CONF-014), so fixtures take it from the
+// shipped template and put their own terms under Project terms.
+function standardSection(text) {
+  const lines = text.split("\n");
+  const start = lines.indexOf("## Working vocabulary");
+  let end = lines.findIndex((l, i) => i > start && l.startsWith("## "));
+  if (end < 0) end = lines.length;
+  return lines.slice(start, end).join("\n");
+}
+const STANDARD = standardSection(readFileSync(join(TEMPLATES, "glossary.md"), "utf8"));
+
 const GLOSSARY = `# Glossary
 
-## Working vocabulary
+${STANDARD}
+## Project terms
 
 **Authentication service**:
 The component that issues and validates tokens.
 _Avoid_: service
-
-**Defer**:
-A developer verdict that moves agreed work out of scope.
-_Avoid_: out of scope (as a model verdict), later
 `;
 
 const CLEAN_SPEC = `# Demo -- 01 Broker
@@ -65,6 +76,10 @@ The broker MAY cache a manifest for the duration of a lease.
 - When a plugin sends ten invalid requests, the broker MUST reject
   all ten.
 `;
+
+// The map every CLEAN_SPEC fixture needs, so a CONF-040 finding never
+// masquerades as the finding under test.
+const BROKER_MAP = `# Evidence map\n\n## BROKER\n\n| Requirement | Coverage | Method | Evidence |\n|---|---|---|---|\n| BROKER-001 | Uncovered | - | |\n| BROKER-002 | Uncovered | - | |\n| BROKER-003 | Uncovered | - | |\n`;
 
 // ---------------------------------------------------------------- clean
 
@@ -439,5 +454,68 @@ test("a spec set scaffolded from the shipped templates passes", () => {
   );
   const r = run([dir]);
   expect(r.stdout).toContain("no findings");
+  expect(r.status).toBe(0);
+});
+
+// ---------------------------------------------------------------- standard dictionary
+
+// CONF-014: the Working vocabulary section is the standard dictionary,
+// identical in every project by default; a project changes an entry only
+// by a recorded _Ruling_: line. False-pass guards: an unruled edit, a
+// missing entry, a missing section, and a foreign entry are reported.
+// False-block guards: the verbatim section passes (every fixture above
+// is built from it), and a ruled edit passes with an INFO line.
+test("an edited standard-dictionary entry without a ruling is reported (CONF-014)", () => {
+  const edited = GLOSSARY.replace("Implemented and verified.", "Implemented, tests optional.");
+  expect(edited).not.toBe(GLOSSARY);
+  const dir = specDir({ "glossary.md": edited, "01-broker.md": CLEAN_SPEC });
+  const r = run([dir]);
+  expect(r.status).toBe(1);
+  expect(r.stdout).toContain("STANDARD DICTIONARY DRIFT: Done");
+  expect(r.stdout).toContain("glossary.md:");
+});
+
+test("an edited standard-dictionary entry with a ruling passes and is listed (CONF-014)", () => {
+  const ruled = GLOSSARY.replace(
+    "Implemented and verified. Code without its verification is not done.\n_Avoid_: mostly done, done pending tests\n",
+    "Implemented and verified by the developer. Code without its verification is not done.\n_Avoid_: mostly done, done pending tests\n_Ruling_: 2026-09-01 -- verification here means the developer ran it\n"
+  );
+  expect(ruled).not.toBe(GLOSSARY);
+  const dir = specDir({ "glossary.md": ruled, "01-broker.md": CLEAN_SPEC, "conformance.md": BROKER_MAP });
+  const r = run([dir]);
+  expect(r.stdout).toContain("no findings");
+  expect(r.stdout).toContain("standard term ruled for this project: Done");
+  expect(r.status).toBe(0);
+});
+
+test("a missing standard entry and a foreign entry in the section are reported (CONF-014)", () => {
+  const withoutDrift = GLOSSARY.replace(/\*\*Drift\*\*:\n[^]*?\n\n/, "");
+  const foreign = withoutDrift.replace("## Project terms", "**Widget**:\nA thing.\n_Avoid_: gadget\n\n## Project terms");
+  const dir = specDir({ "glossary.md": foreign, "01-broker.md": CLEAN_SPEC });
+  const r = run([dir]);
+  expect(r.status).toBe(1);
+  expect(r.stdout).toContain("STANDARD DICTIONARY DRIFT: Drift");
+  expect(r.stdout).toContain("NOT A STANDARD TERM: Widget");
+});
+
+test("a glossary without the Working vocabulary section is reported (CONF-014)", () => {
+  const dir = specDir({
+    "glossary.md": "# Glossary\n\n## Project terms\n\n**Thing**:\nA thing.\n_Avoid_: stuff\n",
+    "01-broker.md": CLEAN_SPEC,
+  });
+  const r = run([dir]);
+  expect(r.status).toBe(1);
+  expect(r.stdout).toContain("STANDARD DICTIONARY MISSING");
+});
+
+// A script copied without its templates cannot compare; it says so (INFO)
+// and does not fail the run.
+test("a script without its template beside it says so and does not fail (CONF-014)", () => {
+  const lone = mkdtempSync(join(tmpdir(), "same-page-lone-"));
+  mkdirSync(join(lone, "scripts"));
+  writeFileSync(join(lone, "scripts", "language-check.mjs"), readFileSync(CHECK, "utf8"));
+  const dir = specDir({ "glossary.md": GLOSSARY, "01-broker.md": CLEAN_SPEC, "conformance.md": BROKER_MAP });
+  const r = spawnSync("node", [join(lone, "scripts", "language-check.mjs"), dir], { cwd: dir, encoding: "utf8" });
+  expect(r.stdout).toContain("CONF-014) skipped");
   expect(r.status).toBe(0);
 });

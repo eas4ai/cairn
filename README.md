@@ -53,11 +53,13 @@ Normative spec text is written in Same Page Technical English: one
 obligation per sentence, exactly one of MUST, MUST NOT, or MAY, the
 actor named, the condition first, requirement identifiers where the
 spec declares a prefix. skills/new-project/scripts/language-check.mjs
-is the deterministic half of the check -- it verifies the language
-plus the evidence map (conformance.md), which ties every Agreed
-requirement identifier to its coverage, the method that produced the
-evidence, and the evidence itself, or to an honest Uncovered. Run it
-on demand:
+is the deterministic half of the check -- it verifies the language,
+the evidence map (conformance.md), which ties every Agreed requirement
+identifier to its coverage, the method that produced the evidence, and
+the evidence itself, or to an honest Uncovered, and the standard
+dictionary: the glossary's working vocabulary is identical in every
+project unless the developer has recorded a ruling on an entry, and
+any change without one is reported. Run it on demand:
 
     node skills/new-project/scripts/language-check.mjs docs/specs/<project>
 

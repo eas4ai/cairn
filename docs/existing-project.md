@@ -52,7 +52,7 @@ code should do.
 Q: How is this different from /new-project?
 A: /new-project designs software that does not exist. /existing-project
 starts from evidence and asks you to correct its reading. Same spec set,
-same glossary, same drift gate afterwards.
+same standard dictionary, same drift gate afterwards.
 
 ## It's working if
 

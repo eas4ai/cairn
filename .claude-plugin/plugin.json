@@ -1,6 +1,6 @@
 {
   "name": "same-page",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Cooperative spec workflow: /new-project scaffolds a complete spec set through confirmed understanding; /existing-project adopts an agent onto an existing codebase from evidence; /next-iteration routes new ideas to the next iteration; a drift gate audits sessions against the contract.",
   "author": { "name": "Shawn" },
   "skills": ["./skills/new-project", "./skills/existing-project", "./skills/next-iteration"]

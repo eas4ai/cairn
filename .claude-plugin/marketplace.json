@@ -1,12 +1,12 @@
 {
   "name": "same-page",
   "owner": { "name": "Shawn" },
-  "description": "Cooperative spec workflow skills and drift gate, packaged as a Claude Code plugin.",
+  "description": "Cooperative spec workflow skills, drift gate, and language check, packaged as a Claude Code plugin.",
   "plugins": [
     {
       "name": "same-page",
       "source": "./",
-      "description": "Cooperative spec workflow skills and drift gate."
+      "description": "Cooperative spec workflow skills, drift gate, and language check."
     }
   ]
 }

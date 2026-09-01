@@ -359,6 +359,11 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-01 -- A `glossary.md` joins the package's own specs so the
+  self-hosting run of the check exercises CONF-006. Until then the
+  Avoid-term check was skipped on the very specs that define it, and
+  the shipped template's `_Avoid_: conformance map` entry protected
+  consumer projects only. The suite now fails if that skip returns.
 - 2026-09-01 -- Remediation against the round-five Feature Spec
   consensus, three items. (a) The map's single Status column splits
   into Coverage and Method (CONF-041, CONF-045 through CONF-049):

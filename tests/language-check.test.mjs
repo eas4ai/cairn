@@ -402,9 +402,12 @@ test("a three-column map row is reported (CONF-041/045)", () => {
 // ---------------------------------------------------------------- self
 
 // The interlock: both design specs pass their own checker.
+// Self-hosting with teeth: the package's own glossary supplies the Avoid
+// terms, so CONF-006 runs here instead of being skipped.
 test("the language and evidence-map specs pass their own check", () => {
   const r = run([OWN_SPECS]);
   expect(r.stdout).toContain("no findings");
+  expect(r.stdout).not.toContain("CONF-006) skipped");
   expect(r.status).toBe(0);
 });
 

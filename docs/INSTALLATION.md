@@ -16,20 +16,22 @@ Global install (available in every project):
 ## Codex (drift gate)
 
 Copy .codex/hooks.json into the target repo, or merge its Stop entry into
-an existing one, and vendor skills/new-project/scripts/spec-drift-gate.mjs alongside.
+an existing one, and vendor the gate script at exactly
+skills/new-project/scripts/spec-drift-gate.mjs under the repository root.
+The hook resolves that path from the git top level and exits silently
+when the file is absent, so a partial setup never blocks a session.
 
 ## What lands where
 
 The skills CLI installs all three skills into your agent's native skill
-directory (the spec-set templates and the drift-gate script ride inside
-the new-project skill; existing-project carries its own recon and defect
-templates); -g targets the user-level directory. On its first run,
-/new-project or /existing-project offers to register the gate for your
-project. The
-Claude Code plugin registers the gate automatically at install. For
-Codex, the gate is registered via .codex/hooks.json.
-Agents with neither hooks nor skills follow docs/WORKFLOW.md in this
-package.
+directory (the spec-set templates, the drift-gate script, and the
+language check ride inside the new-project skill; existing-project
+carries its own recon and defect templates); -g targets the user-level
+directory. On its first run, /new-project or /existing-project offers
+to register the gate for your project. The Claude Code plugin registers
+the gate automatically at install. For Codex, the gate is registered
+via .codex/hooks.json. Agents with neither hooks nor skills follow
+docs/WORKFLOW.md in this package.
 
 ## Local development install
 

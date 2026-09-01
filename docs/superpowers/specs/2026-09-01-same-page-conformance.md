@@ -375,6 +375,11 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-01 -- Developer confirmed the three judgment calls shipped
+  in 0.2.0 without a ruling at the time: the Asserted/inspected lock
+  in both directions (CONF-046, CONF-047), the eight-kind method
+  vocabulary enforced before the engine exists (CONF-045), and this
+  spec's retitle. All three stand as written.
 - 2026-09-01 -- CONF-014: the glossary's Working vocabulary entries
   are compared with the shipped template. The language spec's decision
   to ship the standard dictionary inside the glossary template stands;

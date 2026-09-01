@@ -6,7 +6,10 @@ wins. Entries are revised in place as understanding deepens -- never left
 stale. A term enters only after both parties have confirmed the meaning.
 
 Entry format: bold term, tight one-or-two-sentence definition of what the
-term IS, then an Avoid line listing rejected synonyms.
+term IS, then an Avoid line listing rejected synonyms. An Avoid term with
+a parenthetical qualifier is banned only under that condition; an
+unqualified Avoid term is banned outright in normative text and the
+language check enforces it.
 
 ## Working vocabulary
 
@@ -34,7 +37,7 @@ _Avoid_: rewrite (unless it truly is one), cleanup (when behavior changes)
 
 **Spec**:
 The agreed contract for a domain. Normative, not advisory.
-_Avoid_: notes, suggestions
+_Avoid_: notes (as a name for a spec), suggestions (as a name for a spec)
 
 **Iteration**:
 The current scope contract (iterations/NNN.md): what ships now, what
@@ -55,7 +58,80 @@ _Avoid_: documented (says nothing about confirmation), as designed
 Spec text the developer has confirmed describes both what the system does
 and what it should do. Only Agreed sections enter an iteration contract.
 _Avoid_: approved (implies a process this methodology does not have),
-final
+final (as a section status)
+
+**Requirement**:
+A single identified normative statement. One sentence, one obligation,
+one identifier.
+_Avoid_: rule (reserved for language rules), constraint (unless it is
+one), feature (a feature contains requirements)
+
+**State**:
+The stored condition of a thing at a moment, enumerable and testable.
+_Avoid_: status (when state is meant)
+
+**Status**:
+A reported summary of state for a reader. A status is derived; a state
+is stored.
+_Avoid_: state (when status is meant)
+
+**Capability**:
+Something the system can do, spec'd as a set of requirements under a
+domain.
+_Avoid_: functionality, feature set
+
+**Dependency**:
+A thing that must exist or hold before another thing works, named
+explicitly.
+_Avoid_: prerequisite, assumption (an assumption is unverified)
+
+**Interface**:
+The agreed surface between two components: operations, inputs,
+outputs, errors.
+_Avoid_: API (when the surface is not an API), contract (reserved for
+iteration contracts)
+
+**Defect**:
+A violation of an Agreed requirement, recorded in
+defects/<slug>.md.
+_Avoid_: bug (colloquial), issue (tracker artifact)
+
+**Verify**:
+To confirm by executing a check -- a test, a lint, a measurement.
+Reading is review, not verification.
+_Avoid_: validate (unless input validation), check (as a verb for
+reading)
+
+**Reject**:
+To refuse an input or request with an observable error result. Silent
+dropping is not rejection.
+_Avoid_: ignore (when rejection is meant), discard (when rejection is
+meant)
+
+**Falsifier**:
+The observable state that would violate a requirement, named by the
+model and confirmed by the developer at the moment the requirement
+becomes Agreed. A requirement without a confirmed falsifier has been
+written but not understood.
+_Avoid_: failure case, negative test (a test is one way to address a
+falsifier, not the falsifier itself)
+
+**Evidence map**:
+The committed claim register (`conformance.md`) tying each Agreed
+requirement identifier to its coverage, the method that produced its
+evidence, and the cited evidence.
+_Avoid_: conformance map
+
+**Coverage**:
+Whether cited evidence addresses a requirement's falsifier: Covered,
+Asserted, or Uncovered. Coverage never names the mechanism.
+_Avoid_: status (when coverage is meant)
+
+**Method**:
+The mechanism that produced a piece of evidence: formal, model,
+property, integration, test, static, inspected, or manual. The list
+is not a rank.
+_Avoid_: evidence level, confidence
 
 ## Project terms
 

@@ -13,6 +13,24 @@ never silently resolved; understanding is confirmed in the model's own
 words before an artifact is written; ambiguous terms are defined in the
 project's glossary the moment they surface; no stage closes unconfirmed.
 
+Normative spec text is written in Same Page Technical English: one
+obligation per sentence, exactly one of "MUST", "MUST NOT", or "MAY",
+the actor named, the condition first, no vague qualifiers, requirement
+identifiers ([PREFIX-NNN]) where the spec declares a prefix. A
+deterministic language check (in the new-project skill,
+scripts/language-check.mjs) verifies the language and the evidence
+map -- conformance.md, which ties every Agreed identifier to its
+coverage, the method that produced its evidence, and the cited
+evidence itself, or to an honest Uncovered. The check runs before
+any stage that wrote normative text closes; its findings resolve
+through the confirm-back loop, never by silent rewrite.
+
+Agreement carries a falsifier. Wherever a requirement becomes Agreed
+-- a stage close, a confirmed observed section, a promotion out of
+iterations/next/ -- the model asks what observable state would
+violate it, states its own reading, and the developer confirms. The
+question is a comprehension test as much as a record.
+
 ## Creating a project's spec set
 
 - Stage 0, baseline and orientation: check DEVELOPMENT_PRACTICES.md
@@ -25,12 +43,15 @@ project's glossary the moment they surface; no stage closes unconfirmed.
 - Stage 3, interaction: ux.md -- interaction model, journeys, surface map,
   decision points, error and recovery flows, platform divergences.
 - Stage 4, domains: partition features into bounded domains; write each
-  NN-<domain>.md with acceptance criteria per feature.
+  NN-<domain>.md with identified SPTE requirements and acceptance
+  criteria per feature; run the language check before the stage closes.
 - Stage 5, technical shape: complete the overview (architecture,
   cross-cutting requirements, spec map, revision policy, completion
   criteria); write conventions.md; vendor upstream reference docs by
   default (declinable, logged).
-- Stage 6, contract: iterations/001.md (in, out, definition of done); write
+- Stage 6, contract: iterations/001.md (in, out, definition of done);
+  scaffold the evidence map, conformance.md, with every requirement
+  identifier Uncovered; write
   the working agreement block into CLAUDE.md or AGENTS.md.
 
 ## Adopting an existing codebase
@@ -59,12 +80,16 @@ is not opened until recon and verification are done.
   win; the developer corrects.
 - Stage 2, observed specs or verification: with no spec set,
   00-overview.md and one domain spec per domain in the radius, written in
-  the designed shape but marked "Status: Observed (as-built;
+  the designed shape -- Same Page Technical English, identified
+  requirements, the language check run as written -- but marked
+  "Status: Observed (as-built;
   unconfirmed)". With one, each spec section in the radius is reported as
   holds, drifted (raised with both sides cited; the developer rules
   whether the spec or the code is wrong), still observed, or missing
   (written as observed). The developer confirms observed sections one by
-  one; confirmed sections become "Agreed: date". When the developer says
+  one; confirmed sections become "Agreed: date", their falsifiers are
+  confirmed at that moment, and their identifiers enter the evidence
+  map, conformance.md, Uncovered until evidence is cited. When the developer says
   the code is wrong, the observed text stays as the record of what is and
   the intent becomes a defect record or a staged spec -- inferred intent
   is never written as agreed.

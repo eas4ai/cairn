@@ -32,6 +32,13 @@ is registered:
   "Stop": [{"hooks": [{"type": "command", "command":
   "node \"SKILL_DIR/scripts/spec-drift-gate.mjs\"", "timeout": 15}]}]}}
 
+This skill also ships the language check at scripts/language-check.mjs
+-- pass one of the deterministic check. It is not a hook; run it on
+demand against the spec directory (node SKILL_DIR/scripts/
+language-check.mjs docs/specs/<project-name>) at the points the stages
+name below. It reads, reports, and exits nonzero on findings; it never
+writes.
+
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in
   the working agreement at Stage 6: the workflow functions unassisted, the
@@ -47,6 +54,23 @@ is registered:
 3. New terms get glossary entries the moment they emerge, at any stage.
 4. A stage never closes on unconfirmed understanding.
 5. Depth is calibrated in Stage 0, never assumed.
+6. Normative spec text is written in Same Page Technical English: one
+   obligation per sentence, exactly one of "MUST", "MUST NOT", or
+   "MAY", the actor named, the condition first, requirement
+   identifiers where the spec declares a prefix. Before any stage that
+   wrote or revised normative text closes, run the language check;
+   findings resolve through the confirm-back loop -- propose the
+   rewrite, never apply it silently.
+7. Every requirement confirmed Agreed carries a confirmed falsifier.
+   When the developer confirms a MUST or MUST NOT requirement, ask:
+   "What observable state would violate this agreed requirement?"
+   State the proposed falsifier in your own words and have the
+   developer confirm it; the question doubles as a comprehension
+   test, so a wrong guess is the point of asking. A permission-only
+   MAY requirement has no falsifier, because permitted behavior is
+   not itself obligatory -- when a limit on that behavior matters,
+   write the limit as its own MUST or MUST NOT requirement with its
+   own falsifier.
 
 ## Stage 0 -- Baseline and orientation
 
@@ -118,7 +142,12 @@ through the confirm-back loop. Features carry their acceptance criteria.
 Health rules: a spec outgrowing a single coherent read means split the
 domain; a cross-domain feature lives in its primary domain and is
 cross-referenced from the other, ux.md holding the map; small projects use
-fewer numbers, same shape.
+fewer numbers, same shape. Capabilities and acceptance criteria are
+normative text: identified SPTE requirements as the domain template
+shows. As each requirement is confirmed, ask the falsifier question
+(standing rule 7) and record the confirmed falsifier with the
+requirement. Run the language check on the spec directory before this
+stage closes.
 
 ## Stage 5 -- Technical shape -> overview completed + conventions.md
 
@@ -135,6 +164,13 @@ the overview's Decisions and revisions.
 
 From templates/iteration.md: negotiate which domain specs (or sections) are
 IN iteration one, the explicit OUT list, and the definition of done. Then
+scaffold the evidence map, docs/specs/<project-name>/conformance.md,
+from templates/conformance.md: one table per prefix, one row per
+requirement identifier, every row Uncovered with method "-" -- the
+honest starting claim for a project with no code yet. Coverage and
+method are separate columns; neither is read out of the other. Run the
+language check once more over the whole spec set; it verifies the
+map's integrity along with the language. Then
 write the working agreement block (templates/working-agreement.md, filled
 with real paths, the repo layout table, and verification commands) into the
 project's CLAUDE.md or AGENTS.md -- create the file if absent, append the

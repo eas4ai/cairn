@@ -94,6 +94,11 @@ function auditPrompt(root, projects) {
     "   relied on as contract? If so, say so: confirm it with the developer",
     "   and mark it Agreed, or keep that work out of the contract.",
     ...ruleThirteen,
+    "6. Language and conformance: did normative spec text written or",
+    "   revised this session pass the language check",
+    "   (scripts/language-check.mjs, beside this gate), and does",
+    "   conformance.md still tell the truth for the requirements this",
+    "   session touched?",
     "Make any needed corrections, then finish. This gate fires once per session.",
   ].join("\n");
 }

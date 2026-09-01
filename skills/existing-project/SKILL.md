@@ -36,7 +36,10 @@ The Same Page completion gate ships inside the new-project skill at
 scripts/spec-drift-gate.mjs. Check registration exactly as /new-project's
 Setup section describes (plugin install: already registered; skills-CLI
 install: offer to add the TaskCompleted and Stop hooks; Codex: offer the
-Stop hook). If new-project is not co-installed, say so and continue
+Stop hook). The language check ships beside it at
+scripts/language-check.mjs -- no registration; run it on demand
+against the spec directory at the points the stages name. If
+new-project is not co-installed, say so and continue
 unassisted; record in the working agreement at Stage 4 that the contract
 is carried by instructions alone.
 
@@ -56,6 +59,16 @@ is carried by instructions alone.
    system does. Only the developer can say that is also what it should do.
 8. Drift is a finding, never a quiet fix. When the code and a spec
    disagree, raise it; the developer decides which side is wrong.
+9. Observed sections are written in Same Page Technical English from
+   birth, and the language check runs on them as written -- so
+   confirmation stays a status change, not a language cleanup.
+10. Agreement carries a falsifier. An Observed requirement has none,
+   because nobody has yet agreed what the code should do. At the
+   moment a requirement becomes Agreed, ask: "What observable state
+   would violate this agreed requirement?" State the proposed
+   falsifier in your own words and have the developer confirm it. A
+   permission-only MAY requirement has no falsifier; a limit worth
+   enforcing is written as its own MUST or MUST NOT requirement.
 
 ## Stage 0 -- Baseline and recon
 
@@ -161,10 +174,13 @@ domain spec's are Scope, Capabilities with acceptance criteria per
 feature, Acceptance criteria, Decisions and revisions). Domains outside
 the radius appear only as one-line rows in the spec map, marked observed.
 Every observed artifact states behavior as it IS, in the same normative
-shape a designed spec would use ("shall", acceptance criteria that can be
+shape a designed spec would use (Same Page Technical English keywords,
+requirement identifiers under the spec's declared prefix, acceptance
+criteria that can be
 checked), with an evidence path on each capability. Writing it in the
 designed shape is deliberate: confirmation becomes a status change, not
-a rewrite.
+a rewrite. Run the language check on each observed spec as written and
+resolve findings before presenting it.
 
 Path B -- verify. For each spec section inside the blast radius, check the
 code against it and report one of:
@@ -185,7 +201,13 @@ code against it and report one of:
 Both paths -- the confirm loop. Walk the developer through each observed
 section, one at a time. Three outcomes:
 
-- Confirmed as-is: mark the section Agreed.
+- Confirmed as-is: ask the falsifier question for each MUST or MUST
+  NOT requirement in the section (standing rule 10), record the
+  confirmed falsifiers, then mark the section Agreed. Its requirement
+  identifiers enter the evidence map, conformance.md, at that moment
+  (create the map from the new-project conformance template if
+  absent), each row Uncovered with method "-" until evidence is cited
+  -- Observed identifiers never appear in the map.
 - Corrected reading: you misread the code; fix the text, cite again,
   re-confirm.
 - The code is wrong: the developer says the code does X and it should do
@@ -237,8 +259,10 @@ iterations/001.md from new-project's iteration template (fallback: In,
 Out, Definition of done). In lists the Agreed sections the work changes or
 extends, one line each with what "shipped" means. Out names every other
 domain. Definition of done is the work's acceptance criteria,
-conventions.md's verification commands green, and the touched specs
-current.
+conventions.md's verification commands green, the language check
+reporting zero findings for the spec set, and the touched specs
+current. Where the work produced evidence for an Agreed requirement,
+the evidence map row cites it with its coverage and its method.
 
 A contract exists (Path B): read its In list against the blast radius.
 

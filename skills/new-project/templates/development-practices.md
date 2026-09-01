@@ -25,7 +25,9 @@ means implemented and verified; code without its verification is not done.
 
 Ask questions open-ended, in plain text, one at a time. Do not use
 multiple-choice prompts unless the developer asks for them. No decorative
-glyphs in code, commits, or docs.
+glyphs in code, commits, or docs. Write in simple technical English:
+short sentences, one idea per sentence, common words over rare ones, no
+filler, hype, or buzzwords -- in conversation and in every artifact.
 
 ## Verification gates
 

@@ -39,6 +39,16 @@ A: The observed spec records what the code does; your intent becomes a
 defect record or a staged next-iteration spec. The workflow never writes
 inferred intent as if you had agreed to it.
 
+Q: What language are observed specs written in?
+A: Same Page Technical English from birth -- identified requirements,
+one obligation per sentence -- and the language check runs on them as
+written. Confirming a section is a status change, not a rewrite; the
+moment a section becomes Agreed you are asked what observable state
+would violate each requirement, and its identifiers enter the evidence
+map, conformance.md, Uncovered until evidence is cited. An Observed
+section carries no falsifier, because nobody has agreed yet what the
+code should do.
+
 Q: How is this different from /new-project?
 A: /new-project designs software that does not exist. /existing-project
 starts from evidence and asks you to correct its reading. Same spec set,

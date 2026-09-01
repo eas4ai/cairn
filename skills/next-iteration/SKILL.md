@@ -32,7 +32,8 @@ counterpart of the drift gate.
    Captured: date
    Target domain: NN-domain.md
    ## What it is
-   Two or three normative sentences.
+   Normative.
+   Two or three sentences in Same Page Technical English.
    ## Acceptance criteria
    - Checkable conditions.
    ## Touches
@@ -40,7 +41,10 @@ counterpart of the drift gate.
    ## Why not now
    One line: staged because it is outside iterations/NNN.md.
 
-4. Tell the developer what was captured and where. Do not implement any of
+4. Run the language check (new-project skill,
+   scripts/language-check.mjs) on the staged spec and resolve findings
+   through the confirm-back loop before presenting it.
+5. Tell the developer what was captured and where. Do not implement any of
    it in the current iteration.
 
 ## Iteration close
@@ -51,4 +55,11 @@ contract from iterations/next/ -- promote, carry, or cut each staged spec
 (cutting is the developer's verdict, never yours); merge promoted specs
 into their target domain specs, logging each in that spec's Decisions and
 revisions; write iterations/NNN+1.md; update the working agreement's
-contract reference.
+contract reference. Promotion is an agreement point: ask the falsifier
+question for each promoted MUST or MUST NOT requirement ("What
+observable state would violate this agreed requirement?"), confirm the
+falsifier in the developer's hearing, and record it with the
+requirement. Promotion then makes the staged requirements Agreed:
+their identifiers enter the evidence map, conformance.md, Uncovered
+with method "-" until evidence is cited, and the language check runs
+over the spec set before the new contract is presented.

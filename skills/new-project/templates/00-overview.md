@@ -9,8 +9,10 @@ exist. Replace this template's example prose; keep every section. -->
 
 ## Purpose
 
-One or two paragraphs: what the system shall provide, for whom, and what
-"complete" means for it. Written in normative language ("shall", "must").
+One or two paragraphs: what the system provides, for whom, and what
+"complete" means for it. Written with the normative keywords of Same
+Page Technical English ("MUST", "MUST NOT", "MAY") where obligations
+are stated.
 
 ## Design principles
 

@@ -114,7 +114,8 @@ same-page/
                                  including the baseline check + onboarding stage
       templates/                 development-practices seed, glossary,
                                  00-overview, ux, domain-spec (numbered),
-                                 conventions, iteration, working agreement
+                                 conventions, iteration, evidence map,
+                                 working agreement
                                  (index block); ADR entry format embedded in
                                  the overview and domain-spec templates
     existing-project/
@@ -129,7 +130,9 @@ same-page/
                                  carries inline fallback structure if
                                  new-project's templates are not co-installed
   skills/new-project/scripts/spec-drift-gate.mjs      Spec-anchored completion gate (Bun or Node)
+  skills/new-project/scripts/language-check.mjs       Deterministic SPTE language + conformance-map check
   tests/spec-drift-gate.test.mjs Gate test suite (run with bun test)
+  tests/language-check.test.mjs  Language check suite (run with bun test)
   .claude-plugin/
     plugin.json                  Claude Code plugin: 3 skills + hook
     marketplace.json             Single-plugin marketplace fallback
@@ -169,7 +172,7 @@ One entry point, self-configuring, asked at most once per developer. The
 baseline it establishes is two documents with distinct jobs:
 
 1. **`BEST_PRACTICES.md`** -- universal production discipline. Already exists
-   as the sibling package's 13-rule ruleset; onboarding installs or references
+   as the sibling package's 14-rule ruleset; onboarding installs or references
    it, never authors a competing copy.
 2. **`DEVELOPMENT_PRACTICES.md`** -- the rules of the road. The developer's own
    accumulated working rules, portable across all their projects: scope
@@ -272,6 +275,12 @@ followed.
 4. **A stage never closes on unconfirmed understanding.**
 5. **Depth is calibrated, not assumed** -- a weekend CLI and a product get
    different documentation depth, decided explicitly in Stage 0.
+6. **Agreement carries a falsifier.** When a requirement becomes Agreed,
+   the model asks what observable state would violate it, states its own
+   reading, and the developer confirms. The question is a comprehension
+   test: a model that cannot name the violating state has not understood
+   the requirement it just wrote. A permission-only MAY requirement has no
+   falsifier; a limit worth enforcing becomes its own MUST or MUST NOT.
 
 ### Stages
 
@@ -444,6 +453,7 @@ they affect.
 | `NN-<domain>.md` | Numbered domain specs, one per bounded subsystem, features spec'd within their domain. Shared skeleton: status header (Status / Baseline / Last revised), Scope, domain content (capabilities with acceptance criteria, domain flow detail deferring to `ux.md`), Acceptance criteria, Decisions and revisions. Absorbs the old features + functional-requirements + per-feature-flow templates. |
 | `conventions.md` | Implementation standards, naming, file-organization rules, patterns, verification commands. |
 | `iterations/NNN.md` | Scope contract per iteration: IN list (domain spec/section refs), explicit OUT list, definition of done. |
+| `conformance.md` | The evidence map: from Agreed requirement identifiers to implementation evidence, one row per identifier, with coverage (Covered / Asserted / Uncovered), method (the mechanism that produced the evidence), and cited repository paths as three separate columns. Scaffolded all-Uncovered at Stage 6; its integrity is verified by the language check. Defined by the language check and evidence map spec (2026-09-01). Same Page Conformance names the evidence engine specified above that pair. |
 | `iterations/next/` | Staged specs for the next iteration (see below). |
 | `recon.md` | Written by `/existing-project` only: the cited recon report (exists, documented, contradicted, unverified) plus the Gaps list that is the project's documentation debt. |
 | `defects/<slug>.md` | Written by `/existing-project` for a remediation: observed behavior with reproduction, expected behavior with the Agreed section it violates, root cause when known, the regression test the fix ships with. |
@@ -503,11 +513,17 @@ self-audit before finishing:
    `~/.claude/BEST_PRACTICES.md`, mirroring the sibling's precedence) and
    embeds the rule's own text when no ruleset is found, so the
    self-evaluation happens even without the sibling installed.
+6. Did normative text written or revised this session pass the language
+   check (`scripts/language-check.mjs`, beside this gate), and does
+   the evidence map (`conformance.md`) still tell the truth for the
+   requirements this session touched? The language and the check are
+   defined by the Same Page Technical English spec and the language
+   check and evidence map spec (2026-09-01).
 
 If the project has no spec set, the hook does nothing (mirroring the
 sibling's no-todo-list behavior). When the sibling package's own hook is
 also registered, the audits overlap harmlessly -- each gate fires once per
-session; the sibling audits the full 13 rules on todo completion, this one
+session; the sibling audits its full ruleset on todo completion, this one
 audits scope, spec fidelity, and the release gate.
 
 ## What does not carry forward from the old templates
@@ -561,7 +577,8 @@ registration for skills-CLI installs),
   reach for it, Common questions, It's working if.
 - **Versioning**: changesets, with a CHANGELOG and a version-sync check for
   the plugin manifest (exemplar convention), run under Bun.
-- **Package tests**: the drift-gate suite (`bun test`), built around the two
+- **Package tests**: the drift-gate suite and the language-check suite
+  (`bun test`), each built around the two
   ways a completion gate goes wrong -- a false pass that lets out-of-contract
   work finish unaudited, and a false block that wedges the agent in a loop.
 
@@ -596,6 +613,24 @@ declinable per project.
 
 ## Revisions
 
+- 2026-09-01 -- Remediation against the round-five Feature Spec
+  consensus: the evidence map's single status column splits into
+  coverage and method; the table is named the evidence map, and Same
+  Page Conformance is reserved for the evidence engine specified
+  separately; the falsifier question joins the confirm-back loop in
+  all three skills (standing rule 6). Engine-shaped artifacts --
+  obligations, validators, assurance policy, evidence records,
+  verdicts, trust anchors, `.same-page/` -- are absent by design until
+  that engine's specifications are generated; their absence is not a
+  defect in this package.
+- 2026-09-01 -- Added Same Page Technical English and the language
+  check and evidence map spec (sibling specs of this date): normative spec text is a
+  controlled language with requirement identifiers, checked by
+  `skills/new-project/scripts/language-check.mjs` (pass one) and by the
+  model in-session (pass two); `conformance.md` joins the spec set as
+  the requirement-to-evidence map; the drift gate audit gains item 6;
+  the glossary template gains the standard dictionary; the domain and
+  iteration templates carry worked SPTE examples.
 - 2026-08-25 -- Added `/existing-project` as the adoption workflow (ADR
   0006), with two entry paths: no spec set (observed specs, first
   contract) and spec set exists (verify against the code, then route the

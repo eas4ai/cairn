@@ -29,6 +29,16 @@ Q: How big does my project need to be?
 A: Any size. Depth is calibrated in Stage 0; a small tool gets a keystone
 overview plus one domain spec.
 
+Q: What keeps the specs unambiguous?
+A: Normative text is written in Same Page Technical English -- one
+obligation per sentence, MUST / MUST NOT / MAY, named actors,
+requirement identifiers -- and a deterministic language check runs
+before stages close. Every requirement you agree to also gets a
+falsifier: the model asks what observable state would violate it, and
+you confirm. The contract stage scaffolds conformance.md, the evidence
+map, tying every requirement to its coverage, the method behind it,
+and the evidence itself.
+
 ## It's working if
 
 Sessions stop re-litigating settled decisions; new sessions load the

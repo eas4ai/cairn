@@ -19,7 +19,9 @@ Same Page Technical English (SPTE) and the evidence map. Beside them
 ships the engine, Same Page Conformance, as TypeScript under
 scripts/engine/: `elaborate` projects Agreed requirements and their
 confirmed falsifiers into committed obligation files under .same-page/,
-and `verify` reports each obligation's verdict against the policy.
+`trust`, `run`, and `attest` produce evidence records under execution
+trust, and `verify` reports each obligation's verdict against the
+policy.
 
 Four normative specs in docs/superpowers/specs/ govern this package; read
 the relevant one before a structural change:
@@ -31,9 +33,10 @@ the relevant one before a structural change:
   map (CONF-nnn).
 - 2026-09-02-same-page-conformance-engine.md: the engine, Same Page
   Conformance (ENG-nnn), generated at stage 8 from the feature spec in
-  reference/ with the developer's rulings. Layer L1 (the obligation
-  store) is built under docs/specs/same-page/iterations/001.md; layers
-  L2 through L6 follow as further contracts. Never describe any layer
+  reference/ with the developer's rulings. Layers L1 (the obligation
+  store, iterations/001.md) and L2 (validators, evidence records, the
+  verdict lattice, iterations/002.md) are built; layers L3 through L6
+  follow as further contracts. Never describe any layer
   as absent, deferred, or optional. Sequencing is the developer's, and
   so is any deferral.
 
@@ -48,8 +51,10 @@ the relevant one before a structural change:
     bunx tsc --noEmit -p skills/new-project/scripts/engine
                                                       # the engine's type check; typescript is not a dependency
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts elaborate
+    node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts run
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts verify
-                                                      # the engine on this repository (bun runs the same file)
+                                                      # the engine on this repository (bun runs the same file);
+                                                      # run needs the bun-test validator trusted: same-page trust bun-test
     grep -rnP '[^\x00-\x7F]' --include='*.md' --include='*.mjs' --include='*.json' --include='*.sh' .
                                                       # ASCII gate (excluding .git, .remember, reference); must return nothing
     ./scripts/link-skills.sh                          # symlink skills into ~/.claude/skills and ~/.agents/skills
@@ -82,10 +87,19 @@ surface it uses because @types/node is not a dependency. Modules:
 yaml.ts (the YAML subset it reads and writes), digest.ts (canonical
 text, sha256), specs.ts (Agreed requirements and Falsifier lines, with
 section-level Agreed: markers honored), policy.ts (.same-page/policy.yaml:
-spec directories, profiles, defaults, domain overrides), obligations.ts
-(one file per requirement; profile and validators survive
-re-elaboration via profile_from), same-page.ts (elaborate, verify; exit
-0 clean, 1 findings or verdicts below SUFFICIENT, 2 usage).
+spec directories, profiles, defaults, domain overrides; strength
+comparison by implication for downgrades), obligations.ts (one file
+per requirement; profile and validators survive re-elaboration via
+profile_from; `required` is the downgrade baseline), snapshot.ts
+(git:<sha> or workspace:<digest>; .same-page/ is not a source input),
+validators.ts (definitions, digests, argv execution), trust.ts (grants
+under $SAME_PAGE_HOME or ~/.same-page, never inside the repository),
+evidence.ts (records, runs, disproofs, acknowledgments under
+.same-page/evidence/), adapters.ts (the capability registry: command
+and manual, no capabilities), evaluate.ts (L2 freshness and the
+verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
+acknowledge, policy confirm; exit 0 clean, 1 findings or verdicts
+below SUFFICIENT, 2 usage).
 
 The scaffolded spec set (docs/specs/<project>/ in a consumer repo) is the
 contract between the skills and the scripts. Both scripts locate it by
@@ -189,8 +203,8 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/001.md
-  (engine layer L1). Work outside it is captured via /next-iteration --
+- The current iteration contract is docs/specs/same-page/iterations/002.md
+  (engine layer L2); 001 (L1) is closed. Work outside it is captured via /next-iteration --
   surfaced and staged, never implemented ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec
   and confirm the change deliberately before acting.

@@ -47,9 +47,29 @@ use and one obligation file per Agreed MUST or MUST NOT requirement from
 the confirmed requirements and falsifiers) and `verify` (reports
 obligations whose requirement or falsifier changed, Agreed requirements
 with no obligation, and each obligation's verdict against the policy).
-Invocation: node --disable-warning=ExperimentalWarning SKILL_DIR/scripts/engine/same-page.ts elaborate, from the project root. Layer L1 is
-built; evidence records, validators, freshness, and map comparison
-are the next layers, each under its own iteration contract.
+Invocation: node --disable-warning=ExperimentalWarning SKILL_DIR/scripts/engine/same-page.ts elaborate, from the project root.
+
+Once implementation exists, four more commands carry the evidence:
+`trust <validator>` grants execution trust to a validator definition
+under .same-page/validators/, recorded outside the repository under
+the developer's home directory; `run` executes trusted validators as
+argv and writes one evidence record per obligation that lists them;
+`attest <REQ-ID>` records manual evidence by a named human with an
+expiry; `acknowledge <REQ-ID>` records the developer's acknowledgment
+of a revision that clears a standing disproof. `verify` then reports,
+per requirement, the verdict (FAILING, BLOCKED, INSUFFICIENT,
+SUFFICIENT), what the policy requires, the evidence present with its
+freshness, the authority and snapshot, the boundary, and the
+assumptions. Trust is the developer's act: run `same-page trust` or
+`run --as-developer` only when the developer says so, naming the
+validator; never as part of scaffolding. A policy downgrade
+(`same-page verify` reports it) is confirmed by the developer with
+`same-page policy confirm` and recorded in the affected spec's
+Decisions and revisions; a disproof-clearing revision is acknowledged
+by the developer, then `same-page acknowledge` and the same log entry.
+Layers L1 and L2 are built; narrower freshness boundaries,
+configurable authority and map comparison, challenges, and ecosystem
+adapters are the next layers, each under its own iteration contract.
 
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in

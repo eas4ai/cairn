@@ -309,7 +309,13 @@ scripts/engine/same-page.ts, under node 22.18 or later or bun). It
 writes .same-page/policy.yaml on first use and one obligation file per
 Agreed MUST or MUST NOT requirement from the confirmed falsifiers;
 Observed requirements get none. Resolve any finding it reports through
-the confirm loop, and commit .same-page/.
+the confirm loop, and commit .same-page/. Where the project's checks
+already exist (conventions.md names them), define each as a validator
+under .same-page/validators/ (name, kind, argv command), list it on the
+obligations it addresses with `attested_by: agent`, and ask the
+developer to trust it (`same-page trust <name>`) before the first
+`same-page run`; `same-page verify` then says what each requirement's
+evidence establishes.
 
 Then the working agreement block (new-project
 templates/working-agreement.md, filled with real paths, the repo layout

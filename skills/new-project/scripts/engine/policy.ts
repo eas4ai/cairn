@@ -64,15 +64,7 @@ function isMap(v: YamlValue | undefined): v is YamlMap {
 
 function policyToYaml(p: Policy): YamlMap {
   const profiles: YamlMap = {};
-  for (const [name, prof] of Object.entries(p.profiles)) {
-    const req: YamlMap = {};
-    if (prof.require.all) req["all"] = prof.require.all.map((c) => ({ ...c }) as YamlMap);
-    if (prof.require.any) req["any"] = prof.require.any.map((c) => ({ ...c }) as YamlMap);
-    if (prof.require.binding) req["binding"] = { ...prof.require.binding } as YamlMap;
-    if (prof.require.authority !== undefined) req["authority"] = prof.require.authority;
-    if (prof.require.assumptions) req["assumptions"] = [...prof.require.assumptions];
-    profiles[name] = { require: req };
-  }
+  for (const [name, prof] of Object.entries(p.profiles)) profiles[name] = { require: requireToYaml(prof.require) };
   const domains: YamlMap = {};
   for (const [k, v] of Object.entries(p.domains)) domains[k] = { profile: v.profile };
   return { version: p.version, specs: [...p.specs], default_profile: p.default_profile, profiles, domains };
@@ -118,6 +110,109 @@ function parseClauses(raw: YamlValue | undefined, where: string, findings: Findi
   return out;
 }
 
+
+// A profile is a composition (ENG-070): a mapping with a require block
+// of all/any clauses, binding, authority, assumptions. A scalar, a
+// missing require block, or a freshness setting anywhere is a finding.
+export function parseProfile(prof: YamlValue | undefined, at: string, findings: Finding[]): Profile | null {
+  if (!isMap(prof) || !isMap(prof["require"])) {
+    findings.push({ where: at, message: "a profile is a composition: a mapping with a require block, not a single grade", rule: "ENG-070" });
+    return null;
+  }
+  const fresh: string[] = [];
+  findFreshness(prof, at, fresh);
+  for (const f of fresh) findings.push({ where: f, message: "freshness is always required and cannot be set in a profile", rule: "ENG-073" });
+  const req = prof["require"];
+  for (const k of Object.keys(req))
+    if (!(REQUIRE_KEYS as readonly string[]).includes(k))
+      findings.push({ where: `${at}.require.${k}`, message: `unknown require key; use ${REQUIRE_KEYS.join(", ")}`, rule: "ENG-071" });
+  const profile: Profile = { require: {} };
+  const all = parseClauses(req["all"], `${at}.require.all`, findings);
+  const any = parseClauses(req["any"], `${at}.require.any`, findings);
+  if (all) profile.require.all = all;
+  if (any) profile.require.any = any;
+  if (req["binding"] !== undefined) {
+    const b = req["binding"];
+    if (!isMap(b)) findings.push({ where: `${at}.require.binding`, message: "binding must be a mapping", rule: "ENG-071" });
+    else {
+      const binding: Profile["require"]["binding"] = {};
+      if (b["basis"] !== undefined) {
+        if (typeof b["basis"] === "string" && (BINDING_BASES as readonly string[]).includes(b["basis"]))
+          binding.basis = b["basis"] as (typeof BINDING_BASES)[number];
+        else findings.push({ where: `${at}.require.binding.basis`, message: `basis must be one of ${BINDING_BASES.join(", ")}`, rule: "ENG-029" });
+      }
+      if (b["developer_confirmed"] !== undefined) {
+        if (typeof b["developer_confirmed"] === "boolean") binding.developer_confirmed = b["developer_confirmed"];
+        else findings.push({ where: `${at}.require.binding.developer_confirmed`, message: "must be true or false", rule: "ENG-071" });
+      }
+      profile.require.binding = binding;
+    }
+  }
+  if (req["authority"] !== undefined) {
+    if (typeof req["authority"] === "string") profile.require.authority = req["authority"];
+    else findings.push({ where: `${at}.require.authority`, message: "authority must be a string", rule: "ENG-071" });
+  }
+  if (req["assumptions"] !== undefined) {
+    const a = req["assumptions"];
+    if (Array.isArray(a) && a.every((x) => typeof x === "string")) profile.require.assumptions = a as string[];
+    else findings.push({ where: `${at}.require.assumptions`, message: "assumptions must be a list of names", rule: "ENG-071" });
+  }
+  if (!profile.require.all?.length && !profile.require.any?.length)
+    findings.push({ where: `${at}.require`, message: "a profile requires at least one evidence method under all or any", rule: "ENG-070" });
+  return profile;
+}
+
+export function requireToYaml(r: Profile["require"]): YamlMap {
+  const req: YamlMap = {};
+  if (r.all) req["all"] = r.all.map((c) => ({ ...c }) as YamlMap);
+  if (r.any) req["any"] = r.any.map((c) => ({ ...c }) as YamlMap);
+  if (r.binding) req["binding"] = { ...r.binding } as YamlMap;
+  if (r.authority !== undefined) req["authority"] = r.authority;
+  if (r.assumptions) req["assumptions"] = [...r.assumptions];
+  return req;
+}
+
+const clauseKey = (c: Clause): string => ("kind" in c ? `kind:${c.kind}` : `sensitivity:${c.sensitivity}`);
+const basisRank = (b: string | undefined): number => (b === "backend" ? 2 : b === "attested" ? 1 : 0);
+
+// Implication between requirements: every evidence set that satisfies
+// `a` also satisfies `b`. Sound under the clause semantics (a clause is
+// met by some passing record): an all-clause of b is guaranteed by a
+// when a demands it outright or a's any-set can only be met by it; an
+// any-set of b is guaranteed when a demands one of its members or a's
+// any-set lies inside it; a binding is guaranteed when a's is at least
+// as strong.
+export function implies(a: Profile["require"], b: Profile["require"]): boolean {
+  const aAll = new Set((a.all ?? []).map(clauseKey));
+  const aAny = (a.any ?? []).map(clauseKey);
+  const bAll = (b.all ?? []).map(clauseKey);
+  const bAny = new Set((b.any ?? []).map(clauseKey));
+  for (const c of bAll) {
+    if (aAll.has(c)) continue;
+    if (aAny.length > 0 && aAny.every((k) => k === c)) continue;
+    return false;
+  }
+  if (bAny.size > 0) {
+    const viaAll = [...bAny].some((c) => aAll.has(c));
+    const viaAny = aAny.length > 0 && aAny.every((k) => bAny.has(k));
+    if (!viaAll && !viaAny) return false;
+  }
+  if (basisRank(a.binding?.basis) < basisRank(b.binding?.basis)) return false;
+  if (b.binding?.developer_confirmed && !a.binding?.developer_confirmed) return false;
+  return true;
+}
+
+// ENG-101: the new requirement is a downgrade when it no longer
+// guarantees what the old one demanded. Incomparable requirements count
+// as a downgrade, because something the old one demanded is no longer
+// guaranteed.
+export function compareStrength(oldR: Profile["require"], newR: Profile["require"]): "equal" | "stronger" | "weaker" {
+  const newGuaranteesOld = implies(newR, oldR);
+  const oldGuaranteesNew = implies(oldR, newR);
+  if (newGuaranteesOld && oldGuaranteesNew) return "equal";
+  if (newGuaranteesOld) return "stronger";
+  return "weaker";
+}
 export function validatePolicy(raw: YamlValue, where = ".same-page/policy.yaml"): { policy: Policy | null; findings: Finding[] } {
   const findings: Finding[] = [];
   if (!isMap(raw)) return { policy: null, findings: [{ where, message: "policy must be a mapping", rule: "ENG-189" }] };
@@ -138,51 +233,8 @@ export function validatePolicy(raw: YamlValue, where = ".same-page/policy.yaml")
   else {
     for (const [name, prof] of Object.entries(profilesRaw)) {
       const at = `${where}:profiles.${name}`;
-      if (!isMap(prof) || !isMap(prof["require"])) {
-        findings.push({ where: at, message: "a profile is a composition: a mapping with a require block, not a single grade", rule: "ENG-070" });
-        continue;
-      }
-      const fresh: string[] = [];
-      findFreshness(prof, at, fresh);
-      for (const f of fresh) findings.push({ where: f, message: "freshness is always required and cannot be set in a profile", rule: "ENG-073" });
-      const req = prof["require"];
-      for (const k of Object.keys(req))
-        if (!(REQUIRE_KEYS as readonly string[]).includes(k))
-          findings.push({ where: `${at}.require.${k}`, message: `unknown require key; use ${REQUIRE_KEYS.join(", ")}`, rule: "ENG-071" });
-      const profile: Profile = { require: {} };
-      const all = parseClauses(req["all"], `${at}.require.all`, findings);
-      const any = parseClauses(req["any"], `${at}.require.any`, findings);
-      if (all) profile.require.all = all;
-      if (any) profile.require.any = any;
-      if (req["binding"] !== undefined) {
-        const b = req["binding"];
-        if (!isMap(b)) findings.push({ where: `${at}.require.binding`, message: "binding must be a mapping", rule: "ENG-071" });
-        else {
-          const binding: Profile["require"]["binding"] = {};
-          if (b["basis"] !== undefined) {
-            if (typeof b["basis"] === "string" && (BINDING_BASES as readonly string[]).includes(b["basis"]))
-              binding.basis = b["basis"] as (typeof BINDING_BASES)[number];
-            else findings.push({ where: `${at}.require.binding.basis`, message: `basis must be one of ${BINDING_BASES.join(", ")}`, rule: "ENG-029" });
-          }
-          if (b["developer_confirmed"] !== undefined) {
-            if (typeof b["developer_confirmed"] === "boolean") binding.developer_confirmed = b["developer_confirmed"];
-            else findings.push({ where: `${at}.require.binding.developer_confirmed`, message: "must be true or false", rule: "ENG-071" });
-          }
-          profile.require.binding = binding;
-        }
-      }
-      if (req["authority"] !== undefined) {
-        if (typeof req["authority"] === "string") profile.require.authority = req["authority"];
-        else findings.push({ where: `${at}.require.authority`, message: "authority must be a string", rule: "ENG-071" });
-      }
-      if (req["assumptions"] !== undefined) {
-        const a = req["assumptions"];
-        if (Array.isArray(a) && a.every((x) => typeof x === "string")) profile.require.assumptions = a as string[];
-        else findings.push({ where: `${at}.require.assumptions`, message: "assumptions must be a list of names", rule: "ENG-071" });
-      }
-      if (!profile.require.all?.length && !profile.require.any?.length)
-        findings.push({ where: `${at}.require`, message: "a profile requires at least one evidence method under all or any", rule: "ENG-070" });
-      profiles[name] = profile;
+      const parsed = parseProfile(prof, at, findings);
+      if (parsed) profiles[name] = parsed;
     }
   }
 
@@ -233,13 +285,13 @@ export function inheritedProfile(policy: Policy, prefix: string): { name: string
   return { name: policy.default_profile, source: "project default" };
 }
 
-export function requiredText(profile: Profile): string {
+export function requiredText(r: Profile["require"]): string {
   const parts: string[] = [];
   const clause = (c: Clause) => ("kind" in c ? c.kind : `sensitivity ${c.sensitivity}`);
-  if (profile.require.all?.length) parts.push(profile.require.all.map(clause).join(" + "));
-  if (profile.require.any?.length) parts.push(`any of ${profile.require.any.map(clause).join(", ")}`);
-  if (profile.require.binding?.basis) parts.push(`binding ${profile.require.binding.basis}`);
-  if (profile.require.binding?.developer_confirmed) parts.push("developer-confirmed binding");
-  if (profile.require.authority) parts.push(`authority ${profile.require.authority}`);
+  if (r.all?.length) parts.push(r.all.map(clause).join(" + "));
+  if (r.any?.length) parts.push(`any of ${r.any.map(clause).join(", ")}`);
+  if (r.binding?.basis) parts.push(`binding ${r.binding.basis}`);
+  if (r.binding?.developer_confirmed) parts.push("developer-confirmed binding");
+  if (r.authority) parts.push(`authority ${r.authority}`);
   return parts.join("; ") + "; current freshness";
 }

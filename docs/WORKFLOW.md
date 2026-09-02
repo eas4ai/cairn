@@ -133,7 +133,24 @@ on), never implemented ad hoc. Direction that contradicts a confirmed spec
 is re-anchored: return to the spec, confirm the change deliberately, then
 act. Closing an iteration promotes, carries, or cuts staged specs into the
 next numbered contract; cutting is the developer's verdict.
-`same-page verify` reports, per requirement, the verdict, what the
-policy requires, and what evidence exists; an obligation whose
-requirement or falsifier changed is invalid until `same-page elaborate`
-regenerates it from the confirmed text.
+Once implementation exists, evidence is produced and evaluated by the
+engine. A validator is a definition under .same-page/validators/: a
+name, the method it produces, and an argv command (no shell unless
+declared). It runs only under execution trust: a record the developer
+writes with `same-page trust <name>`, kept outside the repository, or
+an explicit `same-page run --as-developer`; committed content never
+grants trust, and no completion hook runs a validator. `same-page run`
+writes one evidence record per obligation that lists the validator,
+with the method, the binding basis, the sensitivity, the freshness,
+the dependency provenance, the assumptions, and the source snapshot.
+`same-page attest` records manual evidence by a named human with an
+expiry. `same-page verify` reports, per requirement, one verdict in
+the order FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT, with what the
+policy requires, the evidence present and its freshness, the authority
+and snapshot, the boundary, and the assumptions; an obligation whose
+requirement or falsifier changed is BLOCKED until `same-page
+elaborate` regenerates it. A policy change that requires less is a
+downgrade, held until the developer runs `same-page policy confirm`
+and the change is logged; a revision of a requirement with a standing
+disproof is held until the developer acknowledges it, `same-page
+acknowledge` records that, and the log carries it.

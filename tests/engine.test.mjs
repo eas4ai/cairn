@@ -193,13 +193,18 @@ test("re-elaboration is idempotent and preserves a hand-set profile and validato
   const policyPath = join(root, ".same-page", "policy.yaml");
   writeFileSync(policyPath, addProfile(readFileSync(policyPath, "utf8"), "  strict:\n    require:\n      all:\n        - kind: integration\n        - sensitivity: challenged\n"));
   const obPath = join(root, ".same-page", "obligations", "BRK-003.yaml");
-  writeFileSync(obPath, readFileSync(obPath, "utf8").replace("profile: default", "profile: strict").replace("validators: []", "validators:\n  - name: cache-negative\n    command:\n      - bun\n      - test\n"));
+  writeFileSync(obPath, readFileSync(obPath, "utf8").replace("profile: default", "profile: strict").replace("validators: []", "validators:\n  - name: cache-negative\n    attested_by: developer\n"));
   const r = run(["elaborate", "--root", root], root);
   expect(r.stdout).toContain("(1 written, 1 unchanged)");
   const o = obligation(root, "BRK-003");
   expect(o.profile).toBe("strict");
   expect(o.profile_from).toBe("obligation");
-  expect(o.validators).toEqual([{ name: "cache-negative", command: ["bun", "test"] }]);
+  expect(o.validators.length).toBe(1);
+  expect(o.validators[0].name).toBe("cache-negative");
+  expect(o.validators[0].attested_by).toBe("developer");
+  expect(o.validators[0].developer_confirmed).toBe(true);
+  expect(typeof o.validators[0].attested_at).toBe("string");
+  expect(o.validators[0].snapshot).toMatch(/^(git|workspace):/);
   expect(run(["elaborate", "--root", root], root).stdout).toContain("(0 written, 2 unchanged)");
   const v = run(["verify", "--root", root], root);
   expect(v.stdout).toContain("BRK-003  INSUFFICIENT\n  Requirement: The broker MUST NOT serve an error response from the cache.\n  Required:    integration + sensitivity challenged; current freshness\n  Evidence:    none");
@@ -225,12 +230,19 @@ test("a domain override is the nearest inherited default for its prefix (ENG-076
   expect(obligation(root, "BRK-001").profile).toBe("strict");
   expect(obligation(root, "BRK-001").profile_from).toBe("domain BRK");
   expect(obligation(root, "BRK-003").profile).toBe("strict");
-  // A profile the developer set stays set when the domain default moves.
+  // A profile the developer set stays set when the domain default moves;
+  // setting a weaker one is a downgrade, held until policy confirm.
   const obPath = join(root, ".same-page", "obligations", "BRK-003.yaml");
   writeFileSync(obPath, readFileSync(obPath, "utf8").replace("profile: strict", "profile: default"));
-  run(["elaborate", "--root", root], root);
+  const down = run(["elaborate", "--root", root], root);
+  expect(down.stdout).toContain("policy downgrade for BRK-003");
+  expect(down.status).toBe(1);
   expect(obligation(root, "BRK-003").profile).toBe("default");
   expect(obligation(root, "BRK-003").profile_from).toBe("obligation");
+  expect(obligation(root, "BRK-003").required).toEqual({ all: [{ kind: "integration" }] });
+  const confirm = run(["policy", "confirm", "--root", root], root);
+  expect(confirm.stdout).toContain("BRK-003: required [integration; current freshness] -> [any of");
+  expect(run(["elaborate", "--root", root], root).status).toBe(0);
   // A renamed project default does not strand an inherited obligation.
   const renamed = readFileSync(policyPath, "utf8").replace("default_profile: default", "default_profile: strict").replace("domains:\n  BRK:\n    profile: strict\n", "domains: {}\n");
   writeFileSync(policyPath, renamed);

@@ -64,9 +64,11 @@ Details and Codex setup: docs/INSTALLATION.md.
   skills/new-project/scripts/engine/same-page.ts, TypeScript run by
   node or bun with no install: `elaborate` turns every agreed
   requirement and its confirmed falsifier into a committed obligation
-  file under .same-page/, and `verify` answers what evidence the policy
-  requires and what exists. Layer L1 of six is built. Manual, chapter
-  10.
+  file under .same-page/; `trust`, `run`, and `attest` produce evidence
+  records under execution trust; and `verify` answers, per requirement,
+  FAILING, BLOCKED, INSUFFICIENT, or SUFFICIENT, with what the policy
+  requires and what exists. Layers L1 and L2 of six are built. Manual,
+  chapter 10.
 
 ## Read next
 

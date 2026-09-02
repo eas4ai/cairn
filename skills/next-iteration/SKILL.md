@@ -66,4 +66,10 @@ over the spec set before the new contract is presented. Then run the
 engine's `same-page elaborate` (new-project skill,
 scripts/engine/same-page.ts) so every promoted requirement has its
 obligation file before implementation starts; resolve any finding it
-reports through the confirm loop.
+reports through the confirm loop. At iteration close, `same-page
+verify` is the evidence for the definition of done: a requirement is
+verified when its verdict is SUFFICIENT at the closing snapshot, and a
+BLOCKED or FAILING verdict is a finding to resolve, never to talk
+past. A revision that the engine reports as disproof-clearing is
+acknowledged by the developer, recorded with `same-page acknowledge`,
+and logged in the spec's Decisions and revisions.

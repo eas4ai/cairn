@@ -1,29 +1,47 @@
 // Same Page Conformance -- the engine's command line.
 //
-//   node --disable-warning=ExperimentalWarning same-page.ts elaborate [--root DIR]
-//   node --disable-warning=ExperimentalWarning same-page.ts verify    [--root DIR]
+//   same-page elaborate                      project Agreed requirements into obligations
+//   same-page verify                         evaluate every obligation against the policy
+//   same-page trust <validator>              grant execution trust, outside the repository
+//   same-page run [validator...] [--as-developer]
+//   same-page attest <REQ-ID> --by <actor> --expires <date> --description <text>
+//                   [--bindings a,b] [--addresses-falsifier] [--inspection-only]
+//   same-page acknowledge <REQ-ID>           acknowledge a disproof-clearing revision
+//   same-page policy confirm                 accept a policy downgrade
 //
-// Runs under node (type stripping) and bun unchanged; no dependencies.
-// Layer L1 (iteration 001): the obligation store and its lifecycle.
-// `elaborate` projects every Agreed MUST and MUST NOT requirement with a
-// confirmed falsifier into .same-page/obligations/<ID>.yaml and writes
-// the policy file on first use. `verify` reports obligations whose
-// digests no longer match the spec, Agreed requirements with no
-// obligation, and evaluates the rest; with no evidence records yet,
-// every valid obligation is INSUFFICIENT and says what it requires.
-// Exit codes: 0 no findings and every verdict SUFFICIENT; 1 findings or
-// a verdict below SUFFICIENT; 2 usage or configuration error.
+// Run with node 22.18+ (`node --disable-warning=ExperimentalWarning
+// same-page.ts ...`) or bun; no dependencies. Exit codes: 0 no findings
+// and every verdict SUFFICIENT; 1 findings or a verdict below
+// SUFFICIENT; 2 usage or configuration error.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { digest } from "./digest.ts";
-import { obligationPath, obligationsDir, projectObligation, readObligation, writeObligation, type Obligation } from "./obligations.ts";
-import { defaultPolicy, loadPolicy, policyText, requiredText, type Finding, type Policy } from "./policy.ts";
+import { assess, evaluate, type Evaluation, type Verdict } from "./evaluate.ts";
+import {
+  L2_ASSUMPTIONS,
+  stamp,
+  readAcknowledgment,
+  readDisproof,
+  readRecords,
+  standingDisproof,
+  writeAcknowledgment,
+  writeDisproof,
+  writeRecord,
+  writeRun,
+  type EvidenceRecord,
+} from "./evidence.ts";
+import { completeRef, obligationPath, obligationsDir, obligationText, projectObligation, readObligation, writeObligation, type Obligation } from "./obligations.ts";
+import { compareStrength, defaultPolicy, loadPolicy, policyText, requiredText, type Finding, type Policy } from "./policy.ts";
+import { currentSnapshot } from "./snapshot.ts";
 import { readCorpus, type Requirement } from "./specs.ts";
+import { findGrant, gitActor, grant, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
+import { listValidators, readValidator, runValidator, validatorDigest, type ValidatorDef } from "./validators.ts";
+import type { YamlMap } from "./yaml.ts";
 
-const USAGE = "usage: same-page <elaborate|verify> [--root DIR]";
+const USAGE = "usage: same-page <elaborate|verify|trust|run|attest|acknowledge|policy> ... [--root DIR]";
 
 function gitRoot(from: string): string | null {
   const r = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: from, encoding: "utf8" });
@@ -53,10 +71,9 @@ function printFindings(findings: Finding[]): void {
   for (const f of findings) process.stdout.write(`${f.where}\n  ${f.message} (${f.rule})\n\n`);
 }
 
-function readPolicyFile(root: string): { policy: Policy | null; findings: Finding[]; path: string } {
+function readPolicyFile(root: string): { policy: Policy | null; findings: Finding[] } {
   const path = join(root, ".same-page", "policy.yaml");
-  const r = loadPolicy(readFileSync(path, "utf8"));
-  return { ...r, path };
+  return loadPolicy(readFileSync(path, "utf8"));
 }
 
 function ensureLayout(root: string): void {
@@ -69,6 +86,53 @@ function ensureLayout(root: string): void {
 function isObligationCandidate(r: Requirement): boolean {
   return r.authority === "agreed" && !r.withdrawn && (r.keyword === "MUST" || r.keyword === "MUST NOT");
 }
+
+function requirePolicy(root: string, command: string): { policy: Policy; findings: Finding[] } | number {
+  const policyPath = join(root, ".same-page", "policy.yaml");
+  if (!existsSync(policyPath)) {
+    process.stderr.write("same-page: no .same-page/policy.yaml; run `same-page elaborate` first\n");
+    return 2;
+  }
+  const { policy, findings } = readPolicyFile(root);
+  if (!policy) {
+    printFindings(findings);
+    process.stdout.write(`same-page ${command}: ${findings.length} finding(s) in the policy file\n`);
+    return 1;
+  }
+  return { policy, findings };
+}
+
+function loadObligations(root: string): { obligations: Map<string, Obligation>; findings: Finding[] } {
+  const dir = obligationsDir(root);
+  const obligations = new Map<string, Obligation>();
+  const findings: Finding[] = [];
+  const files = existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".yaml")).sort() : [];
+  for (const name of files) {
+    const where = `.same-page/obligations/${name}`;
+    const id = name.slice(0, -5);
+    const read = readObligation(join(dir, name), where);
+    if (!read.obligation) {
+      findings.push(...read.findings);
+      continue;
+    }
+    if (read.obligation.requirement !== id) {
+      findings.push({ where, message: `file is named ${id} but keys on ${read.obligation.requirement}`, rule: "ENG-013" });
+      continue;
+    }
+    obligations.set(id, read.obligation);
+  }
+  return { obligations, findings };
+}
+
+function downgradeFinding(id: string, old: Obligation["required"], next: Obligation["required"], effect: string): Finding {
+  return {
+    where: `.same-page/obligations/${id}.yaml`,
+    message: `policy downgrade for ${id}: required was [${requiredText(old)}], the policy now requires [${requiredText(next)}]; ${effect}. Evaluated under the old requirement until \`same-page policy confirm\``,
+    rule: "ENG-102",
+  };
+}
+
+// ---------------------------------------------------------------- elaborate
 
 function elaborate(root: string): number {
   const policyPath = join(root, ".same-page", "policy.yaml");
@@ -83,13 +147,12 @@ function elaborate(root: string): number {
     process.stdout.write(`wrote .same-page/policy.yaml (specs: ${dirs.join(", ")})\n`);
   }
   ensureLayout(root);
-  const { policy, findings } = readPolicyFile(root);
-  if (!policy) {
-    printFindings(findings);
-    process.stdout.write(`same-page elaborate: ${findings.length} finding(s) in the policy file\n`);
-    return 1;
-  }
+  const loaded = requirePolicy(root, "elaborate");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
   const corpus = readCorpus(root, policy.specs);
+  const snapshot = currentSnapshot(root);
+  const actor = gitActor(root);
   const out: Finding[] = corpus.duplicates.map((d) => ({ where: "spec set", message: d, rule: "ENG-012" }));
   const wanted = new Map<string, Requirement>();
   for (const r of corpus.requirements) {
@@ -108,23 +171,48 @@ function elaborate(root: string): number {
   }
   let written = 0;
   let unchanged = 0;
+  let held = 0;
   for (const [id, r] of [...wanted.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     const path = obligationPath(root, id);
     let existing: Obligation | null = null;
     if (existsSync(path)) {
       const read = readObligation(path, relative(root, path));
       if (read.obligation) existing = read.obligation;
-      else {
-        // A malformed file is regenerated from the spec, and said so.
-        out.push(...read.findings.map((f) => ({ ...f, message: `${f.message}; regenerated from the spec` })));
+      else out.push(...read.findings.map((f) => ({ ...f, message: `${f.message}; regenerated from the spec` })));
+    }
+    // ENG-112: a revision of an obligation with a standing disproof is
+    // held until the developer acknowledges it.
+    if (existing && (existing.requirement_digest !== digest(r.text) || existing.falsifier_digest !== digest(r.falsifier!))) {
+      const { records } = readRecords(root, id);
+      const standing = standingDisproof(root, id, records);
+      if (standing) {
+        const ack = readAcknowledgment(root, id);
+        const acknowledged = ack && ack.new_requirement_digest === digest(r.text) && ack.new_falsifier_digest === digest(r.falsifier!) && ack.prior_requirement_digest === existing.requirement_digest;
+        if (!acknowledged) {
+          held++;
+          out.push({
+            where: `${r.file}:${r.line}`,
+            message: [
+              `disproof-clearing revision of ${id}.`,
+              `Prior requirement: ${existing.sentence}`,
+              `Prior falsifier: ${existing.falsifier}`,
+              `Prior verdict: FAILING at ${standing.snapshot} (${standing.record})`,
+              `Proposed requirement: ${r.text}`,
+              `Proposed falsifier: ${r.falsifier}`,
+              `Reason: the revision changes the ${existing.requirement_digest !== digest(r.text) ? "requirement" : "falsifier"} the disproof was recorded against, so the disproof no longer binds the revised obligation.`,
+              `The obligation is held; run \`same-page acknowledge ${id}\` after the developer acknowledges that this revision clears or changes the standing disproof, and record it in the spec's Decisions and revisions`,
+            ].join("\n  "),
+            rule: "ENG-112",
+          });
+          continue;
+        }
       }
     }
-    const projected = projectObligation(r, policy, existing);
-    if (writeObligation(path, projected)) written++;
+    const projection = projectObligation(r, policy, existing, snapshot.id, actor);
+    if (projection.downgrade) out.push(downgradeFinding(id, projection.downgrade.old, projection.downgrade.new, "sufficiency under the new requirement is not evaluated until confirmed"));
+    if (writeObligation(path, projection.obligation)) written++;
     else unchanged++;
   }
-  // Obligation files whose requirement is no longer Agreed are reported,
-  // never deleted: a stale obligation is the developer's to remove.
   for (const name of existsSync(obligationsDir(root)) ? readdirSync(obligationsDir(root)).sort() : []) {
     if (!name.endsWith(".yaml")) continue;
     const id = name.slice(0, -5);
@@ -135,102 +223,402 @@ function elaborate(root: string): number {
     }
   }
   printFindings(out);
-  process.stdout.write(`same-page elaborate: ${wanted.size} obligation(s) (${written} written, ${unchanged} unchanged), ${out.length} finding(s)\n`);
+  process.stdout.write(`same-page elaborate: ${wanted.size} obligation(s) (${written} written, ${unchanged} unchanged${held ? `, ${held} held` : ""}), ${out.length} finding(s)\n`);
   return out.length === 0 ? 0 : 1;
 }
 
-type Verdict = "FAILING" | "BLOCKED" | "INSUFFICIENT" | "SUFFICIENT";
+// ---------------------------------------------------------------- verify
 
 function verify(root: string): number {
-  const policyPath = join(root, ".same-page", "policy.yaml");
-  if (!existsSync(policyPath)) {
-    process.stderr.write("same-page: no .same-page/policy.yaml; run `same-page elaborate` first\n");
-    return 2;
-  }
-  const { policy, findings } = readPolicyFile(root);
-  if (!policy) {
-    printFindings(findings);
-    process.stdout.write(`same-page verify: ${findings.length} finding(s) in the policy file\n`);
-    return 1;
-  }
+  const loaded = requirePolicy(root, "verify");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
   const corpus = readCorpus(root, policy.specs);
   const byId = new Map(corpus.requirements.map((r) => [r.id, r] as const));
+  const snapshot = currentSnapshot(root);
+  const now = new Date();
   const out: Finding[] = corpus.duplicates.map((d) => ({ where: "spec set", message: d, rule: "ENG-012" }));
-  const verdicts: Array<{ id: string; verdict: Verdict; o: Obligation; profileText: string }> = [];
-  const dir = obligationsDir(root);
-  const files = existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".yaml")).sort() : [];
-  const seen = new Set<string>();
-  for (const name of files) {
-    const where = `.same-page/obligations/${name}`;
-    const id = name.slice(0, -5);
-    seen.add(id);
-    const read = readObligation(join(dir, name), where);
-    if (!read.obligation) {
-      out.push(...read.findings);
-      continue;
-    }
-    const o = read.obligation;
-    if (o.requirement !== id) {
-      out.push({ where, message: `file is named ${id} but keys on ${o.requirement}`, rule: "ENG-013" });
-      continue;
-    }
+  const { obligations, findings } = loadObligations(root);
+  out.push(...findings);
+  const validatorDigests = new Map<string, string | null>();
+  for (const name of listValidators(root)) {
+    const v = readValidator(root, name);
+    validatorDigests.set(name, v.def ? validatorDigest(v.def) : null);
+    out.push(...v.findings);
+  }
+  const evaluations: Evaluation[] = [];
+  for (const [id, o] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const where = `.same-page/obligations/${id}.yaml`;
     const req = byId.get(id);
-    if (!req || req.withdrawn || req.authority !== "agreed" || !isObligationCandidate(req)) {
+    if (!req || !isObligationCandidate(req)) {
       out.push({ where, message: `${id} has no Agreed MUST or MUST NOT requirement behind it; the obligation is invalid`, rule: "ENG-010" });
       continue;
     }
+    let invalid: string | null = null;
     const reasons: string[] = [];
     if (digest(req.text) !== o.requirement_digest) reasons.push("the requirement text changed");
     if (req.falsifier === null) reasons.push("the requirement has no Falsifier line now");
     else if (digest(req.falsifier) !== o.falsifier_digest) reasons.push("the confirmed falsifier changed");
     if (reasons.length) {
+      invalid = `obligation digest mismatch: ${reasons.join("; ")}; run \`same-page elaborate\` to regenerate it from the confirmed requirement`;
       out.push({ where, message: `invalid obligation ${id}: ${reasons.join("; ")}; run \`same-page elaborate\` to regenerate it from the confirmed requirement`, rule: "ENG-019" });
-      continue;
     }
     const profile = policy.profiles[o.profile];
     if (!profile) {
       out.push({ where, message: `${id} names profile ${o.profile}, which the policy does not define`, rule: "ENG-016" });
       continue;
     }
-    // Layer L1: no evidence records exist yet, so nothing satisfies the
-    // profile. INSUFFICIENT names what would.
-    verdicts.push({ id, verdict: "INSUFFICIENT", o, profileText: requiredText(profile) });
+    // ENG-101, ENG-103: a downgrade holds the recorded requirement.
+    let required = o.required;
+    if (Object.keys(required).length === 0) required = profile.require;
+    else {
+      const cmp = compareStrength(required, profile.require);
+      if (cmp === "weaker") out.push(downgradeFinding(id, required, profile.require, "the verdict below is under the old requirement"));
+      else required = profile.require;
+    }
+    for (const v of o.validators) {
+      if (!validatorDigests.has(v.name)) out.push({ where, message: `${id} lists validator ${v.name}, which has no definition under .same-page/validators/`, rule: "ENG-161" });
+    }
+    const { records, findings: rf } = readRecords(root, id);
+    out.push(...rf);
+    const assessed = assess({ ...o, required }, records, snapshot.id, validatorDigests, now);
+    const standing = standingDisproof(root, id, records);
+    const history = standing ? null : readDisproof(root, id);
+    let ev = evaluate({ ...o, required }, assessed, invalid, standing, history);
+    if (ev.verdict === "FAILING") {
+      const failing = assessed.find((a) => a.freshness === "current" && a.record.result === "fail")!;
+      const disproof = { requirement: id, requirement_digest: o.requirement_digest, falsifier_digest: o.falsifier_digest, sentence: o.sentence, falsifier: o.falsifier, verdict: "FAILING" as const, snapshot: snapshot.id, record: failing.record.path, recorded_at: now.toISOString() };
+      writeDisproof(root, disproof);
+      ev = { ...ev, standing: disproof, history: null };
+    }
+    evaluations.push(ev);
   }
   for (const r of corpus.requirements) {
-    if (isObligationCandidate(r) && !seen.has(r.id))
+    if (isObligationCandidate(r) && !obligations.has(r.id))
       out.push({ where: `${r.file}:${r.line}`, message: `${r.id} is Agreed and has no obligation; run \`same-page elaborate\``, rule: "ENG-206" });
   }
-  for (const v of verdicts) {
-    process.stdout.write(`${v.id}  ${v.verdict}\n  Requirement: ${v.o.sentence}\n  Required:    ${v.profileText}\n  Evidence:    none\n\n`);
+  for (const ev of evaluations) {
+    const o = obligations.get(ev.id)!;
+    const lines = [`${ev.id}  ${ev.verdict}`];
+    if (ev.reason && ev.verdict !== "SUFFICIENT") lines.push(`  Reason:      ${ev.reason}`);
+    lines.push(`  Requirement: ${o.sentence}`);
+    lines.push(`  Required:    ${requiredText(ev.required)}`);
+    if (ev.records.length === 0) lines.push("  Evidence:    none");
+    else {
+      ev.records.forEach((a, i) => {
+        const r = a.record;
+        const who = r.validator ?? (r.manual ? `manual by ${r.manual.actor}` : r.kind);
+        const state = a.expired ? "expired" : a.freshness === "current" ? "current" : `unknown: ${a.why}`;
+        lines.push(`  ${i === 0 ? "Evidence:   " : "            "} ${r.kind} ${who} ${r.result} (${state}; binding ${r.binding_basis}; ${r.sensitivity}; ${r.path})`);
+      });
+    }
+    const anyCurrent = ev.records.some((a) => a.freshness === "current" && !a.expired);
+    lines.push(`  Freshness:   ${ev.records.length === 0 ? "no evidence" : anyCurrent ? "current" : "unknown"}`);
+    lines.push(`  Authority:   local @ ${snapshot.id}`);
+    lines.push(`  Boundary:    repository`);
+    lines.push(`  Assumptions: ${ev.assumptions.length ? ev.assumptions.join("; ") : "none recorded"}`);
+    if (ev.standing) lines.push(`  Standing disproof: FAILING at ${ev.standing.snapshot} (${ev.standing.record})`);
+    else if (ev.history) lines.push(`  Prior disproof: FAILING at ${ev.history.snapshot} (${ev.history.record}); no longer the last verdict`);
+    process.stdout.write(lines.join("\n") + "\n\n");
   }
   printFindings(out);
   const counts: Record<Verdict, number> = { FAILING: 0, BLOCKED: 0, INSUFFICIENT: 0, SUFFICIENT: 0 };
-  for (const v of verdicts) counts[v.verdict]++;
+  for (const ev of evaluations) counts[ev.verdict]++;
   process.stdout.write(
-    `same-page verify: ${verdicts.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s)\n`
+    `same-page verify: ${evaluations.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s); authority local @ ${snapshot.id}\n`
   );
-  const allSufficient = verdicts.every((v) => v.verdict === "SUFFICIENT");
+  const allSufficient = evaluations.every((v) => v.verdict === "SUFFICIENT");
   return out.length === 0 && allSufficient ? 0 : 1;
 }
+
+// ---------------------------------------------------------------- trust
+
+function trust(root: string, name: string | undefined): number {
+  if (!name) {
+    process.stderr.write("usage: same-page trust <validator>\n");
+    return 2;
+  }
+  if (trustStoreInsideRepository(root)) {
+    process.stderr.write(`same-page: the trust store ${trustPath()} is inside the repository it would authorize; set SAME_PAGE_HOME outside it (ENG-062)\n`);
+    return 2;
+  }
+  const v = readValidator(root, name);
+  if (!v.def) {
+    printFindings(v.findings);
+    return 1;
+  }
+  const d = validatorDigest(v.def);
+  const g = grant(root, name, d, gitActor(root));
+  process.stdout.write(`trusted ${name} (${d}) for ${g.repository} by ${g.actor}; recorded in ${trustPath()}\n`);
+  return 0;
+}
+
+// ---------------------------------------------------------------- run
+
+function run(root: string, names: string[], asDeveloper: boolean): number {
+  const loaded = requirePolicy(root, "run");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
+  const corpus = readCorpus(root, policy.specs);
+  const { obligations, findings } = loadObligations(root);
+  const out: Finding[] = [...findings];
+  if (trustStoreInsideRepository(root)) {
+    process.stderr.write(`same-page: the trust store ${trustPath()} is inside the repository; set SAME_PAGE_HOME outside it (ENG-062)\n`);
+    return 2;
+  }
+  const store = readTrustStore();
+  const actor = gitActor(root);
+  // Which validators: the named ones, else every one an obligation lists.
+  const listed = new Map<string, Obligation[]>();
+  for (const o of obligations.values()) for (const v of o.validators) listed.set(v.name, [...(listed.get(v.name) ?? []), o]);
+  const targets = names.length ? names : [...listed.keys()].sort();
+  let executed = 0;
+  let recordsWritten = 0;
+  const snapshot = currentSnapshot(root);
+  for (const name of targets) {
+    const v = readValidator(root, name);
+    if (!v.def) {
+      out.push(...v.findings);
+      continue;
+    }
+    const def: ValidatorDef = v.def;
+    const d = validatorDigest(def);
+    const g = findGrant(store, root, name, d);
+    let context: EvidenceRecord["execution_trust"];
+    if (g) context = { context: "trust-record", actor: g.actor };
+    else if (asDeveloper) context = { context: "developer-invocation", actor };
+    else {
+      out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is not trusted for this repository at its current definition (${d}); run \`same-page trust ${name}\`, or the developer runs \`same-page run ${name} --as-developer\``, rule: "ENG-058" });
+      continue;
+    }
+    const bound = listed.get(name) ?? [];
+    if (bound.length === 0) {
+      out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is listed on no obligation; nothing to record`, rule: "ENG-012" });
+      continue;
+    }
+    const result = runValidator(root, def);
+    executed++;
+    const runId = `${stamp(new Date(result.started_at))}-${name}`;
+    const runPath = writeRun(root, runId, {
+      validator: name,
+      validator_digest: d,
+      command: [...def.command],
+      cwd: def.cwd,
+      shell: def.shell,
+      started_at: result.started_at,
+      duration_ms: result.duration_ms,
+      exit_code: result.exit_code,
+      signal: result.signal,
+      result: result.result,
+      error: result.error,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    } as YamlMap);
+    for (const o of bound) {
+      const ref = completeRef(o.validators.find((x) => x.name === name)!, snapshot.id, actor);
+      const attested = ref.attested_by !== undefined;
+      const req = corpus.requirements.find((r) => r.id === o.requirement);
+      const rec: EvidenceRecord = {
+        requirement: o.requirement,
+        kind: def.kind,
+        adapter: "command",
+        validator: name,
+        validator_digest: d,
+        result: result.result,
+        run: runPath,
+        recorded_at: new Date().toISOString(),
+        snapshot: snapshot.id,
+        requirement_digest: req ? digest(req.text) : o.requirement_digest,
+        falsifier_digest: req && req.falsifier !== null ? digest(req.falsifier) : o.falsifier_digest,
+        execution_trust: context,
+        binding_basis: attested ? "attested" : "none",
+        binding: attested ? { actor: ref.actor!, actor_type: ref.attested_by!, timestamp: ref.attested_at!, snapshot: ref.snapshot!, developer_confirmed: ref.developer_confirmed === true } : null,
+        sensitivity: "unchallenged",
+        freshness: "current",
+        boundary: "repository",
+        dependency_provenance: "conservative",
+        assumptions: [...L2_ASSUMPTIONS],
+        authority: "local",
+        manual: null,
+      };
+      writeRecord(root, rec, name);
+      recordsWritten++;
+    }
+    process.stdout.write(`ran ${name}: ${result.result}${result.exit_code !== null ? ` (exit ${result.exit_code})` : ""}${result.error ? ` ${result.error}` : ""} under ${context.context}; ${bound.length} record(s) at ${snapshot.id}\n`);
+  }
+  printFindings(out);
+  process.stdout.write(`same-page run: ${executed} validator(s) executed, ${recordsWritten} record(s) written, ${out.length} finding(s)\n`);
+  return out.length === 0 ? 0 : 1;
+}
+
+// ---------------------------------------------------------------- attest
+
+function attest(root: string, id: string | undefined, opts: { by?: string; expires?: string; description?: string; bindings?: string; addressesFalsifier: boolean; inspectionOnly: boolean }): number {
+  if (!id || !opts.by || !opts.expires || !opts.description) {
+    process.stderr.write("usage: same-page attest <REQ-ID> --by <actor> --expires <YYYY-MM-DD> --description <text> [--bindings a,b] [--addresses-falsifier] [--inspection-only]\n");
+    return 2;
+  }
+  const loaded = requirePolicy(root, "attest");
+  if (typeof loaded === "number") return loaded;
+  const { obligations, findings } = loadObligations(root);
+  const out: Finding[] = [...findings];
+  const o = obligations.get(id);
+  if (!o) {
+    out.push({ where: `.same-page/obligations/${id}.yaml`, message: `${id} has no obligation; elaborate first`, rule: "ENG-206" });
+    printFindings(out);
+    return 1;
+  }
+  if (Number.isNaN(new Date(opts.expires).getTime())) {
+    out.push({ where: "--expires", message: "expiry must be a date (YYYY-MM-DD)", rule: "ENG-181" });
+    printFindings(out);
+    return 1;
+  }
+  const bindings = (opts.bindings ?? "").split(",").map((s) => s.trim()).filter((s) => s !== "");
+  for (const b of bindings) if (!existsSync(join(root, b))) out.push({ where: b, message: `bound path does not exist in the snapshot`, rule: "ENG-209" });
+  if (out.length) {
+    printFindings(out);
+    return 1;
+  }
+  const snapshot = currentSnapshot(root);
+  const now = new Date().toISOString();
+  const rec: EvidenceRecord = {
+    requirement: id,
+    kind: opts.inspectionOnly ? "inspected" : "manual",
+    adapter: "manual",
+    validator: null,
+    validator_digest: null,
+    result: "pass",
+    run: null,
+    recorded_at: now,
+    snapshot: snapshot.id,
+    requirement_digest: o.requirement_digest,
+    falsifier_digest: o.falsifier_digest,
+    execution_trust: null,
+    binding_basis: "attested",
+    binding: { actor: opts.by, actor_type: "developer", timestamp: now, snapshot: snapshot.id, developer_confirmed: true },
+    sensitivity: "not_applicable",
+    freshness: "current",
+    boundary: "repository",
+    dependency_provenance: "conservative",
+    assumptions: [...L2_ASSUMPTIONS, "manual evidence: the actor's account is the mechanism"],
+    authority: "local",
+    manual: { actor: opts.by, description: opts.description, bindings, expires: opts.expires, addresses_falsifier: !opts.inspectionOnly && opts.addressesFalsifier },
+  };
+  const path = writeRecord(root, rec, opts.inspectionOnly ? "inspected" : "manual");
+  process.stdout.write(`recorded ${rec.kind} evidence for ${id} by ${opts.by}, expires ${opts.expires}, at ${snapshot.id}: ${path}\n`);
+  return 0;
+}
+
+// ---------------------------------------------------------------- acknowledge
+
+function acknowledge(root: string, id: string | undefined): number {
+  if (!id) {
+    process.stderr.write("usage: same-page acknowledge <REQ-ID>\n");
+    return 2;
+  }
+  const loaded = requirePolicy(root, "acknowledge");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
+  const { obligations } = loadObligations(root);
+  const o = obligations.get(id);
+  const req = readCorpus(root, policy.specs).requirements.find((r) => r.id === id);
+  const { records } = readRecords(root, id);
+  const standing = standingDisproof(root, id, records);
+  if (!o || !req || !standing || req.falsifier === null) {
+    process.stdout.write(`same-page acknowledge: ${id} has no standing disproof awaiting a revision\n`);
+    return 1;
+  }
+  writeAcknowledgment(root, {
+    requirement: id,
+    actor: gitActor(root),
+    acknowledged_at: new Date().toISOString(),
+    prior_requirement_digest: o.requirement_digest,
+    prior_falsifier_digest: o.falsifier_digest,
+    new_requirement_digest: digest(req.text),
+    new_falsifier_digest: digest(req.falsifier),
+  });
+  process.stdout.write(`acknowledged: the revision of ${id} clears or changes the standing disproof recorded at ${standing.snapshot}; the prior disproof stays as history. Record this in the spec's Decisions and revisions, then run \`same-page elaborate\`\n`);
+  return 0;
+}
+
+// ---------------------------------------------------------------- policy confirm
+
+function policyConfirm(root: string): number {
+  const loaded = requirePolicy(root, "policy confirm");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
+  const { obligations, findings } = loadObligations(root);
+  printFindings(findings);
+  let changed = 0;
+  for (const [id, o] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const profile = policy.profiles[o.profile];
+    if (!profile) continue;
+    if (compareStrength(o.required, profile.require) !== "equal") {
+      process.stdout.write(`${id}: required [${requiredText(o.required)}] -> [${requiredText(profile.require)}]\n`);
+      const next: Obligation = { ...o, required: profile.require };
+      writeFileSync(obligationPath(root, id), obligationText(next));
+      changed++;
+    }
+  }
+  process.stdout.write(`same-page policy confirm: ${changed} obligation(s) now carry the current policy requirement; record the confirmed change in the spec's Decisions and revisions\n`);
+  return 0;
+}
+
+// ---------------------------------------------------------------- main
 
 function main(): number {
   let parsed;
   try {
-    parsed = parseArgs({ args: process.argv.slice(2), options: { root: { type: "string" } }, allowPositionals: true, strict: true });
+    parsed = parseArgs({
+      args: process.argv.slice(2),
+      options: {
+        root: { type: "string" },
+        "as-developer": { type: "boolean" },
+        by: { type: "string" },
+        expires: { type: "string" },
+        description: { type: "string" },
+        bindings: { type: "string" },
+        "addresses-falsifier": { type: "boolean" },
+        "inspection-only": { type: "boolean" },
+      },
+      allowPositionals: true,
+      strict: true,
+    });
   } catch (e) {
     process.stderr.write(`same-page: ${(e as Error).message}\n${USAGE}\n`);
     return 2;
   }
-  const command = parsed.positionals[0];
-  const rootOpt = typeof parsed.values["root"] === "string" ? parsed.values["root"] : undefined;
-  if (parsed.positionals.length !== 1) {
+  const [command, ...rest] = parsed.positionals;
+  const str = (k: string): string | undefined => (typeof parsed.values[k] === "string" ? (parsed.values[k] as string) : undefined);
+  const flag = (k: string): boolean => parsed.values[k] === true;
+  if (!command) {
     process.stderr.write(`${USAGE}\n`);
     return 2;
   }
-  const root = projectRoot(rootOpt);
-  if (command === "elaborate") return elaborate(root);
-  if (command === "verify") return verify(root);
-  process.stderr.write(`same-page: unknown command ${command}\n${USAGE}\n`);
+  const root = projectRoot(str("root"));
+  switch (command) {
+    case "elaborate":
+      return rest.length === 0 ? elaborate(root) : usage();
+    case "verify":
+      return rest.length === 0 ? verify(root) : usage();
+    case "trust":
+      return trust(root, rest[0]);
+    case "run":
+      return run(root, rest, flag("as-developer"));
+    case "attest":
+      return attest(root, rest[0], { by: str("by"), expires: str("expires"), description: str("description"), bindings: str("bindings"), addressesFalsifier: flag("addresses-falsifier"), inspectionOnly: flag("inspection-only") });
+    case "acknowledge":
+      return acknowledge(root, rest[0]);
+    case "policy":
+      return rest[0] === "confirm" ? policyConfirm(root) : usage();
+    default:
+      process.stderr.write(`same-page: unknown command ${command}\n`);
+      return usage();
+  }
+}
+
+function usage(): number {
+  process.stderr.write(`${USAGE}\n`);
   return 2;
 }
 

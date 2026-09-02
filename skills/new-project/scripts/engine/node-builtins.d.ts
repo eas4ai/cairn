@@ -28,6 +28,7 @@ declare module "node:fs" {
   export function existsSync(path: string): boolean;
   export function mkdirSync(path: string, options?: { recursive?: boolean }): void;
   export function readdirSync(path: string): string[];
+  export function rmSync(path: string, options?: { recursive?: boolean; force?: boolean }): void;
   export function statSync(path: string): { isDirectory(): boolean; isFile(): boolean };
 }
 
@@ -50,8 +51,12 @@ declare module "node:child_process" {
   export function spawnSync(
     command: string,
     args: string[],
-    options?: { cwd?: string; encoding?: "utf8" }
-  ): { status: number | null; stdout: string; stderr: string; error?: Error };
+    options?: { cwd?: string; encoding?: "utf8"; shell?: boolean; timeout?: number; maxBuffer?: number; env?: Record<string, string | undefined> }
+  ): { status: number | null; signal: string | null; stdout: string; stderr: string; error?: Error & { code?: string } };
+}
+
+declare module "node:os" {
+  export function homedir(): string;
 }
 
 declare module "node:util" {

@@ -54,3 +54,7 @@ unchanged. From a project root:
 
 or `bun <skill dir>/scripts/engine/same-page.ts elaborate`. The skills
 name the step at every stage close.
+
+Execution trust for validators lives under `~/.same-page/trust.yaml`
+(or `$SAME_PAGE_HOME/trust.yaml`), never inside a repository; the
+developer writes it with `same-page trust <validator>`.

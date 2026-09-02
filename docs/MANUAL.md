@@ -849,21 +849,62 @@ developer is never asked to confirm a digest (ENG-211, ENG-216); the
 profile and validators fields are the developer's to set, and survive
 re-elaboration (ENG-217).
 
-`same-page verify` reports, per requirement, the verdict, the
-requirement text, what the policy requires, and what evidence exists.
-At L1 no evidence records exist, so every valid obligation is
-INSUFFICIENT with its requirement named, and an obligation whose
-requirement or falsifier changed is reported invalid. Neither command
-writes a spec or the evidence map (ENG-011, ENG-197): the engine
-computes and compares; the map stays the human claim register.
+Layer L2 (iteration 002) makes evidence real. A validator is a
+definition under .same-page/validators/: on the broker,
+`.same-page/validators/reject-malformed.yaml` says `kind: test` and
+`command: [bun, test, tests/broker.test.mjs]`, argv only, no shell
+unless the definition declares one (ENG-162, ENG-163). It runs only
+under execution trust (ENG-059): the developer runs `same-page trust
+reject-malformed`, which writes a grant under the developer's home
+directory, never inside the repository (ENG-062), bound to the
+definition's digest, so a changed definition needs a new grant
+(ENG-065). `same-page run` then executes it and writes one evidence
+record per obligation that lists it, under .same-page/evidence/,
+carrying the six independent axes the engine owns (ENG-026): the
+method, the binding basis (`attested` when the obligation's entry
+says who vouched for the mapping, ENG-030), the sensitivity
+(`unchallenged` until L5), the freshness, the dependency provenance
+(`conservative`), and the assumptions ("environment not fingerprinted",
+until L3), plus the source snapshot: `git:<sha>` on a clean tree,
+`workspace:<digest>` otherwise (ENG-047, ENG-048). Nothing the
+validator prints can set any of those axes (ENG-052, ENG-054); its
+output is captured and stored, never parsed. `same-page attest`
+records manual evidence the same way, by a named human, with an
+expiry the engine enforces (ENG-181, ENG-183).
 
-The next layers, each under its own contract: validators run and
-evidence records carry their independent axes (L2); freshness is
-established conservatively inside a verification boundary, and
-BLOCKED appears where it cannot be (L3); the configured authority
-selects authoritative evidence and the machine view is compared with
-the map (L4); challenges demonstrate sensitivity (L5); ecosystem
-adapters establish backend bindings and complete closures (L6).
+`same-page verify` evaluates. The verdict for each requirement is one
+of four, in this order (ENG-081): FAILING when a current result
+demonstrates the falsifier, whatever the profile says (ENG-082,
+ENG-083); BLOCKED when a precondition cannot be established, with the
+reason stated (ENG-084, ENG-219); INSUFFICIENT when evaluation is
+possible and the current evidence does not compose to the profile
+(ENG-085); SUFFICIENT when it does (ENG-086). At L2 a record is
+current only while the whole repository is unchanged since it was
+produced, which is the widest sound boundary; edit any file and every
+verdict becomes BLOCKED with "freshness cannot be established" until
+the validators run again at the new snapshot. That is the engine
+refusing to claim what it cannot see, and it is the product. The
+authority on every entry is `local`, the only one until L4. A policy
+edit that requires less of an existing obligation is a downgrade,
+shown with old, new, and effect, and held until the developer runs
+`same-page policy confirm` and the change is logged (ENG-101 through
+ENG-105). A FAILING verdict records a standing disproof; revising the
+requirement afterwards raises a disproof-clearing finding with the
+prior text, falsifier, verdict, and counterexample, and the obligation
+is held until the developer acknowledges it (ENG-112 through ENG-115);
+the prior disproof stays as history and nothing bound to the old text
+counts for the new (ENG-117, ENG-120).
+
+Neither command writes a spec or the evidence map (ENG-011, ENG-197):
+the engine computes; the map stays the human claim register until L4
+compares the two.
+
+The next layers, each under its own contract: freshness inside a
+verification boundary narrower than the repository, `stale`, and
+environment fingerprints (L3); the configured authority with the CI
+default, and the machine view compared with the map (L4); challenges
+that demonstrate sensitivity (L5); ecosystem adapters that establish
+backend bindings and complete closures (L6).
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof
@@ -882,6 +923,7 @@ defining output is BLOCKED, with a reason (ENG-219).
 | skills/new-project/scripts/language-check.mjs | The language check, pass one. |
 | skills/new-project/scripts/spec-drift-gate.mjs | The drift gate. |
 | skills/new-project/scripts/engine/ | Same Page Conformance, the engine: same-page.ts and its modules. |
+| .same-page/ | In a consumer project: policy.yaml, obligations/, validators/ (committed); evidence/, cache/ (derived, ignored). |
 | docs/superpowers/specs/ | The normative specs. |
 | docs/specs/same-page/ | The package's own spec set: glossary, keystone, conventions, contracts, evidence map. |
 | docs/WORKFLOW.md | The process as plain instructions, for agents without a skill system. |

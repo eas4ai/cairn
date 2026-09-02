@@ -245,18 +245,25 @@ falsification:
 
 ### Evidence record
 
+Agreed: 2026-09-02
+
 An evidence record is the unit of machine-evaluable belief. Each record
 carries independent axes; no axis is derived from another.
 
 [ENG-026] An evidence record MUST carry the independent axes `kind`,
 `binding_basis`, `sensitivity`, `freshness`, `dependency_provenance`,
 and `assumptions`.
+Falsifier: an evidence record lacks `kind`, `binding_basis`,
+`sensitivity`, `freshness`, `dependency_provenance`, or `assumptions`.
 
 [ENG-027] The `kind` field MUST hold the evidence method: one of
 `formal`, `model`, `property`, `integration`, `test`, `static`,
 `inspected`, or `manual`.
+Falsifier: a record's `kind` holds a value outside the eight methods.
 
 [ENG-028] The engine MUST NOT order evidence methods as a ranking.
+Falsifier: a clause naming one method is satisfied by a record of
+another method, or an engine surface presents the methods as a ladder.
 
 Rationale: a deterministic integration test that executes the exact
 confirmed falsifier can establish more about one requirement than a
@@ -267,39 +274,62 @@ evidence space is a total order.
 
 [ENG-029] The `binding_basis` field MUST hold one of `none`, `attested`,
 or `backend`.
+Falsifier: a record's `binding_basis` holds a value outside `none`,
+`attested`, and `backend`.
 
 [ENG-030] An attested binding MUST record the actor, the actor type
 (`developer` or `agent`), the timestamp, the source snapshot identity,
 and whether the developer confirmed the mapping.
+Falsifier: an attested record lacks the actor, the actor type, the
+timestamp, the snapshot, or the developer-confirmed flag.
 
 [ENG-031] The engine MUST NOT treat developer confirmation of a binding
 as strengthening the evidence mechanism itself.
+Falsifier: a developer-confirmed binding satisfies a kind, sensitivity,
+or freshness clause it would not satisfy unconfirmed.
 
 [ENG-032] A backend binding MUST be established by a trusted adapter
 capability.
+Falsifier: a record carries `binding_basis` `backend` and no registered
+adapter with `can_establish_binding` produced it.
 
 [ENG-033] The engine MUST NOT accept a backend binding from a free-form
 claim in a validator result.
+Falsifier: a validator's output declares a backend binding and the
+record carries `binding_basis` `backend`.
 
 [ENG-034] The `sensitivity` field MUST hold one of `unchallenged`,
 `challenged`, or `not_applicable`.
+Falsifier: a record's `sensitivity` holds a value outside
+`unchallenged`, `challenged`, and `not_applicable`.
 
 [ENG-035] A challenged record MUST name the challenge mechanism.
+Falsifier: a record with `sensitivity` `challenged` has no challenge
+mechanism field.
 
 [ENG-036] A challenged record MUST state whether the challenge derives
 from the confirmed falsifier.
+Falsifier: a challenged record lacks the falsifier-derived flag.
 
 [ENG-037] When a challenge derives from the confirmed falsifier, the
 record MUST cite the falsifier the challenge realizes.
+Falsifier: a challenged record flagged falsifier-derived cites no
+falsifier digest.
 
 [ENG-038] The `freshness` field MUST hold one of `current`, `stale`, or
 `unknown`.
+Falsifier: a record's `freshness` holds a value outside `current`,
+`stale`, and `unknown`.
 
 [ENG-039] The engine MUST evaluate freshness relative to the recorded
 verification boundary.
+Falsifier: a record is reported current while an input inside its
+recorded boundary changed after the record was produced.
 
 [ENG-040] The `dependency_provenance` field MUST hold one of
 `conservative`, `adapter_derived`, or `traced_supplemental`.
+Falsifier: a record's `dependency_provenance` holds a value outside
+`conservative`, `adapter_derived`, and `traced_supplemental`.
 
 [ENG-041] A `traced_supplemental` dependency set MAY enrich a
 conservative or adapter-derived set.
@@ -307,14 +337,20 @@ conservative or adapter-derived set.
 [ENG-042] The engine MUST NOT narrow a conservative dependency floor by
 a `traced_supplemental` set unless that set is established complete
 within the verification boundary.
+Falsifier: a record's boundary is narrower than the conservative floor
+on the strength of a traced set with no completeness established.
 
 [ENG-043] An evidence record MAY carry residual assumptions.
 
 [ENG-044] The engine MUST report every recorded assumption with the
 evidence it qualifies.
+Falsifier: a record carries an assumption that `same-page verify`
+output does not show next to that record.
 
 [ENG-045] The engine MUST NOT absorb an assumption into a claim of
 correctness.
+Falsifier: a `same-page verify` entry states `SUFFICIENT` and shows no
+assumptions while its records carry one.
 
 Rationale: residual assumptions include a trusted verifier version, a
 declared toolchain fingerprint, a container digest, a database version,
@@ -323,21 +359,33 @@ base, and untracked environment behavior. They stay visible.
 
 ### Source snapshot identity
 
+Agreed: 2026-09-02
+
 [ENG-046] The engine MUST bind every evidence record to an immutable
 source snapshot identity.
+Falsifier: a record has no snapshot field.
 
 [ENG-047] For a clean Git source tree, the snapshot identity MUST be
 `git:<commit-sha>`.
+Falsifier: a record produced in a clean git tree carries a snapshot
+other than `git:` followed by the HEAD commit.
 
 [ENG-048] For a dirty workspace, the snapshot identity MUST be
 `workspace:<digest>`.
+Falsifier: a record produced with uncommitted changes carries a `git:`
+snapshot.
 
 [ENG-049] A workspace digest MUST include the Git HEAD identity when
 present, every relevant dirty input inside the verification boundary,
 and every untracked input the dependency mechanism declares relevant.
+Falsifier: two workspaces that differ in HEAD or in a dirty tracked
+file produce the same workspace digest.
 
 [ENG-050] The engine MUST NOT present workspace evidence as evidence for
 the underlying commit.
+Falsifier: `same-page verify` reports a workspace record as current for
+a `git:` snapshot, or shows a commit as the authority for a workspace
+record.
 
 Rationale: workspace evidence is evidence for that workspace snapshot
 only. CI authority remains commit-based unless a named environment
@@ -347,9 +395,16 @@ defines another immutable snapshot model.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-051] The engine MUST own every trust-sensitive evidence axis.
+Falsifier: a record's `binding_basis`, `sensitivity`, `freshness`, or
+`dependency_provenance` value comes from a validator's output rather
+than from the engine.
 
 [ENG-052] A validator result MUST NOT award itself a trust property.
+Falsifier: a validator's output sets a trust property and the record
+carries it.
 
 [ENG-053] A command validator MAY return a pass, a fail, an error,
 stdout and stderr, artifacts, and measurements.
@@ -357,15 +412,23 @@ stdout and stderr, artifacts, and measurements.
 [ENG-054] The engine MUST NOT accept from a validator result a claim of
 complete dependency closure, backend binding, formal proof coverage,
 challenge sensitivity, or authoritative freshness.
+Falsifier: a validator's output claims any of those five and the
+record carries it.
 
 [ENG-055] The engine MUST register each adapter with explicit
 capabilities.
+Falsifier: an adapter produces records with no entry in the capability
+registry.
 
 [ENG-056] The engine MUST accept an adapter claim only when the
 adapter's trusted registration carries the matching capability.
+Falsifier: a record carries a property an adapter claimed while the
+adapter's registration lacks the capability.
 
 [ENG-057] The engine MUST NOT grant a capability because an evidence
 payload carries additional fields.
+Falsifier: an evidence payload with an extra field yields a capability
+the registration does not carry.
 
 Conceptual capabilities:
 
@@ -383,12 +446,18 @@ Adapters and validators are executable code.
 
 [ENG-058] The engine MUST NOT execute a newly discovered
 repository-controlled validator because configuration for it exists.
+Falsifier: a validator definition added to the repository runs with no
+trust record and no explicit invocation.
 
 [ENG-059] The engine MUST execute a validator only under an execution
 trust context.
+Falsifier: a validator runs and its record carries no execution trust
+context.
 
 [ENG-060] The engine MUST accept exactly the execution trust contexts
 listed below.
+Falsifier: a record carries an execution trust context outside the four
+listed.
 
 - Explicit developer invocation.
 - Owner-controlled CI configuration.
@@ -400,17 +469,25 @@ listed below.
 
 [ENG-061] The evaluated repository MUST NOT grant execution trust to
 itself.
+Falsifier: a file inside the repository makes a validator trusted.
 
 [ENG-062] A trust record that authorizes repository-controlled
 validators or adapters MUST live outside the repository it authorizes.
+Falsifier: the engine reads a trust record from a path under the
+evaluated repository.
 
 [ENG-063] Committed repository content MAY request trust.
 
 [ENG-064] Committed repository content MUST NOT grant trust.
+Falsifier: committing a file makes a validator run with no trust record
+outside the repository.
 
 [ENG-065] A trust grant MUST bind to the validator or adapter identity
 and configuration digest, unless the developer approves a broader scope
 outside the repository.
+Falsifier: a validator whose definition changed since the grant runs
+under that grant, with no broader scope approved outside the
+repository.
 
 [ENG-066] An agent completion hook MAY inspect existing conformance
 state.
@@ -418,6 +495,7 @@ state.
 [ENG-067] An agent completion hook MUST NOT execute a newly discovered
 validator or adapter without the execution trust the host environment
 requires.
+Falsifier: the drift gate, or any completion hook, spawns a validator.
 
 Valid trust-anchor locations: local derived host state controlled by
 the developer; developer-level Same Page configuration outside the
@@ -505,20 +583,34 @@ profiles:
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-080] Policy evaluation MUST produce exactly one verdict:
 `SUFFICIENT`, `INSUFFICIENT`, `FAILING`, or `BLOCKED`.
+Falsifier: a `same-page verify` entry shows no verdict, two verdicts,
+or a value outside the four.
 
 [ENG-081] The engine MUST evaluate verdicts in the order `FAILING`,
 `BLOCKED`, `INSUFFICIENT`, `SUFFICIENT`.
+Falsifier: an obligation with a failing result and a blocking
+precondition evaluates `BLOCKED`, or with a blocking precondition and
+satisfying evidence evaluates `SUFFICIENT`.
 
 [ENG-082] When a current, relevant, authoritative validator result or
 counterexample demonstrates that the falsifier occurs, the verdict MUST
 be `FAILING`.
+Falsifier: a current authoritative validator result of fail exists and
+the verdict is not `FAILING`.
 
 [ENG-083] A profile MUST NOT override a `FAILING` verdict.
+Falsifier: a profile that does not require the failing validator's
+method yields `SUFFICIENT` or `INSUFFICIENT` over a current failing
+result.
 
 [ENG-084] When the engine cannot establish a precondition required for
 evaluation, the verdict MUST be `BLOCKED`.
+Falsifier: freshness is `unknown`, a validator errored, or a digest
+mismatches, and the verdict is `SUFFICIENT` or `INSUFFICIENT`.
 
 Preconditions whose absence blocks: freshness is `unknown`; required
 authoritative evidence cannot be obtained; validator infrastructure
@@ -528,16 +620,24 @@ spec digest mismatch prevents safe evaluation.
 [ENG-085] When evaluation is possible and current evidence does not
 satisfy the active assurance profile, the verdict MUST be
 `INSUFFICIENT`.
+Falsifier: evaluation is possible, no failing result exists, the
+profile is unsatisfied, and the verdict is not `INSUFFICIENT`.
 
 [ENG-086] When current evidence inside the recorded verification
 boundary satisfies every active policy requirement, the verdict MUST be
 `SUFFICIENT`.
+Falsifier: current evidence inside the boundary satisfies every clause
+and the verdict is not `SUFFICIENT`.
 
 [ENG-087] The engine MUST NOT discard evidence because that evidence is
 insufficient under policy.
+Falsifier: a record that does not satisfy the profile is deleted or
+omitted from `same-page verify` output.
 
 [ENG-088] The engine MUST report partial evidence with its coverage,
 method, freshness, the active policy, and the verdict.
+Falsifier: an `INSUFFICIENT` entry omits the evidence present, its
+method, its freshness, or the active policy.
 
 Rationale: a current counterexample dominates profile sufficiency; a
 profile cannot ignore evidence that demonstrates the requirement is
@@ -555,22 +655,34 @@ Verdict: INSUFFICIENT
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-100] The developer MAY change assurance policy.
 
 [ENG-101] The engine MUST treat a change that reduces the assurance
 required for an existing Agreed requirement as a policy downgrade.
+Falsifier: a policy change removes a required clause for an Agreed
+requirement and the engine reports no downgrade.
 
 [ENG-102] The engine MUST surface a policy downgrade explicitly, showing
 the old policy, the new policy, and the effect on current sufficiency.
+Falsifier: a downgrade finding omits the old policy, the new policy, or
+the effect on current sufficiency.
 
 [ENG-103] The engine MUST NOT apply a policy downgrade before the
 developer confirms it.
+Falsifier: a requirement evaluates under the reduced profile before the
+developer confirms the downgrade.
 
 [ENG-104] The workflow MUST record a confirmed policy downgrade in the
 applicable Decisions and revisions log.
+Falsifier: a confirmed downgrade has no entry in the affected spec's
+Decisions and revisions.
 
 [ENG-105] The engine MUST treat a policy downgrade without developer
 confirmation as drift.
+Falsifier: `same-page verify` runs with an unconfirmed downgrade and
+reports no finding.
 
 Rationale: the developer is allowed to change the bar. An agent is not
 allowed to lower it silently.
@@ -828,19 +940,31 @@ Not yet established by authoritative CI.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-161] A validator definition MUST state the mechanism that produces
 evidence for an obligation.
+Falsifier: a validator definition under `.same-page/validators/` has no
+method, or one outside the eight.
 
 [ENG-162] The portability floor for a validator MUST be direct argv
 execution.
+Falsifier: a validator definition's command is a single string rather
+than a list of arguments.
 
 [ENG-163] The engine MUST NOT apply shell interpretation to a validator
 command by default.
+Falsifier: a validator with no shell declaration runs through a shell,
+or an argument containing shell metacharacters is interpreted.
 
 [ENG-164] A validator that requires a shell MUST declare `shell: true`.
+Falsifier: a validator that needs a shell runs without `shell: true` in
+its definition.
 
 [ENG-165] The engine MUST require an execution trust context for every
 validator, with or without a shell.
+Falsifier: a validator with `shell: true` runs with no execution trust
+context recorded, or a validator without it does.
 
 Rationale: the obligation says what has to be demonstrated; the
 validator determines how to attempt that demonstration. Direct argv
@@ -861,6 +985,8 @@ database validators, browser validators, and custom project validators.
 [ENG-166] The engine MUST NOT treat a formal proof as eliminating the
 correspondence assumption between a natural-language requirement and
 its formal model.
+Falsifier: a `same-page verify` entry backed by a formal record shows
+no correspondence assumption between the requirement and its model.
 
 [ENG-167] A bound formal proof MAY establish that the implementation
 satisfies the formalized obligation under the proof's declared
@@ -906,23 +1032,36 @@ gap between the requirement and the mechanism that checks it.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-180] The engine MUST accept manual evidence.
+Falsifier: `same-page attest` refuses a well-formed manual record, or
+the record is absent from `same-page verify` output.
 
 [ENG-181] A manual evidence record MUST include a named human actor, a
 timestamp, the source snapshot identity, an evidence description, the
 relevant coarse bindings, and an expiry or re-attestation policy.
+Falsifier: a manual record lacks the actor, the timestamp, the
+snapshot, the description, the bindings, or the expiry.
 
 [ENG-182] When a bound surface changes, the engine MUST invalidate
 manual evidence by the normal freshness rules.
+Falsifier: a bound surface changes and the manual record is still
+reported current.
 
 [ENG-183] The engine MUST NOT let expired manual evidence satisfy
 policy.
+Falsifier: a manual record past its expiry satisfies a profile clause.
 
 [ENG-184] The engine MUST project manual evidence to `Covered` only
 when the human actor exercised or otherwise addressed the falsifier.
+Falsifier: a manual record whose description does not address the
+falsifier projects to Covered.
 
 [ENG-185] The engine MUST project implementation inspection alone to
 method `inspected` and coverage Asserted.
+Falsifier: an inspection-only record projects to a coverage other than
+Asserted, or to a method other than `inspected`.
 
 Rationale: manual evidence is not immortal, and inspection alone
 addresses no falsifier.
@@ -1358,6 +1497,47 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-02 -- Iteration 002 (layer L2) built, under
+  docs/specs/same-page/iterations/002.md. Implementation-design
+  decisions taken under that contract: (a) freshness is
+  whole-repository: a record is `current` while the snapshot, the
+  validator definition digest, and the obligation digests are
+  unchanged, else `unknown` (the widest sound boundary; `stale` and
+  narrower boundaries are L3); (b) `local` is the only verification
+  authority, stated on every record and every `verify` entry, until
+  L4; (c) the snapshot identity covers the source tree outside
+  `.same-page/`, because obligations and validator definitions are
+  identified on every record by their own digests and a policy change
+  re-evaluates evidence instead of staling it -- a tree that differs
+  from HEAD only under `.same-page/` has the commit's identity
+  (ENG-047 read as "clean of source changes"); (d) execution trust
+  records live under `$SAME_PAGE_HOME` or `~/.same-page/trust.yaml`,
+  bound to repository path, validator name, and definition digest; the
+  four contexts are `trust-record`, `developer-invocation`
+  (`--as-developer`), and, when they arrive with L4, `ci` and
+  `named-environment`; (e) the validator-to-obligation mapping is the
+  obligation's `validators` list: a bare name is `binding_basis:
+  none`, an entry with `attested_by` (developer or agent) is
+  `attested`, and elaboration or `run` completes the actor, timestamp,
+  snapshot, and confirmation; (f) the downgrade baseline is the
+  `required` block each obligation stores at elaboration, compared by
+  implication (a requirement is weaker when it no longer guarantees
+  what the old one demanded; incomparable counts as weaker);
+  (g) a standing disproof is `disproof.yaml` under the requirement's
+  evidence directory while the latest record is a failing result;
+  acknowledgment is a sibling file naming the prior and new digests,
+  and `elaborate` regenerates only when they match; (h) the capability
+  registry holds `command` and `manual`, neither with a capability;
+  (i) a manual record satisfies `kind: manual` only when it addressed
+  the falsifier, and `inspected` otherwise, which is ENG-184 and
+  ENG-185 in policy terms ahead of the L4 map projection; (j) a
+  validator run has a timeout (default 600 seconds) and a timed-out or
+  unspawnable validator is `error`, hence `BLOCKED`.
+- 2026-09-02 -- Confirmed Agreed by the developer with falsifiers at
+  the close of iteration 001, for iteration 002 (layer L2): Evidence
+  record, Source snapshot identity, Adapter capability and trust model,
+  Policy evaluation, Assurance-policy downgrade handling, Validators,
+  Manual evidence.
 - 2026-09-02 -- Iteration 001 (layer L1) built, under
   docs/specs/same-page/iterations/001.md. Implementation-design
   decisions taken under that contract: (a) open question 2 closed --

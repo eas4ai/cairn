@@ -39,7 +39,7 @@ skills.sh.json. Node 24.1.0 and bun 1.4.0 on this machine.
 | Templates ship working defaults, no placeholders | skills/new-project/templates/, skills/existing-project/templates/ |
 | Plugin channel registers the gate on TaskCompleted and Stop | hooks/hooks.json |
 | Codex channel: Stop hook that fails open when the script is absent | .codex/hooks.json |
-| Engine, Same Page Conformance: specified, prefix ENG, 190 requirements; layer L1 built under iteration 001 | docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md; skills/new-project/scripts/engine/ |
+| Engine, Same Page Conformance: specified, prefix ENG, 190 requirements; layers L1 and L2 built under iterations 001 and 002 | docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md; skills/new-project/scripts/engine/ |
 | Engine storage model: .same-page/ with committed obligations, validators, policy; derived evidence and cache | engine spec, Storage (ENG-186..194) |
 | Engine construction layers L1..L6, order fixed, timing by contract | engine spec, Construction layers (ENG-240, ENG-241) |
 
@@ -124,9 +124,9 @@ Filled in Stage 3.
 
 | Gap | Kind | Evidence | Decision |
 |---|---|---|---|
-| The checker does not recognize a section-level Agreed: line; an Agreed section inside a Draft or Observed file is not held to the map by machine, though the skill convention promises it | contradicted | skills/existing-project/SKILL.md Stage 2 status convention vs language-check.mjs:436, 674 | recorded 2026-09-02; closes in the iteration that revises the CONF spec (a CONF rule and a checker change together) |
+| The checker does not recognize a section-level Agreed: line; an Agreed section inside a Draft or Observed file is not held to the map by machine, though the skill convention promises it | contradicted | skills/existing-project/SKILL.md Stage 2 status convention vs language-check.mjs:436, 674 | recorded 2026-09-02; closes in iteration 003, the CONF revision (a CONF rule and a checker change together), per the 001 close |
 | The four specs say Draft for review while CLAUDE.md calls them normative and the LANG and CONF rules are enforced by tests | contradicted | head of each docs/superpowers/specs/2026-*.md; tests/language-check.test.mjs | recorded 2026-09-02; confirming LANG and CONF section by section with falsifiers is its own pass |
 | The implementation plan names two underscored skills and never mentions existing-project | contradicted | docs/superpowers/plans/2026-08-10-same-page.md:5 | closed 2026-09-02: the plan is deleted; the specs and CLAUDE.md are the record |
 | No test runs a script under bun as well as node, and no test asserts package.json has no dependencies | untested | PKG-001, PKG-002 rows in conformance.md | recorded 2026-09-02; the map rows say Uncovered, which is the truth |
-| The plugin hook registration is not tested; only the Codex one is | untested | hooks/hooks.json; tests/spec-drift-gate.codex.test.mjs | recorded 2026-09-02; PKG-005 stays Asserted |
-| No check verifies that a MAY requirement carries no Falsifier line, or that an Agreed MUST carries one | untested | LANG-070, LANG-073; ENG-024, ENG-025 | recorded 2026-09-02 as a candidate rule for the CONF revision iteration |
+| The plugin hook registration is not tested; only the Codex one is | untested | hooks/hooks.json; tests/spec-drift-gate.codex.test.mjs | promoted into iteration 002 at the 001 close: a test over both hook registrations |
+| No check verifies that a MAY requirement carries no Falsifier line, or that an Agreed MUST carries one | untested | LANG-070, LANG-073; ENG-024, ENG-025 | recorded 2026-09-02 as a candidate rule for iteration 003, the CONF revision |

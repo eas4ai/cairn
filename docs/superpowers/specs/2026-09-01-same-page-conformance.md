@@ -376,6 +376,11 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-02 -- The engine spec exists:
+  2026-09-02-same-page-conformance-engine.md (ENG). This spec's two
+  parts are what the engine is built on; ENG-195 through ENG-201 bind
+  the engine to the evidence-map rules here, and ENG-185 restates the
+  inspected/Asserted projection of CONF-046 and CONF-047.
 - 2026-09-01 -- The header no longer says the check and the map "ship
   first" with the engine "specified separately": that wording read as
   the model deferring the engine, and deferral is a developer verdict

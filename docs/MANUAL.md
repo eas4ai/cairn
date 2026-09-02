@@ -4,9 +4,10 @@
 
 This manual explains how Same Page works and why each part is shaped
 the way it is. It is explanatory text. The rules themselves live in
-three normative specs under docs/superpowers/specs/: the package
-design, the language (rules named LANG-nnn), and the language check
-and evidence map (rules named CONF-nnn). Where this manual cites a
+four normative specs under docs/superpowers/specs/: the package
+design, the language (rules named LANG-nnn), the language check and
+evidence map (rules named CONF-nnn), and the engine (rules named
+ENG-nnn). Where this manual cites a
 rule by identifier, the spec is the authority and the manual is the
 explanation. The test suite fails if the manual cites an identifier
 the specs no longer define.
@@ -376,8 +377,10 @@ The model states the proposed falsifier in its own words and the
 developer confirms it. The question is a comprehension test as much as
 a record: a model that cannot name the violating state has not
 understood the requirement it just wrote, and a wrong guess is the
-point of asking. The confirmed falsifier is recorded with the
-requirement it belongs to.
+point of asking. The confirmed falsifier is recorded on a
+`Falsifier:` line directly under the requirement, in plain English,
+naming the actor, the sequence, and the violating result, with no
+normative keyword in it (LANG-070 through LANG-077).
 
 For the broker:
 
@@ -802,10 +805,13 @@ Same Page Conformance is the evidence engine the check and the map are
 built for: obligations, confirmed falsifiers, typed evidence records,
 assurance policy, verdicts, and trust anchors. Its feature spec is
 complete and is kept under reference/ as source material. Its normative
-specs are generated from that feature spec at stage 8 of the same
-workflow this manual describes, with the developer ruling each of the
-open "SHOULD" statements the feature spec carries on purpose. The engine
-is then built as iteration contracts over its construction layers.
+spec was generated from that feature spec at stage 8 on 2026-09-02,
+with the developer ruling each of the seven "SHOULD" statements the
+feature spec carried on purpose: 2026-09-02-same-page-conformance-engine.md
+in docs/superpowers/specs/, prefix ENG, opening with the trust model
+that governs every requirement under it. The engine is built next, as
+iteration contracts over its six construction layers, from the
+obligation store to the ecosystem adapters.
 
 What ships today is the floor the engine stands on: a controlled
 language, a deterministic check, and an evidence map that is a claim

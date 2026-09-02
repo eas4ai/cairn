@@ -248,6 +248,56 @@ text replaced by `Withdrawn: date -- reason`.
 [LANG-053] NNN is three digits, assigned in increasing order; gaps
 are allowed and carry no meaning.
 
+## Falsifiers
+
+Normative.
+
+A falsifier is the observable state that would violate a requirement,
+confirmed by the developer at the moment the requirement becomes
+Agreed. The workflows ask the question; these rules govern the answer
+as it is written into the spec.
+
+[LANG-070] When a `MUST` or `MUST NOT` requirement becomes Agreed, the
+spec set MUST record exactly one confirmed falsifier with that
+requirement.
+
+[LANG-071] A falsifier MUST name an observable state: the actor, the
+sequence that reaches the state, and the result that violates the
+requirement.
+
+[LANG-072] A falsifier MUST NOT restate the requirement in negated form
+without naming the observable state.
+
+[LANG-073] A permission-only `MAY` requirement MUST NOT carry a
+falsifier.
+
+[LANG-074] When a limit on permitted behavior matters, the writer MUST
+state the limit as a separate `MUST` or `MUST NOT` requirement with its
+own falsifier.
+
+[LANG-075] A falsifier MUST follow its requirement on a line that opens
+with `Falsifier:`.
+
+[LANG-076] When the writer revises a requirement, the writer MUST
+re-confirm its falsifier in the same change.
+
+[LANG-077] A falsifier MUST NOT contain a normative keyword.
+
+Rationale: "the broker does not reject the request" is a negation, not
+a falsifier. "A request with a malformed header reaches dispatch and
+the broker returns a success response" is a state a test can produce
+and a reviewer can recognize. A falsifier describes a state; the
+obligation lives in the requirement above it, never in the falsifier,
+which is why the line carries no keyword. Worked example:
+
+```text
+[BROKER-021]
+When a plugin sends an invalid request, the broker MUST reject the
+request.
+Falsifier: a request with a malformed header reaches dispatch and the
+broker returns a success response.
+```
+
 ## Where SPTE applies
 
 Normative.
@@ -262,6 +312,7 @@ Normative.
 | Overview narrative, principles, rationale | Plain English |
 | `ux.md` journeys and flows | Plain English; step form (`user action -> system response`) already carries the discipline |
 | Glossary definitions | Plain English written in the glossary's own terms |
+| `Falsifier:` lines | Plain English describing a state; no normative keyword (LANG-077) |
 | Decisions logs, recon report | Plain English |
 
 Observed sections are written in SPTE too -- the designed shape, so
@@ -359,6 +410,14 @@ _Avoid_: ignore, discard (different behaviors -- specify which)
 
 ## Decisions and revisions
 
+- 2026-09-02 -- The falsifier rules, LANG-070 through LANG-077, land
+  with the engine's stage-8 generation, as the 2026-09-01 remediation
+  planned: the workflows got the question then, the language gets the
+  grammar now. This is new text; the chat draft the plan referred to
+  was never captured, so the rules were written from the Feature
+  Spec's falsifier section and the confirm-back loop. The `Falsifier:`
+  line format is fixed so a deterministic check can verify presence
+  under an Agreed requirement and the absence of a keyword.
 - 2026-09-01 -- Review pass, same day: pronoun subjects banned
   outright (LANG-021) so the deterministic check needs no referent
   judgment; present tense stated as a rule (LANG-008); normative

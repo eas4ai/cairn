@@ -31,9 +31,13 @@ after writing or revising this section.
 [DOM-001]
 When the trigger condition occurs, the component MUST produce the
 agreed observable response.
+Falsifier: the trigger condition occurs and the component produces no
+observable response.
 
 [DOM-002]
 The component MUST NOT act outside its declared capability.
+Falsifier: a request outside the declared capability reaches the
+component and the component completes it.
 
 Acceptance criteria:
 - When the trigger condition occurs, the component produces the agreed

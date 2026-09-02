@@ -30,7 +30,8 @@ Agreement carries a falsifier. Wherever a requirement becomes Agreed
 -- a stage close, a confirmed observed section, a promotion out of
 iterations/next/ -- the model asks what observable state would
 violate it, states its own reading, and the developer confirms. The
-question is a comprehension test as much as a record.
+confirmed falsifier is recorded on a Falsifier: line under the
+requirement. The question is a comprehension test as much as a record.
 
 ## Creating a project's spec set
 

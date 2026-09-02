@@ -16,7 +16,7 @@ function definedIdentifiers() {
   for (const name of readdirSync(SPECS)) {
     if (!name.endsWith(".md")) continue;
     const text = readFileSync(join(SPECS, name), "utf8");
-    for (const m of text.matchAll(/^\[((?:LANG|CONF)-\d{3})\](?!\s*Withdrawn:)/gm)) {
+    for (const m of text.matchAll(/^\[((?:LANG|CONF|ENG)-\d{3})\](?!\s*Withdrawn:)/gm)) {
       defined.add(m[1]);
     }
   }
@@ -28,7 +28,7 @@ test("every identifier the manual and README cite is defined in the specs", () =
   expect(defined.size).toBeGreaterThan(40);
   const cited = new Set();
   for (const path of EXPLANATORY) {
-    for (const id of readFileSync(path, "utf8").match(/\b(?:LANG|CONF)-\d{3}\b/g) ?? []) cited.add(id);
+    for (const id of readFileSync(path, "utf8").match(/\b(?:LANG|CONF|ENG)-\d{3}\b/g) ?? []) cited.add(id);
   }
   expect(cited.size).toBeGreaterThan(20);
   const missing = [...cited].filter((id) => !defined.has(id)).sort();

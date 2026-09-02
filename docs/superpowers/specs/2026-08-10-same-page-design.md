@@ -613,6 +613,13 @@ declinable per project.
 
 ## Revisions
 
+- 2026-09-02 -- Stage 8 done. The engine spec,
+  2026-09-02-same-page-conformance-engine.md (ENG), is generated from
+  the Feature Spec with the developer's seven rulings; the spec set has
+  four normative specs; the language spec carries the falsifier rules
+  (LANG-070 block); the domain template and the three skills record a
+  confirmed falsifier on a `Falsifier:` line. Next: iteration contracts
+  over the engine's construction layers.
 - 2026-09-01 -- Withdrawn wording. The entry that follows calls
   engine-shaped artifacts "absent by design" and their absence "not a
   defect". That was the model's phrasing, never a developer verdict,

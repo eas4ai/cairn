@@ -166,13 +166,159 @@ without one.
 _Avoid_: working vocabulary (as a name for something freely editable)
 
 **Same Page Conformance**:
-The evidence engine that comes next, built on the language check and
-the evidence map: obligations, validators, evidence records, verdicts.
-Its specs are generated from its feature spec at stage 8 with the
-developer ruling each open "SHOULD". The name is reserved for the
-engine; the check and the map sit beneath it and are not it.
+The evidence engine specified in
+2026-09-02-same-page-conformance-engine.md (prefix ENG), built on the
+language check and the evidence map, and built as iteration contracts
+over its construction layers. The name is reserved for the engine; the
+check and the map sit beneath it and are not it.
 _Avoid_: conformance (as a name for the language check or the evidence
 map)
+
+**Obligation**:
+The engine's persistent projection of one Agreed requirement: its
+identifier, locator, digests, confirmed falsifier, assurance profile,
+and validator references. Keyed on the requirement identifier; never a
+second contract.
+_Avoid_: contract (when an obligation is meant), task (when an
+obligation is meant)
+
+**Evidence record**:
+The unit of machine-evaluable belief: one record per evidence
+mechanism run, carrying the independent axes method (`kind`), binding
+basis, sensitivity, freshness, dependency provenance, and assumptions.
+_Avoid_: proof (when a record is meant), result (when a record is
+meant)
+
+**Binding basis**:
+Why the engine believes an evidence record corresponds to its
+obligation: `none`, `attested` (a named actor mapped it), or
+`backend` (a trusted adapter established it).
+_Avoid_: link (when a binding basis is meant)
+
+**Sensitivity**:
+Whether an evidence mechanism has demonstrated that it notices a
+realization of the confirmed falsifier: `unchallenged`, `challenged`,
+or `not_applicable`.
+_Avoid_: strength (when sensitivity is meant), mutation score
+
+**Challenge**:
+Any deliberate attempt to realize or expose the confirmed falsifier:
+mutation, fault injection, a negative fixture, a controlled double, a
+counterexample search, an adversarial input, a harness. A challenge
+that derives from the falsifier is recorded as such.
+_Avoid_: mutation (as a synonym for challenge)
+
+**Freshness**:
+Whether an evidence record is current for its exact recorded inputs
+and source snapshot, inside the recorded verification boundary:
+`current`, `stale`, or `unknown`. Unknown is never green.
+_Avoid_: up to date (when freshness is meant)
+
+**Dependency provenance**:
+How an evidence record's dependency set was established:
+`conservative`, `adapter_derived`, or `traced_supplemental`. A
+supplemental trace enriches and never silently narrows.
+_Avoid_: coverage (when provenance is meant)
+
+**Residual assumption**:
+A named input the engine did not verify but the evidence depends on: a
+verifier version, a toolchain, a container digest, an external
+contract. Always reported, never absorbed into correctness.
+_Avoid_: caveat (when a residual assumption is meant)
+
+**Source snapshot**:
+The immutable identity evidence is bound to: `git:<commit-sha>` for a
+clean tree, `workspace:<digest>` for a dirty one. Workspace evidence
+never passes as commit evidence.
+_Avoid_: version (when a snapshot is meant), build (when a snapshot is
+meant)
+
+**Verification boundary**:
+The recorded envelope inside which the engine claims freshness: root,
+dependency scope, selected inputs, validator definition, fingerprints,
+declared contracts, named assumptions. Residual risk outside it is
+explicit.
+_Avoid_: scope (when the boundary is meant)
+
+**Evidence identity**:
+Every input whose change invalidates an evidence claim: snapshot,
+requirement and falsifier digests, obligation digest, validator
+digest, adapter identity, dependency and environment fingerprints.
+Policy is not part of it.
+_Avoid_: cache key (when evidence identity is meant)
+
+**Verification authority**:
+Which execution context's evidence counts as authoritative for a
+snapshot: `ci`, `local`, or `named-environment`. Non-authoritative
+evidence stays visible and never overwrites authoritative evidence.
+_Avoid_: source of truth (when authority is meant)
+
+**Validator**:
+A declared mechanism that produces evidence for an obligation. The
+floor is direct argv execution; a shell is explicit opt-in; execution
+always needs an execution trust context.
+_Avoid_: test (when a validator is meant), checker (when a validator
+is meant)
+
+**Adapter**:
+Registered, trusted code that integrates an evidence backend and holds
+explicit capabilities: binding, complete dependencies, challenge,
+formal or model results. A validator result never awards itself a
+capability.
+_Avoid_: plugin (when an adapter is meant), integration (when an
+adapter is meant)
+
+**Execution trust**:
+The context under which the engine may run a validator or adapter:
+explicit developer invocation, owner-controlled CI, an externally
+recorded trust grant, or a named trusted environment.
+_Avoid_: permission (when execution trust is meant)
+
+**Trust anchor**:
+The record, outside the evaluated repository, that grants execution
+trust to a validator or adapter identity and configuration digest.
+Repository content can request trust and cannot grant it.
+_Avoid_: allowlist (when a trust anchor is meant)
+
+**Assurance profile**:
+The composition of evidence properties sufficient for a requirement:
+methods, alternatives, binding, attestation, sensitivity, authority,
+named assumptions. Current freshness is always required. Project and
+domain defaults apply unless a requirement needs an exception.
+_Avoid_: assurance level, tier (when a profile is meant)
+
+**Policy**:
+The committed file, `policy.yaml`, that names the assurance profiles
+and their defaults. A change to policy re-evaluates evidence; it never
+makes evidence stale.
+_Avoid_: config (when policy is meant)
+
+**Verdict**:
+The single outcome of policy evaluation for one requirement:
+`FAILING`, `BLOCKED`, `INSUFFICIENT`, or `SUFFICIENT`, evaluated in
+that order.
+_Avoid_: score (when a verdict is meant), grade (when a verdict is
+meant), pass (when a verdict is meant)
+
+**Policy downgrade**:
+A policy change that reduces the assurance required for an existing
+Agreed requirement. Surfaced with old and new policy, confirmed by the
+developer, and logged; hidden, it is drift.
+_Avoid_: relaxation (when a downgrade is meant)
+
+**Standing disproof**:
+Authoritative evidence that a requirement's falsifier occurred: a last
+verdict of `FAILING` or a current authoritative counterexample. A
+revision that would clear it is surfaced, acknowledged, and logged,
+and the disproof stays as history.
+_Avoid_: known failure (when a standing disproof is meant)
+
+**Manual evidence**:
+An evidence record produced by a named human: actor, timestamp,
+snapshot, description, coarse bindings, and an expiry or
+re-attestation policy. Covered only when the human addressed the
+falsifier; never immortal.
+_Avoid_: sign-off (when manual evidence is meant)
 
 **Drift gate**:
 The one-shot completion hook that audits a session against the

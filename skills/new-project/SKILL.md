@@ -157,8 +157,9 @@ cross-referenced from the other, ux.md holding the map; small projects use
 fewer numbers, same shape. Capabilities and acceptance criteria are
 normative text: identified SPTE requirements as the domain template
 shows. As each requirement is confirmed, ask the falsifier question
-(standing rule 7) and record the confirmed falsifier with the
-requirement. Run the language check on the spec directory before this
+(standing rule 7) and record the confirmed falsifier on a Falsifier:
+line directly under the requirement, in plain English with no
+normative keyword. Run the language check on the spec directory before this
 stage closes.
 
 ## Stage 5 -- Technical shape -> overview completed + conventions.md

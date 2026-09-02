@@ -58,8 +58,8 @@ revisions; write iterations/NNN+1.md; update the working agreement's
 contract reference. Promotion is an agreement point: ask the falsifier
 question for each promoted MUST or MUST NOT requirement ("What
 observable state would violate this agreed requirement?"), confirm the
-falsifier in the developer's hearing, and record it with the
-requirement. Promotion then makes the staged requirements Agreed:
+falsifier in the developer's hearing, and record it on a Falsifier:
+line under the requirement. Promotion then makes the staged requirements Agreed:
 their identifiers enter the evidence map, conformance.md, Uncovered
 with method "-" until evidence is cited, and the language check runs
 over the spec set before the new contract is presented.

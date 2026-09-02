@@ -211,8 +211,9 @@ Both paths -- the confirm loop. Walk the developer through each observed
 section, one at a time. Three outcomes:
 
 - Confirmed as-is: ask the falsifier question for each MUST or MUST
-  NOT requirement in the section (standing rule 10), record the
-  confirmed falsifiers, then mark the section Agreed. Its requirement
+  NOT requirement in the section (standing rule 10), record each
+  confirmed falsifier on a Falsifier: line under its requirement, then
+  mark the section Agreed. Its requirement
   identifiers enter the evidence map, conformance.md, at that moment
   (create the map from the new-project conformance template if
   absent), each row Uncovered with method "-" until evidence is cited

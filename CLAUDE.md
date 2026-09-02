@@ -17,18 +17,20 @@ new-project skill: the spec-drift completion gate, which audits sessions
 against the iteration contract, and the language check, which verifies
 Same Page Technical English (SPTE) and the evidence map.
 
-Three normative specs in docs/superpowers/specs/ govern this package; read
+Four normative specs in docs/superpowers/specs/ govern this package; read
 the relevant one before a structural change:
 
 - 2026-08-10-same-page-design.md: the package, the three skills, the spec
   set, the drift gate.
 - 2026-09-01-same-page-technical-english.md: the language (LANG-nnn).
 - 2026-09-01-same-page-conformance.md: the language check and the evidence
-  map (CONF-nnn). "Same Page Conformance" names the evidence engine that
-  comes next: its feature spec is in reference/, its specs are generated
-  at stage 8 with the developer ruling each open SHOULD, and it is built
-  on the check and the map. Never describe it as absent, deferred, or
-  optional. Sequencing is the developer's, and so is any deferral.
+  map (CONF-nnn).
+- 2026-09-02-same-page-conformance-engine.md: the engine, Same Page
+  Conformance (ENG-nnn), generated at stage 8 from the feature spec in
+  reference/ with the developer's rulings. It is built next, as iteration
+  contracts over its six construction layers. Never describe it as
+  absent, deferred, or optional. Sequencing is the developer's, and so is
+  any deferral.
 
 ## Commands
 

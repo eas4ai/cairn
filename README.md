@@ -70,8 +70,8 @@ Details and Codex setup: docs/INSTALLATION.md.
 - docs/WORKFLOW.md -- the process as plain instructions, for agents
   without a skill system.
 - docs/superpowers/specs/ -- the normative specs: the package design,
-  the language (LANG rules), and the language check and evidence map
-  (CONF rules).
+  the language (LANG rules), the language check and evidence map
+  (CONF rules), and the engine, Same Page Conformance (ENG rules).
 
 ## Relationship to best-practices-agent-package
 

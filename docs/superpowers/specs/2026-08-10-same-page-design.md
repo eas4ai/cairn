@@ -613,6 +613,15 @@ declinable per project.
 
 ## Revisions
 
+- 2026-09-01 -- Withdrawn wording. The entry that follows calls
+  engine-shaped artifacts "absent by design" and their absence "not a
+  defect". That was the model's phrasing, never a developer verdict,
+  and it reads as deferral, which this package forbids: defer is a
+  developer verdict only. The developer's ruling was sequencing: the
+  engine's specs are generated at stage 8, with the developer ruling
+  each open "SHOULD", after the language, the check, and the map. Same
+  Page Conformance is committed work that comes next. The entry that
+  follows stands as history; this one governs.
 - 2026-09-01 -- Remediation against the round-five Feature Spec
   consensus: the evidence map's single status column splits into
   coverage and method; the table is named the evidence map, and Same

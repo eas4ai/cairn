@@ -28,7 +28,7 @@ Chapters:
 7. The gates: the language check and the drift gate
 8. The three skills, walked through on the broker
 9. Iterations
-10. What Same Page is not yet
+10. Same Page Conformance: the engine that comes next
 
 ## 1. The problem
 
@@ -796,23 +796,28 @@ the iteration closes, the negotiation described in chapter 8 produces
 the next contract. The recon report's Gaps list is documentation debt
 and is promoted or cut at the same moment, the same way.
 
-## 10. What Same Page is not yet
+## 10. Same Page Conformance: the engine that comes next
 
-Same Page Conformance is the name reserved for an evidence engine
-specified separately from this package: obligations, confirmed
-falsifiers, typed evidence records, assurance policy, verdicts, and
-trust anchors. That engine is absent from this package by design, and
-its absence is not a defect. What ships today is the floor beneath it:
-a controlled language, a deterministic check, and an evidence map that
-is a claim register rather than a verdict. The CONF identifier prefix
-belongs to the language check and evidence map spec and does not move
-with the name, because identifiers are permanent.
+Same Page Conformance is the evidence engine the check and the map are
+built for: obligations, confirmed falsifiers, typed evidence records,
+assurance policy, verdicts, and trust anchors. Its feature spec is
+complete and is kept under reference/ as source material. Its normative
+specs are generated from that feature spec at stage 8 of the same
+workflow this manual describes, with the developer ruling each of the
+open "SHOULD" statements the feature spec carries on purpose. The engine
+is then built as iteration contracts over its construction layers.
 
-Three things Same Page is also not. It is not an auto-rewriter: the
-check surfaces, proposes, and waits. It is not a proof system: a cited
-test can be wrong, and correctness remains the job of tests, lint, and
-CI. It is not a file-to-feature verifier: nothing maps changed files to
-requirements automatically.
+What ships today is the floor the engine stands on: a controlled
+language, a deterministic check, and an evidence map that is a claim
+register rather than a verdict. The CONF identifier prefix belongs to
+the language check and evidence map spec and does not move with the
+name, because identifiers are permanent.
+
+Three things the check and the map are not. They are not an
+auto-rewriter: the check surfaces, proposes, and waits. They are not a
+proof system: a cited test can be wrong, and correctness remains the
+job of tests, lint, and CI. They are not a file-to-feature verifier:
+nothing maps changed files to requirements automatically.
 
 ## Appendix: where things live
 

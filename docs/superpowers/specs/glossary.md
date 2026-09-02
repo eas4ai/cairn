@@ -166,10 +166,11 @@ without one.
 _Avoid_: working vocabulary (as a name for something freely editable)
 
 **Same Page Conformance**:
-The evidence engine specified separately from this package:
-obligations, validators, evidence records, verdicts. The name is
-reserved for the engine; the language check and the evidence map sit
-beneath it and are not it.
+The evidence engine that comes next, built on the language check and
+the evidence map: obligations, validators, evidence records, verdicts.
+Its specs are generated from its feature spec at stage 8 with the
+developer ruling each open "SHOULD". The name is reserved for the
+engine; the check and the map sit beneath it and are not it.
 _Avoid_: conformance (as a name for the language check or the evidence
 map)
 

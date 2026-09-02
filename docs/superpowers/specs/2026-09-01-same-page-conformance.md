@@ -5,12 +5,13 @@
 **Sibling:** 2026-09-01-same-page-technical-english.md (the language)
 **Rule prefix:** CONF
 
-Same Page Conformance names the evidence engine specified separately:
+Same Page Conformance names the evidence engine that comes next:
 obligations, confirmed falsifiers, typed evidence records, assurance
-policy, and verdicts. This spec covers two of that engine's siblings,
-each of which stands alone and ships first: the language check and the
-evidence map. The CONF prefix is permanent and does not move with the
-name (LANG-052).
+policy, and verdicts, generated from its feature spec at stage 8 with
+the developer ruling each open "SHOULD". This spec covers the two parts
+that engine is built on, each of which stands alone: the language
+check and the evidence map. The CONF prefix is permanent and does not
+move with the name (LANG-052).
 
 ## Why this exists
 
@@ -375,6 +376,13 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-01 -- The header no longer says the check and the map "ship
+  first" with the engine "specified separately": that wording read as
+  the model deferring the engine, and deferral is a developer verdict
+  only. The engine is committed work, sequenced by the developer:
+  generated at stage 8 with the developer ruling each open "SHOULD",
+  then built on this spec's two parts. The same correction lands in
+  the design spec, the manual, CLAUDE.md, and the package glossary.
 - 2026-09-01 -- Developer confirmed the three judgment calls shipped
   in 0.2.0 without a ruling at the time: the Asserted/inspected lock
   in both directions (CONF-046, CONF-047), the eight-kind method

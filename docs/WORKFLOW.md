@@ -33,6 +33,16 @@ violate it, states its own reading, and the developer confirms. The
 confirmed falsifier is recorded on a Falsifier: line under the
 requirement. The question is a comprehension test as much as a record.
 
+Agreement is elaborated before implementation. At every stage close
+that made requirements Agreed, run the engine, Same Page Conformance
+(in the new-project skill, scripts/engine/same-page.ts, under node
+22.18 or later or bun): `same-page elaborate` writes
+.same-page/policy.yaml on first use and one obligation file per Agreed
+MUST or MUST NOT requirement -- locator, digests, the confirmed
+falsifier, the assurance profile -- with nothing hand-authored. The
+developer's surfaces are the evidence map, the policy file, and
+`same-page verify`; the machine-shaped detail stays under .same-page/.
+
 ## Creating a project's spec set
 
 - Stage 0, baseline and orientation: check DEVELOPMENT_PRACTICES.md
@@ -123,3 +133,7 @@ on), never implemented ad hoc. Direction that contradicts a confirmed spec
 is re-anchored: return to the spec, confirm the change deliberately, then
 act. Closing an iteration promotes, carries, or cuts staged specs into the
 next numbered contract; cutting is the developer's verdict.
+`same-page verify` reports, per requirement, the verdict, what the
+policy requires, and what evidence exists; an obligation whose
+requirement or falsifier changed is invalid until `same-page elaborate`
+regenerates it from the confirmed text.

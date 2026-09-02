@@ -9,6 +9,7 @@ const CHECK = new URL(
   import.meta.url
 ).pathname;
 const OWN_SPECS = new URL("../docs/superpowers/specs", import.meta.url).pathname;
+const OWN_SPEC_SET = new URL("../docs/specs/same-page", import.meta.url).pathname;
 
 function run(args, cwd) {
   return spawnSync("node", [CHECK, ...args], { cwd, encoding: "utf8" });
@@ -420,7 +421,7 @@ test("a three-column map row is reported (CONF-041/045)", () => {
 // Self-hosting with teeth: the package's own glossary supplies the Avoid
 // terms, so CONF-006 runs here instead of being skipped.
 test("the language and evidence-map specs pass their own check", () => {
-  const r = run([OWN_SPECS]);
+  const r = run([OWN_SPEC_SET, OWN_SPECS]);
   expect(r.stdout).toContain("no findings");
   expect(r.stdout).not.toContain("CONF-006) skipped");
   expect(r.status).toBe(0);

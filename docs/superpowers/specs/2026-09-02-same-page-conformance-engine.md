@@ -2,6 +2,9 @@
 
 **Date:** 2026-09-02
 **Status:** Draft for review
+(sections that carry an `Agreed:` line are confirmed by the developer
+with a falsifier under each `MUST` and `MUST NOT` requirement; the
+rest is draft)
 **Rule prefix:** ENG
 **Source:** the Feature Spec "Same Page Conformance", remediated draft,
 round five, consensus 2026-09-01, kept under reference/
@@ -21,32 +24,52 @@ of the architecture.
 
 Normative.
 
+Agreed: 2026-09-02
+
 This section governs every requirement below. A requirement that
 conflicts with it is wrong until the conflict is argued and resolved
 under Decisions and revisions.
 
 [ENG-001] The engine MUST NOT claim that evidence semantically
 establishes a natural-language requirement.
+Falsifier: `same-page verify` output states that a requirement is
+proven, correct, or established, instead of stating that evidence is
+`SUFFICIENT` for it under a named policy.
 
 [ENG-002] The engine MUST record the confirmed falsifier of each
 obligation.
+Falsifier: an obligation file exists with no falsifier field, or with a
+falsifier that differs from the Falsifier line in the spec.
 
 [ENG-003] The engine MUST execute and evaluate only declared evidence
 mechanisms.
+Falsifier: the engine runs a command that no validator definition
+declares, or evaluates a record that no declared mechanism produced.
 
 [ENG-004] The engine MUST track only the evidence inputs it can observe
 within the recorded verification boundary.
+Falsifier: an evidence record lists a tracked input outside its recorded
+boundary, or claims freshness from an input the engine never read.
 
 [ENG-005] The engine MUST record the basis on which each evidence record
 is bound to its obligation.
+Falsifier: an evidence record has no `binding_basis` field, or holds a
+value outside `none`, `attested`, and `backend`.
 
 [ENG-006] The engine MUST record whether each evidence mechanism has
 demonstrated sensitivity to the confirmed falsifier.
+Falsifier: an evidence record has no `sensitivity` field, or holds a
+value outside `unchallenged`, `challenged`, and `not_applicable`.
 
 [ENG-007] The engine MUST NOT claim freshness or sufficiency beyond the
 recorded verification boundary.
+Falsifier: a file inside the recorded boundary changes after the
+evidence was produced, and the next `same-page verify` run still
+reports that evidence current.
 
 [ENG-008] The engine MUST NOT convert uncertainty into correctness.
+Falsifier: a requirement with unknown freshness, or with a dependency
+closure not established complete, evaluates `SUFFICIENT`.
 
 Rationale: the engine's defining behavior is refusal. Its most important
 output is not a pass. It is `BLOCKED`, with a reason.
@@ -104,10 +127,18 @@ Normative.
 
 ### Requirement authority
 
-[ENG-010] Only an Agreed requirement MAY have an active obligation.
+Agreed: 2026-09-02
+
+[ENG-010] The engine MUST NOT keep an active obligation for a
+requirement that is not Agreed.
+Falsifier: a requirement whose section is Observed or Draft has an
+obligation file that `same-page verify` evaluates.
 
 [ENG-011] The engine MUST NOT change a requirement from Observed to
 Agreed.
+Falsifier: after an engine command runs, a section's status reads
+Agreed where it read Observed before, with no developer confirmation in
+the conversation.
 
 Rationale: machine evidence can show that code matches an Observed
 description. Only developer confirmation can establish that the
@@ -115,23 +146,38 @@ description is what the system is meant to do.
 
 ### Obligation
 
+Agreed: 2026-09-02
+
 [ENG-012] An active obligation MUST belong to exactly one Agreed
 requirement identifier.
+Falsifier: an obligation file names two identifiers or none, or two
+obligation files name the same identifier.
 
 [ENG-013] An obligation MUST key on a requirement identifier.
+Falsifier: an obligation file is named or keyed by anything other than
+its requirement identifier.
 
 [ENG-014] The engine MUST NOT assign identifiers to acceptance
 criteria.
+Falsifier: an engine-written artifact carries an identifier for an
+acceptance-criterion line.
 
 [ENG-015] An obligation MUST store the requirement identifier, a source
 locator for the requirement, the canonical requirement digest, the
 confirmed falsifier, and the canonical falsifier digest.
+Falsifier: an elaborated obligation file lacks the identifier, the
+locator, the requirement digest, the falsifier, or the falsifier
+digest.
 
 [ENG-016] An obligation MUST store the applicable assurance profile and
 its validator references.
+Falsifier: an elaborated obligation lacks a profile field or a
+validators field, or names a profile the policy file does not define.
 
 [ENG-017] When implementation exists, an obligation MUST store
 evidence-binding metadata and dependency metadata.
+Falsifier: an obligation with a bound implementation has no binding
+section or no dependency section.
 
 [ENG-018] An obligation MAY include a copied requirement sentence for
 readability.
@@ -139,8 +185,14 @@ readability.
 [ENG-019] When the requirement digest no longer matches the
 specification, the engine MUST treat the obligation as invalid until
 the obligation is regenerated from the confirmed requirement.
+Falsifier: a requirement's text changes in the spec, and `same-page
+verify` evaluates its old obligation as anything other than invalid
+before re-elaboration.
 
 [ENG-020] The engine MUST NOT treat an obligation as a second contract.
+Falsifier: the obligation's copied sentence and the spec disagree, and
+the engine evaluates against the copy instead of reporting the
+obligation invalid.
 
 Rationale: acceptance criteria remain observations that establish
 whether a requirement is satisfied; they receive no second identifier
@@ -149,21 +201,32 @@ the specification is the sole authority.
 
 ### Falsifier
 
+Agreed: 2026-09-02
+
 [ENG-021] A falsifier MUST record the observable state that violates
 the requirement.
+Falsifier: an obligation's falsifier field is empty or is a copy of the
+requirement sentence.
 
 [ENG-022] A falsifier MAY include preconditions, actors, an observable
 sequence, relevant state, and the violating result.
 
 [ENG-023] The engine MUST NOT interpret a falsifier sequence as an
 executable language.
+Falsifier: the engine runs, or parses as commands, the lines of a
+falsifier's sequence.
 
 [ENG-024] A permission-only `MAY` requirement MUST NOT carry a
 falsifier.
+Falsifier: elaboration writes an obligation file for a requirement whose
+only keyword is `MAY`.
 
 [ENG-025] When a limit on permitted behavior matters, the specification
 MUST express the limit as a separate `MUST` or `MUST NOT` requirement
 with its own falsifier.
+Falsifier: a `MAY` requirement carries a Falsifier line or an "only"
+clause standing in for a limit, with no separate `MUST` or `MUST NOT`
+requirement stating the limit.
 
 Rationale: the falsifier is machine-readable semantic intent, written
 for validator authors, reviewers, and adapters. Executable behavior
@@ -367,9 +430,13 @@ or modifying a repository-side trust marker.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-070] An assurance profile MUST define the evidence properties that
 are sufficient for a requirement as a composition, not as one scalar
 grade.
+Falsifier: a profile in `policy.yaml` is a single number or word, and
+the engine accepts it.
 
 [ENG-071] A profile MAY require one or more evidence methods,
 alternative method sets, a binding basis, developer-confirmed
@@ -377,25 +444,38 @@ attestation, challenged sensitivity, an authoritative execution
 context, and named assumptions or verifier families.
 
 [ENG-072] Every profile MUST require current freshness.
+Falsifier: a requirement evaluates `SUFFICIENT` on evidence whose
+freshness is `stale` or `unknown`, under any profile.
 
 [ENG-073] A profile MUST NOT waive current freshness.
+Falsifier: `policy.yaml` carries a profile setting that turns freshness
+off, and the engine accepts the policy without a finding.
 
 [ENG-074] A profile MAY require falsifier-derived challenge for a
 requirement.
 
 [ENG-075] The policy file MUST define a default assurance profile at
 project scope.
+Falsifier: `policy.yaml` has no project-scope default profile, and
+elaboration or `same-page verify` runs without a finding.
 
 [ENG-076] A domain MAY override the project default profile.
 
 [ENG-077] When an obligation names no profile, the engine MUST apply the
 nearest inherited default.
+Falsifier: an obligation with no profile field is evaluated under a
+profile other than its domain default, or the project default when the
+domain has none.
 
 [ENG-078] When the inherited default applies to a requirement, the
 workflow MUST NOT ask the developer about that requirement's profile.
+Falsifier: the model asks which profile a requirement takes when no
+exception is in play.
 
 [ENG-079] When a requirement needs a profile that differs from the
 inherited default, the workflow MUST ask the developer.
+Falsifier: an obligation is elaborated with a non-default profile that
+the developer never confirmed in the conversation.
 
 Examples:
 
@@ -499,44 +579,66 @@ allowed to lower it silently.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-110] The developer MAY revise an Agreed requirement or its
 confirmed falsifier through the Same Page confirmation process.
 
 [ENG-111] The engine MUST record a standing disproof when authoritative
 evidence for a requirement includes a last verdict of `FAILING` or a
 current authoritative counterexample realizing the confirmed falsifier.
+Falsifier: an authoritative `FAILING` verdict exists for a requirement,
+and the engine's state for it carries no standing disproof.
 
 [ENG-112] When a revision invalidates an obligation that has a standing
 disproof, the engine MUST surface a disproof-clearing revision finding
 before the revised obligation can evaluate `SUFFICIENT`.
+Falsifier: a requirement with a standing disproof is revised, and the
+revised obligation evaluates `SUFFICIENT` with no disproof-clearing
+finding reported.
 
 [ENG-113] A disproof-clearing revision finding MUST show the prior
 requirement text, the prior falsifier, the prior verdict, and the
 authoritative source snapshot.
+Falsifier: a disproof-clearing finding omits any of those four.
 
 [ENG-114] A disproof-clearing revision finding MUST show the
 counterexample or failing evidence reference, the proposed revision,
 and the reason the revision invalidates the prior disproof.
+Falsifier: a disproof-clearing finding omits any of those three.
 
 [ENG-115] The workflow MUST obtain the developer's explicit
 acknowledgment that the revision clears or changes the standing
 disproof.
+Falsifier: a revised obligation is created after a disproof-clearing
+finding with no acknowledgment from the developer in the conversation.
 
 [ENG-116] The workflow MUST record that acknowledgment in the
 applicable Decisions and revisions log.
+Falsifier: the developer acknowledged a disproof-clearing revision and
+the affected spec's log has no entry for it.
 
 [ENG-117] The engine MUST preserve the prior counterexample as
 historical evidence about the prior contract.
+Falsifier: after the revision, the prior counterexample's record is
+gone from the evidence store.
 
 [ENG-118] The engine MUST NOT delete, relabel as irrelevant, or hide a
 prior disproof because the requirement digest changed.
+Falsifier: a prior disproof is absent from `same-page verify` output,
+or shown as irrelevant, because the digest changed.
 
 [ENG-119] After acknowledgment, the engine MUST create a new obligation
 projection under the same requirement identifier, unless the language
 spec's revision rules require withdrawal and replacement.
+Falsifier: after acknowledgment, the obligation file still carries the
+prior digests, or a new identifier was assigned where the language
+rules did not require one.
 
 [ENG-120] A revised obligation MUST NOT inherit a sufficiency claim from
 evidence bound to the prior requirement or falsifier.
+Falsifier: the revised obligation evaluates `SUFFICIENT` on evidence
+records whose digests match the prior requirement or falsifier.
 
 Rationale: a revision does not erase the history of what the previous
 contract disproved. Revision remains the developer's right; the
@@ -829,6 +931,8 @@ addresses no falsifier.
 
 Normative.
 
+Agreed: 2026-09-02
+
 The storage model separates authored contract projection from derived
 execution state:
 
@@ -847,28 +951,45 @@ docs/specs/<project>/
 
 [ENG-186] The engine MUST keep authored contract projection separate
 from derived execution state.
+Falsifier: a file under `obligations/`, `validators/`, or `policy.yaml`
+holds an evidence record or a freshness value, or a file under
+`evidence/` or `cache/` is the only place an obligation's fields exist.
 
 [ENG-187] The engine MUST store canonical obligations as one committed,
 diffable text artifact per requirement under `.same-page/obligations/`.
+Falsifier: two requirements share one obligation file, an obligation
+lives outside `.same-page/obligations/`, or an obligation file is not
+plain text.
 
 [ENG-188] The canonical obligation syntax MUST be YAML.
+Falsifier: an obligation file is written in a syntax other than YAML.
 
 [ENG-189] The engine MUST store validator definitions and the policy
 file as committed, diffable text under `.same-page/`.
+Falsifier: a validator definition or the policy file lives outside
+`.same-page/`, or is not plain text.
 
 [ENG-190] The engine MUST keep derived evidence and caches uncommitted,
 under `.same-page/evidence/` and `.same-page/cache/`.
+Falsifier: a file under `.same-page/evidence/` or `.same-page/cache/`
+is tracked by git, or derived evidence is written anywhere else.
 
 [ENG-191] A database MAY index obligations or evidence as a derived
 cache.
 
 [ENG-192] The engine MUST NOT use a database as the authoritative
 committed obligation store.
+Falsifier: an obligation exists only in a database, with no YAML file
+under `.same-page/obligations/`, and the engine evaluates it.
 
 [ENG-193] The engine MUST NOT commit a freshness lock file.
+Falsifier: a tracked file under `.same-page/` records freshness state
+or evidence digests.
 
 [ENG-194] The engine MUST treat CI evidence as an artifact and local
 evidence as derived local state.
+Falsifier: the engine reads a local evidence file as authoritative CI
+evidence, or writes local evidence where CI artifacts are read.
 
 Rationale: machine-generated hashes are derived execution state, not
 mergeable human source. Replacing the diffable-artifact rule with a
@@ -878,20 +999,33 @@ database store requires an explicit design decision in this log.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-195] The evidence map MUST remain the committed human claim
 register that CONF-040 through CONF-049 define.
+Falsifier: the engine writes a column, a value, or a row format into
+`conformance.md` that the map spec does not define.
 
 [ENG-196] The evidence map MUST NOT store freshness or policy
 sufficiency.
+Falsifier: a row in `conformance.md` carries a freshness value or a
+verdict.
 
 [ENG-197] The engine MUST NOT edit the committed evidence map without
 an explicit synchronization action or a confirmed workflow action.
+Falsifier: `conformance.md` changes after an engine command other than
+`same-page sync-map`, or after a workflow step the developer did not
+confirm.
 
 [ENG-198] The engine MUST compute its machine view of coverage and
 compare that view with the evidence map.
+Falsifier: `same-page verify` runs with a map present and its output
+carries no comparison between the machine view and the map.
 
 [ENG-199] The `same-page verify` command MUST report every disagreement
 between the machine view and the evidence map.
+Falsifier: the machine view and the map differ on a row, and the
+`same-page verify` output does not name that row.
 
 [ENG-200] An explicit synchronization action MAY update the map; its
 working name is `same-page sync-map`.
@@ -910,24 +1044,36 @@ claimed.
 
 Normative.
 
+Agreed: 2026-09-02
+
 The lifecycle has three moments: requirement confirmation, stage close
 before implementation, and implementation.
 
 [ENG-205] At requirement confirmation, the workflow MUST ask the
 falsifier question and record the confirmed falsifier with the
 requirement.
+Falsifier: a requirement becomes Agreed in the spec with no Falsifier
+line under it.
 
 [ENG-206] At stage close, before implementation, the workflow MUST
 elaborate confirmed requirements and falsifiers into obligation files.
+Falsifier: implementation of an Agreed requirement begins with no
+obligation file for it.
 
 [ENG-207] At stage close, the workflow MUST apply the inherited
 assurance profile to each new obligation.
+Falsifier: a newly elaborated obligation carries no profile, or a
+non-default one with no developer ruling.
 
 [ENG-208] The workflow MUST keep machine-shaped detail in `.same-page/`,
 not in the confirmation conversation.
+Falsifier: the model asks the developer to confirm a digest, a locator,
+a dependency list, or a YAML field.
 
 [ENG-209] The engine MUST attach evidence bindings only after
 implementation exists.
+Falsifier: an obligation carries a binding to an implementation path
+that does not exist in the snapshot.
 
 [ENG-210] After implementation, the workflow or the engine MAY
 associate implementation boundaries, validators, a binding basis,
@@ -935,6 +1081,8 @@ dependency provenance, and a verification boundary with an obligation.
 
 [ENG-211] The engine MUST compute digests, dependency provenance, and
 evidence records without developer hand-authoring.
+Falsifier: elaboration or verification stops and asks the developer to
+supply a digest, a dependency set, or an evidence record.
 
 Rationale: confirm fatigue creates rubber-stamped authority, so the
 requirement and its falsifier are confirmed inline and everything
@@ -944,11 +1092,18 @@ machine-shaped is elaborated afterwards from defaults.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-215] The normal developer surface MUST be the evidence map, the
 policy file, and `same-page verify`.
+Falsifier: a routine workflow step requires the developer to open or
+edit a file under `.same-page/` other than `policy.yaml`.
 
 [ENG-216] The engine MUST NOT require a developer to hand-author
 obligation files, digests, dependency provenance, or evidence records.
+Falsifier: a documented or prompted step tells the developer to write
+an obligation file, a digest, provenance, or an evidence record by
+hand.
 
 [ENG-217] A developer MAY edit a committed obligation file directly.
 
@@ -956,9 +1111,13 @@ obligation files, digests, dependency provenance, or evidence records.
 requirement, the verdict, the requirement text, the required evidence,
 the evidence present, the freshness, the authority with its snapshot,
 and the boundary.
+Falsifier: a `same-page verify` entry omits the verdict, the text, the
+required evidence, the present evidence, the freshness, the authority
+with its snapshot, or the boundary.
 
 [ENG-219] A `BLOCKED` result MUST state the uncertainty that prevents a
 correctness claim.
+Falsifier: a `BLOCKED` entry carries no reason line.
 
 ```text
 AUTH-011  SUFFICIENT
@@ -988,19 +1147,29 @@ The `BLOCKED` output is part of the product's character.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-225] In `/new-project`, the workflow MUST ask the falsifier
 question in the confirmation loop, elaborate obligations at stage
 close, and turn project and domain assurance defaults into policy.
+Falsifier: a `/new-project` run reaches the working agreement with an
+Agreed `MUST` lacking a Falsifier line, with no obligation files, or
+with no `policy.yaml`.
 
 [ENG-226] In `/existing-project` Path B, the workflow MUST consult
 conformance state before re-deriving what the engine already
 established.
+Falsifier: a Path B session re-verifies a section from code while
+fresh, sufficient, authoritative evidence for it exists unconsulted.
 
 [ENG-227] Fresh, sufficient, authoritative evidence MAY establish
 `Holds` for a spec section.
 
 [ENG-228] The workflow MUST focus session judgment on the requirements
 listed below.
+Falsifier: a session spends its judgment on a requirement whose
+obligation, evidence, validator, and map row are all in order while one
+of the listed conditions stands unaddressed.
 
 - The obligation is missing.
 - The evidence is stale.
@@ -1011,21 +1180,32 @@ listed below.
 
 [ENG-229] The engine MUST NOT change the meaning of `Holds`,
 `Drifted`, `Still Observed`, or `Missing`.
+Falsifier: an engine surface reports one of those four words with a
+meaning other than the `/existing-project` definition.
 
 [ENG-230] In `/next-iteration`, the workflow MUST confirm a falsifier
 for each staged `MUST` or `MUST NOT` requirement before promotion.
+Falsifier: a staged requirement is promoted into a contract with no
+Falsifier line.
 
 [ENG-231] The workflow MUST elaborate obligations for promoted
 requirements before implementation.
+Falsifier: implementation of a promoted requirement begins with no
+obligation file for it.
 
 [ENG-232] The drift gate MUST remain a semantic and scope audit.
+Falsifier: the gate's output contains a validator result or a verdict
+the gate computed itself.
 
 [ENG-233] The drift gate MUST NOT become the validator runtime.
+Falsifier: the gate spawns a validator command.
 
 [ENG-234] The drift gate MAY inspect cached conformance state.
 
 [ENG-235] The drift gate MUST NOT execute a newly discovered validator
 during completion.
+Falsifier: a validator definition added in the session runs during the
+completion hook.
 
 Rationale: the engine changes who establishes the evidence. It does
 not change the vocabulary.
@@ -1034,11 +1214,17 @@ not change the vocabulary.
 
 Normative.
 
+Agreed: 2026-09-02
+
 [ENG-240] Every construction layer listed below is in scope, and an
 iteration contract MUST decide when each layer is built.
+Falsifier: a spec, a contract, or a doc describes a layer as optional
+or out of scope.
 
 [ENG-241] When an iteration contract includes a layer, the contract
 MUST include or presuppose every layer that layer depends on.
+Falsifier: a contract's In list names a layer whose dependency layer is
+neither in that list nor already built.
 
 - L1, obligation store and lifecycle: requirement locator and digest,
   falsifier lifecycle, YAML obligation artifacts, policy defaults,
@@ -1069,8 +1255,10 @@ iteration contract that builds the layer they belong to.
 1. Challenge review surface: do reviewable challenge artifacts live
    primarily in repository files, in `same-page verify` output, or
    both?
-2. Package boundary: does `policy.yaml` scaffold whenever Same Page is
-   installed, or only when the engine is enabled for a project?
+2. Package boundary -- closed under iteration 001 (2026-09-02):
+   `policy.yaml` is written by the first `same-page elaborate` in a
+   project, with the default profile and the spec directories;
+   installing Same Page writes nothing.
 3. Trusted adapter registration: how does a developer inspect and
    approve the capabilities an adapter is authorized to assert?
 4. Evidence artifact portability: what portable artifact format does CI
@@ -1170,6 +1358,38 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-02 -- Iteration 001 (layer L1) built, under
+  docs/specs/same-page/iterations/001.md. Implementation-design
+  decisions taken under that contract: (a) open question 2 closed --
+  the policy file is written by the first `elaborate`, not by
+  installation; (b) the policy file carries `specs:`, the spec
+  directories the engine reads, so `verify` needs no arguments and the
+  developer surface stays the map, the policy, and `verify` (ENG-215);
+  (c) the default profile requires any one evidence method other than
+  `inspected`, so its sufficiency is the map's Covered in policy form;
+  (d) an obligation stores the applicable profile (ENG-016) together
+  with `profile_from` (`project default`, `domain <PREFIX>`, or
+  `obligation`), which is how re-elaboration re-resolves an inherited
+  default when policy changes (ENG-077) and keeps a profile the
+  developer set (ENG-217); (e) digests are over canonical text
+  (glossary), so a re-wrapped paragraph keeps its obligation; (f) the
+  engine is TypeScript run directly by node and bun with no build step
+  and no dependency, with its own reader and writer for the YAML subset
+  it emits (ENG-188); (g) at L1 `verify` evaluates every valid
+  obligation `INSUFFICIENT` and names the required evidence, because
+  no evidence record exists until L2 -- the full `verify` output
+  (ENG-218) lands with the layers that produce its fields.
+- 2026-09-02 -- Confirmed Agreed by the developer with falsifiers, in
+  the /existing-project pass that opened the package's own spec set:
+  Trust model, Requirement authority, Obligation, Falsifier, Assurance
+  profile, Requirement and falsifier revision handling, Storage,
+  Evidence map, Obligation lifecycle, Developer surfaces, Workflow
+  integration, Construction layers. ENG-010
+  reworded from "Only an Agreed requirement MAY have an active
+  obligation" to a `MUST NOT`, because a limit phrased as a permission
+  is what ENG-025 and LANG-074 forbid. In a section whose first line
+  is `Normative.`, the `Agreed:` line follows that marker, because the
+  language check reads the marker only on the first line.
 - 2026-09-02 -- Generated at stage 8 from the Feature Spec (remediated
   draft, round five, consensus 2026-09-01). The seven queued "SHOULD"
   statements were presented to the developer on 2026-09-01 with the

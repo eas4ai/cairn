@@ -23,8 +23,9 @@ Q: Where do staged specs live?
 A: docs/specs/<project>/iterations/next/, shaped to merge into their
 target domain spec when promoted. They are written in Same Page
 Technical English and pass the language check at capture; promotion
-makes their requirements Agreed, confirms a falsifier for each, and
-adds them to the evidence map, conformance.md.
+makes their requirements Agreed, confirms a falsifier for each, adds
+them to the evidence map, conformance.md, and runs `same-page
+elaborate` so each has its obligation file before implementation.
 
 ## It's working if
 

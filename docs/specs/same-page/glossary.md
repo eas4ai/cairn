@@ -1,10 +1,12 @@
 # Glossary
 
 Canonical language for the Same Page package's own specifications: the
-design spec, the language spec, and the language check and evidence map
-spec. The language check reads this file's Avoid lines whenever it scans
-this directory, so the specs that define the check are held to the same
-vocabulary discipline they prescribe. The Working vocabulary section below
+design spec, the language spec, the language check and evidence map
+spec, and the engine spec under docs/superpowers/specs/, and the spec
+set that governs the package's own build in this directory. The
+self-hosting check scans both directories as one corpus and reads this
+file's Avoid lines, so the specs that define the check are held to the
+same vocabulary discipline they prescribe. The Working vocabulary section below
 is the standard dictionary, verbatim from the shipped glossary template;
 the check reports any entry that differs without a recorded ruling
 (CONF-014). The package's own terms live under Project terms.
@@ -288,9 +290,11 @@ domain defaults apply unless a requirement needs an exception.
 _Avoid_: assurance level, tier (when a profile is meant)
 
 **Policy**:
-The committed file, `policy.yaml`, that names the assurance profiles
-and their defaults. A change to policy re-evaluates evidence; it never
-makes evidence stale.
+The committed file, `.same-page/policy.yaml`, that names the spec
+directories the engine reads, the assurance profiles, the project
+default, and the domain overrides. Written by the first elaboration;
+the developer's to edit. A change to policy re-evaluates evidence; it
+never makes evidence stale.
 _Avoid_: config (when policy is meant)
 
 **Verdict**:
@@ -313,6 +317,41 @@ revision that would clear it is surfaced, acknowledged, and logged,
 and the disproof stays as history.
 _Avoid_: known failure (when a standing disproof is meant)
 
+**Requirement locator**:
+The spec file path plus the requirement identifier, together locating
+one requirement in the spec set. Stored on the obligation (ENG-015).
+_Avoid_: pointer
+
+**Canonical text**:
+A requirement's sentences as the engine digests them: the lines under
+its identifier up to the next identifier, blank line, Falsifier line,
+or Agreed line, with whitespace collapsed to single spaces. The engine
+digests canonical text, never raw bytes, so re-wrapping a paragraph
+does not invalidate an obligation and changing a word does.
+_Avoid_: raw text (when the digest input is meant)
+
+**Digest**:
+The SHA-256 of canonical text, written `sha256:<hex>`. The requirement
+digest covers the requirement; the falsifier digest covers the
+confirmed falsifier. A mismatch invalidates the obligation and every
+evidence record bound to it (ENG-015, ENG-019).
+_Avoid_: hash (when the stored value is meant), checksum
+
+**Elaboration**:
+The stage-close step that turns each confirmed requirement and its
+falsifier into an obligation file under `.same-page/obligations/`, with
+the inherited assurance profile applied and no hand-authoring
+(ENG-206, ENG-207, ENG-211).
+_Avoid_: generation (when elaboration is meant), sync (when elaboration
+is meant)
+
+**Disproof-clearing revision**:
+A revision of an Agreed requirement or its falsifier that invalidates
+an obligation carrying a standing disproof. Surfaced as a finding,
+acknowledged by the developer, logged, and the prior disproof kept as
+history (ENG-112 through ENG-118).
+_Avoid_: reset
+
 **Manual evidence**:
 An evidence record produced by a named human: actor, timestamp,
 snapshot, description, coarse bindings, and an expiry or
@@ -329,8 +368,9 @@ _Avoid_: hook (as a name for the gate; the hook is its registration)
 **Spec set**:
 The directory of specs a project agrees to: a keystone overview,
 numbered domain specs, glossary, conventions, iteration contracts, and
-the evidence map. This package's own specs live under
-docs/superpowers/specs/ and are governed by the same rules.
+the evidence map. This package's own spec set lives under
+docs/specs/same-page/, its four normative specs under
+docs/superpowers/specs/, and both are governed by the same rules.
 _Avoid_: docs (as a name for the spec set), documentation (as a name
 for the spec set)
 

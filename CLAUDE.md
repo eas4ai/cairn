@@ -15,7 +15,11 @@ same spec set with Observed sections kept distinct from Agreed ones;
 instead of scope creep. Two dependency-free scripts ship inside the
 new-project skill: the spec-drift completion gate, which audits sessions
 against the iteration contract, and the language check, which verifies
-Same Page Technical English (SPTE) and the evidence map.
+Same Page Technical English (SPTE) and the evidence map. Beside them
+ships the engine, Same Page Conformance, as TypeScript under
+scripts/engine/: `elaborate` projects Agreed requirements and their
+confirmed falsifiers into committed obligation files under .same-page/,
+and `verify` reports each obligation's verdict against the policy.
 
 Four normative specs in docs/superpowers/specs/ govern this package; read
 the relevant one before a structural change:
@@ -27,26 +31,33 @@ the relevant one before a structural change:
   map (CONF-nnn).
 - 2026-09-02-same-page-conformance-engine.md: the engine, Same Page
   Conformance (ENG-nnn), generated at stage 8 from the feature spec in
-  reference/ with the developer's rulings. It is built next, as iteration
-  contracts over its six construction layers. Never describe it as
-  absent, deferred, or optional. Sequencing is the developer's, and so is
-  any deferral.
+  reference/ with the developer's rulings. Layer L1 (the obligation
+  store) is built under docs/specs/same-page/iterations/001.md; layers
+  L2 through L6 follow as further contracts. Never describe any layer
+  as absent, deferred, or optional. Sequencing is the developer's, and
+  so is any deferral.
 
 ## Commands
 
     bun test                                          # every suite in tests/; must pass before commit
     bun test tests/language-check.test.mjs            # one suite
     bun test -t "CONF-045"                            # one test by name substring
-    node skills/new-project/scripts/language-check.mjs docs/superpowers/specs
+    node skills/new-project/scripts/language-check.mjs docs/specs/same-page docs/superpowers/specs
                                                       # self-hosting check; must report no findings
     claude plugin validate . --strict                 # after touching .claude-plugin/ or hooks/hooks.json
+    bunx tsc --noEmit -p skills/new-project/scripts/engine
+                                                      # the engine's type check; typescript is not a dependency
+    node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts elaborate
+    node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts verify
+                                                      # the engine on this repository (bun runs the same file)
     grep -rnP '[^\x00-\x7F]' --include='*.md' --include='*.mjs' --include='*.json' --include='*.sh' .
                                                       # ASCII gate (excluding .git, .remember, reference); must return nothing
     ./scripts/link-skills.sh                          # symlink skills into ~/.claude/skills and ~/.agents/skills
 
-Tests spawn the scripts with node against temp directories, so a change
-to either script is exercised only through its CLI contract (stdin, env,
-exit code, stderr). Live-install verification goes through the plugin
+Tests spawn the scripts and the engine with node (and the engine with
+bun) against temp directories, so a change to either script is exercised
+only through its CLI contract (stdin, env, exit code, stderr); the
+engine's YAML subset is also unit-tested by import. Live-install verification goes through the plugin
 CLI: uninstall, `claude plugin marketplace add` the local path, install,
 then confirm the cached copy under ~/.claude/plugins/cache/ carries the
 change before trusting the version label.
@@ -59,9 +70,22 @@ conventions that tie the files together.
 Distribution is three channels over one tree. The skills CLI installs
 skills/*/ as-is; the Claude Code plugin (.claude-plugin/plugin.json +
 marketplace.json, hooks/hooks.json) adds automatic gate registration;
-Codex gets .codex/hooks.json. Both scripts live under
+Codex gets .codex/hooks.json. Both scripts and the engine live under
 skills/new-project/scripts/ precisely so every channel carries them
 (ADR 0004). Hook registrations invoke node, never bun (ADR 0003).
+
+The engine (scripts/engine/) is TypeScript in erasable syntax only,
+run directly by node 22.18+ (type stripping) and by bun; the directory
+carries its own package.json ({"type": "module"}) so tsc and node agree
+it is ES modules, and node-builtins.d.ts declares the exact builtin
+surface it uses because @types/node is not a dependency. Modules:
+yaml.ts (the YAML subset it reads and writes), digest.ts (canonical
+text, sha256), specs.ts (Agreed requirements and Falsifier lines, with
+section-level Agreed: markers honored), policy.ts (.same-page/policy.yaml:
+spec directories, profiles, defaults, domain overrides), obligations.ts
+(one file per requirement; profile and validators survive
+re-elaboration via profile_from), same-page.ts (elaborate, verify; exit
+0 clean, 1 findings or verdicts below SUFFICIENT, 2 usage).
 
 The scaffolded spec set (docs/specs/<project>/ in a consumer repo) is the
 contract between the skills and the scripts. Both scripts locate it by
@@ -96,7 +120,7 @@ points at the language check and the evidence map.
 Self-hosting is an interlock: the SPTE and conformance specs are written
 in SPTE and the test suite runs the check against them, so an edit to
 either spec or to the checker's rules can fail the suite on that seam.
-docs/superpowers/specs/glossary.md supplies the Avoid terms for that run,
+docs/specs/same-page/glossary.md supplies the Avoid terms for that run,
 so the suite also fails if CONF-006 is ever skipped there. Fix forward.
 
 Agreement points across the three skills ask one falsifier question per
@@ -138,3 +162,50 @@ When a skill is added, renamed, or behavior-changed, update together:
 skills array, plus its docs/ page. Install commands are copied verbatim
 from .agents/install-block.md wherever they appear. A version bump touches
 package.json and .claude-plugin/plugin.json together.
+
+## Working agreement (Same Page)
+
+This package governs its own build with a spec set at
+docs/specs/same-page/ and the four normative specs at
+docs/superpowers/specs/. Both are normative: 00-overview.md is the
+keystone and spec map; the LANG, CONF, and ENG specs own their
+domains; glossary.md owns vocabulary -- when a term there conflicts
+with your prior, the glossary wins.
+
+Baselines: ~/.claude/DEVELOPMENT_PRACTICES.md (defaults accepted) and
+~/.claude/BEST_PRACTICES.md (the 14-rule floor). Read both before
+working.
+
+## Repo layout
+
+| Path | Role |
+|---|---|
+| docs/specs/same-page/ | The spec set that governs the build: keystone, glossary, conventions, contracts, evidence map, recon |
+| docs/superpowers/specs/ | The four normative specs (design, LANG, CONF, ENG) |
+| skills/<name>/ | The three skills and their templates |
+| skills/new-project/scripts/ | The drift gate, the language check, and engine/ (Same Page Conformance) |
+| tests/ | The suites; scripts and the engine are exercised through their CLI |
+| .agents/adr/ | Package-level decisions |
+
+## Scope and re-anchor rules
+
+- The current iteration contract is docs/specs/same-page/iterations/001.md
+  (engine layer L1). Work outside it is captured via /next-iteration --
+  surfaced and staged, never implemented ad hoc, never silently dropped.
+- When incoming direction contradicts a confirmed spec, return to the spec
+  and confirm the change deliberately before acting.
+- New or collided terms go to glossary.md the moment they surface.
+- Still Observed: docs/specs/same-page/recon.md (by nature). Still Draft:
+  every section of the engine spec without an `Agreed:` line, and the
+  design, LANG, and CONF specs as files (recon.md Gaps). Observed and
+  Draft sections are not contract.
+
+## Verification
+
+Copied from docs/specs/same-page/conventions.md:
+
+    bun test
+    node skills/new-project/scripts/language-check.mjs docs/specs/same-page docs/superpowers/specs
+    bunx tsc --noEmit -p skills/new-project/scripts/engine
+    grep -rnP '[^\x00-\x7F]' --include='*.md' --include='*.mjs' --include='*.ts' --include='*.json' --include='*.sh' . --exclude-dir=.git --exclude-dir=.remember --exclude-dir=reference --exclude-dir=node_modules
+    claude plugin validate . --strict

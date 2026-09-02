@@ -799,31 +799,78 @@ the iteration closes, the negotiation described in chapter 8 produces
 the next contract. The recon report's Gaps list is documentation debt
 and is promoted or cut at the same moment, the same way.
 
-## 10. Same Page Conformance: the engine that comes next
+## 10. Same Page Conformance: the engine
 
 Same Page Conformance is the evidence engine the check and the map are
 built for: obligations, confirmed falsifiers, typed evidence records,
-assurance policy, verdicts, and trust anchors. Its feature spec is
-complete and is kept under reference/ as source material. Its normative
-spec was generated from that feature spec at stage 8 on 2026-09-02,
-with the developer ruling each of the seven "SHOULD" statements the
-feature spec carried on purpose: 2026-09-02-same-page-conformance-engine.md
-in docs/superpowers/specs/, prefix ENG, opening with the trust model
-that governs every requirement under it. The engine is built next, as
-iteration contracts over its six construction layers, from the
-obligation store to the ecosystem adapters.
+assurance policy, verdicts, and trust anchors. Its normative spec is
+2026-09-02-same-page-conformance-engine.md in docs/superpowers/specs/,
+prefix ENG, generated from the feature spec kept under reference/ with
+the developer ruling each of its seven queued "SHOULD" statements. It
+opens with the trust model that governs every requirement under it,
+and it is built as iteration contracts over six construction layers
+(ENG-240): the obligation store, the validator floor and evidence
+model, conservative freshness, authority and map comparison,
+sensitivity mechanisms, and ecosystem adapters.
 
-What ships today is the floor the engine stands on: a controlled
-language, a deterministic check, and an evidence map that is a claim
-register rather than a verdict. The CONF identifier prefix belongs to
-the language check and evidence map spec and does not move with the
-name, because identifiers are permanent.
+Layer L1, the obligation store and its lifecycle, is built (iteration
+001 of the package's own spec set, docs/specs/same-page/). It is
+TypeScript under skills/new-project/scripts/engine/, run directly by
+node or bun with no build step and no dependencies, and it has two
+commands.
 
-Three things the check and the map are not. They are not an
-auto-rewriter: the check surfaces, proposes, and waits. They are not a
-proof system: a cited test can be wrong, and correctness remains the
-job of tests, lint, and CI. They are not a file-to-feature verifier:
-nothing maps changed files to requirements automatically.
+`same-page elaborate` runs at stage close, after the confirm loop. It
+reads the spec directories the policy names, finds every Agreed MUST
+and MUST NOT requirement with its confirmed falsifier, and writes one
+YAML file per requirement under .same-page/obligations/ (ENG-187,
+ENG-188). On the broker, BROKER-021 becomes:
+
+    requirement: BROKER-021
+    locator: docs/specs/broker/01-broker.md::BROKER-021
+    keyword: MUST
+    requirement_digest: sha256:...
+    falsifier: a request with a malformed header reaches dispatch and the broker returns a success response.
+    falsifier_digest: sha256:...
+    profile: default
+    profile_from: project default
+    validators: []
+    sentence: When a plugin sends an invalid request, the broker MUST reject the request.
+
+The digests are over canonical text -- whitespace collapsed -- so
+re-wrapping a paragraph changes nothing and changing a word
+invalidates the obligation until the next elaboration regenerates it
+(ENG-019). The first run writes .same-page/policy.yaml with the project
+default profile, which requires any one evidence method other than
+inspected (the map's Covered, in policy form) and current freshness,
+which no profile can waive (ENG-072, ENG-073). A MAY gets no
+obligation (ENG-024); an Agreed MUST with no Falsifier line is a
+finding, not a guess (ENG-205). Nothing here is hand-authored, and the
+developer is never asked to confirm a digest (ENG-211, ENG-216); the
+profile and validators fields are the developer's to set, and survive
+re-elaboration (ENG-217).
+
+`same-page verify` reports, per requirement, the verdict, the
+requirement text, what the policy requires, and what evidence exists.
+At L1 no evidence records exist, so every valid obligation is
+INSUFFICIENT with its requirement named, and an obligation whose
+requirement or falsifier changed is reported invalid. Neither command
+writes a spec or the evidence map (ENG-011, ENG-197): the engine
+computes and compares; the map stays the human claim register.
+
+The next layers, each under its own contract: validators run and
+evidence records carry their independent axes (L2); freshness is
+established conservatively inside a verification boundary, and
+BLOCKED appears where it cannot be (L3); the configured authority
+selects authoritative evidence and the machine view is compared with
+the map (L4); challenges demonstrate sensitivity (L5); ecosystem
+adapters establish backend bindings and complete closures (L6).
+
+Three things the engine is not. It is not an auto-rewriter: it never
+edits a spec or the map without an explicit action. It is not a proof
+system: a formal backend eliminates uncertainty only inside its stated
+boundary, and the correspondence between a sentence and a model stays
+an assumption (ENG-166). It is not a source of correctness: its
+defining output is BLOCKED, with a reason (ENG-219).
 
 ## Appendix: where things live
 
@@ -834,11 +881,15 @@ nothing maps changed files to requirements automatically.
 | skills/next-iteration/ | The valve and iteration close. |
 | skills/new-project/scripts/language-check.mjs | The language check, pass one. |
 | skills/new-project/scripts/spec-drift-gate.mjs | The drift gate. |
-| docs/superpowers/specs/ | The normative specs and the package's own glossary. |
+| skills/new-project/scripts/engine/ | Same Page Conformance, the engine: same-page.ts and its modules. |
+| docs/superpowers/specs/ | The normative specs. |
+| docs/specs/same-page/ | The package's own spec set: glossary, keystone, conventions, contracts, evidence map. |
 | docs/WORKFLOW.md | The process as plain instructions, for agents without a skill system. |
 | docs/INSTALLATION.md | Install per agent, including Codex. |
-| tests/ | The suites: the check, the gate, the Codex adapter, and this manual's identifiers. |
+| tests/ | The suites: the check, the gate, the Codex adapter, the engine, and this manual's identifiers. |
 
     bun test                                          # every suite
-    node skills/new-project/scripts/language-check.mjs docs/superpowers/specs
+    node skills/new-project/scripts/language-check.mjs docs/specs/same-page docs/superpowers/specs
                                                       # the package's own specs under their own check
+    bunx tsc --noEmit -p skills/new-project/scripts/engine
+                                                      # the engine's type check

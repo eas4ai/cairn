@@ -47,7 +47,9 @@ moment a section becomes Agreed you are asked what observable state
 would violate each requirement, and its identifiers enter the evidence
 map, conformance.md, Uncovered until evidence is cited. An Observed
 section carries no falsifier, because nobody has agreed yet what the
-code should do.
+code should do. Once the contract is written, `same-page elaborate`
+turns each Agreed requirement into an obligation file under
+.same-page/; Observed requirements get none.
 
 Q: How is this different from /new-project?
 A: /new-project designs software that does not exist. /existing-project

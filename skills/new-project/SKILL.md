@@ -39,6 +39,18 @@ language-check.mjs docs/specs/<project-name>) at the points the stages
 name below. It reads, reports, and exits nonzero on findings; it never
 writes.
 
+This skill also ships the engine, Same Page Conformance, at
+scripts/engine/same-page.ts: TypeScript run directly by node (22.18 or
+later) or by bun, no install, no dependencies. Its two commands are
+`elaborate` (run at stage close: writes .same-page/policy.yaml on first
+use and one obligation file per Agreed MUST or MUST NOT requirement from
+the confirmed requirements and falsifiers) and `verify` (reports
+obligations whose requirement or falsifier changed, Agreed requirements
+with no obligation, and each obligation's verdict against the policy).
+Invocation: node --disable-warning=ExperimentalWarning SKILL_DIR/scripts/engine/same-page.ts elaborate, from the project root. Layer L1 is
+built; evidence records, validators, freshness, and map comparison
+are the next layers, each under its own iteration contract.
+
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in
   the working agreement at Stage 6: the workflow functions unassisted, the
@@ -183,7 +195,24 @@ requirement identifier, every row Uncovered with method "-" -- the
 honest starting claim for a project with no code yet. Coverage and
 method are separate columns; neither is read out of the other. Run the
 language check once more over the whole spec set; it verifies the
-map's integrity along with the language. Then
+map's integrity along with the language.
+
+Then elaborate. Run the engine (Setup section) from the project root:
+`same-page elaborate`. On first use it writes .same-page/policy.yaml
+with the project default profile and the spec directory, then one
+obligation file per Agreed MUST or MUST NOT requirement under
+.same-page/obligations/, each carrying the requirement locator, the
+requirement and falsifier digests, the confirmed falsifier, and the
+profile. Nothing in it is hand-authored, and the developer is not asked
+to confirm a digest, a locator, or a YAML field. The default profile
+applies without a question; ask only when a requirement needs a profile
+that differs from it, and record that as a domain override in
+policy.yaml or on the obligation. Commit .same-page/ (its own
+.gitignore keeps evidence/ and cache/ out). A finding from elaborate --
+an Agreed MUST with no Falsifier line, a MAY carrying one -- goes back
+through the confirm loop before the stage closes.
+
+Then
 write the working agreement block (templates/working-agreement.md, filled
 with real paths, the repo layout table, and verification commands) into the
 project's CLAUDE.md or AGENTS.md -- create the file if absent, append the
@@ -194,4 +223,5 @@ DEVELOPMENT_PRACTICES.md always, BEST_PRACTICES.md only if present.
 
 Summarize what exists and where. Remind the developer: new ideas go through
 /next-iteration; the drift gate will audit sessions against
-iterations/001.md.
+iterations/001.md; `same-page verify` answers, per requirement, what
+evidence the policy requires and what exists.

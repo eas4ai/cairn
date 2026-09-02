@@ -37,7 +37,10 @@ before stages close. Every requirement you agree to also gets a
 falsifier: the model asks what observable state would violate it, and
 you confirm. The contract stage scaffolds conformance.md, the evidence
 map, tying every requirement to its coverage, the method behind it,
-and the evidence itself.
+and the evidence itself, and then runs the engine: `same-page
+elaborate` turns every agreed requirement and its confirmed falsifier
+into a committed obligation file under .same-page/, with nothing for
+you to hand-author.
 
 ## It's working if
 

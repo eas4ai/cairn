@@ -39,3 +39,18 @@ docs/WORKFLOW.md in this package.
 
 Symlinks the skills into ~/.claude/skills and ~/.agents/skills so a git
 pull keeps them current.
+
+## The engine (Same Page Conformance)
+
+The engine ships inside the new-project skill at
+skills/new-project/scripts/engine/same-page.ts and needs no install: it
+is TypeScript that node 22.18 or later runs directly (type stripping is
+on by default from that version; node 24 prints an ExperimentalWarning
+unless run with --disable-warning=ExperimentalWarning), and bun runs
+unchanged. From a project root:
+
+    node --disable-warning=ExperimentalWarning <skill dir>/scripts/engine/same-page.ts elaborate
+    node --disable-warning=ExperimentalWarning <skill dir>/scripts/engine/same-page.ts verify
+
+or `bun <skill dir>/scripts/engine/same-page.ts elaborate`. The skills
+name the step at every stage close.

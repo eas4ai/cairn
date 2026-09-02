@@ -303,6 +303,14 @@ domain spec through the confirm-back loop and mark it Agreed. The observed
 section records what is, the feature section records what shall be, and
 both stand.
 
+Then elaborate, exactly as /new-project Stage 6 does: run the engine's
+`same-page elaborate` from the project root (new-project skill,
+scripts/engine/same-page.ts, under node 22.18 or later or bun). It
+writes .same-page/policy.yaml on first use and one obligation file per
+Agreed MUST or MUST NOT requirement from the confirmed falsifiers;
+Observed requirements get none. Resolve any finding it reports through
+the confirm loop, and commit .same-page/.
+
 Then the working agreement block (new-project
 templates/working-agreement.md, filled with real paths, the repo layout
 table from recon, and the verification commands from conventions.md) into

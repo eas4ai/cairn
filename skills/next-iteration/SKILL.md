@@ -62,4 +62,8 @@ falsifier in the developer's hearing, and record it on a Falsifier:
 line under the requirement. Promotion then makes the staged requirements Agreed:
 their identifiers enter the evidence map, conformance.md, Uncovered
 with method "-" until evidence is cited, and the language check runs
-over the spec set before the new contract is presented.
+over the spec set before the new contract is presented. Then run the
+engine's `same-page elaborate` (new-project skill,
+scripts/engine/same-page.ts) so every promoted requirement has its
+obligation file before implementation starts; resolve any finding it
+reports through the confirm loop.

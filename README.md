@@ -33,7 +33,7 @@ Details and Codex setup: docs/INSTALLATION.md.
 
 | Skill | What it does |
 |---|---|
-| [new-project](skills/new-project/SKILL.md) | Staged, confirm-back workflow that scaffolds a complete spec set: glossary, keystone overview, ux spec, numbered domain specs, conventions, iteration contract, evidence map. Every agreed requirement gets a confirmed falsifier. Onboards your development practices once. User-invoked. |
+| [new-project](skills/new-project/SKILL.md) | Staged, confirm-back workflow that scaffolds a complete spec set: glossary, keystone overview, ux spec, numbered domain specs, conventions, iteration contract, evidence map. Every agreed requirement gets a confirmed falsifier, and stage close elaborates it into an obligation file for the engine. Onboards your development practices once. User-invoked. |
 | [existing-project](skills/existing-project/SKILL.md) | Gets an agent up to speed on a codebase that already exists: cited recon report, glossary from the code's own names, observed specs for the work's blast radius (or verification of an existing spec set against the code), documentation gap list, and the session's work prepared as one feature or one defect -- a first contract, or a staged spec through /next-iteration when a contract exists. Observed stays distinct from agreed. User-invoked. |
 | [next-iteration](skills/next-iteration/SKILL.md) | Scope-creep valve: captures new ideas as staged next-iteration specs instead of expanding the current build; negotiates iteration close, confirming a falsifier for each promoted requirement. Model-invocable by design. |
 
@@ -60,6 +60,13 @@ Details and Codex setup: docs/INSTALLATION.md.
   audits each session once at completion against the iteration
   contract, the specs, the glossary, the language, and the map. Manual,
   chapter 7.
+- **The engine, Same Page Conformance.**
+  skills/new-project/scripts/engine/same-page.ts, TypeScript run by
+  node or bun with no install: `elaborate` turns every agreed
+  requirement and its confirmed falsifier into a committed obligation
+  file under .same-page/, and `verify` answers what evidence the policy
+  requires and what exists. Layer L1 of six is built. Manual, chapter
+  10.
 
 ## Read next
 

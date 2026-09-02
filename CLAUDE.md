@@ -24,8 +24,11 @@ the relevant one before a structural change:
   set, the drift gate.
 - 2026-09-01-same-page-technical-english.md: the language (LANG-nnn).
 - 2026-09-01-same-page-conformance.md: the language check and the evidence
-  map (CONF-nnn). "Same Page Conformance" names a future evidence engine,
-  specified separately; the engine is absent from this package by design.
+  map (CONF-nnn). "Same Page Conformance" names the evidence engine that
+  comes next: its feature spec is in reference/, its specs are generated
+  at stage 8 with the developer ruling each open SHOULD, and it is built
+  on the check and the map. Never describe it as absent, deferred, or
+  optional. Sequencing is the developer's, and so is any deferral.
 
 ## Commands
 

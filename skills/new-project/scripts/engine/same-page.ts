@@ -321,9 +321,18 @@ function environmentLines(records: EvidenceRecord[]): string[] {
   return out;
 }
 
-function dependencyLine(records: EvidenceRecord[]): string {
-  const d = records[records.length - 1]!.dependency;
-  return `${d.scope} via chain step ${d.step} (${d.chain.map((c) => `${c.step} ${c.mechanism}: ${c.outcome}`).join("; ")}); narrowing: ${d.narrowing}`;
+// One line per distinct dependency scope among an entry's records: an
+// entry with both a repository-scoped and a narrowed record states
+// both, so no line implies more than its own record established
+// (ENG-132).
+function dependencyLines(records: EvidenceRecord[]): string[] {
+  const seen = new Map<string, string>();
+  for (const r of records) {
+    const d = r.dependency;
+    const text = `${d.scope} via chain step ${d.step} (${d.chain.map((c) => `${c.step} ${c.mechanism}: ${c.outcome}`).join("; ")}); narrowing: ${d.narrowing}`;
+    seen.set(text, text);
+  }
+  return [...seen.values()];
 }
 
 function verify(root: string, asDeveloper: boolean): number {
@@ -492,7 +501,7 @@ function verify(root: string, asDeveloper: boolean): number {
       lines.push("  Residual risk: everything; no evidence is inside any boundary");
     } else {
       boundaryLines(recs).forEach((b, i) => lines.push(`  ${i === 0 ? "Boundary:   " : "            "} ${b}`));
-      lines.push(`  Dependency:  ${dependencyLine(recs)}`);
+      dependencyLines(recs).forEach((d, i) => lines.push(`  ${i === 0 ? "Dependency: " : "            "} ${d}`));
       const env = environmentLines(recs);
       if (env.length === 0) lines.push("  Environment: none recorded (manual evidence)");
       else env.forEach((e, i) => lines.push(`  ${i === 0 ? "Environment:" : "            "} ${e}`));

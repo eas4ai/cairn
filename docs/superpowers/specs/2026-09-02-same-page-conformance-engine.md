@@ -1577,6 +1577,26 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 009 (the command line, decomposed) built,
+  under docs/specs/same-page/iterations/009.md. Structure only: every
+  command keeps its behavior, its output, and its exit code. The
+  evidence is an A/B run of the committed engine and the decomposed one
+  against the same working tree, whose `verify`, `elaborate`,
+  `sync-map`, usage, and error output compare byte for byte identical,
+  with the same 125 tests passing over both. Decisions: (a) same-page.ts
+  keeps only argument parsing and dispatch; (b) project.ts holds what
+  every command needs first -- the root, the spec directories, the
+  layout, the policy file, the obligation store, the finding printer;
+  (c) execution.ts holds everything that must be true before a command
+  executes anything, and the record it produces afterwards, because
+  `run` and `challenge` each carried a copy of that resolution and of
+  the forty-line record literal; the resolution is split into trust and
+  inputs so no command fingerprints an environment or spawns an adapter
+  before trust is established; (d) history.ts separates what the engine
+  keeps forever -- disproofs, acknowledgments, misses -- from the
+  records it writes; (e) one module per command family, named for the
+  act: elaboration, verification, runs, attestation; (f) no module
+  exceeds 500 lines, which is a size the next reader can hold.
 - 2026-09-03 -- Iteration 008 (remediation) built, under
   docs/specs/same-page/iterations/008.md, after a release audit found
   three defects in layer L5. No requirement text changed; the engine

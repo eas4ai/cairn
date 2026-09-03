@@ -16,7 +16,8 @@
 
 import { BUILTIN, adapterVersion, type Adapter } from "./adapters.ts";
 import { authorityLabel, sameAuthority, type Authority } from "./authority.ts";
-import type { Disproof, Miss, StoredRecord } from "./evidence.ts";
+import type { StoredRecord } from "./evidence.ts";
+import type { Disproof, Miss } from "./history.ts";
 import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
 import type { EnvironmentInput, InputSet } from "./validators.ts";

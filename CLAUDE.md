@@ -107,7 +107,8 @@ The engine (scripts/engine/) is TypeScript in erasable syntax only,
 run directly by node 22.18+ (type stripping) and by bun; the directory
 carries its own package.json ({"type": "module"}) so tsc and node agree
 it is ES modules, and node-builtins.d.ts declares the exact builtin
-surface it uses because @types/node is not a dependency. Modules:
+surface it uses because @types/node is not a dependency. No module
+exceeds 500 lines. Modules:
 yaml.ts (the YAML subset it reads and writes), digest.ts (canonical
 text, sha256), specs.ts (Agreed requirements and Falsifier lines, with
 section-level Agreed: markers honored), policy.ts (.same-page/policy.yaml:
@@ -130,9 +131,19 @@ dependency chain, and the residual risk; runs, disproofs,
 acknowledgments under .same-page/evidence/), adapters.ts (the capability registry: the built-in command,
 manual, and tsc-closure, plus registrations under
 $SAME_PAGE_HOME/adapters.yaml), evaluate.ts (three-state freshness over the identity
-inputs and the verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
-acknowledge, policy confirm, challenge, sync-map;
-exit 0 clean, 1 findings or verdicts below SUFFICIENT, 2 usage).
+inputs and the verdict lattice), history.ts (what the engine keeps and never
+deletes: standing disproofs, acknowledgments, and the misses a
+challenge recorded against a mechanism), project.ts (the project root,
+the spec directories, the .same-page layout, the policy file, the
+obligation store, the finding printer), execution.ts (the trust context
+and authority an invocation runs under, the environment fingerprint,
+the adapter closure and the supplemental trace, the record builder both
+producing commands share, and the trust command), render.ts (the lines
+verify prints), and one module per command family: elaboration.ts
+(elaborate, policy confirm), verification.ts (verify, sync-map),
+runs.ts (run, challenge), attestation.ts (attest, acknowledge).
+same-page.ts is the command line itself: argument parsing and dispatch
+(exit 0 clean, 1 findings or verdicts below SUFFICIENT, 2 usage).
 
 The scaffolded spec set (docs/specs/<project>/ in a consumer repo) is the
 contract between the skills and the scripts. Both scripts locate it by
@@ -236,8 +247,8 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/008.md
-  (remediation: sensitivity claims and their reach); 001 (L1), 002 (L2),
+- The current iteration contract is docs/specs/same-page/iterations/009.md
+  (the engine's command line, decomposed); 008 (remediation) is closed; 001 (L1), 002 (L2),
   003 (the CONF revision), 004 (L3), 005 (L4), 006 (L5), and 007 (L6)
   are closed, and all six construction layers are built. Work outside it is
   captured via /next-iteration -- surfaced and staged, never implemented

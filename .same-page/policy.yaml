@@ -1,5 +1,8 @@
 # Same Page policy. Written by the first `same-page elaborate`; yours to edit.
 # specs: the spec directories the engine reads, relative to the project root.
+# authority: whose evidence counts, ci, local, or named-environment (with
+# authority_name); this repository has no CI pipeline, so local, ruled by the
+# developer 2026-09-02 and recorded in 00-overview.md.
 # default_profile: the assurance profile every obligation takes unless its
 # domain (by prefix) overrides it under domains, or the developer sets one
 # on the obligation. A profile is a composition of evidence properties;
@@ -8,6 +11,7 @@ version: 1
 specs:
   - docs/specs/same-page
   - docs/superpowers/specs
+authority: local
 default_profile: default
 profiles:
   default:

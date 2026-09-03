@@ -161,8 +161,16 @@ the order FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT, with what the
 policy requires, the evidence present and its freshness, the authority
 and snapshot, the boundary, the dependency chain, the environment
 fingerprint, the residual risk, and the assumptions; an obligation whose
-requirement or falsifier changed is BLOCKED until `same-page
-elaborate` regenerates it. A policy change that requires less is a
+requirement or falsifier changed is BLOCKED until `same-page elaborate`
+regenerates it. The policy names the authority whose evidence counts
+(`ci`, `local`, or a named environment; the default follows the
+repository's CI configuration). Evidence of another authority is shown
+with that authority named and never passes as authoritative, while a
+current failing result counts whoever produced it. `same-page verify`
+also compares its machine view of coverage with the evidence map and
+names every row that disagrees; `same-page sync-map` is the only engine
+command that writes the map, and a workflow may propose the same changes
+through the confirm-back loop. A policy change that requires less is a
 downgrade, held until the developer runs `same-page policy confirm`
 and the change is logged; a revision of a requirement with a standing
 disproof is held until the developer acknowledges it, `same-page

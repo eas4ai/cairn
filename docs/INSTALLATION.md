@@ -57,4 +57,8 @@ name the step at every stage close.
 
 Execution trust for validators lives under `~/.same-page/trust.yaml`
 (or `$SAME_PAGE_HOME/trust.yaml`), never inside a repository; the
-developer writes it with `same-page trust <validator>`.
+developer writes it with `same-page trust <validator>`, and names a
+trusted environment with `same-page trust --environment <name>`. A run
+inside CI needs no grant: owner-controlled CI configuration in the
+repository is the trust anchor, and its evidence carries `ci`
+authority.

@@ -12,7 +12,12 @@ import { dirname, join, relative, resolve } from "node:path";
 import { parseYaml, stringifyYaml, type YamlMap, type YamlValue } from "./yaml.ts";
 
 export type Grant = { repository: string; validator: string; digest: string; actor: string; granted_at: string };
-export type TrustStore = { version: number; grants: Grant[] };
+// A named trusted environment the developer configured (ENG-060): the
+// grant names the repository and the environment; validators run there
+// under the environment's trust, and their evidence carries that
+// authority.
+export type EnvironmentGrant = { repository: string; environment: string; actor: string; granted_at: string };
+export type TrustStore = { version: number; grants: Grant[]; environments: EnvironmentGrant[] };
 
 export const TRUST_CONTEXTS = ["developer-invocation", "trust-record", "ci", "named-environment"] as const;
 export type TrustContext = (typeof TRUST_CONTEXTS)[number];
@@ -46,11 +51,14 @@ function isMap(v: YamlValue | undefined): v is YamlMap {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
+export const EMPTY_STORE: TrustStore = { version: 1, grants: [], environments: [] };
+
 export function readTrustStore(): TrustStore {
   const path = trustPath();
-  if (!existsSync(path)) return { version: 1, grants: [] };
+  if (!existsSync(path)) return { version: 1, grants: [], environments: [] };
   const raw = parseYaml(readFileSync(path, "utf8"));
   const grants: Grant[] = [];
+  const environments: EnvironmentGrant[] = [];
   if (isMap(raw) && Array.isArray(raw["grants"])) {
     for (const g of raw["grants"]) {
       if (!isMap(g)) continue;
@@ -60,7 +68,14 @@ export function readTrustStore(): TrustStore {
       }
     }
   }
-  return { version: 1, grants };
+  if (isMap(raw) && Array.isArray(raw["environments"])) {
+    for (const g of raw["environments"]) {
+      if (!isMap(g)) continue;
+      const s = (k: string) => (typeof g[k] === "string" ? (g[k] as string) : "");
+      if (s("repository") && s("environment")) environments.push({ repository: s("repository"), environment: s("environment"), actor: s("actor"), granted_at: s("granted_at") });
+    }
+  }
+  return { version: 1, grants, environments };
 }
 
 export function writeTrustStore(store: TrustStore): void {
@@ -69,13 +84,15 @@ export function writeTrustStore(store: TrustStore): void {
   const value: YamlMap = {
     version: store.version,
     grants: store.grants.map((g) => ({ ...g }) as YamlMap),
+    environments: store.environments.map((g) => ({ ...g }) as YamlMap),
   };
   writeFileSync(
     path,
     stringifyYaml(value, [
       "Same Page execution trust. Each grant binds one repository, one validator",
       "name, and the digest of its definition; a changed definition needs a new",
-      "grant. This file lives outside every repository it authorizes.",
+      "grant. An environments entry names a trusted environment for one",
+      "repository. This file lives outside every repository it authorizes.",
     ])
   );
 }
@@ -91,6 +108,21 @@ export function grant(root: string, validator: string, digest: string, actor: st
   const g: Grant = { repository: repo, validator, digest, actor, granted_at: new Date().toISOString() };
   store.grants = store.grants.filter((x) => !(x.repository === repo && x.validator === validator));
   store.grants.push(g);
+  writeTrustStore(store);
+  return g;
+}
+
+export function findEnvironmentGrant(store: TrustStore, root: string, environment: string): EnvironmentGrant | null {
+  const repo = resolve(root);
+  return store.environments.find((g) => g.repository === repo && g.environment === environment) ?? null;
+}
+
+export function grantEnvironment(root: string, environment: string, actor: string): EnvironmentGrant {
+  const store = readTrustStore();
+  const repo = resolve(root);
+  const g: EnvironmentGrant = { repository: repo, environment, actor, granted_at: new Date().toISOString() };
+  store.environments = store.environments.filter((x) => !(x.repository === repo && x.environment === environment));
+  store.environments.push(g);
   writeTrustStore(store);
   return g;
 }

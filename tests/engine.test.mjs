@@ -277,8 +277,8 @@ test("the .same-page layout: committed text for obligations and policy, evidence
   const { root } = project();
   run(["elaborate", "--root", root], root);
   const base = join(root, ".same-page");
-  expect(readdirSync(base).sort()).toEqual([".gitignore", "cache", "evidence", "obligations", "policy.yaml", "validators"]);
-  expect(readFileSync(join(base, ".gitignore"), "utf8")).toContain("evidence/\ncache/\n");
+  expect(readdirSync(base).sort()).toEqual([".gitignore", "artifacts", "cache", "evidence", "obligations", "policy.yaml", "validators"]);
+  expect(readFileSync(join(base, ".gitignore"), "utf8")).toContain("evidence/\ncache/\nartifacts/\n");
   expect(readdirSync(join(base, "evidence"))).toEqual([]);
   expect(readdirSync(join(base, "cache"))).toEqual([]);
   const o = readFileSync(join(base, "obligations", "BRK-001.yaml"), "utf8");
@@ -318,7 +318,7 @@ test("a falsifier is stored as text, verbatim, whatever it says (ENG-021, ENG-02
 test("the first elaborate writes the policy with the project default and the spec directories; SAME_PAGE_SPECS_DIR seeds it (ENG-075, ENG-189)", () => {
   const { root } = project();
   const r = run(["elaborate", "--root", root], root);
-  expect(r.stdout).toContain("wrote .same-page/policy.yaml (specs: docs/specs/proj)");
+  expect(r.stdout).toContain("wrote .same-page/policy.yaml (specs: docs/specs/proj; authority local, no CI configuration)");
   const policy = parseYaml(readFileSync(join(root, ".same-page", "policy.yaml"), "utf8"));
   expect(policy.specs).toEqual(["docs/specs/proj"]);
   expect(policy.default_profile).toBe("default");
@@ -328,7 +328,7 @@ test("the first elaborate writes the policy with the project default and the spe
   mkdirSync(alt);
   writeFileSync(join(alt, "01-x.md"), DOMAIN);
   const r2 = run(["elaborate", "--root", custom], custom, { env: { SAME_PAGE_SPECS_DIR: "spec" } });
-  expect(r2.stdout).toContain("(specs: spec)");
+  expect(r2.stdout).toContain("(specs: spec; authority local, no CI configuration)");
   expect(r2.status).toBe(0);
 });
 

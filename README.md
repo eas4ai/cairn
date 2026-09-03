@@ -65,9 +65,11 @@ Details and Codex setup: docs/INSTALLATION.md.
   node or bun with no install: `elaborate` turns every agreed
   requirement and its confirmed falsifier into a committed obligation
   file under .same-page/; `trust`, `run`, and `attest` produce evidence
-  records under execution trust; and `verify` answers, per requirement,
-  FAILING, BLOCKED, INSUFFICIENT, or SUFFICIENT, with what the policy
-  requires and what exists. Layers L1, L2, and L3 of six are built.
+  records under execution trust; `verify` answers, per requirement, FAILING, BLOCKED,
+  INSUFFICIENT, or SUFFICIENT, with what the policy requires and what
+  exists, and compares its machine view of coverage with the evidence
+  map; and `sync-map` is the only engine command that writes that map.
+  Layers L1 through L4 of six are built.
   Manual,
   chapter 10.
 

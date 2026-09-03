@@ -318,10 +318,18 @@ already exist (conventions.md names them), define each as a validator
 under .same-page/validators/ (name, kind, argv command, and
 `environment:` -- the inputs its result depends on, as `- command:
 [argv]` or `- file: path` entries, or [] for none), list it on the
-obligations it addresses with `attested_by: agent`, and ask the
-developer to trust it (`same-page trust <name>`) before the first
-`same-page run`; `same-page verify` then says what each requirement's
-evidence establishes.
+obligations it addresses with `attested_by: agent`, and ask the developer to trust it (`same-page trust
+<name>`) before the first `same-page run`; `same-page verify` then says
+what each requirement's evidence establishes.
+
+On Path B, consult `same-page verify` before re-deriving a section from
+the code: where its evidence is fresh, sufficient, and of the
+configured authority, that evidence establishes Holds and the session's
+judgment belongs elsewhere. Spend it where verify points instead: a
+missing obligation, stale or unknown evidence, an insufficient policy, a
+failing validator, or an evidence-map row that disagrees with the
+machine view. The four words keep their meaning -- Holds, Drifted,
+Still Observed, Missing -- whatever the engine reports.
 
 Then the working agreement block (new-project
 templates/working-agreement.md, filled with real paths, the repo layout

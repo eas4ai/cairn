@@ -1,3 +1,4 @@
 # Derived execution state stays uncommitted (ENG-190, ENG-193).
 evidence/
 cache/
+artifacts/

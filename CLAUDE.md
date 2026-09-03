@@ -21,7 +21,8 @@ scripts/engine/: `elaborate` projects Agreed requirements and their
 confirmed falsifiers into committed obligation files under .same-page/,
 `trust`, `run`, and `attest` produce evidence records under execution
 trust, and `verify` reports each obligation's verdict against the
-policy. Every record stores its identity inputs as one block; its
+policy and compares its machine view of coverage with the evidence map,
+which `sync-map` is the only engine command that writes. Every record stores its identity inputs as one block; its
 freshness is `current`, `stale` (an identity input such as the
 snapshot, the validator definition, or a declared environment input is
 known to differ: INSUFFICIENT, re-run named), or `unknown` (an input
@@ -41,9 +42,10 @@ the relevant one before a structural change:
   Conformance (ENG-nnn), generated at stage 8 from the feature spec in
   reference/ with the developer's rulings. Layers L1 (the obligation
   store, iterations/001.md), L2 (validators, evidence records, the
-  verdict lattice, iterations/002.md), and L3 (evidence identity, the
-  third freshness state `stale`, environment fingerprints,
-  iterations/004.md) are built; layers L4 through L6 follow as further
+  verdict lattice, iterations/002.md), L3 (evidence identity, the third
+  freshness state `stale`, environment fingerprints, iterations/004.md),
+  and L4 (verification authority, the machine view against the evidence
+  map, iterations/005.md) are built; layers L5 and L6 follow as further
   contracts. Never describe any layer as absent, deferred, or optional.
   Sequencing is the developer's, and so is any deferral.
 
@@ -60,6 +62,7 @@ the relevant one before a structural change:
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts elaborate
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts run
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts verify
+node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts sync-map
                                                       # the engine on this repository (bun runs the same file);
                                                       # run, and verify's environment commands, need the bun-test
                                                       # validator trusted: same-page trust bun-test
@@ -102,16 +105,20 @@ profile_from; `required` is the downgrade baseline), snapshot.ts
 (git:<sha> or workspace:<digest>, null when the tree cannot be read;
 .same-page/ is not a source input),
 validators.ts (definitions with their `environment:` declaration,
-digests, argv execution, environment fingerprints), trust.ts (grants
-under $SAME_PAGE_HOME or ~/.same-page, never inside the repository),
+digests, argv execution, environment fingerprints), authority.ts (the configured
+verification authority, the CI default, where each authority's evidence
+lives), map.ts (the evidence map: rows, the machine view, the
+comparison, the row projection sync-map writes), trust.ts (validator and
+environment grants under $SAME_PAGE_HOME or ~/.same-page, never inside
+the repository),
 evidence.ts (records with the identity block, the boundary, the
 dependency chain, and the residual risk; runs, disproofs,
 acknowledgments under .same-page/evidence/), adapters.ts (the
 capability registry: command and manual, each with a version, no
 capabilities), evaluate.ts (three-state freshness over the identity
 inputs and the verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
-acknowledge, policy confirm; exit 0 clean, 1 findings or verdicts
-below SUFFICIENT, 2 usage).
+acknowledge, policy confirm, sync-map; exit 0 clean, 1 findings or
+verdicts below SUFFICIENT, 2 usage).
 
 The scaffolded spec set (docs/specs/<project>/ in a consumer repo) is the
 contract between the skills and the scripts. Both scripts locate it by

@@ -3,11 +3,13 @@
 //   same-page elaborate                      project Agreed requirements into obligations
 //   same-page verify [--as-developer]        evaluate every obligation against the policy
 //   same-page trust <validator>              grant execution trust, outside the repository
-//   same-page run [validator...] [--as-developer]
+//   same-page trust --environment <name>     trust a named environment for this repository
+//   same-page run [validator...] [--as-developer] [--environment <name>]
 //   same-page attest <REQ-ID> --by <actor> --expires <date> --description <text>
 //                   [--bindings a,b] [--addresses-falsifier] [--inspection-only]
 //   same-page acknowledge <REQ-ID>           acknowledge a disproof-clearing revision
 //   same-page policy confirm                 accept a policy downgrade
+//   same-page sync-map                       write the machine view into the evidence map
 //
 // Run with node 22.18+ (`node --disable-warning=ExperimentalWarning
 // same-page.ts ...`) or bun; no dependencies. Exit codes: 0 no findings
@@ -20,7 +22,8 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { digest } from "./digest.ts";
 import { adapterVersion } from "./adapters.ts";
-import { assess, evaluate, type Evaluation, type Present, type Verdict } from "./evaluate.ts";
+import { authorityLabel, ciActor, ciConfiguration, configuredAuthority, inCi, type Authority, type Configured } from "./authority.ts";
+import { assess, evaluate, isAuthoritative, type Evaluation, type Present, type Verdict } from "./evaluate.ts";
 import {
   COMMAND_ASSUMPTIONS,
   MANUAL_ASSUMPTIONS,
@@ -36,16 +39,18 @@ import {
   writeRecord,
   writeRun,
   type EvidenceRecord,
+  type StoredRecord,
 } from "./evidence.ts";
+import { applyRowChanges, compare, machineView, projectRow, readMap, rowText, type RowChange } from "./map.ts";
 import { completeRef, obligationDigest, obligationPath, obligationsDir, obligationText, projectObligation, readObligation, writeObligation, type Obligation } from "./obligations.ts";
 import { compareStrength, defaultPolicy, loadPolicy, policyText, requiredText, type Finding, type Policy } from "./policy.ts";
 import { currentSnapshot } from "./snapshot.ts";
 import { readCorpus, type Requirement } from "./specs.ts";
-import { findGrant, gitActor, grant, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
+import { EMPTY_STORE, findEnvironmentGrant, findGrant, gitActor, grant, grantEnvironment, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
 import { environmentLabel, fingerprintEnvironment, listValidators, readValidator, runValidator, validatorDigest, type EnvironmentInput, type ValidatorDef } from "./validators.ts";
 import type { YamlMap } from "./yaml.ts";
 
-const USAGE = "usage: same-page <elaborate|verify|trust|run|attest|acknowledge|policy> ... [--root DIR]";
+const USAGE = "usage: same-page <elaborate|verify|trust|run|attest|acknowledge|policy|sync-map> ... [--root DIR]";
 
 function gitRoot(from: string): string | null {
   const r = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: from, encoding: "utf8" });
@@ -82,9 +87,10 @@ function readPolicyFile(root: string): { policy: Policy | null; findings: Findin
 
 function ensureLayout(root: string): void {
   const base = join(root, ".same-page");
-  for (const d of ["obligations", "validators", "evidence", "cache"]) mkdirSync(join(base, d), { recursive: true });
+  for (const d of ["obligations", "validators", "evidence", "cache", "artifacts"]) mkdirSync(join(base, d), { recursive: true });
   const ignore = join(base, ".gitignore");
-  if (!existsSync(ignore)) writeFileSync(ignore, "# Derived execution state stays uncommitted (ENG-190, ENG-193).\nevidence/\ncache/\n");
+  if (!existsSync(ignore)) writeFileSync(ignore, "# Derived execution state stays uncommitted (ENG-190, ENG-193, ENG-194).\nevidence/\ncache/\nartifacts/\n");
+  else if (!readFileSync(ignore, "utf8").split("\n").includes("artifacts/")) writeFileSync(ignore, readFileSync(ignore, "utf8").replace(/\n?$/, "\n") + "artifacts/\n");
 }
 
 function isObligationCandidate(r: Requirement): boolean {
@@ -147,8 +153,9 @@ function elaborate(root: string): number {
       return 2;
     }
     ensureLayout(root);
-    writeFileSync(policyPath, policyText(defaultPolicy(dirs)));
-    process.stdout.write(`wrote .same-page/policy.yaml (specs: ${dirs.join(", ")})\n`);
+    const ci = ciConfiguration(root);
+    writeFileSync(policyPath, policyText(defaultPolicy(dirs, ci ? "ci" : "local")));
+    process.stdout.write(`wrote .same-page/policy.yaml (specs: ${dirs.join(", ")}; authority ${ci ? `ci, CI configuration at ${ci}` : "local, no CI configuration"})\n`);
   }
   ensureLayout(root);
   const loaded = requirePolicy(root, "elaborate");
@@ -283,23 +290,27 @@ function verify(root: string, asDeveloper: boolean): number {
   if (snapshotId === null) out.push({ where: root, message: "the repository snapshot cannot be computed (a directory or file is unreadable); no chain step establishes a boundary and every record's freshness is unknown", rule: "ENG-126" });
   const { obligations, findings } = loadObligations(root);
   out.push(...findings);
+  const configured: Configured = configuredAuthority(root, policy);
   // The present value of every identity input (ENG-142): validator
   // digests, and each usable validator's environment fingerprint,
   // computed once (ENG-151: exactly the declared inputs).
   const present: Present = { snapshot: snapshotId, validatorDigests: new Map(), environments: new Map() };
   const defs = new Map<string, ValidatorDef>();
-  const store = trustStoreInsideRepository(root) ? { version: 1, grants: [] } : readTrustStore();
+  const store = trustStoreInsideRepository(root) ? EMPTY_STORE : readTrustStore();
   const trusted = new Set<string>();
+  const ciContext = inCi(process.env) && ciConfiguration(root) !== null;
   for (const name of listValidators(root)) {
     const v = readValidator(root, name);
     const d = v.def ? validatorDigest(v.def) : null;
     present.validatorDigests.set(name, d);
     if (v.def) defs.set(name, v.def);
     // ENG-059: a declared environment command runs during verify only
-    // under the grant that covers this definition, or --as-developer.
-    if (v.def && d && (asDeveloper || findGrant(store, root, name, d))) trusted.add(name);
+    // under a trust context: the grant that covers this definition,
+    // owner-controlled CI, or --as-developer.
+    if (v.def && d && (asDeveloper || ciContext || findGrant(store, root, name, d))) trusted.add(name);
     out.push(...v.findings);
   }
+  const recordsById = new Map<string, StoredRecord[]>();
   const evaluations: Evaluation[] = [];
   for (const [id, o] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     const where = `.same-page/obligations/${id}.yaml`;
@@ -335,13 +346,17 @@ function verify(root: string, asDeveloper: boolean): number {
     }
     const { records, findings: rf } = readRecords(root, id);
     out.push(...rf);
+    recordsById.set(id, records);
     for (const r of records) {
       if (r.validator && defs.has(r.validator) && !present.environments.has(r.validator)) present.environments.set(r.validator, fingerprintEnvironment(root, defs.get(r.validator)!, trusted.has(r.validator)));
     }
     const assessed = assess({ ...o, required }, records, present, now);
     const standing = standingDisproof(root, id, records);
     const history = standing ? null : readDisproof(root, id);
-    let ev = evaluate({ ...o, required }, assessed, invalid, standing, history);
+    // A profile may name the authority its evidence comes from (ENG-071);
+    // otherwise the configured authority applies.
+    const authorityFor = profile.require.authority ? { authority: profile.require.authority, name: policy.authority_name } : { authority: configured.authority, name: configured.name };
+    let ev = evaluate({ ...o, required }, assessed, invalid, standing, history, authorityFor);
     if (ev.verdict === "FAILING") {
       const failing = assessed.find((a) => a.freshness === "current" && a.record.result === "fail")!;
       const disproof = { requirement: id, requirement_digest: o.requirement_digest, falsifier_digest: o.falsifier_digest, sentence: o.sentence, falsifier: o.falsifier, verdict: "FAILING" as const, snapshot: failing.record.identity.snapshot ?? "unknown", record: failing.record.path, recorded_at: now.toISOString() };
@@ -353,6 +368,18 @@ function verify(root: string, asDeveloper: boolean): number {
   for (const r of corpus.requirements) {
     if (isObligationCandidate(r) && !obligations.has(r.id))
       out.push({ where: `${r.file}:${r.line}`, message: `${r.id} is Agreed and has no obligation; run \`same-page elaborate\``, rule: "ENG-206" });
+  }
+  // ENG-198, ENG-199: the machine view of coverage against the map.
+  const map = readMap(root, policy.specs);
+  let disagreements = 0;
+  for (const [id] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (map.files.length === 0 || !recordsById.has(id)) continue;
+    const row = map.rows.get(id) ?? null;
+    const msg = compare(machineView(recordsById.get(id)!), row);
+    if (msg) {
+      disagreements++;
+      out.push({ where: row ? `${row.file}:${row.line}` : map.files[0]!, message: `${id}: ${msg}; run \`same-page sync-map\` to write the machine view, or correct the map`, rule: "ENG-199" });
+    }
   }
   for (const ev of evaluations) {
     const o = obligations.get(ev.id)!;
@@ -367,13 +394,15 @@ function verify(root: string, asDeveloper: boolean): number {
         const r = a.record;
         const who = r.validator ?? (r.manual ? `manual by ${r.manual.actor}` : r.kind);
         const state = a.expired ? `expired: ${a.why}` : a.freshness === "current" ? "current" : `${a.freshness}: ${a.why}`;
-        lines.push(`  ${i === 0 ? "Evidence:   " : "            "} ${r.kind} ${who} ${r.result} (${state}; binding ${r.binding_basis}; ${r.sensitivity}; ${r.path})`);
+        // ENG-159: a record of another authority is named as such.
+        const auth = isAuthoritative(r, ev.authority) ? "" : `authority ${authorityLabel(r.authority, r.authority_name)}, non-authoritative; `;
+        lines.push(`  ${i === 0 ? "Evidence:   " : "            "} ${r.kind} ${who} ${r.result} (${state}; ${auth}binding ${r.binding_basis}; ${r.sensitivity}; ${r.path})`);
       });
     }
     const live = ev.records.filter((a) => !a.expired);
     const freshness = ev.records.length === 0 ? "no evidence" : live.some((a) => a.freshness === "current") ? "current" : live.some((a) => a.freshness === "stale") ? "stale" : live.some((a) => a.freshness === "unknown") ? "unknown" : "expired";
     lines.push(`  Freshness:   ${freshness}`);
-    lines.push(`  Authority:   local @ ${snapshotId ?? "unknown (no snapshot)"}`);
+    lines.push(`  Authority:   ${authorityLabel(ev.authority.authority, ev.authority.name)} @ ${snapshotId ?? "unknown (no snapshot)"}`);
     if (recs.length === 0) {
       lines.push("  Boundary:    none recorded (no evidence)");
       lines.push("  Dependency:  none established (no evidence)");
@@ -395,8 +424,9 @@ function verify(root: string, asDeveloper: boolean): number {
   printFindings(out);
   const counts: Record<Verdict, number> = { FAILING: 0, BLOCKED: 0, INSUFFICIENT: 0, SUFFICIENT: 0 };
   for (const ev of evaluations) counts[ev.verdict]++;
+  const mapLine = map.files.length === 0 ? "no evidence map under the spec directories" : `${disagreements} map disagreement(s) with ${map.files.join(", ")}`;
   process.stdout.write(
-    `same-page verify: ${evaluations.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s); authority local @ ${snapshotId ?? "unknown (no snapshot)"}\n`
+    `same-page verify: ${evaluations.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s); ${mapLine}; authority ${authorityLabel(configured.authority, configured.name)} (${configured.source}) @ ${snapshotId ?? "unknown (no snapshot)"}\n`
   );
   const allSufficient = evaluations.every((v) => v.verdict === "SUFFICIENT");
   return out.length === 0 && allSufficient ? 0 : 1;
@@ -404,15 +434,21 @@ function verify(root: string, asDeveloper: boolean): number {
 
 // ---------------------------------------------------------------- trust
 
-function trust(root: string, name: string | undefined): number {
-  if (!name) {
-    process.stderr.write("usage: same-page trust <validator>\n");
+function trust(root: string, name: string | undefined, environment: string | undefined): number {
+  if ((!name && !environment) || (name && environment)) {
+    process.stderr.write("usage: same-page trust <validator> | same-page trust --environment <name>\n");
     return 2;
   }
   if (trustStoreInsideRepository(root)) {
     process.stderr.write(`same-page: the trust store ${trustPath()} is inside the repository it would authorize; set SAME_PAGE_HOME outside it (ENG-062)\n`);
     return 2;
   }
+  if (environment) {
+    const g = grantEnvironment(root, environment, gitActor(root));
+    process.stdout.write(`trusted environment ${environment} for ${g.repository} by ${g.actor}; recorded in ${trustPath()}. Runs there: same-page run --environment ${environment}\n`);
+    return 0;
+  }
+  name = name!;
   const v = readValidator(root, name);
   if (!v.def) {
     printFindings(v.findings);
@@ -426,7 +462,7 @@ function trust(root: string, name: string | undefined): number {
 
 // ---------------------------------------------------------------- run
 
-function run(root: string, names: string[], asDeveloper: boolean): number {
+function run(root: string, names: string[], asDeveloper: boolean, environment: string | undefined): number {
   const loaded = requirePolicy(root, "run");
   if (typeof loaded === "number") return loaded;
   const { policy } = loaded;
@@ -439,6 +475,28 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
   }
   const store = readTrustStore();
   const actor = gitActor(root);
+  // The execution trust context and the authority of the evidence it
+  // produces (ENG-060): a named environment the developer trusted, CI
+  // under owner-controlled configuration, or, per validator below, a
+  // trust record or an explicit developer invocation, both local.
+  let shared: { context: NonNullable<EvidenceRecord["execution_trust"]>; authority: Authority; name: string | null } | null = null;
+  if (environment) {
+    const g = findEnvironmentGrant(store, root, environment);
+    if (!g) {
+      out.push({ where: trustPath(), message: `environment ${environment} is not trusted for this repository; run \`same-page trust --environment ${environment}\``, rule: "ENG-058" });
+      printFindings(out);
+      return 1;
+    }
+    shared = { context: { context: "named-environment", actor: `${environment} (${g.actor})` }, authority: "named-environment", name: environment };
+  } else if (inCi(process.env)) {
+    const ci = ciConfiguration(root);
+    if (!ci) {
+      out.push({ where: root, message: "CI is set in the environment but the repository carries no CI configuration at a recognized path; nothing anchors trust for a ci run", rule: "ENG-060" });
+      printFindings(out);
+      return 1;
+    }
+    shared = { context: { context: "ci", actor: ciActor(process.env) }, authority: "ci", name: null };
+  }
   // Which validators: the named ones, else every one an obligation lists.
   const listed = new Map<string, Obligation[]>();
   for (const o of obligations.values()) for (const v of o.validators) listed.set(v.name, [...(listed.get(v.name) ?? []), o]);
@@ -457,8 +515,11 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
     const def: ValidatorDef = v.def;
     const d = validatorDigest(def);
     const g = findGrant(store, root, name, d);
-    let context: EvidenceRecord["execution_trust"];
-    if (g) context = { context: "trust-record", actor: g.actor };
+    let context: NonNullable<EvidenceRecord["execution_trust"]>;
+    const authority: Authority = shared ? shared.authority : "local";
+    const authorityName = shared ? shared.name : null;
+    if (shared) context = shared.context;
+    else if (g) context = { context: "trust-record", actor: g.actor };
     else if (asDeveloper) context = { context: "developer-invocation", actor };
     else {
       out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is not trusted for this repository at its current definition (${d}); run \`same-page trust ${name}\`, or the developer runs \`same-page run ${name} --as-developer\``, rule: "ENG-058" });
@@ -480,7 +541,10 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
     const result = runValidator(root, def);
     executed++;
     const runId = `${stamp(new Date(result.started_at))}-${name}`;
-    const runPath = writeRun(root, runId, {
+    const runPath = writeRun(
+      root,
+      runId,
+      {
       validator: name,
       validator_digest: d,
       command: [...def.command],
@@ -492,9 +556,12 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
       signal: result.signal,
       result: result.result,
       error: result.error,
-      stdout: result.stdout,
-      stderr: result.stderr,
-    } as YamlMap);
+        stdout: result.stdout,
+        stderr: result.stderr,
+      } as YamlMap,
+      authority,
+      authorityName
+    );
     for (const o of bound) {
       const ref = completeRef(o.validators.find((x) => x.name === name)!, snapshotId ?? "unknown", actor);
       const attested = ref.attested_by !== undefined;
@@ -530,14 +597,15 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
         dependency_provenance: "conservative",
         assumptions: [...COMMAND_ASSUMPTIONS],
         residual_risk: residualRisk(dependency, declared, "command"),
-        authority: "local",
+        authority,
+        authority_name: authorityName,
         manual: null,
       };
       writeRecord(root, rec, name);
       recordsWritten++;
     }
     const envText = environment.length ? `; environment ${environment.map((e) => `${e.input} = ${e.error !== null ? `not computed (${e.error})` : short(e.value)}`).join(", ")}` : "; no environment inputs declared";
-    process.stdout.write(`ran ${name}: ${result.result}${result.exit_code !== null ? ` (exit ${result.exit_code})` : ""}${result.error ? ` ${result.error}` : ""} under ${context.context}; ${bound.length} record(s) at ${snapshotId ?? "unknown (no snapshot)"}${envText}\n`);
+    process.stdout.write(`ran ${name}: ${result.result}${result.exit_code !== null ? ` (exit ${result.exit_code})` : ""}${result.error ? ` ${result.error}` : ""} under ${context.context}; ${bound.length} record(s) at ${snapshotId ?? "unknown (no snapshot)"}, authority ${authorityLabel(authority, authorityName)}${envText}\n`);
   }
   printFindings(out);
   process.stdout.write(`same-page run: ${executed} validator(s) executed, ${recordsWritten} record(s) written, ${out.length} finding(s)\n`);
@@ -611,6 +679,7 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
     assumptions: [...MANUAL_ASSUMPTIONS],
     residual_risk: residualRisk(dependency, [], "manual"),
     authority: "local",
+    authority_name: null,
     manual: { actor: opts.by, description: opts.description, bindings, expires: opts.expires, addresses_falsifier: !opts.inspectionOnly && opts.addressesFalsifier },
   };
   const path = writeRecord(root, rec, opts.inspectionOnly ? "inspected" : "manual");
@@ -673,6 +742,52 @@ function policyConfirm(root: string): number {
   return 0;
 }
 
+// ---------------------------------------------------------------- sync-map
+
+// ENG-200: the one engine write to the evidence map, explicit. Rows
+// whose machine view disagrees are rewritten; an obligation with no row
+// gets one; every other byte of the file stays.
+function syncMap(root: string): number {
+  const loaded = requirePolicy(root, "sync-map");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
+  const { obligations, findings } = loadObligations(root);
+  const out: Finding[] = [...findings];
+  const map = readMap(root, policy.specs);
+  if (map.files.length === 0) {
+    process.stderr.write(`same-page: no conformance.md under ${policy.specs.join(", ")}; nothing to synchronize\n`);
+    return 2;
+  }
+  const byFile = new Map<string, RowChange[]>();
+  let citations = 0;
+  for (const [id] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const { records, findings: rf } = readRecords(root, id);
+    out.push(...rf);
+    const view = machineView(records);
+    const row = map.rows.get(id) ?? null;
+    const msg = compare(view, row);
+    if (!msg) continue;
+    const next = projectRow(id, view, row);
+    const file = row ? row.file : map.files[0]!;
+    const changes = byFile.get(file) ?? [];
+    changes.push({ id, text: rowText(id, next.coverage, next.method, next.evidence), line: row ? row.line : null });
+    byFile.set(file, changes);
+    if (next.citationNeeded) citations++;
+    process.stdout.write(`${id}: ${row ? `${row.coverage} ${row.method}` : "no row"} -> ${next.coverage} ${next.method}${next.evidence ? ` (${next.evidence})` : ""}${next.citationNeeded ? " -- cite the evidence by hand" : ""}\n`);
+  }
+  let written = 0;
+  let added = 0;
+  for (const [file, changes] of byFile) {
+    const r = applyRowChanges(root, file, changes);
+    written += r.written;
+    added += r.added;
+    for (const id of r.unplaced) out.push({ where: file, message: `${id} has no table for its prefix in the map; add the table by hand`, rule: "ENG-195" });
+  }
+  printFindings(out);
+  process.stdout.write(`same-page sync-map: ${written} row(s) rewritten, ${added} row(s) added${citations ? `, ${citations} citation(s) to fill in` : ""}, ${out.length} finding(s); the map stays the human claim register (ENG-195)\n`);
+  return out.length === 0 ? 0 : 1;
+}
+
 // ---------------------------------------------------------------- main
 
 function main(): number {
@@ -689,6 +804,7 @@ function main(): number {
         bindings: { type: "string" },
         "addresses-falsifier": { type: "boolean" },
         "inspection-only": { type: "boolean" },
+        environment: { type: "string" },
       },
       allowPositionals: true,
       strict: true,
@@ -711,15 +827,17 @@ function main(): number {
     case "verify":
       return rest.length === 0 ? verify(root, flag("as-developer")) : usage();
     case "trust":
-      return trust(root, rest[0]);
+      return trust(root, rest[0], str("environment"));
     case "run":
-      return run(root, rest, flag("as-developer"));
+      return run(root, rest, flag("as-developer"), str("environment"));
     case "attest":
       return attest(root, rest[0], { by: str("by"), expires: str("expires"), description: str("description"), bindings: str("bindings"), addressesFalsifier: flag("addresses-falsifier"), inspectionOnly: flag("inspection-only") });
     case "acknowledge":
       return acknowledge(root, rest[0]);
     case "policy":
       return rest[0] === "confirm" ? policyConfirm(root) : usage();
+    case "sync-map":
+      return rest.length === 0 ? syncMap(root) : usage();
     default:
       process.stderr.write(`same-page: unknown command ${command}\n`);
       return usage();

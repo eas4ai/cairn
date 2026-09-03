@@ -21,5 +21,11 @@ required:
     - kind: test
     - kind: static
     - kind: manual
-validators: []
+validators:
+  - name: bun-test
+    attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-03T15:31:33.304Z
+    snapshot: workspace:1c081c9b796d7333e178de5f99d88f4807af5404da33587dcc1e8beb1f915f5e
+    developer_confirmed: false
 sentence: The `same-page verify` command MUST report every disagreement between the machine view and the evidence map.

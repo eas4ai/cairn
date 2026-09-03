@@ -58,7 +58,9 @@ each with its identity block and the environment fingerprint the
 definition declares;
 `attest <REQ-ID>` records manual evidence by a named human with an
 expiry; `acknowledge <REQ-ID>` records the developer's acknowledgment
-of a revision that clears a standing disproof. `verify` then reports,
+of a revision that clears a standing disproof; `sync-map` writes the
+machine view of coverage into the evidence map, and is the only engine
+command that writes it. `verify` then reports,
 per requirement, the verdict (FAILING, BLOCKED, INSUFFICIENT,
 SUFFICIENT), what the policy requires, the evidence present with its
 freshness, the authority and snapshot, the boundary, the dependency
@@ -78,10 +80,20 @@ validator; never as part of scaffolding. A policy downgrade
 `same-page policy confirm` and recorded in the affected spec's
 Decisions and revisions; a disproof-clearing revision is acknowledged
 by the developer, then `same-page acknowledge` and the same log entry.
-Layers L1, L2, and L3 are built; configurable authority and map
-comparison, challenges, and ecosystem adapters with boundaries
-narrower than the repository are the next layers, each under its own
-iteration contract.
+The policy names the authority whose evidence counts (`ci`, `local`,
+or a named environment the developer trusted with `same-page trust
+--environment <name>`); the first `elaborate` writes `ci` when the
+repository carries CI configuration, else `local`. Evidence of another
+authority is shown with its authority named and never passes as
+authoritative. `verify` also reports every evidence-map row that
+disagrees with the machine view; resolve each one by correcting the map
+in the confirm-back loop, or by running `same-page sync-map` when the
+machine view is right, and never by editing a row to hide a
+disagreement.
+
+Layers L1 through L4 are built; challenges, and ecosystem adapters with
+boundaries narrower than the repository, are the next layers, each under
+its own iteration contract.
 
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in

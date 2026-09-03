@@ -99,6 +99,11 @@ function auditPrompt(root, projects) {
     "   (scripts/language-check.mjs, beside this gate), and does",
     "   conformance.md still tell the truth for the requirements this",
     "   session touched?",
+    "7. Conformance state: where the engine is in use (.same-page/ exists),",
+    "   run `same-page verify` and spend judgment where it points: a",
+    "   missing obligation, stale or unknown evidence, an insufficient",
+    "   policy, a failing validator, or a map row that disagrees with the",
+    "   machine view. Do not run a validator from this gate.",
     "Make any needed corrections, then finish. This gate fires once per session.",
   ].join("\n");
 }

@@ -8,9 +8,14 @@
 // any profile (ENG-083); a missing precondition, freshness unknown
 // included, is BLOCKED with its reason (ENG-084); stale evidence is
 // shown and the verdict is INSUFFICIENT with the re-run named (ENG-085,
-// ENG-088).
+// ENG-088). Only evidence of the configured authority at the exact
+// snapshot can satisfy a profile (ENG-155, ENG-160); non-authoritative
+// evidence is shown with its authority (ENG-159), and a current failing
+// result from any authority is FAILING: a demonstrated counterexample
+// is never hidden behind authority.
 
 import { adapterVersion } from "./adapters.ts";
+import { authorityLabel, sameAuthority, type Authority } from "./authority.ts";
 import type { Disproof, StoredRecord } from "./evidence.ts";
 import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
@@ -37,6 +42,7 @@ export type Evaluation = {
   id: string;
   verdict: Verdict;
   reason: string | null;
+  authority: { authority: Authority; name: string | null };
   required: Profile["require"];
   records: Assessed[];
   assumptions: string[];
@@ -136,31 +142,47 @@ function rerun(rs: StoredRecord[]): string {
   return parts.join(" or ") + " at this snapshot";
 }
 
-export function evaluate(o: Obligation, assessed: Assessed[], invalidReason: string | null, standing: Disproof | null, history: Disproof | null): Evaluation {
+export function isAuthoritative(r: StoredRecord, configured: { authority: Authority; name: string | null }): boolean {
+  return sameAuthority({ authority: r.authority, name: r.authority_name }, configured);
+}
+
+export function evaluate(o: Obligation, assessed: Assessed[], invalidReason: string | null, standing: Disproof | null, history: Disproof | null, configured: { authority: Authority; name: string | null }): Evaluation {
   const required = o.required;
   const assumptions = [...new Set(assessed.flatMap((a) => a.record.assumptions))];
   const residual_risk = [...new Set(assessed.flatMap((a) => a.record.residual_risk))];
-  const base = { id: o.requirement, required, records: assessed, assumptions, residual_risk, standing, history };
-  const current = assessed.filter((a) => a.freshness === "current" && !a.expired).map((a) => a.record);
-  // FAILING first (ENG-081, ENG-082): a current failing result.
+  const base = { id: o.requirement, authority: configured, required, records: assessed, assumptions, residual_risk, standing, history };
+  const live = assessed.filter((a) => !a.expired);
+  const current = live.filter((a) => a.freshness === "current").map((a) => a.record);
+  // FAILING first (ENG-081, ENG-082): a current failing result, from
+  // any authority.
   const failing = current.find((r) => r.result === "fail");
-  if (failing) return { ...base, verdict: "FAILING", reason: `${failing.validator ?? "manual"} demonstrated the falsifier at ${failing.identity.snapshot} (${failing.path})` };
+  if (failing) return { ...base, verdict: "FAILING", reason: `${failing.validator ?? "manual"} demonstrated the falsifier at ${failing.identity.snapshot} (${failing.path}${isAuthoritative(failing, configured) ? "" : `; authority ${authorityLabel(failing.authority, failing.authority_name)}`})` };
   // BLOCKED (ENG-084): a precondition the engine cannot establish.
   if (invalidReason) return { ...base, verdict: "BLOCKED", reason: invalidReason };
-  const errored = current.find((r) => r.result === "error");
+  const authoritative = (rs: StoredRecord[]) => rs.filter((r) => isAuthoritative(r, configured));
+  const authCurrent = authoritative(current);
+  const errored = authCurrent.find((r) => r.result === "error");
   if (errored) return { ...base, verdict: "BLOCKED", reason: `validator ${errored.validator ?? "?"} did not complete (${errored.path})` };
-  if (satisfies(required, current)) return { ...base, verdict: "SUFFICIENT", reason: null };
-  // Evidence whose freshness cannot be computed would decide the verdict
-  // if it could be: that is a missing precondition, BLOCKED (ENG-084).
-  const unknown = assessed.filter((a) => a.freshness === "unknown" && !a.expired);
-  if (satisfies(required, [...current, ...unknown.map((a) => a.record)])) {
+  if (satisfies(required, authCurrent)) return { ...base, verdict: "SUFFICIENT", reason: null };
+  // Authoritative evidence whose freshness cannot be computed would
+  // decide the verdict if it could be: a missing precondition, BLOCKED
+  // (ENG-084).
+  const unknown = live.filter((a) => a.freshness === "unknown" && isAuthoritative(a.record, configured));
+  if (satisfies(required, [...authCurrent, ...unknown.map((a) => a.record)])) {
     return { ...base, verdict: "BLOCKED", reason: `freshness cannot be established: ${unknown[0]!.why}; ${rerun(unknown.map((a) => a.record))}` };
+  }
+  // Current evidence of another authority never passes as authoritative
+  // (ENG-160): shown, and INSUFFICIENT.
+  const other = current.filter((r) => !isAuthoritative(r, configured));
+  if (satisfies(required, [...authCurrent, ...other])) {
+    const where = [...new Set(other.map((r) => authorityLabel(r.authority, r.authority_name)))].join(", ");
+    return { ...base, verdict: "INSUFFICIENT", reason: `current under ${where}; not yet established by authoritative ${authorityLabel(configured.authority, configured.name)}` };
   }
   // Stale evidence is known to be for other inputs: evaluation is
   // possible, the profile is unsatisfied, INSUFFICIENT with the re-run
   // named (ENG-085, ENG-088).
-  const stale = assessed.filter((a) => a.freshness === "stale" && !a.expired);
-  if (satisfies(required, [...current, ...stale.map((a) => a.record)])) {
+  const stale = live.filter((a) => a.freshness === "stale" && isAuthoritative(a.record, configured));
+  if (satisfies(required, [...authCurrent, ...stale.map((a) => a.record)])) {
     return { ...base, verdict: "INSUFFICIENT", reason: `evidence is stale: ${stale[0]!.why}; ${rerun(stale.map((a) => a.record))}` };
   }
   return { ...base, verdict: "INSUFFICIENT", reason: null };

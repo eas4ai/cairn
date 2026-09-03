@@ -1560,6 +1560,44 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 005 (layer L4) built, under
+  docs/specs/same-page/iterations/005.md. Implementation-design
+  decisions taken under that contract: (a) the policy carries
+  `authority:` and, for a named environment, `authority_name:`; a value
+  outside the three is a finding and no obligation is evaluated;
+  (b) with no `authority:` key the default is `ci` when the repository
+  carries owner-controlled CI configuration at one of ten recognized
+  paths (.github/workflows/, .gitlab-ci.yml, .circleci/config.yml,
+  Jenkinsfile, .buildkite/, azure-pipelines.yml, .travis.yml,
+  bitbucket-pipelines.yml, .drone.yml, .woodpecker.yml), else `local`,
+  and the first `elaborate` writes that default explicitly; (c) a
+  record's authority is the authority of its execution context: a trust
+  record or `--as-developer` is `local`, a run with `CI` set and the
+  configuration present is `ci`, and `run --environment <name>` under an
+  environment grant is `named-environment`; (d) each authority's
+  evidence has its own location -- .same-page/evidence/,
+  .same-page/artifacts/ci/, .same-page/artifacts/environments/<name>/ --
+  and a record whose stated authority contradicts its location is
+  refused, which is ENG-194 in storage terms; (e) an environment grant
+  lives beside the validator grants outside the repository and names the
+  repository and the environment; (f) only evidence of the configured
+  authority at the exact snapshot satisfies a profile, evidence of
+  another authority is shown with its authority and yields
+  `INSUFFICIENT` with "current under X; not yet established by
+  authoritative Y", and a current failing result is `FAILING` whatever
+  its authority; (g) a profile's `require.authority` overrides the
+  configured authority for its obligations; (h) the machine view of
+  coverage is Covered when a record beyond inspection addresses the
+  falsifier (a failing result included: the mechanism exists), Asserted
+  when only inspection records exist, Uncovered when there are none, and
+  no records agrees with both Asserted and Uncovered; (i) `verify`
+  reports each disagreement with the row's file and line and never
+  writes the map; (j) `sync-map` rewrites the Coverage and Method of
+  disagreeing rows, adds a row for an obligation that has none in
+  identifier order, keeps the human's citation, writes `-` and no
+  citation on Uncovered, names a row it cannot cite, and leaves every
+  other byte of the file; (k) the drift gate's audit prompt gains one
+  item pointing at `same-page verify`, and still spawns nothing.
 - 2026-09-03 -- Confirmed Agreed by the developer with falsifiers at
   the close of iteration 004, for iteration 005 (layer L4):
   Verification authority. The map comparison and synchronization

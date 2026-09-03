@@ -10,6 +10,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { adapterHas, type AdapterName } from "./adapters.ts";
+import { AUTHORITIES, evidenceRoot, authorityLabel, type Authority } from "./authority.ts";
 import { METHODS, type Finding, type Method } from "./policy.ts";
 import type { TrustContext } from "./trust.ts";
 import type { EnvironmentInput } from "./validators.ts";
@@ -79,7 +80,8 @@ export type EvidenceRecord = {
   dependency_provenance: (typeof PROVENANCE)[number];
   assumptions: string[];
   residual_risk: string[];
-  authority: "local";
+  authority: Authority;
+  authority_name: string | null;
   manual: { actor: string; description: string; bindings: string[]; expires: string; addresses_falsifier: boolean } | null;
 };
 
@@ -121,12 +123,15 @@ export function stamp(d: Date): string {
   return d.toISOString().replace(/[-:]/g, "").replace(/\.(\d+)Z$/, "$1Z") + String(counter).padStart(3, "0");
 }
 
-export function writeRun(root: string, id: string, data: YamlMap): string {
-  const dir = join(root, ".same-page", "evidence", "runs");
+// A run's captured output travels with the evidence of its authority:
+// under evidence/ for local runs, inside the artifact otherwise.
+export function writeRun(root: string, id: string, data: YamlMap, authority: Authority, name: string | null): string {
+  const rel = `${evidenceRoot(authority, name)}/runs`;
+  const dir = join(root, rel);
   mkdirSync(dir, { recursive: true });
   const path = join(dir, `${id}.yaml`);
   writeFileSync(path, stringifyYaml(data, ["Same Page validator run: captured output. Never parsed for evidence axes."]));
-  return `.same-page/evidence/runs/${id}.yaml`;
+  return `${rel}/${id}.yaml`;
 }
 
 function environmentToYaml(env: EnvironmentInput[]): YamlValue[] {
@@ -166,17 +171,21 @@ export function recordToYaml(r: EvidenceRecord): YamlMap {
     assumptions: [...r.assumptions],
     residual_risk: [...r.residual_risk],
     authority: r.authority,
+    authority_name: r.authority_name,
     manual: r.manual ? ({ ...r.manual, bindings: [...r.manual.bindings] } as YamlMap) : null,
   };
   return m;
 }
 
+// ENG-160, ENG-194: a record is written where its authority's evidence
+// is read, and nowhere else.
 export function writeRecord(root: string, r: EvidenceRecord, label: string): string {
-  const dir = evidenceDir(root, r.requirement);
+  const rel = `${evidenceRoot(r.authority, r.authority_name)}/${r.requirement}`;
+  const dir = join(root, rel);
   mkdirSync(dir, { recursive: true });
   const name = `${stamp(new Date(r.recorded_at))}-${label}.yaml`;
-  writeFileSync(join(dir, name), stringifyYaml(recordToYaml(r), ["Same Page evidence record. Derived local state; the engine never deletes it."]));
-  return `.same-page/evidence/${r.requirement}/${name}`;
+  writeFileSync(join(dir, name), stringifyYaml(recordToYaml(r), [r.authority === "local" ? "Same Page evidence record. Derived local state; the engine never deletes it." : `Same Page evidence record, authority ${authorityLabel(r.authority, r.authority_name)}. An artifact; the engine never deletes it.`]));
+  return `${rel}/${name}`;
 }
 
 export type StoredRecord = EvidenceRecord & { path: string };
@@ -256,9 +265,18 @@ function parseDependency(raw: YamlValue | undefined, where: string, findings: Fi
   return { scope, step: typeof step === "number" ? step : scope === "repository" ? 3 : 4, chain: (chain as YamlMap[]).map((c) => ({ step: c["step"] as number, mechanism: String(c["mechanism"] ?? ""), outcome: String(c["outcome"] ?? "") })), narrowing: "none" };
 }
 
-export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRecord | null; findings: Finding[] } {
+export type Location = { authority: Authority; name: string | null };
+
+export function parseRecord(raw: YamlValue, where: string, location: Location | null = null): { record: EvidenceRecord | null; findings: Finding[] } {
   const findings: Finding[] = [];
   if (!isMap(raw)) return { record: null, findings: [{ where, message: "an evidence record is a mapping", rule: "ENG-026" }] };
+  // ENG-159: every record states its authority; ENG-194: the stated
+  // authority is the one its location holds.
+  const authority = raw["authority"];
+  const authorityName = typeof raw["authority_name"] === "string" ? (raw["authority_name"] as string) : null;
+  if (!oneOf(AUTHORITIES, authority)) findings.push({ where, message: `record states no authority; it must be one of ${AUTHORITIES.join(", ")}`, rule: "ENG-159" });
+  else if (location && (authority !== location.authority || (authority === "named-environment" && authorityName !== location.name)))
+    findings.push({ where, message: `record states authority ${authorityLabel(authority, authorityName)} but lies where ${authorityLabel(location.authority, location.name)} evidence is read; a record is stored only where its own authority's evidence is read`, rule: "ENG-194" });
   const missing = ["kind", "binding_basis", "sensitivity", "freshness", "dependency_provenance", "assumptions"].filter((k) => raw[k] === undefined);
   if (missing.length) findings.push({ where, message: `record lacks axis field(s): ${missing.join(", ")}`, rule: "ENG-026" });
   if (!oneOf(METHODS, raw["kind"])) findings.push({ where, message: `kind must be one of ${METHODS.join(", ")}`, rule: "ENG-027" });
@@ -310,7 +328,8 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
       dependency_provenance: raw["dependency_provenance"] as EvidenceRecord["dependency_provenance"],
       assumptions: strings(raw["assumptions"]),
       residual_risk: strings(raw["residual_risk"]),
-      authority: "local",
+      authority: raw["authority"] as Authority,
+      authority_name: authorityName,
       manual: isMap(manual)
         ? {
             actor: String(manual["actor"] ?? ""),
@@ -325,24 +344,36 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
   };
 }
 
+// Every location evidence is read from: local derived state, the CI
+// artifact, and one artifact per named environment present.
+export function evidenceLocations(root: string): Location[] {
+  const out: Location[] = [{ authority: "local", name: null }, { authority: "ci", name: null }];
+  const envs = join(root, ".same-page", "artifacts", "environments");
+  if (existsSync(envs)) for (const name of readdirSync(envs).sort()) out.push({ authority: "named-environment", name });
+  return out;
+}
+
 export function readRecords(root: string, id: string): { records: StoredRecord[]; findings: Finding[] } {
-  const dir = evidenceDir(root, id);
   const records: StoredRecord[] = [];
   const findings: Finding[] = [];
-  if (!existsSync(dir)) return { records, findings };
-  for (const name of readdirSync(dir).sort()) {
-    if (!name.endsWith(".yaml") || name.startsWith("disproof")) continue;
-    const where = `.same-page/evidence/${id}/${name}`;
-    let raw: YamlValue;
-    try {
-      raw = parseYaml(readFileSync(join(dir, name), "utf8"));
-    } catch (e) {
-      findings.push({ where, message: (e as Error).message, rule: "ENG-026" });
-      continue;
+  for (const location of evidenceLocations(root)) {
+    const rel = `${evidenceRoot(location.authority, location.name)}/${id}`;
+    const dir = join(root, rel);
+    if (!existsSync(dir)) continue;
+    for (const name of readdirSync(dir).sort()) {
+      if (!name.endsWith(".yaml") || name.startsWith("disproof")) continue;
+      const where = `${rel}/${name}`;
+      let raw: YamlValue;
+      try {
+        raw = parseYaml(readFileSync(join(dir, name), "utf8"));
+      } catch (e) {
+        findings.push({ where, message: (e as Error).message, rule: "ENG-026" });
+        continue;
+      }
+      const r = parseRecord(raw, where, location);
+      if (r.record) records.push({ ...r.record, path: where });
+      else findings.push(...r.findings);
     }
-    const r = parseRecord(raw, where);
-    if (r.record) records.push({ ...r.record, path: where });
-    else findings.push(...r.findings);
   }
   records.sort((a, b) => a.recorded_at.localeCompare(b.recorded_at));
   return { records, findings };

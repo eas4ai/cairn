@@ -5,6 +5,7 @@
 // required and cannot be waived (ENG-072, ENG-073), a project default
 // exists (ENG-075), a domain may override it (ENG-076).
 
+import { AUTHORITIES, type Authority } from "./authority.ts";
 import { parseYaml, stringifyYaml, type YamlMap, type YamlValue } from "./yaml.ts";
 
 export const METHODS = ["formal", "model", "property", "integration", "test", "static", "inspected", "manual"] as const;
@@ -19,13 +20,15 @@ export type Profile = {
     all?: Clause[];
     any?: Clause[];
     binding?: { basis?: (typeof BINDING_BASES)[number]; developer_confirmed?: boolean };
-    authority?: string;
+    authority?: Authority;
     assumptions?: string[];
   };
 };
 export type Policy = {
   version: number;
   specs: string[];
+  authority: Authority | null; // null: the default rule of ENG-157 applies
+  authority_name: string | null;
   default_profile: string;
   profiles: Record<string, Profile>;
   domains: Record<string, { profile: string }>;
@@ -33,10 +36,12 @@ export type Policy = {
 
 export type Finding = { where: string; message: string; rule: string };
 
-export function defaultPolicy(specDirs: string[]): Policy {
+export function defaultPolicy(specDirs: string[], authority: Authority): Policy {
   return {
     version: 1,
     specs: specDirs,
+    authority,
+    authority_name: null,
     default_profile: "default",
     profiles: {
       default: {
@@ -52,6 +57,9 @@ export function defaultPolicy(specDirs: string[]): Policy {
 export const POLICY_HEADER = [
   "Same Page policy. Written by the first `same-page elaborate`; yours to edit.",
   "specs: the spec directories the engine reads, relative to the project root.",
+  "authority: whose evidence counts, ci, local, or named-environment (with",
+  "authority_name); the first elaborate writes ci when the repository carries",
+  "CI configuration, else local. A profile's require.authority overrides it.",
   "default_profile: the assurance profile every obligation takes unless its",
   "domain (by prefix) overrides it under domains, or the developer sets one",
   "on the obligation. A profile is a composition of evidence properties;",
@@ -67,7 +75,13 @@ function policyToYaml(p: Policy): YamlMap {
   for (const [name, prof] of Object.entries(p.profiles)) profiles[name] = { require: requireToYaml(prof.require) };
   const domains: YamlMap = {};
   for (const [k, v] of Object.entries(p.domains)) domains[k] = { profile: v.profile };
-  return { version: p.version, specs: [...p.specs], default_profile: p.default_profile, profiles, domains };
+  const out: YamlMap = { version: p.version, specs: [...p.specs] };
+  if (p.authority) out["authority"] = p.authority;
+  if (p.authority_name) out["authority_name"] = p.authority_name;
+  out["default_profile"] = p.default_profile;
+  out["profiles"] = profiles;
+  out["domains"] = domains;
+  return out;
 }
 
 export function policyText(p: Policy): string {
@@ -149,8 +163,8 @@ export function parseProfile(prof: YamlValue | undefined, at: string, findings: 
     }
   }
   if (req["authority"] !== undefined) {
-    if (typeof req["authority"] === "string") profile.require.authority = req["authority"];
-    else findings.push({ where: `${at}.require.authority`, message: "authority must be a string", rule: "ENG-071" });
+    if (typeof req["authority"] === "string" && (AUTHORITIES as readonly string[]).includes(req["authority"])) profile.require.authority = req["authority"] as Authority;
+    else findings.push({ where: `${at}.require.authority`, message: `authority must be one of ${AUTHORITIES.join(", ")}`, rule: "ENG-156" });
   }
   if (req["assumptions"] !== undefined) {
     const a = req["assumptions"];
@@ -244,6 +258,21 @@ export function validatePolicy(raw: YamlValue, where = ".same-page/policy.yaml")
   else if (Object.keys(profiles).length && !profiles[def])
     findings.push({ where: `${where}:default_profile`, message: `default_profile names ${def}, which profiles does not define`, rule: "ENG-075" });
 
+  // ENG-156: the configured authority is one of three; a named
+  // environment carries its name.
+  let authority: Authority | null = null;
+  let authorityName: string | null = null;
+  if (raw["authority"] !== undefined) {
+    if (typeof raw["authority"] === "string" && (AUTHORITIES as readonly string[]).includes(raw["authority"])) authority = raw["authority"] as Authority;
+    else findings.push({ where: `${where}:authority`, message: `authority must be one of ${AUTHORITIES.join(", ")}`, rule: "ENG-156" });
+  }
+  if (raw["authority_name"] !== undefined) {
+    if (typeof raw["authority_name"] === "string" && raw["authority_name"] !== "") authorityName = raw["authority_name"];
+    else findings.push({ where: `${where}:authority_name`, message: "authority_name must be a non-empty name", rule: "ENG-156" });
+  }
+  if (authority === "named-environment" && authorityName === null) findings.push({ where: `${where}:authority`, message: "a named-environment authority needs authority_name", rule: "ENG-156" });
+  if (authority !== null && authority !== "named-environment" && authorityName !== null) findings.push({ where: `${where}:authority_name`, message: `authority_name applies to named-environment only, not ${authority}`, rule: "ENG-156" });
+
   const domainsRaw = raw["domains"] ?? {};
   const domains: Record<string, { profile: string }> = {};
   if (!isMap(domainsRaw)) findings.push({ where: `${where}:domains`, message: "domains must be a mapping of prefix to { profile }", rule: "ENG-076" });
@@ -263,7 +292,7 @@ export function validatePolicy(raw: YamlValue, where = ".same-page/policy.yaml")
 
   if (findings.length) return { policy: null, findings };
   return {
-    policy: { version: version as number, specs, default_profile: def as string, profiles, domains },
+    policy: { version: version as number, specs, authority, authority_name: authorityName, default_profile: def as string, profiles, domains },
     findings,
   };
 }

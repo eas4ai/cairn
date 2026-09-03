@@ -249,6 +249,13 @@ digest, adapter identity, dependency and environment fingerprints.
 Policy is not part of it.
 _Avoid_: cache key (when evidence identity is meant)
 
+**Machine view**:
+The coverage the engine computes from the evidence records of one
+obligation: Covered, Asserted, or Uncovered, with the methods that
+addressed the falsifier. Compared with the evidence map, never written
+into it except by `same-page sync-map`.
+_Avoid_: report (when the machine view is meant)
+
 **Environment fingerprint**:
 The recorded values of the inputs a validator definition declares
 under `environment:`: a command's output or a file's digest, exactly

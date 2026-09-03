@@ -891,8 +891,8 @@ demonstrates the falsifier, whatever the profile says (ENG-082,
 ENG-083); BLOCKED when a precondition cannot be established, with the
 reason stated (ENG-084, ENG-219); INSUFFICIENT when evaluation is
 possible and the current evidence does not compose to the profile
-(ENG-085); SUFFICIENT when it does (ENG-086). The
-authority on every entry is `local`, the only one until L4. A policy edit that requires less of an existing obligation is a downgrade,
+(ENG-085); SUFFICIENT when it does (ENG-086). The authority on every entry was `local` until L4 made it
+configurable. A policy edit that requires less of an existing obligation is a downgrade,
 shown with old, new, and effect, and held until the developer runs
 `same-page policy confirm` and the change is logged (ENG-101 through
 ENG-105). A FAILING verdict records a standing disproof; revising the
@@ -933,15 +933,50 @@ not cover is stated as residual risk on every record and every
 root, and environment drift outside the declared inputs. That is the
 engine refusing to claim what it cannot see, and it is the product.
 
-Neither command writes a spec or the evidence map (ENG-011, ENG-197):
-the engine computes; the map stays the human claim register until L4
-compares the two.
+Layer L4 (iteration 005) settles whose evidence counts and puts the
+map and the machine beside each other. The policy carries
+`authority:`, one of `ci`, `local`, or `named-environment` with a
+name (ENG-156); the first `elaborate` writes `ci` when the repository
+holds owner-controlled CI configuration and `local` when it does not
+(ENG-157), and the developer may set either explicitly (ENG-158). A
+record carries the authority of the context that produced it: a trust
+record or `--as-developer` is `local`; a run inside CI is `ci` and
+writes under .same-page/artifacts/ci/; a run in an environment the
+developer trusted with `same-page trust --environment rig` is
+`named-environment` and writes under
+.same-page/artifacts/environments/rig/. A record found where another
+authority's evidence is read is refused (ENG-194). Only evidence of
+the configured authority, at the exact snapshot it describes, can
+satisfy a profile (ENG-155, ENG-160); evidence of any other authority
+is shown with its authority named (ENG-159) and the entry reads
+"current under local; not yet established by authoritative ci". One
+thing outranks authority: a current failing result is FAILING
+whoever produced it, because a demonstrated counterexample is not a
+matter of standing.
 
-The next layers, each under its own contract: the configured
-authority with the CI default, and the machine view compared with the
-map (L4); challenges that demonstrate sensitivity (L5); ecosystem
-adapters that establish backend bindings, complete closures, and
-boundaries narrower than the repository (L6).
+`same-page verify` also computes its own machine view of coverage
+from the records -- Covered when a record beyond inspection addresses
+the falsifier, with the method that did it; Asserted when only
+inspection exists; Uncovered when nothing does -- and reports every
+row where that view and the map disagree (ENG-198, ENG-199). On the
+broker, a row that claims Covered by test for a requirement with no
+record is named with its file and line. The map stays the human claim
+register: the engine never writes it as a side effect (ENG-197), and
+`same-page sync-map` is the one command that does (ENG-200). It
+rewrites the Coverage and Method of disagreeing rows, adds a row for
+an obligation that has none, keeps the citation the human wrote,
+writes `-` and no citation on Uncovered, and never writes a freshness
+value or a verdict (ENG-195, ENG-196). Every other byte of
+conformance.md stays as written.
+
+The engine still writes no spec, and it writes the evidence map only
+through that one command (ENG-011, ENG-197): the engine computes; the
+map remains the human's claim.
+
+The next layers, each under its own contract: challenges that
+demonstrate sensitivity (L5); ecosystem adapters that establish
+backend bindings, complete closures, and boundaries narrower than the
+repository (L6).
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof

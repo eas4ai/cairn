@@ -324,12 +324,12 @@ test("a change anywhere in the source makes evidence stale and the verdict INSUF
 test("two workspaces that differ in a dirty file have different identities (ENG-049)", () => {
   const p = project();
   writeFileSync(join(p.root, "src.txt"), "a\n");
-  const a = run(["verify"], p).stdout.match(/authority local @ (workspace:\w+)/)[1];
+  const a = run(["verify"], p).stdout.match(/authority local \(policy\) @ (workspace:\w+)/)[1];
   writeFileSync(join(p.root, "src.txt"), "b\n");
-  const b = run(["verify"], p).stdout.match(/authority local @ (workspace:\w+)/)[1];
+  const b = run(["verify"], p).stdout.match(/authority local \(policy\) @ (workspace:\w+)/)[1];
   expect(a).not.toBe(b);
   writeFileSync(join(p.root, "src.txt"), "a\n");
-  expect(run(["verify"], p).stdout.match(/authority local @ (workspace:\w+)/)[1]).toBe(a);
+  expect(run(["verify"], p).stdout.match(/authority local \(policy\) @ (workspace:\w+)/)[1]).toBe(a);
 });
 
 test("a policy edit to the engine's own directory does not stale evidence (ENG-186, acceptance: policy-only change re-evaluates)", () => {
@@ -342,7 +342,7 @@ test("a policy edit to the engine's own directory does not stale evidence (ENG-1
   addProfile(p, "  extra:\n    require:\n      all:\n        - kind: test\n");
   const v = run(["verify"], p);
   expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
-  expect(v.stdout).toContain("authority local @ git:");
+  expect(v.stdout).toContain("authority local (policy) @ git:");
 });
 
 test("a validator no definition names does not run (ENG-003, ENG-161)", () => {

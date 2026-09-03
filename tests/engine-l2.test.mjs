@@ -77,7 +77,7 @@ function commit(p, msg) {
 function validator(p, name, command, extra = "") {
   mkdirSync(join(p.root, ".same-page", "validators"), { recursive: true });
   const cmd = command.map((c) => `  - ${JSON.stringify(c)}`).join("\n");
-  writeFileSync(join(p.root, ".same-page", "validators", `${name}.yaml`), `kind: test\ncommand:\n${cmd}\n${extra}`);
+  writeFileSync(join(p.root, ".same-page", "validators", `${name}.yaml`), `kind: test\ncommand:\n${cmd}\nenvironment: []\n${extra}`);
 }
 
 function bind(p, id, name, attest = "") {
@@ -185,7 +185,7 @@ test("argv execution: no shell unless declared (ENG-162, ENG-163, ENG-164)", () 
   expect(expanded.stdout.trim()).not.toBe("$HOME");
   expect(expanded.shell).toBe(true);
   // A string command is not argv.
-  writeFileSync(join(p.root, ".same-page", "validators", "stringy.yaml"), 'kind: test\ncommand: "echo hi"\n');
+  writeFileSync(join(p.root, ".same-page", "validators", "stringy.yaml"), 'kind: test\ncommand: "echo hi"\nenvironment: []\n');
   bind(p, "BRK-001", "stringy");
   const r = run(["run", "stringy", "--as-developer"], p);
   expect(r.stdout).toContain("command must be a list of arguments (argv), not a string (ENG-162)");
@@ -220,11 +220,11 @@ test("an evidence record carries the six axes, closed value sets, and a commit s
   expect(rec.sensitivity).toBe("unchallenged");
   expect(rec.freshness).toBe("current");
   expect(rec.dependency_provenance).toBe("conservative");
-  expect(rec.assumptions).toEqual(["environment not fingerprinted (layer L3)"]);
-  expect(rec.snapshot).toBe(`git:${sha}`);
+  expect(rec.assumptions).toEqual(["the declared environment inputs are the inputs that decide this validator's result"]);
+  expect(rec.identity.snapshot).toBe(`git:${sha}`);
   expect(rec.authority).toBe("local");
-  expect(rec.boundary).toBe("repository");
-  expect(rec.validator_digest).toMatch(/^sha256:/);
+  expect(rec.boundary.scope).toBe("repository");
+  expect(rec.identity.validator_digest).toMatch(/^sha256:/);
 });
 
 test("an attested binding records actor, actor type, timestamp, snapshot, and confirmation (ENG-017, ENG-030)", () => {
@@ -294,7 +294,7 @@ test("no method ranks above another, and confirmation does not strengthen a mech
   expect(entry(v.stdout, "BRK-001")).toContain("binding attested");
 });
 
-test("a change anywhere in the source makes evidence unknown and the verdict BLOCKED; a re-run at the new snapshot restores it (ENG-007, ENG-008, ENG-039, ENG-048, ENG-050, ENG-084)", () => {
+test("a change anywhere in the source makes evidence stale and the verdict INSUFFICIENT; a re-run at the new snapshot restores it (ENG-007, ENG-008, ENG-039, ENG-048, ENG-050)", () => {
   const p = project();
   validator(p, "ok", ["true"]);
   bind(p, "BRK-001", "ok");
@@ -305,16 +305,16 @@ test("a change anywhere in the source makes evidence unknown and the verdict BLO
   writeFileSync(join(p.root, "src.txt"), "source v2\n");
   let v = run(["verify"], p);
   const e = entry(v.stdout, "BRK-001");
-  expect(e).toContain("BRK-001  BLOCKED");
-  expect(e).toContain(`Reason:      freshness cannot be established: recorded at git:${sha}, current snapshot workspace:`);
-  expect(e).toContain("Freshness:   unknown");
+  expect(e).toContain("BRK-001  INSUFFICIENT");
+  expect(e).toContain(`Reason:      evidence is stale: recorded at git:${sha}, current snapshot workspace:`);
+  expect(e).toContain("Freshness:   stale");
   expect(e).toContain("Authority:   local @ workspace:");
   // Workspace evidence is not commit evidence: a record at a workspace snapshot does not become current on commit.
   run(["run"], p);
   expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
   const sha2 = commit(p, "source v2");
   v = run(["verify"], p);
-  expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  BLOCKED");
+  expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  INSUFFICIENT");
   expect(entry(v.stdout, "BRK-001")).toContain(`current snapshot git:${sha2}`);
   run(["run"], p);
   expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
@@ -461,15 +461,17 @@ test("manual evidence: accepted with its six fields, expiry enforced, bound path
   run(["attest", "BRK-003", "--by", "Dev", "--expires", "2000-01-01", "--description", "old", "--addresses-falsifier"], p);
   v = run(["verify"], p);
   expect(entry(v.stdout, "BRK-003")).toContain("BRK-003  INSUFFICIENT");
-  expect(entry(v.stdout, "BRK-003")).toContain("(expired;");
+  expect(entry(v.stdout, "BRK-003")).toContain("(expired: manual evidence expired 2000-01-01;");
   // Inspection alone is inspected and does not satisfy the default profile.
   const q = project();
   run(["attest", "BRK-001", "--by", "Dev", "--expires", "2099-01-01", "--description", "read the code", "--inspection-only"], q);
   expect(records(q, "BRK-001")[0].kind).toBe("inspected");
   expect(entry(run(["verify"], q).stdout, "BRK-001")).toContain("BRK-001  INSUFFICIENT");
-  // A bound surface change makes it unknown (ENG-182).
+  // A bound surface change makes it stale (ENG-182).
   writeFileSync(join(p.root, "src.txt"), "changed\n");
-  expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  BLOCKED");
+  const changed = entry(run(["verify"], p).stdout, "BRK-001");
+  expect(changed).toContain("BRK-001  INSUFFICIENT");
+  expect(changed).toContain("(stale: recorded at git:");
 });
 
 test("verify prints the seven fields and the assumptions, and a BLOCKED entry states its reason (ENG-044, ENG-045, ENG-215, ENG-218, ENG-219)", () => {
@@ -479,9 +481,10 @@ test("verify prints the seven fields and the assumptions, and a BLOCKED entry st
   run(["trust", "ok"], p);
   run(["run"], p);
   const e = entry(run(["verify"], p).stdout, "BRK-001");
-  for (const line of ["BRK-001  SUFFICIENT", "Requirement: ", "Required:    ", "Evidence:    ", "Freshness:   current", "Authority:   local @ git:", "Boundary:    repository", "Assumptions: environment not fingerprinted (layer L3)"]) expect(e).toContain(line);
-  writeFileSync(join(p.root, "src.txt"), "v2\n");
+  for (const line of ["BRK-001  SUFFICIENT", "Requirement: ", "Required:    ", "Evidence:    ", "Freshness:   current", "Authority:   local @ git:", "Boundary:    repository at ", "Assumptions: the declared environment inputs are the inputs that decide this validator's result"]) expect(e).toContain(line);
+  // A definition the engine cannot read now leaves freshness unknown: BLOCKED, with the reason.
+  writeFileSync(join(p.root, ".same-page", "validators", "ok.yaml"), "kind: nope\n");
   const b = entry(run(["verify"], p).stdout, "BRK-001");
   expect(b).toContain("BRK-001  BLOCKED");
-  expect(b).toContain("Reason:      ");
+  expect(b).toContain("Reason:      freshness cannot be established: validator ok definition is invalid now");
 });

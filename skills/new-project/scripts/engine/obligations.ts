@@ -118,6 +118,16 @@ export function projectObligation(req: Requirement, policy: Policy, existing: Ob
   };
 }
 
+// The obligation digest is over the contract projection: the identifier,
+// the locator, the keyword, both text digests, the falsifier, and the
+// validator names. Never the profile, the recorded requirement, or
+// anything from the policy (ENG-143): a policy edit re-evaluates
+// evidence and never stales it (ENG-144, ENG-145).
+export function obligationDigest(o: Obligation): string {
+  const names = o.validators.map((v) => v.name).sort();
+  return digest([o.requirement, o.locator, o.keyword, o.requirement_digest, o.falsifier_digest, o.falsifier, ...names].join("\n"));
+}
+
 export function completeRef(v: ValidatorRef, snapshot: string, actor: string): ValidatorRef {
   if (!v.attested_by) return { name: v.name };
   return {

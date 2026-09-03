@@ -135,19 +135,32 @@ act. Closing an iteration promotes, carries, or cuts staged specs into the
 next numbered contract; cutting is the developer's verdict.
 Once implementation exists, evidence is produced and evaluated by the
 engine. A validator is a definition under .same-page/validators/: a
-name, the method it produces, and an argv command (no shell unless
-declared). It runs only under execution trust: a record the developer
+name, the method it produces, an argv command (no shell unless
+declared), and `environment:`, the inputs its result depends on (a
+command whose output is the fingerprint, a file whose digest is, or
+[] for none); a definition without that key produces no record, and
+`same-page verify` re-runs a declared command only under the
+validator's trust grant or `--as-developer`. It runs only under execution trust: a record the developer
 writes with `same-page trust <name>`, kept outside the repository, or
 an explicit `same-page run --as-developer`; committed content never
 grants trust, and no completion hook runs a validator. `same-page run`
 writes one evidence record per obligation that lists the validator,
 with the method, the binding basis, the sensitivity, the freshness,
-the dependency provenance, the assumptions, and the source snapshot.
+the dependency provenance, the assumptions, the residual risk, and one
+identity block: the snapshot, the requirement and falsifier digests,
+the obligation digest, the validator digest, the adapter, and the
+environment fingerprint. Freshness is `current` while every identity
+input matches; `stale` when one is known to differ (a source edit, a
+changed definition, a changed declared input), which is INSUFFICIENT
+with the re-run named; `unknown` when one cannot be computed, which is
+BLOCKED. Policy is not an identity input, so a policy edit
+re-evaluates and stales nothing.
 `same-page attest` records manual evidence by a named human with an
 expiry. `same-page verify` reports, per requirement, one verdict in
 the order FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT, with what the
 policy requires, the evidence present and its freshness, the authority
-and snapshot, the boundary, and the assumptions; an obligation whose
+and snapshot, the boundary, the dependency chain, the environment
+fingerprint, the residual risk, and the assumptions; an obligation whose
 requirement or falsifier changed is BLOCKED until `same-page
 elaborate` regenerates it. A policy change that requires less is a
 downgrade, held until the developer runs `same-page policy confirm`

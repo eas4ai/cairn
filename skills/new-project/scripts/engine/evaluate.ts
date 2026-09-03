@@ -1,19 +1,37 @@
 // Policy evaluation (ENG-080 through ENG-088) over the evidence records
-// of one obligation, with layer L2 freshness: a record is current when
-// the snapshot, the validator definition, and the obligation digests
-// are unchanged since it was produced; otherwise unknown (the widest
-// sound boundary, ENG-039; narrower boundaries and `stale` are L3).
-// Verdict order is FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT
-// (ENG-081); a current failing result dominates any profile (ENG-083);
-// a missing precondition is BLOCKED with its reason (ENG-084).
+// of one obligation, with layer L3 freshness: a record is `current` when
+// every identity input matches the present value, `stale` when one is
+// known to differ, and `unknown` when one cannot be computed (ENG-142,
+// ENG-126). The boundary is the repository, the conservative floor of
+// the chain (ENG-124, ENG-125). Verdict order is FAILING, BLOCKED,
+// INSUFFICIENT, SUFFICIENT (ENG-081); a current failing result dominates
+// any profile (ENG-083); a missing precondition, freshness unknown
+// included, is BLOCKED with its reason (ENG-084); stale evidence is
+// shown and the verdict is INSUFFICIENT with the re-run named (ENG-085,
+// ENG-088).
 
+import { adapterVersion } from "./adapters.ts";
 import type { Disproof, StoredRecord } from "./evidence.ts";
-import type { Obligation } from "./obligations.ts";
+import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
+import type { EnvironmentInput } from "./validators.ts";
 
 export type Verdict = "FAILING" | "BLOCKED" | "INSUFFICIENT" | "SUFFICIENT";
 
-export type Assessed = { record: StoredRecord; freshness: "current" | "unknown"; expired: boolean; why: string };
+export type Freshness = "current" | "stale" | "unknown";
+
+export type Assessed = { record: StoredRecord; freshness: Freshness; expired: boolean; why: string };
+
+// The present value of every identity input the engine can compute:
+// the snapshot (null when no chain step established a boundary), each
+// validator's definition digest (undefined: not defined; null:
+// invalid), and each validator's environment fingerprint (null when the
+// definition is unusable).
+export type Present = {
+  snapshot: string | null;
+  validatorDigests: Map<string, string | null>;
+  environments: Map<string, EnvironmentInput[] | null>;
+};
 
 export type Evaluation = {
   id: string;
@@ -22,30 +40,63 @@ export type Evaluation = {
   required: Profile["require"];
   records: Assessed[];
   assumptions: string[];
+  residual_risk: string[];
   standing: Disproof | null;
   history: Disproof | null;
 };
 
-export function assess(o: Obligation, records: StoredRecord[], snapshot: string, validatorDigests: Map<string, string | null>, now: Date): Assessed[] {
+function short(v: string | null): string {
+  if (v === null) return "none";
+  return v.startsWith("sha256:") ? v.slice(0, 19) : v;
+}
+
+// ENG-142: compare every recorded identity input with its present
+// value. An input that cannot be computed now, or was not computed when
+// the record was made, is unknown; unknown wins over stale.
+export function assess(o: Obligation, records: StoredRecord[], present: Present, now: Date): Assessed[] {
+  const obligation = obligationDigest(o);
   return records.map((record) => {
-    const reasons: string[] = [];
-    if (record.requirement_digest !== o.requirement_digest || record.falsifier_digest !== o.falsifier_digest) reasons.push("recorded for a prior requirement or falsifier text");
-    if (record.snapshot !== snapshot) reasons.push(`recorded at ${record.snapshot}, current snapshot ${snapshot}`);
+    const id = record.identity;
+    const unknown: string[] = [];
+    const stale: string[] = [];
+    if (id.snapshot === null) unknown.push("recorded with no snapshot: no chain step established a boundary at run time");
+    if (present.snapshot === null) unknown.push("the repository snapshot cannot be computed now");
+    if (id.requirement_digest !== o.requirement_digest || id.falsifier_digest !== o.falsifier_digest) stale.push("recorded for a prior requirement or falsifier text");
+    if (id.obligation_digest !== obligation) stale.push("the obligation changed since the record (locator, keyword, or validator names)");
+    if (id.snapshot !== null && present.snapshot !== null && id.snapshot !== present.snapshot) stale.push(`recorded at ${id.snapshot}, current snapshot ${present.snapshot}`);
+    if (id.dependency_fingerprint !== id.snapshot) stale.push("the dependency fingerprint does not match the snapshot it was recorded for");
+    if (id.adapter_version !== adapterVersion(id.adapter)) stale.push(`adapter ${id.adapter} was version ${id.adapter_version}, now ${adapterVersion(id.adapter)}`);
     if (record.validator) {
-      const d = validatorDigests.get(record.validator);
-      if (d === undefined) reasons.push(`validator ${record.validator} is not defined now`);
-      else if (d === null) reasons.push(`validator ${record.validator} definition is invalid now`);
-      else if (d !== record.validator_digest) reasons.push(`validator ${record.validator} definition changed`);
+      const d = present.validatorDigests.get(record.validator);
+      if (d === undefined) unknown.push(`validator ${record.validator} is not defined now`);
+      else if (d === null) unknown.push(`validator ${record.validator} definition is invalid now`);
+      else if (d !== id.validator_digest) stale.push(`validator ${record.validator} definition changed`);
+      // The environment is compared only for the definition the record
+      // was made under; a changed definition is stale by itself.
+      const env = d !== undefined && d !== null && d === id.validator_digest ? present.environments.get(record.validator) : undefined;
+      if (env) {
+        for (const recorded of id.environment) {
+          if (recorded.error !== null) {
+            unknown.push(`environment input ${recorded.input} was not computed at run time (${recorded.error})`);
+            continue;
+          }
+          const nowInput = env.find((e) => e.input === recorded.input);
+          if (!nowInput) continue; // the declaration changed: the validator digest already says so
+          if (nowInput.error !== null) unknown.push(`environment input ${nowInput.input} cannot be computed now (${nowInput.error})`);
+          else if (nowInput.value !== recorded.value) stale.push(`environment input ${recorded.input} changed: ${short(recorded.value)} -> ${short(nowInput.value)}`);
+        }
+      }
     }
     let expired = false;
     if (record.manual && record.manual.expires) {
       const exp = new Date(record.manual.expires);
       if (!Number.isNaN(exp.getTime()) && exp.getTime() <= now.getTime()) {
         expired = true;
-        reasons.push(`manual evidence expired ${record.manual.expires}`);
       }
     }
-    return { record, freshness: reasons.length ? "unknown" : "current", expired, why: reasons.join("; ") };
+    const freshness: Freshness = unknown.length ? "unknown" : stale.length ? "stale" : "current";
+    const why = [...unknown, ...stale, ...(expired ? [`manual evidence expired ${record.manual!.expires}`] : [])].join("; ");
+    return { record, freshness, expired, why };
   });
 }
 
@@ -77,23 +128,40 @@ export function satisfies(req: Profile["require"], rs: StoredRecord[]): boolean 
   return true;
 }
 
+function rerun(rs: StoredRecord[]): string {
+  const validators = [...new Set(rs.map((r) => r.validator).filter((v): v is string => v !== null))].sort();
+  const parts: string[] = [];
+  if (validators.length) parts.push(`run \`same-page run ${validators.join(" ")}\``);
+  if (rs.some((r) => r.validator === null)) parts.push("attest again");
+  return parts.join(" or ") + " at this snapshot";
+}
+
 export function evaluate(o: Obligation, assessed: Assessed[], invalidReason: string | null, standing: Disproof | null, history: Disproof | null): Evaluation {
   const required = o.required;
   const assumptions = [...new Set(assessed.flatMap((a) => a.record.assumptions))];
-  const base = { id: o.requirement, required, records: assessed, assumptions, standing, history };
+  const residual_risk = [...new Set(assessed.flatMap((a) => a.record.residual_risk))];
+  const base = { id: o.requirement, required, records: assessed, assumptions, residual_risk, standing, history };
   const current = assessed.filter((a) => a.freshness === "current" && !a.expired).map((a) => a.record);
   // FAILING first (ENG-081, ENG-082): a current failing result.
   const failing = current.find((r) => r.result === "fail");
-  if (failing) return { ...base, verdict: "FAILING", reason: `${failing.validator ?? "manual"} demonstrated the falsifier at ${failing.snapshot} (${failing.path})` };
+  if (failing) return { ...base, verdict: "FAILING", reason: `${failing.validator ?? "manual"} demonstrated the falsifier at ${failing.identity.snapshot} (${failing.path})` };
   // BLOCKED (ENG-084): a precondition the engine cannot establish.
   if (invalidReason) return { ...base, verdict: "BLOCKED", reason: invalidReason };
   const errored = current.find((r) => r.result === "error");
   if (errored) return { ...base, verdict: "BLOCKED", reason: `validator ${errored.validator ?? "?"} did not complete (${errored.path})` };
   if (satisfies(required, current)) return { ...base, verdict: "SUFFICIENT", reason: null };
-  const notCurrent = assessed.filter((a) => a.freshness === "unknown" && !a.expired).map((a) => a.record);
-  if (satisfies(required, [...current, ...notCurrent])) {
-    const first = assessed.find((a) => a.freshness === "unknown" && !a.expired)!;
-    return { ...base, verdict: "BLOCKED", reason: `freshness cannot be established: ${first.why}; run the validators again at this snapshot` };
+  // Evidence whose freshness cannot be computed would decide the verdict
+  // if it could be: that is a missing precondition, BLOCKED (ENG-084).
+  const unknown = assessed.filter((a) => a.freshness === "unknown" && !a.expired);
+  if (satisfies(required, [...current, ...unknown.map((a) => a.record)])) {
+    return { ...base, verdict: "BLOCKED", reason: `freshness cannot be established: ${unknown[0]!.why}; ${rerun(unknown.map((a) => a.record))}` };
+  }
+  // Stale evidence is known to be for other inputs: evaluation is
+  // possible, the profile is unsatisfied, INSUFFICIENT with the re-run
+  // named (ENG-085, ENG-088).
+  const stale = assessed.filter((a) => a.freshness === "stale" && !a.expired);
+  if (satisfies(required, [...current, ...stale.map((a) => a.record)])) {
+    return { ...base, verdict: "INSUFFICIENT", reason: `evidence is stale: ${stale[0]!.why}; ${rerun(stale.map((a) => a.record))}` };
   }
   return { ...base, verdict: "INSUFFICIENT", reason: null };
 }

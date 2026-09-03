@@ -1,9 +1,19 @@
 # The package's own test suite as a validator: every evidence map row the
 # suite covers lists this validator; the developer grants it execution
-# trust with `same-page trust bun-test`.
+# trust with `same-page trust bun-test`. The environment inputs are the
+# ones the result depends on: the two runtimes the tests spawn and the
+# package manifest. Drift outside them is residual risk on every record.
 kind: test
 command:
   - bun
   - test
 cwd: .
 timeout: 600
+environment:
+  - command:
+      - bun
+      - --version
+  - command:
+      - node
+      - --version
+  - file: package.json

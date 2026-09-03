@@ -1,48 +1,111 @@
-// Evidence records (ENG-026 through ENG-050), manual evidence (ENG-180
-// through ENG-183), standing disproofs and their acknowledgment
-// (ENG-111 through ENG-120). All of it is derived local state under
-// .same-page/evidence/ (ENG-190, ENG-194): one directory per
-// requirement, one file per record, never deleted by the engine.
+// Evidence records (ENG-026 through ENG-050), their identity (ENG-140
+// through ENG-145), the boundary they claim freshness inside (ENG-130
+// through ENG-133), the dependency chain that established it (ENG-124
+// through ENG-129), manual evidence (ENG-180 through ENG-183), standing
+// disproofs and their acknowledgment (ENG-111 through ENG-120). All of
+// it is derived local state under .same-page/evidence/ (ENG-190,
+// ENG-194): one directory per requirement, one file per record, never
+// deleted by the engine.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AdapterName } from "./adapters.ts";
+import { adapterHas, type AdapterName } from "./adapters.ts";
 import { METHODS, type Finding, type Method } from "./policy.ts";
 import type { TrustContext } from "./trust.ts";
+import type { EnvironmentInput } from "./validators.ts";
 import { parseYaml, stringifyYaml, type YamlMap, type YamlValue } from "./yaml.ts";
 
 export const BINDING_BASES = ["none", "attested", "backend"] as const;
 export const SENSITIVITIES = ["unchallenged", "challenged", "not_applicable"] as const;
 export const FRESHNESS = ["current", "stale", "unknown"] as const;
 export const PROVENANCE = ["conservative", "adapter_derived", "traced_supplemental"] as const;
+export const SCOPES = ["repository", "unknown"] as const;
 
 export type Binding = { actor: string; actor_type: "developer" | "agent"; timestamp: string; snapshot: string; developer_confirmed: boolean };
+
+// Every input whose change ends `current` (ENG-140, ENG-141), stored as
+// one block. Policy is never in it (ENG-143). The dependency fingerprint
+// at the repository scope is the snapshot itself: the boundary's content
+// is the tree. External contracts are declared by adapters that hold a
+// capability for them; the command and manual adapters declare none.
+export type Identity = {
+  snapshot: string | null;
+  requirement: string;
+  requirement_digest: string;
+  falsifier_digest: string;
+  obligation_digest: string;
+  validator_digest: string | null;
+  adapter: AdapterName;
+  adapter_version: string;
+  dependency_fingerprint: string | null;
+  environment: EnvironmentInput[];
+  contracts: string[];
+};
+
+export const IDENTITY_KEYS = ["snapshot", "requirement", "requirement_digest", "falsifier_digest", "obligation_digest", "validator_digest", "adapter", "adapter_version", "dependency_fingerprint", "environment", "contracts"] as const;
+const POLICY_KEYS = ["policy", "profile", "required", "require"];
+
+export type Scope = (typeof SCOPES)[number];
+
+// The chain of ENG-124, as run for one record: the first step that
+// succeeded fixed the scope. Steps one and two consult the adapter
+// registry; step three is the repository snapshot; step four is the
+// answer when nothing established a boundary (ENG-126).
+export type ChainStep = { step: number; mechanism: string; outcome: string };
+export type Dependency = { scope: Scope; step: number; chain: ChainStep[]; narrowing: "none" };
+
+// The envelope inside which the record claims freshness (ENG-130): the
+// scope, the root it was established for, the validator definition (its
+// digest is on the identity), and the declared environment inputs. The
+// record's assumptions axis names the boundary's assumptions.
+export type Boundary = { scope: Scope; root: string; validator: string | null; environment: string[] };
 
 export type EvidenceRecord = {
   requirement: string;
   kind: Method;
   adapter: AdapterName;
   validator: string | null;
-  validator_digest: string | null;
   result: "pass" | "fail" | "error";
   run: string | null;
   recorded_at: string;
-  snapshot: string;
-  requirement_digest: string;
-  falsifier_digest: string;
+  identity: Identity;
   execution_trust: { context: TrustContext; actor: string } | null;
   binding_basis: (typeof BINDING_BASES)[number];
   binding: Binding | null;
   sensitivity: (typeof SENSITIVITIES)[number];
   freshness: (typeof FRESHNESS)[number];
-  boundary: "repository";
+  boundary: Boundary;
+  dependency: Dependency;
   dependency_provenance: (typeof PROVENANCE)[number];
   assumptions: string[];
+  residual_risk: string[];
   authority: "local";
   manual: { actor: string; description: string; bindings: string[]; expires: string; addresses_falsifier: boolean } | null;
 };
 
-export const L2_ASSUMPTIONS = ["environment not fingerprinted (layer L3)"];
+export const COMMAND_ASSUMPTIONS = ["the declared environment inputs are the inputs that decide this validator's result"];
+export const MANUAL_ASSUMPTIONS = ["manual evidence: the actor's account is the mechanism", "manual evidence declares no environment inputs"];
+
+export function dependencyChain(adapter: AdapterName, snapshot: string | null): Dependency {
+  const chain: ChainStep[] = [
+    { step: 1, mechanism: "trusted adapter dependency closure", outcome: adapterHas(adapter, "can_establish_complete_dependencies") ? "established" : "no mechanism" },
+    { step: 2, mechanism: "package or service boundary", outcome: "no mechanism" },
+    { step: 3, mechanism: "repository boundary", outcome: snapshot === null ? "not established: the snapshot cannot be computed" : `established: ${snapshot}` },
+  ];
+  if (snapshot !== null) return { scope: "repository", step: 3, chain, narrowing: "none" };
+  chain.push({ step: 4, mechanism: "none", outcome: "freshness unknown" });
+  return { scope: "unknown", step: 4, chain, narrowing: "none" };
+}
+
+// ENG-133, ENG-152: what the boundary does not cover, stated on the
+// record so `same-page verify` can state it on the entry.
+export function residualRisk(dep: Dependency, environment: string[], adapter: AdapterName): string[] {
+  const out: string[] = [];
+  out.push(dep.scope === "repository" ? "inputs outside the repository root: system packages, services, the network, and anything the snapshot does not contain" : "no dependency scope was established; nothing is inside a boundary");
+  if (adapter === "manual") out.push("environment drift: manual evidence declares no environment inputs, so no drift is detected");
+  else out.push(environment.length ? `environment drift outside the declared inputs (${environment.join(", ")})` : "environment drift: no environment inputs are declared, so no drift is detected");
+  return out;
+}
 
 export function evidenceDir(root: string, id: string): string {
   return join(root, ".same-page", "evidence", id);
@@ -66,27 +129,42 @@ export function writeRun(root: string, id: string, data: YamlMap): string {
   return `.same-page/evidence/runs/${id}.yaml`;
 }
 
+function environmentToYaml(env: EnvironmentInput[]): YamlValue[] {
+  return env.map((e) => ({ input: e.input, value: e.value, error: e.error }) as YamlMap);
+}
+
 export function recordToYaml(r: EvidenceRecord): YamlMap {
   const m: YamlMap = {
     requirement: r.requirement,
     kind: r.kind,
     adapter: r.adapter,
     validator: r.validator,
-    validator_digest: r.validator_digest,
     result: r.result,
     run: r.run,
     recorded_at: r.recorded_at,
-    snapshot: r.snapshot,
-    requirement_digest: r.requirement_digest,
-    falsifier_digest: r.falsifier_digest,
+    identity: {
+      snapshot: r.identity.snapshot,
+      requirement: r.identity.requirement,
+      requirement_digest: r.identity.requirement_digest,
+      falsifier_digest: r.identity.falsifier_digest,
+      obligation_digest: r.identity.obligation_digest,
+      validator_digest: r.identity.validator_digest,
+      adapter: r.identity.adapter,
+      adapter_version: r.identity.adapter_version,
+      dependency_fingerprint: r.identity.dependency_fingerprint,
+      environment: environmentToYaml(r.identity.environment),
+      contracts: [...r.identity.contracts],
+    },
     execution_trust: r.execution_trust ? ({ ...r.execution_trust } as YamlMap) : null,
     binding_basis: r.binding_basis,
     binding: r.binding ? ({ ...r.binding } as YamlMap) : null,
     sensitivity: r.sensitivity,
     freshness: r.freshness,
-    boundary: r.boundary,
+    boundary: { scope: r.boundary.scope, root: r.boundary.root, validator: r.boundary.validator, environment: [...r.boundary.environment] },
+    dependency: { scope: r.dependency.scope, step: r.dependency.step, chain: r.dependency.chain.map((c) => ({ ...c }) as YamlMap), narrowing: r.dependency.narrowing },
     dependency_provenance: r.dependency_provenance,
     assumptions: [...r.assumptions],
+    residual_risk: [...r.residual_risk],
     authority: r.authority,
     manual: r.manual ? ({ ...r.manual, bindings: [...r.manual.bindings] } as YamlMap) : null,
   };
@@ -107,6 +185,77 @@ function oneOf<T extends readonly string[]>(set: T, v: YamlValue | undefined): v
   return typeof v === "string" && (set as readonly string[]).includes(v);
 }
 
+function strOrNull(v: YamlValue | undefined): string | null {
+  return typeof v === "string" ? v : null;
+}
+
+function strings(v: YamlValue | undefined): string[] {
+  return Array.isArray(v) ? v.map((x) => String(x)) : [];
+}
+
+function parseIdentity(raw: YamlValue | undefined, where: string, findings: Finding[]): Identity | null {
+  if (!isMap(raw)) {
+    findings.push({ where, message: "record has no identity block, so nothing can establish its freshness; run the validator again", rule: "ENG-141" });
+    return null;
+  }
+  const missing = IDENTITY_KEYS.filter((k) => raw[k] === undefined);
+  if (missing.length) findings.push({ where, message: `record identity lacks input(s): ${missing.join(", ")}`, rule: "ENG-141" });
+  const policy = Object.keys(raw).filter((k) => POLICY_KEYS.includes(k));
+  if (policy.length) findings.push({ where, message: `record identity carries policy (${policy.join(", ")}); policy is never an identity input`, rule: "ENG-143" });
+  const env = raw["environment"];
+  if (!Array.isArray(env) || !env.every((e) => isMap(e) && typeof e["input"] === "string")) findings.push({ where, message: "identity environment must be a list of fingerprinted inputs (input, value, error)", rule: "ENG-141" });
+  if (findings.length) return null;
+  const adapter = raw["adapter"];
+  return {
+    snapshot: strOrNull(raw["snapshot"]),
+    requirement: String(raw["requirement"]),
+    requirement_digest: String(raw["requirement_digest"]),
+    falsifier_digest: String(raw["falsifier_digest"]),
+    obligation_digest: String(raw["obligation_digest"]),
+    validator_digest: strOrNull(raw["validator_digest"]),
+    adapter: adapter === "manual" ? "manual" : "command",
+    adapter_version: String(raw["adapter_version"]),
+    dependency_fingerprint: strOrNull(raw["dependency_fingerprint"]),
+    environment: (env as YamlMap[]).map((e) => ({ input: String(e["input"]), value: strOrNull(e["value"]), error: strOrNull(e["error"]) })),
+    contracts: strings(raw["contracts"]),
+  };
+}
+
+function parseBoundary(raw: YamlValue | undefined, where: string, findings: Finding[]): Boundary | null {
+  if (!isMap(raw)) {
+    findings.push({ where, message: "record has no recorded verification boundary", rule: "ENG-130" });
+    return null;
+  }
+  if (!oneOf(SCOPES, raw["scope"]) || typeof raw["root"] !== "string" || !Array.isArray(raw["environment"])) {
+    findings.push({ where, message: "a boundary records scope, root, validator, and the declared environment inputs", rule: "ENG-130" });
+    return null;
+  }
+  return { scope: raw["scope"], root: raw["root"], validator: strOrNull(raw["validator"]), environment: strings(raw["environment"]) };
+}
+
+function parseDependency(raw: YamlValue | undefined, where: string, findings: Finding[]): Dependency | null {
+  if (!isMap(raw)) {
+    findings.push({ where, message: "record has no dependency scope; the chain that established it is not recorded", rule: "ENG-124" });
+    return null;
+  }
+  const scope = raw["scope"];
+  if (!oneOf(SCOPES, scope)) {
+    findings.push({ where, message: `dependency scope ${String(scope)} is narrower than the repository and no registered mechanism established its completeness; the conservative floor is the repository`, rule: "ENG-128" });
+    return null;
+  }
+  if (raw["narrowing"] !== "none") {
+    findings.push({ where, message: `dependency narrowing ${String(raw["narrowing"])} names no reviewable narrowing act; no registered mechanism narrows`, rule: "ENG-129" });
+    return null;
+  }
+  const chain = raw["chain"];
+  if (!Array.isArray(chain) || !chain.every((c) => isMap(c) && typeof c["step"] === "number")) {
+    findings.push({ where, message: "dependency chain must list the steps taken in order", rule: "ENG-124" });
+    return null;
+  }
+  const step = raw["step"];
+  return { scope, step: typeof step === "number" ? step : scope === "repository" ? 3 : 4, chain: (chain as YamlMap[]).map((c) => ({ step: c["step"] as number, mechanism: String(c["mechanism"] ?? ""), outcome: String(c["outcome"] ?? "") })), narrowing: "none" };
+}
+
 export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRecord | null; findings: Finding[] } {
   const findings: Finding[] = [];
   if (!isMap(raw)) return { record: null, findings: [{ where, message: "an evidence record is a mapping", rule: "ENG-026" }] };
@@ -117,7 +266,6 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
   if (!oneOf(SENSITIVITIES, raw["sensitivity"])) findings.push({ where, message: `sensitivity must be one of ${SENSITIVITIES.join(", ")}`, rule: "ENG-034" });
   if (!oneOf(FRESHNESS, raw["freshness"])) findings.push({ where, message: `freshness must be one of ${FRESHNESS.join(", ")}`, rule: "ENG-038" });
   if (!oneOf(PROVENANCE, raw["dependency_provenance"])) findings.push({ where, message: `dependency_provenance must be one of ${PROVENANCE.join(", ")}`, rule: "ENG-040" });
-  if (typeof raw["snapshot"] !== "string" || raw["snapshot"] === "") findings.push({ where, message: "record has no snapshot", rule: "ENG-046" });
   if (raw["binding_basis"] === "attested") {
     const b = raw["binding"];
     const ok = isMap(b) && typeof b["actor"] === "string" && (b["actor_type"] === "developer" || b["actor_type"] === "agent") && typeof b["timestamp"] === "string" && typeof b["snapshot"] === "string" && typeof b["developer_confirmed"] === "boolean";
@@ -125,8 +273,18 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
   }
   if (raw["binding_basis"] === "backend") findings.push({ where, message: "no registered adapter can establish a backend binding", rule: "ENG-032" });
   if (raw["sensitivity"] === "challenged") findings.push({ where, message: "no challenge mechanism exists to record a challenged sensitivity", rule: "ENG-035" });
+  const identity = parseIdentity(raw["identity"], where, findings);
+  // A record with no identity at all has no boundary or chain worth
+  // reporting separately: one finding names the record.
+  if (!isMap(raw["identity"])) return { record: null, findings };
+  const boundary = parseBoundary(raw["boundary"], where, findings);
+  const dependency = parseDependency(raw["dependency"], where, findings);
+  if (!Array.isArray(raw["residual_risk"])) findings.push({ where, message: "record states no residual risk outside its boundary", rule: "ENG-133" });
+  if (findings.length || !identity || !boundary || !dependency) return { record: null, findings };
+  if (identity.snapshot === null && raw["freshness"] !== "unknown") findings.push({ where, message: "a record with no snapshot has unknown freshness; no chain step established a boundary", rule: "ENG-126" });
+  if (identity.snapshot !== null && dependency.scope !== "repository") findings.push({ where, message: "a record with a snapshot has the repository as its dependency scope", rule: "ENG-124" });
   if (findings.length) return { record: null, findings };
-  const s = (k: string): string | null => (typeof raw[k] === "string" ? (raw[k] as string) : null);
+  const s = (k: string): string | null => strOrNull(raw[k]);
   const et = raw["execution_trust"];
   const manual = raw["manual"];
   const b = raw["binding"];
@@ -134,15 +292,12 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
     record: {
       requirement: s("requirement") ?? "",
       kind: raw["kind"] as Method,
-      adapter: (s("adapter") as AdapterName) ?? "command",
+      adapter: identity.adapter,
       validator: s("validator"),
-      validator_digest: s("validator_digest"),
       result: (s("result") as EvidenceRecord["result"]) ?? "error",
       run: s("run"),
       recorded_at: s("recorded_at") ?? "",
-      snapshot: s("snapshot") ?? "",
-      requirement_digest: s("requirement_digest") ?? "",
-      falsifier_digest: s("falsifier_digest") ?? "",
+      identity,
       execution_trust: isMap(et) && typeof et["context"] === "string" ? { context: et["context"] as TrustContext, actor: typeof et["actor"] === "string" ? et["actor"] : "" } : null,
       binding_basis: raw["binding_basis"] as EvidenceRecord["binding_basis"],
       binding: isMap(b)
@@ -150,15 +305,17 @@ export function parseRecord(raw: YamlValue, where: string): { record: EvidenceRe
         : null,
       sensitivity: raw["sensitivity"] as EvidenceRecord["sensitivity"],
       freshness: raw["freshness"] as EvidenceRecord["freshness"],
-      boundary: "repository",
+      boundary,
+      dependency,
       dependency_provenance: raw["dependency_provenance"] as EvidenceRecord["dependency_provenance"],
-      assumptions: Array.isArray(raw["assumptions"]) ? (raw["assumptions"] as YamlValue[]).map((a) => String(a)) : [],
+      assumptions: strings(raw["assumptions"]),
+      residual_risk: strings(raw["residual_risk"]),
       authority: "local",
       manual: isMap(manual)
         ? {
             actor: String(manual["actor"] ?? ""),
             description: String(manual["description"] ?? ""),
-            bindings: Array.isArray(manual["bindings"]) ? (manual["bindings"] as YamlValue[]).map((x) => String(x)) : [],
+            bindings: strings(manual["bindings"]),
             expires: String(manual["expires"] ?? ""),
             addresses_falsifier: manual["addresses_falsifier"] === true,
           }
@@ -244,7 +401,8 @@ export function writeAcknowledgment(root: string, a: Acknowledgment): void {
 }
 
 // A disproof stands while the latest record for the requirement is a
-// failing result (ENG-111).
+// failing result (ENG-111), whatever that record's freshness is now: a
+// stale counterexample is still the last thing observed.
 export function standingDisproof(root: string, id: string, records: StoredRecord[]): Disproof | null {
   const d = readDisproof(root, id);
   if (!d) return null;

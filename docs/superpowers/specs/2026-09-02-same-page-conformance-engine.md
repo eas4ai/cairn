@@ -760,17 +760,25 @@ engine's job is to make the consequence of that revision visible.
 
 Normative.
 
+Agreed: 2026-09-03
+
 This is the load-bearing joint of the engine.
 
 [ENG-121] The engine MUST NOT report evidence as current from a
 dependency set it cannot establish as complete within the recorded
 verification boundary.
+Falsifier: a record is reported current while its dependency set was
+not established complete inside its recorded boundary.
 
 [ENG-122] The engine MUST NOT use a hand-declared symbol list as the
 freshness graph.
+Falsifier: a validator definition or an obligation carries a list of
+symbols or files that the engine uses to decide freshness.
 
 [ENG-123] The engine MUST NOT use a runtime execution trace as the
 freshness graph.
+Falsifier: the engine decides freshness from the set of files a
+validator run touched.
 
 Rationale: declared symbol lists rot silently. A runtime trace
 under-approximates behavioral dependency: it can miss configuration,
@@ -781,6 +789,8 @@ run did not exercise.
 [ENG-124] The engine MUST establish the dependency scope by the
 conservative fallback chain listed below, taking the first step that
 succeeds.
+Falsifier: a record's dependency scope comes from a step of the chain
+below one that succeeded, or from no step.
 
 1. A trusted adapter establishes a complete dependency closure inside
    the verification boundary.
@@ -792,9 +802,13 @@ succeeds.
 
 [ENG-125] The engine MUST prefer over-invalidation to
 under-invalidation.
+Falsifier: a change inside the recorded boundary leaves a record
+current.
 
 [ENG-126] When no step of the chain succeeds, the engine MUST set
 freshness to `unknown`.
+Falsifier: no chain step succeeds and the record's freshness is
+`current` or `stale`.
 
 [ENG-127] Explicit bindings and runtime traces MAY enrich the
 dependency graph.
@@ -802,8 +816,12 @@ dependency graph.
 [ENG-128] The engine MUST NOT narrow the conservative floor unless the
 narrowing mechanism establishes that the resulting dependency set is
 complete within the verification boundary.
+Falsifier: a record's dependency scope is narrower than the repository
+with no mechanism recorded that established completeness.
 
 [ENG-129] The engine MUST record every narrowing as a reviewable act.
+Falsifier: a record's scope is narrower than the conservative floor and
+the record names no narrowing act.
 
 Rationale: over-invalidation costs computation; under-invalidation
 manufactures a false claim that evidence remains current. Narrowing is
@@ -816,8 +834,11 @@ generated artifact, external contract, file, directory, glob.
 
 Normative.
 
+Agreed: 2026-09-03
+
 [ENG-130] A verification boundary MUST define the envelope inside which
 the engine claims freshness.
+Falsifier: a record claims freshness with no recorded boundary.
 
 [ENG-131] A verification boundary MAY include any of the inputs listed
 below.
@@ -834,9 +855,13 @@ below.
 
 [ENG-132] The engine MUST NOT claim completeness outside the recorded
 verification boundary.
+Falsifier: `same-page verify` states that an input outside the
+recorded boundary is unchanged or tracked.
 
 [ENG-133] The engine MUST report residual risk outside the boundary
 explicitly.
+Falsifier: a `same-page verify` entry for a record whose boundary is
+narrower than everything shows no residual risk line.
 
 Freshness therefore means: current for the exact recorded source
 snapshot, obligation, validator, dependencies, declared environment
@@ -846,11 +871,19 @@ inputs, and assumptions inside the recorded verification boundary.
 
 Normative.
 
+Agreed: 2026-09-03
+
 [ENG-140] Evidence identity MUST include every input that can
 invalidate the evidence claim.
+Falsifier: an input the engine tracks for a record changes and the
+record stays current.
 
 [ENG-141] Evidence identity MUST include at minimum the inputs listed
 below.
+Falsifier: a record lacks the snapshot, the requirement identifier,
+either digest, the obligation digest, the validator digest, the
+adapter identity, the dependency fingerprint, or the environment
+fingerprint.
 
 - The source snapshot identity.
 - The requirement identifier.
@@ -865,15 +898,23 @@ below.
 
 [ENG-142] When any evidence identity input changes, the engine MUST
 treat the prior evidence as no longer current.
+Falsifier: one identity input differs from the present value and the
+record is reported current.
 
 [ENG-143] The engine MUST NOT include assurance policy in evidence
 identity.
+Falsifier: a record's identity inputs include a policy or profile
+value.
 
 [ENG-144] When policy changes, the engine MUST re-evaluate existing
 current evidence under the new policy.
+Falsifier: the policy changes and `same-page verify` evaluates a
+current record under the old profile.
 
 [ENG-145] The engine MUST NOT mark evidence stale because policy
 changed.
+Falsifier: a policy-only edit turns a current record `stale` or
+`unknown`.
 
 ```text
 implementation changed -> evidence freshness can change
@@ -888,14 +929,21 @@ policy changed         -> evidence is re-evaluated
 
 Normative.
 
+Agreed: 2026-09-03
+
 [ENG-150] Each validator or adapter MUST declare the environment inputs
 relevant to its result.
+Falsifier: a validator definition with no environment declaration
+produces a record.
 
 [ENG-151] The engine MUST NOT attempt to fingerprint the whole
 execution environment.
+Falsifier: a record's environment fingerprint includes an input the
+validator did not declare.
 
 [ENG-152] The engine MUST record environment drift outside the declared
 fingerprint as residual risk.
+Falsifier: a record's residual risk omits the undeclared environment.
 
 Rationale: declared inputs include the validator tool name and
 version, the compiler version, the lockfile, the toolchain file, the
@@ -1497,6 +1545,58 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 004 (layer L3) built, under
+  docs/specs/same-page/iterations/004.md. Implementation-design
+  decisions taken under that contract: (a) every record stores its
+  identity inputs as one `identity` block (snapshot, requirement
+  identifier, requirement and falsifier digests, obligation digest,
+  validator digest, adapter name and version, dependency fingerprint,
+  environment fingerprint, contracts), and the engine refuses a record
+  that lacks one or that names policy there; (b) the obligation digest
+  is over the contract projection -- identifier, locator, keyword, both
+  text digests, the falsifier, and the sorted validator names -- never
+  the profile or the recorded requirement, so a policy edit
+  re-evaluates and a change to the validator list stales; (c) freshness
+  is `current` when every identity input matches its present value,
+  `stale` when one is known to differ, `unknown` when one cannot be
+  computed, and unknown wins over stale; (d) the dependency chain is
+  recorded on every record: step one consults the adapter registry (no
+  registered adapter holds `can_establish_complete_dependencies`), step
+  two has no registered mechanism, step three is the repository
+  snapshot, step four is `unknown` when the snapshot cannot be computed
+  -- git reported a tree it could not read, or a tree without git has
+  an unreadable directory -- and the scope is `repository` or `unknown`
+  with `narrowing: none`; a record claiming a narrower scope or a
+  narrowing act is refused; (e) the boundary on a record is scope,
+  root, validator, and the declared environment inputs, with the
+  assumptions axis as its assumptions; (f) a validator definition
+  declares `environment:` as a list of `command` (argv; the output is
+  the value) or `file` (path; the digest is the value) inputs, or `[]`;
+  the declaration is part of the definition digest, so a changed
+  declaration needs a new trust grant; a missing key is finding ENG-150
+  and no record; a command input runs as argv with a 60-second timeout;
+  (g) a fingerprint that cannot be computed at run time is recorded
+  with its error and the record's freshness is `unknown`; (h) residual
+  risk is stored on every record -- inputs outside the repository
+  root, and environment drift outside the declared inputs -- and
+  `verify` prints it on every entry with the boundary, the dependency
+  chain, and the environment values; (i) verdicts: `BLOCKED` for
+  `unknown`, a validator error, or a digest mismatch; `INSUFFICIENT`
+  with the re-run named when only stale evidence would satisfy the
+  profile; `FAILING` only on a current failing result, while a standing
+  disproof on stale evidence stays shown as standing; (j) the adapter
+  version is `2` for `command` and `manual` and changes when an
+  adapter's recording behavior changes, so records made under the prior
+  behavior go stale instead of passing; (k) a declared environment
+  command is repository content, so `verify` runs it only under the
+  trust grant that covers the definition or under `verify
+  --as-developer` (ENG-059); otherwise the input is not computed, the
+  record is `unknown`, and the entry names the grant to write; a file
+  input is a read and is digested without a grant.
+- 2026-09-03 -- Confirmed Agreed by the developer with falsifiers at
+  the close of iteration 003, for iteration 004 (layer L3): Dependency
+  and freshness model, Verification boundary, Evidence identity,
+  Environment fingerprint.
 - 2026-09-02 -- Iteration 002 (layer L2) built, under
   docs/specs/same-page/iterations/002.md. Implementation-design
   decisions taken under that contract: (a) freshness is

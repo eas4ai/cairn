@@ -67,7 +67,8 @@ Details and Codex setup: docs/INSTALLATION.md.
   file under .same-page/; `trust`, `run`, and `attest` produce evidence
   records under execution trust; and `verify` answers, per requirement,
   FAILING, BLOCKED, INSUFFICIENT, or SUFFICIENT, with what the policy
-  requires and what exists. Layers L1 and L2 of six are built. Manual,
+  requires and what exists. Layers L1, L2, and L3 of six are built.
+  Manual,
   chapter 10.
 
 ## Read next

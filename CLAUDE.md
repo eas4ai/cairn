@@ -21,7 +21,13 @@ scripts/engine/: `elaborate` projects Agreed requirements and their
 confirmed falsifiers into committed obligation files under .same-page/,
 `trust`, `run`, and `attest` produce evidence records under execution
 trust, and `verify` reports each obligation's verdict against the
-policy.
+policy. Every record stores its identity inputs as one block; its
+freshness is `current`, `stale` (an identity input such as the
+snapshot, the validator definition, or a declared environment input is
+known to differ: INSUFFICIENT, re-run named), or `unknown` (an input
+cannot be computed: BLOCKED). A validator definition declares
+`environment:`, the inputs the engine fingerprints; drift outside them
+is residual risk on every record and every verify entry.
 
 Four normative specs in docs/superpowers/specs/ govern this package; read
 the relevant one before a structural change:
@@ -34,11 +40,12 @@ the relevant one before a structural change:
 - 2026-09-02-same-page-conformance-engine.md: the engine, Same Page
   Conformance (ENG-nnn), generated at stage 8 from the feature spec in
   reference/ with the developer's rulings. Layers L1 (the obligation
-  store, iterations/001.md) and L2 (validators, evidence records, the
-  verdict lattice, iterations/002.md) are built; layers L3 through L6
-  follow as further contracts. Never describe any layer
-  as absent, deferred, or optional. Sequencing is the developer's, and
-  so is any deferral.
+  store, iterations/001.md), L2 (validators, evidence records, the
+  verdict lattice, iterations/002.md), and L3 (evidence identity, the
+  third freshness state `stale`, environment fingerprints,
+  iterations/004.md) are built; layers L4 through L6 follow as further
+  contracts. Never describe any layer as absent, deferred, or optional.
+  Sequencing is the developer's, and so is any deferral.
 
 ## Commands
 
@@ -54,7 +61,8 @@ the relevant one before a structural change:
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts run
     node --disable-warning=ExperimentalWarning skills/new-project/scripts/engine/same-page.ts verify
                                                       # the engine on this repository (bun runs the same file);
-                                                      # run needs the bun-test validator trusted: same-page trust bun-test
+                                                      # run, and verify's environment commands, need the bun-test
+                                                      # validator trusted: same-page trust bun-test
     grep -rnP '[^\x00-\x7F]' --include='*.md' --include='*.mjs' --include='*.json' --include='*.sh' .
                                                       # ASCII gate (excluding .git, .remember, reference); must return nothing
     ./scripts/link-skills.sh                          # symlink skills into ~/.claude/skills and ~/.agents/skills
@@ -91,13 +99,17 @@ spec directories, profiles, defaults, domain overrides; strength
 comparison by implication for downgrades), obligations.ts (one file
 per requirement; profile and validators survive re-elaboration via
 profile_from; `required` is the downgrade baseline), snapshot.ts
-(git:<sha> or workspace:<digest>; .same-page/ is not a source input),
-validators.ts (definitions, digests, argv execution), trust.ts (grants
+(git:<sha> or workspace:<digest>, null when the tree cannot be read;
+.same-page/ is not a source input),
+validators.ts (definitions with their `environment:` declaration,
+digests, argv execution, environment fingerprints), trust.ts (grants
 under $SAME_PAGE_HOME or ~/.same-page, never inside the repository),
-evidence.ts (records, runs, disproofs, acknowledgments under
-.same-page/evidence/), adapters.ts (the capability registry: command
-and manual, no capabilities), evaluate.ts (L2 freshness and the
-verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
+evidence.ts (records with the identity block, the boundary, the
+dependency chain, and the residual risk; runs, disproofs,
+acknowledgments under .same-page/evidence/), adapters.ts (the
+capability registry: command and manual, each with a version, no
+capabilities), evaluate.ts (three-state freshness over the identity
+inputs and the verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
 acknowledge, policy confirm; exit 0 clean, 1 findings or verdicts
 below SUFFICIENT, 2 usage).
 
@@ -203,9 +215,11 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/003.md
-  (the CONF revision); 001 (L1) and 002 (L2) are closed. Work outside it is captured via /next-iteration --
-  surfaced and staged, never implemented ad hoc, never silently dropped.
+- The current iteration contract is docs/specs/same-page/iterations/004.md
+  (engine layer L3, conservative freshness); 001 (L1), 002 (L2), and 003
+  (the CONF revision) are closed. Work outside it is captured via
+  /next-iteration -- surfaced and staged, never implemented ad hoc, never
+  silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec
   and confirm the change deliberately before acting.
 - New or collided terms go to glossary.md the moment they surface.

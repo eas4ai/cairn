@@ -125,8 +125,8 @@ like any other. The language check verifies the map's integrity.
 | ENG-081 | Covered | test | tests/engine-l2.test.mjs::ENG-080 |
 | ENG-082 | Covered | test | tests/engine-l2.test.mjs::ENG-080 |
 | ENG-083 | Covered | test | tests/engine-l2.test.mjs::ENG-080 |
-| ENG-084 | Covered | test | tests/engine-l2.test.mjs::ENG-084 |
-| ENG-085 | Covered | test | tests/engine-l2.test.mjs::ENG-080 |
+| ENG-084 | Covered | test | tests/engine-l3.test.mjs::ENG-084 |
+| ENG-085 | Covered | test | tests/engine-l3.test.mjs::ENG-084 |
 | ENG-086 | Covered | test | tests/engine-l2.test.mjs::ENG-080 |
 | ENG-087 | Covered | test | tests/engine-l2.test.mjs::ENG-087 |
 | ENG-088 | Covered | test | tests/engine-l2.test.mjs::ENG-088 |
@@ -147,6 +147,28 @@ like any other. The language check verifies the map's integrity.
 | ENG-118 | Covered | test | tests/engine-l2.test.mjs::ENG-111 |
 | ENG-119 | Covered | test | tests/engine-l2.test.mjs::ENG-111 |
 | ENG-120 | Covered | test | tests/engine-l2.test.mjs::ENG-111 |
+| ENG-121 | Covered | test | tests/engine-l3.test.mjs::ENG-084 |
+| ENG-122 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-123 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-124 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-125 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-126 | Covered | test | tests/engine-l3.test.mjs::ENG-084 |
+| ENG-127 | Uncovered | - |  |
+| ENG-128 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-129 | Covered | test | tests/engine-l3.test.mjs::ENG-122 |
+| ENG-130 | Covered | test | tests/engine-l3.test.mjs::ENG-130 |
+| ENG-131 | Uncovered | - |  |
+| ENG-132 | Covered | test | tests/engine-l3.test.mjs::ENG-130 |
+| ENG-133 | Covered | test | tests/engine-l3.test.mjs::ENG-130 |
+| ENG-140 | Covered | test | tests/engine-l3.test.mjs::ENG-140 |
+| ENG-141 | Covered | test | tests/engine-l3.test.mjs::ENG-141 |
+| ENG-142 | Covered | test | tests/engine-l3.test.mjs::ENG-140 |
+| ENG-143 | Covered | test | tests/engine-l3.test.mjs::ENG-141 |
+| ENG-144 | Covered | test | tests/engine-l3.test.mjs::ENG-144 |
+| ENG-145 | Covered | test | tests/engine-l3.test.mjs::ENG-144 |
+| ENG-150 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
+| ENG-151 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
+| ENG-152 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
 | ENG-161 | Covered | test | tests/engine-l2.test.mjs::ENG-161 |
 | ENG-162 | Covered | test | tests/engine-l2.test.mjs::ENG-162 |
 | ENG-163 | Covered | test | tests/engine-l2.test.mjs::ENG-163 |

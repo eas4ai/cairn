@@ -878,8 +878,7 @@ carrying the six independent axes the engine owns (ENG-026): the
 method, the binding basis (`attested` when the obligation's entry
 says who vouched for the mapping, ENG-030), the sensitivity
 (`unchallenged` until L5), the freshness, the dependency provenance
-(`conservative`), and the assumptions ("environment not fingerprinted",
-until L3), plus the source snapshot: `git:<sha>` on a clean tree,
+(`conservative`), and the assumptions, plus the source snapshot: `git:<sha>` on a clean tree,
 `workspace:<digest>` otherwise (ENG-047, ENG-048). Nothing the
 validator prints can set any of those axes (ENG-052, ENG-054); its
 output is captured and stored, never parsed. `same-page attest`
@@ -892,14 +891,8 @@ demonstrates the falsifier, whatever the profile says (ENG-082,
 ENG-083); BLOCKED when a precondition cannot be established, with the
 reason stated (ENG-084, ENG-219); INSUFFICIENT when evaluation is
 possible and the current evidence does not compose to the profile
-(ENG-085); SUFFICIENT when it does (ENG-086). At L2 a record is
-current only while the whole repository is unchanged since it was
-produced, which is the widest sound boundary; edit any file and every
-verdict becomes BLOCKED with "freshness cannot be established" until
-the validators run again at the new snapshot. That is the engine
-refusing to claim what it cannot see, and it is the product. The
-authority on every entry is `local`, the only one until L4. A policy
-edit that requires less of an existing obligation is a downgrade,
+(ENG-085); SUFFICIENT when it does (ENG-086). The
+authority on every entry is `local`, the only one until L4. A policy edit that requires less of an existing obligation is a downgrade,
 shown with old, new, and effect, and held until the developer runs
 `same-page policy confirm` and the change is logged (ENG-101 through
 ENG-105). A FAILING verdict records a standing disproof; revising the
@@ -909,16 +902,46 @@ is held until the developer acknowledges it (ENG-112 through ENG-115);
 the prior disproof stays as history and nothing bound to the old text
 counts for the new (ENG-117, ENG-120).
 
+Layer L3 (iteration 004) makes freshness exact. Every record stores
+its identity inputs as one block (ENG-141): the snapshot, the
+requirement identifier, the requirement and falsifier digests, the
+obligation digest (over the contract projection, never the profile),
+the validator definition digest, the adapter name and version, the
+dependency fingerprint, and the environment fingerprint. A record is
+current only while every one of them matches its present value
+(ENG-142). When one is known to differ the record is `stale`: edit
+any file in the repository and the verdict is INSUFFICIENT, the
+evidence shown as stale with the reason, and the re-run named
+(ENG-085); the repository is the boundary, established by the
+conservative chain (ENG-124) and recorded on the record with
+`narrowing: none`, because nothing hand-declared or traced ever
+decides freshness (ENG-122, ENG-123). When an input cannot be
+computed at all -- the tree cannot be read, a declared tool is
+missing -- the record is `unknown` and the verdict is BLOCKED with
+the reason (ENG-126, ENG-084). Policy is never an identity input:
+a policy edit re-evaluates existing evidence and stales nothing
+(ENG-143 through ENG-145). A validator definition declares
+`environment:`, the inputs its result depends on -- on the broker,
+`- command: [bun, --version]` and `- file: bun.lock` -- or `[]` when
+there are none; `run` records exactly those (ENG-151), `verify`
+recomputes them (a command input only under the validator's trust
+grant or `verify --as-developer`, because committed content never
+executes on its own, ENG-059), a different value is stale, and a
+definition without the key produces no record (ENG-150). What the boundary does
+not cover is stated as residual risk on every record and every
+`verify` entry (ENG-133, ENG-152): inputs outside the repository
+root, and environment drift outside the declared inputs. That is the
+engine refusing to claim what it cannot see, and it is the product.
+
 Neither command writes a spec or the evidence map (ENG-011, ENG-197):
 the engine computes; the map stays the human claim register until L4
 compares the two.
 
-The next layers, each under its own contract: freshness inside a
-verification boundary narrower than the repository, `stale`, and
-environment fingerprints (L3); the configured authority with the CI
-default, and the machine view compared with the map (L4); challenges
-that demonstrate sensitivity (L5); ecosystem adapters that establish
-backend bindings and complete closures (L6).
+The next layers, each under its own contract: the configured
+authority with the CI default, and the machine view compared with the
+map (L4); challenges that demonstrate sensitivity (L5); ecosystem
+adapters that establish backend bindings, complete closures, and
+boundaries narrower than the repository (L6).
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof

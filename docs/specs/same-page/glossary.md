@@ -249,6 +249,13 @@ digest, adapter identity, dependency and environment fingerprints.
 Policy is not part of it.
 _Avoid_: cache key (when evidence identity is meant)
 
+**Environment fingerprint**:
+The recorded values of the inputs a validator definition declares
+under `environment:`: a command's output or a file's digest, exactly
+those and nothing else. Drift outside the declaration is residual
+risk, never a claim.
+_Avoid_: toolchain hash (when the fingerprint is meant)
+
 **Verification authority**:
 Which execution context's evidence counts as authoritative for a
 snapshot: `ci`, `local`, or `named-environment`. Non-authoritative

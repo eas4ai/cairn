@@ -315,7 +315,9 @@ Agreed MUST or MUST NOT requirement from the confirmed falsifiers;
 Observed requirements get none. Resolve any finding it reports through
 the confirm loop, and commit .same-page/. Where the project's checks
 already exist (conventions.md names them), define each as a validator
-under .same-page/validators/ (name, kind, argv command), list it on the
+under .same-page/validators/ (name, kind, argv command, and
+`environment:` -- the inputs its result depends on, as `- command:
+[argv]` or `- file: path` entries, or [] for none), list it on the
 obligations it addresses with `attested_by: agent`, and ask the
 developer to trust it (`same-page trust <name>`) before the first
 `same-page run`; `same-page verify` then says what each requirement's

@@ -1,7 +1,7 @@
 // Same Page Conformance -- the engine's command line.
 //
 //   same-page elaborate                      project Agreed requirements into obligations
-//   same-page verify                         evaluate every obligation against the policy
+//   same-page verify [--as-developer]        evaluate every obligation against the policy
 //   same-page trust <validator>              grant execution trust, outside the repository
 //   same-page run [validator...] [--as-developer]
 //   same-page attest <REQ-ID> --by <actor> --expires <date> --description <text>
@@ -19,9 +19,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { digest } from "./digest.ts";
-import { assess, evaluate, type Evaluation, type Verdict } from "./evaluate.ts";
+import { adapterVersion } from "./adapters.ts";
+import { assess, evaluate, type Evaluation, type Present, type Verdict } from "./evaluate.ts";
 import {
-  L2_ASSUMPTIONS,
+  COMMAND_ASSUMPTIONS,
+  MANUAL_ASSUMPTIONS,
+  dependencyChain,
+  residualRisk,
   stamp,
   readAcknowledgment,
   readDisproof,
@@ -33,12 +37,12 @@ import {
   writeRun,
   type EvidenceRecord,
 } from "./evidence.ts";
-import { completeRef, obligationPath, obligationsDir, obligationText, projectObligation, readObligation, writeObligation, type Obligation } from "./obligations.ts";
+import { completeRef, obligationDigest, obligationPath, obligationsDir, obligationText, projectObligation, readObligation, writeObligation, type Obligation } from "./obligations.ts";
 import { compareStrength, defaultPolicy, loadPolicy, policyText, requiredText, type Finding, type Policy } from "./policy.ts";
 import { currentSnapshot } from "./snapshot.ts";
 import { readCorpus, type Requirement } from "./specs.ts";
 import { findGrant, gitActor, grant, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
-import { listValidators, readValidator, runValidator, validatorDigest, type ValidatorDef } from "./validators.ts";
+import { environmentLabel, fingerprintEnvironment, listValidators, readValidator, runValidator, validatorDigest, type EnvironmentInput, type ValidatorDef } from "./validators.ts";
 import type { YamlMap } from "./yaml.ts";
 
 const USAGE = "usage: same-page <elaborate|verify|trust|run|attest|acknowledge|policy> ... [--root DIR]";
@@ -208,7 +212,7 @@ function elaborate(root: string): number {
         }
       }
     }
-    const projection = projectObligation(r, policy, existing, snapshot.id, actor);
+    const projection = projectObligation(r, policy, existing, snapshot?.id ?? "unknown", actor);
     if (projection.downgrade) out.push(downgradeFinding(id, projection.downgrade.old, projection.downgrade.new, "sufficiency under the new requirement is not evaluated until confirmed"));
     if (writeObligation(path, projection.obligation)) written++;
     else unchanged++;
@@ -229,21 +233,71 @@ function elaborate(root: string): number {
 
 // ---------------------------------------------------------------- verify
 
-function verify(root: string): number {
+function short(v: string | null): string {
+  if (v === null) return "none";
+  return v.startsWith("sha256:") ? v.slice(0, 19) : v;
+}
+
+// One line per distinct boundary among an entry's records: the same
+// validator at the same root and declaration is one boundary.
+function boundaryLines(records: EvidenceRecord[]): string[] {
+  const seen = new Map<string, string>();
+  for (const r of records) {
+    const who = r.validator ?? (r.manual ? `manual by ${r.manual.actor}` : r.kind);
+    const env = r.boundary.environment.length ? `environment inputs: ${r.boundary.environment.join(", ")}` : "no environment inputs declared";
+    const text = `${r.boundary.scope} at ${r.boundary.root}; ${who}${r.identity.validator_digest ? ` (${short(r.identity.validator_digest)})` : ""}; ${env}`;
+    seen.set(text, text);
+  }
+  return [...seen.values()];
+}
+
+function environmentLines(records: EvidenceRecord[]): string[] {
+  const out: string[] = [];
+  const latestByValidator = new Map<string, EvidenceRecord>();
+  for (const r of records) if (r.validator) latestByValidator.set(r.validator, r);
+  for (const [name, r] of [...latestByValidator.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (r.identity.environment.length === 0) {
+      out.push(`${name}: no environment inputs declared`);
+      continue;
+    }
+    out.push(`${name}: ${r.identity.environment.map((e) => `${e.input} = ${e.error !== null ? `not computed (${e.error})` : short(e.value)}`).join(", ")}`);
+  }
+  return out;
+}
+
+function dependencyLine(records: EvidenceRecord[]): string {
+  const d = records[records.length - 1]!.dependency;
+  return `${d.scope} via chain step ${d.step} (${d.chain.map((c) => `${c.step} ${c.mechanism}: ${c.outcome}`).join("; ")}); narrowing: ${d.narrowing}`;
+}
+
+function verify(root: string, asDeveloper: boolean): number {
   const loaded = requirePolicy(root, "verify");
   if (typeof loaded === "number") return loaded;
   const { policy } = loaded;
   const corpus = readCorpus(root, policy.specs);
   const byId = new Map(corpus.requirements.map((r) => [r.id, r] as const));
   const snapshot = currentSnapshot(root);
+  const snapshotId = snapshot?.id ?? null;
   const now = new Date();
   const out: Finding[] = corpus.duplicates.map((d) => ({ where: "spec set", message: d, rule: "ENG-012" }));
+  if (snapshotId === null) out.push({ where: root, message: "the repository snapshot cannot be computed (a directory or file is unreadable); no chain step establishes a boundary and every record's freshness is unknown", rule: "ENG-126" });
   const { obligations, findings } = loadObligations(root);
   out.push(...findings);
-  const validatorDigests = new Map<string, string | null>();
+  // The present value of every identity input (ENG-142): validator
+  // digests, and each usable validator's environment fingerprint,
+  // computed once (ENG-151: exactly the declared inputs).
+  const present: Present = { snapshot: snapshotId, validatorDigests: new Map(), environments: new Map() };
+  const defs = new Map<string, ValidatorDef>();
+  const store = trustStoreInsideRepository(root) ? { version: 1, grants: [] } : readTrustStore();
+  const trusted = new Set<string>();
   for (const name of listValidators(root)) {
     const v = readValidator(root, name);
-    validatorDigests.set(name, v.def ? validatorDigest(v.def) : null);
+    const d = v.def ? validatorDigest(v.def) : null;
+    present.validatorDigests.set(name, d);
+    if (v.def) defs.set(name, v.def);
+    // ENG-059: a declared environment command runs during verify only
+    // under the grant that covers this definition, or --as-developer.
+    if (v.def && d && (asDeveloper || findGrant(store, root, name, d))) trusted.add(name);
     out.push(...v.findings);
   }
   const evaluations: Evaluation[] = [];
@@ -277,17 +331,20 @@ function verify(root: string): number {
       else required = profile.require;
     }
     for (const v of o.validators) {
-      if (!validatorDigests.has(v.name)) out.push({ where, message: `${id} lists validator ${v.name}, which has no definition under .same-page/validators/`, rule: "ENG-161" });
+      if (!present.validatorDigests.has(v.name)) out.push({ where, message: `${id} lists validator ${v.name}, which has no definition under .same-page/validators/`, rule: "ENG-161" });
     }
     const { records, findings: rf } = readRecords(root, id);
     out.push(...rf);
-    const assessed = assess({ ...o, required }, records, snapshot.id, validatorDigests, now);
+    for (const r of records) {
+      if (r.validator && defs.has(r.validator) && !present.environments.has(r.validator)) present.environments.set(r.validator, fingerprintEnvironment(root, defs.get(r.validator)!, trusted.has(r.validator)));
+    }
+    const assessed = assess({ ...o, required }, records, present, now);
     const standing = standingDisproof(root, id, records);
     const history = standing ? null : readDisproof(root, id);
     let ev = evaluate({ ...o, required }, assessed, invalid, standing, history);
     if (ev.verdict === "FAILING") {
       const failing = assessed.find((a) => a.freshness === "current" && a.record.result === "fail")!;
-      const disproof = { requirement: id, requirement_digest: o.requirement_digest, falsifier_digest: o.falsifier_digest, sentence: o.sentence, falsifier: o.falsifier, verdict: "FAILING" as const, snapshot: snapshot.id, record: failing.record.path, recorded_at: now.toISOString() };
+      const disproof = { requirement: id, requirement_digest: o.requirement_digest, falsifier_digest: o.falsifier_digest, sentence: o.sentence, falsifier: o.falsifier, verdict: "FAILING" as const, snapshot: failing.record.identity.snapshot ?? "unknown", record: failing.record.path, recorded_at: now.toISOString() };
       writeDisproof(root, disproof);
       ev = { ...ev, standing: disproof, history: null };
     }
@@ -303,19 +360,33 @@ function verify(root: string): number {
     if (ev.reason && ev.verdict !== "SUFFICIENT") lines.push(`  Reason:      ${ev.reason}`);
     lines.push(`  Requirement: ${o.sentence}`);
     lines.push(`  Required:    ${requiredText(ev.required)}`);
+    const recs = ev.records.map((a) => a.record);
     if (ev.records.length === 0) lines.push("  Evidence:    none");
     else {
       ev.records.forEach((a, i) => {
         const r = a.record;
         const who = r.validator ?? (r.manual ? `manual by ${r.manual.actor}` : r.kind);
-        const state = a.expired ? "expired" : a.freshness === "current" ? "current" : `unknown: ${a.why}`;
+        const state = a.expired ? `expired: ${a.why}` : a.freshness === "current" ? "current" : `${a.freshness}: ${a.why}`;
         lines.push(`  ${i === 0 ? "Evidence:   " : "            "} ${r.kind} ${who} ${r.result} (${state}; binding ${r.binding_basis}; ${r.sensitivity}; ${r.path})`);
       });
     }
-    const anyCurrent = ev.records.some((a) => a.freshness === "current" && !a.expired);
-    lines.push(`  Freshness:   ${ev.records.length === 0 ? "no evidence" : anyCurrent ? "current" : "unknown"}`);
-    lines.push(`  Authority:   local @ ${snapshot.id}`);
-    lines.push(`  Boundary:    repository`);
+    const live = ev.records.filter((a) => !a.expired);
+    const freshness = ev.records.length === 0 ? "no evidence" : live.some((a) => a.freshness === "current") ? "current" : live.some((a) => a.freshness === "stale") ? "stale" : live.some((a) => a.freshness === "unknown") ? "unknown" : "expired";
+    lines.push(`  Freshness:   ${freshness}`);
+    lines.push(`  Authority:   local @ ${snapshotId ?? "unknown (no snapshot)"}`);
+    if (recs.length === 0) {
+      lines.push("  Boundary:    none recorded (no evidence)");
+      lines.push("  Dependency:  none established (no evidence)");
+      lines.push("  Environment: none recorded");
+      lines.push("  Residual risk: everything; no evidence is inside any boundary");
+    } else {
+      boundaryLines(recs).forEach((b, i) => lines.push(`  ${i === 0 ? "Boundary:   " : "            "} ${b}`));
+      lines.push(`  Dependency:  ${dependencyLine(recs)}`);
+      const env = environmentLines(recs);
+      if (env.length === 0) lines.push("  Environment: none recorded (manual evidence)");
+      else env.forEach((e, i) => lines.push(`  ${i === 0 ? "Environment:" : "            "} ${e}`));
+      lines.push(`  Residual risk: ${ev.residual_risk.join("; ")}`);
+    }
     lines.push(`  Assumptions: ${ev.assumptions.length ? ev.assumptions.join("; ") : "none recorded"}`);
     if (ev.standing) lines.push(`  Standing disproof: FAILING at ${ev.standing.snapshot} (${ev.standing.record})`);
     else if (ev.history) lines.push(`  Prior disproof: FAILING at ${ev.history.snapshot} (${ev.history.record}); no longer the last verdict`);
@@ -325,7 +396,7 @@ function verify(root: string): number {
   const counts: Record<Verdict, number> = { FAILING: 0, BLOCKED: 0, INSUFFICIENT: 0, SUFFICIENT: 0 };
   for (const ev of evaluations) counts[ev.verdict]++;
   process.stdout.write(
-    `same-page verify: ${evaluations.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s); authority local @ ${snapshot.id}\n`
+    `same-page verify: ${evaluations.length} obligation(s): ${counts.SUFFICIENT} SUFFICIENT, ${counts.INSUFFICIENT} INSUFFICIENT, ${counts.BLOCKED} BLOCKED, ${counts.FAILING} FAILING; ${out.length} finding(s); authority local @ ${snapshotId ?? "unknown (no snapshot)"}\n`
   );
   const allSufficient = evaluations.every((v) => v.verdict === "SUFFICIENT");
   return out.length === 0 && allSufficient ? 0 : 1;
@@ -375,6 +446,8 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
   let executed = 0;
   let recordsWritten = 0;
   const snapshot = currentSnapshot(root);
+  const snapshotId = snapshot?.id ?? null;
+  if (snapshotId === null) out.push({ where: root, message: "the repository snapshot cannot be computed (a directory or file is unreadable); no chain step establishes a boundary, so every record written now has unknown freshness", rule: "ENG-126" });
   for (const name of targets) {
     const v = readValidator(root, name);
     if (!v.def) {
@@ -396,6 +469,14 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
       out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is listed on no obligation; nothing to record`, rule: "ENG-012" });
       continue;
     }
+    // ENG-150, ENG-151: exactly the declared environment inputs, taken
+    // beside the run. An input that cannot be computed leaves the
+    // record's freshness unknown (ENG-126).
+    const environment: EnvironmentInput[] = fingerprintEnvironment(root, def, true);
+    for (const e of environment) if (e.error !== null) out.push({ where: `.same-page/validators/${name}.yaml`, message: `environment input ${e.input} cannot be computed (${e.error}); records written now have unknown freshness`, rule: "ENG-126" });
+    const dependency = dependencyChain("command", snapshotId);
+    const declared = def.environment.map(environmentLabel);
+    const freshness: EvidenceRecord["freshness"] = snapshotId !== null && environment.every((e) => e.error === null) ? "current" : "unknown";
     const result = runValidator(root, def);
     executed++;
     const runId = `${stamp(new Date(result.started_at))}-${name}`;
@@ -415,7 +496,7 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
       stderr: result.stderr,
     } as YamlMap);
     for (const o of bound) {
-      const ref = completeRef(o.validators.find((x) => x.name === name)!, snapshot.id, actor);
+      const ref = completeRef(o.validators.find((x) => x.name === name)!, snapshotId ?? "unknown", actor);
       const attested = ref.attested_by !== undefined;
       const req = corpus.requirements.find((r) => r.id === o.requirement);
       const rec: EvidenceRecord = {
@@ -423,28 +504,40 @@ function run(root: string, names: string[], asDeveloper: boolean): number {
         kind: def.kind,
         adapter: "command",
         validator: name,
-        validator_digest: d,
         result: result.result,
         run: runPath,
         recorded_at: new Date().toISOString(),
-        snapshot: snapshot.id,
-        requirement_digest: req ? digest(req.text) : o.requirement_digest,
-        falsifier_digest: req && req.falsifier !== null ? digest(req.falsifier) : o.falsifier_digest,
+        identity: {
+          snapshot: snapshotId,
+          requirement: o.requirement,
+          requirement_digest: req ? digest(req.text) : o.requirement_digest,
+          falsifier_digest: req && req.falsifier !== null ? digest(req.falsifier) : o.falsifier_digest,
+          obligation_digest: obligationDigest(o),
+          validator_digest: d,
+          adapter: "command",
+          adapter_version: adapterVersion("command"),
+          dependency_fingerprint: snapshotId,
+          environment: environment.map((e) => ({ ...e })),
+          contracts: [],
+        },
         execution_trust: context,
         binding_basis: attested ? "attested" : "none",
         binding: attested ? { actor: ref.actor!, actor_type: ref.attested_by!, timestamp: ref.attested_at!, snapshot: ref.snapshot!, developer_confirmed: ref.developer_confirmed === true } : null,
         sensitivity: "unchallenged",
-        freshness: "current",
-        boundary: "repository",
+        freshness,
+        boundary: { scope: dependency.scope, root, validator: name, environment: declared },
+        dependency,
         dependency_provenance: "conservative",
-        assumptions: [...L2_ASSUMPTIONS],
+        assumptions: [...COMMAND_ASSUMPTIONS],
+        residual_risk: residualRisk(dependency, declared, "command"),
         authority: "local",
         manual: null,
       };
       writeRecord(root, rec, name);
       recordsWritten++;
     }
-    process.stdout.write(`ran ${name}: ${result.result}${result.exit_code !== null ? ` (exit ${result.exit_code})` : ""}${result.error ? ` ${result.error}` : ""} under ${context.context}; ${bound.length} record(s) at ${snapshot.id}\n`);
+    const envText = environment.length ? `; environment ${environment.map((e) => `${e.input} = ${e.error !== null ? `not computed (${e.error})` : short(e.value)}`).join(", ")}` : "; no environment inputs declared";
+    process.stdout.write(`ran ${name}: ${result.result}${result.exit_code !== null ? ` (exit ${result.exit_code})` : ""}${result.error ? ` ${result.error}` : ""} under ${context.context}; ${bound.length} record(s) at ${snapshotId ?? "unknown (no snapshot)"}${envText}\n`);
   }
   printFindings(out);
   process.stdout.write(`same-page run: ${executed} validator(s) executed, ${recordsWritten} record(s) written, ${out.length} finding(s)\n`);
@@ -480,33 +573,49 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
     return 1;
   }
   const snapshot = currentSnapshot(root);
+  const snapshotId = snapshot?.id ?? null;
+  if (snapshotId === null) {
+    printFindings([{ where: root, message: "the repository snapshot cannot be computed (a directory or file is unreadable); no chain step establishes a boundary, so the record written now has unknown freshness", rule: "ENG-126" }]);
+  }
   const now = new Date().toISOString();
+  const dependency = dependencyChain("manual", snapshotId);
   const rec: EvidenceRecord = {
     requirement: id,
     kind: opts.inspectionOnly ? "inspected" : "manual",
     adapter: "manual",
     validator: null,
-    validator_digest: null,
     result: "pass",
     run: null,
     recorded_at: now,
-    snapshot: snapshot.id,
-    requirement_digest: o.requirement_digest,
-    falsifier_digest: o.falsifier_digest,
+    identity: {
+      snapshot: snapshotId,
+      requirement: id,
+      requirement_digest: o.requirement_digest,
+      falsifier_digest: o.falsifier_digest,
+      obligation_digest: obligationDigest(o),
+      validator_digest: null,
+      adapter: "manual",
+      adapter_version: adapterVersion("manual"),
+      dependency_fingerprint: snapshotId,
+      environment: [],
+      contracts: [],
+    },
     execution_trust: null,
     binding_basis: "attested",
-    binding: { actor: opts.by, actor_type: "developer", timestamp: now, snapshot: snapshot.id, developer_confirmed: true },
+    binding: { actor: opts.by, actor_type: "developer", timestamp: now, snapshot: snapshotId ?? "unknown", developer_confirmed: true },
     sensitivity: "not_applicable",
-    freshness: "current",
-    boundary: "repository",
+    freshness: snapshotId === null ? "unknown" : "current",
+    boundary: { scope: dependency.scope, root, validator: null, environment: [] },
+    dependency,
     dependency_provenance: "conservative",
-    assumptions: [...L2_ASSUMPTIONS, "manual evidence: the actor's account is the mechanism"],
+    assumptions: [...MANUAL_ASSUMPTIONS],
+    residual_risk: residualRisk(dependency, [], "manual"),
     authority: "local",
     manual: { actor: opts.by, description: opts.description, bindings, expires: opts.expires, addresses_falsifier: !opts.inspectionOnly && opts.addressesFalsifier },
   };
   const path = writeRecord(root, rec, opts.inspectionOnly ? "inspected" : "manual");
-  process.stdout.write(`recorded ${rec.kind} evidence for ${id} by ${opts.by}, expires ${opts.expires}, at ${snapshot.id}: ${path}\n`);
-  return 0;
+  process.stdout.write(`recorded ${rec.kind} evidence for ${id} by ${opts.by}, expires ${opts.expires}, at ${snapshotId ?? "unknown (no snapshot)"}: ${path}\n`);
+  return snapshotId === null ? 1 : 0;
 }
 
 // ---------------------------------------------------------------- acknowledge
@@ -600,7 +709,7 @@ function main(): number {
     case "elaborate":
       return rest.length === 0 ? elaborate(root) : usage();
     case "verify":
-      return rest.length === 0 ? verify(root) : usage();
+      return rest.length === 0 ? verify(root, flag("as-developer")) : usage();
     case "trust":
       return trust(root, rest[0]);
     case "run":

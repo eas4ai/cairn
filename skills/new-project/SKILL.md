@@ -53,23 +53,35 @@ Once implementation exists, four more commands carry the evidence:
 `trust <validator>` grants execution trust to a validator definition
 under .same-page/validators/, recorded outside the repository under
 the developer's home directory; `run` executes trusted validators as
-argv and writes one evidence record per obligation that lists them;
+argv and writes one evidence record per obligation that lists them,
+each with its identity block and the environment fingerprint the
+definition declares;
 `attest <REQ-ID>` records manual evidence by a named human with an
 expiry; `acknowledge <REQ-ID>` records the developer's acknowledgment
 of a revision that clears a standing disproof. `verify` then reports,
 per requirement, the verdict (FAILING, BLOCKED, INSUFFICIENT,
 SUFFICIENT), what the policy requires, the evidence present with its
-freshness, the authority and snapshot, the boundary, and the
-assumptions. Trust is the developer's act: run `same-page trust` or
+freshness, the authority and snapshot, the boundary, the dependency
+chain, the environment fingerprint, the residual risk, and the
+assumptions. Freshness is `current`, `stale` (an identity input such
+as the snapshot, the validator definition, or a declared environment
+input is known to differ: INSUFFICIENT, re-run named), or `unknown`
+(one cannot be computed: BLOCKED). A validator definition declares
+`environment:`, the inputs its result depends on (`- command: [argv]`
+whose output is the fingerprint, `- file: path` whose digest is, or
+[] for none); without it the validator produces no record, and
+`verify` re-runs a declared command only under the validator's trust
+grant or `verify --as-developer`. Trust is the developer's act: run `same-page trust` or
 `run --as-developer` only when the developer says so, naming the
 validator; never as part of scaffolding. A policy downgrade
 (`same-page verify` reports it) is confirmed by the developer with
 `same-page policy confirm` and recorded in the affected spec's
 Decisions and revisions; a disproof-clearing revision is acknowledged
 by the developer, then `same-page acknowledge` and the same log entry.
-Layers L1 and L2 are built; narrower freshness boundaries,
-configurable authority and map comparison, challenges, and ecosystem
-adapters are the next layers, each under its own iteration contract.
+Layers L1, L2, and L3 are built; configurable authority and map
+comparison, challenges, and ecosystem adapters with boundaries
+narrower than the repository are the next layers, each under its own
+iteration contract.
 
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in

@@ -73,6 +73,7 @@ export function attest(root: string, id: string | undefined, opts: { by?: string
       environment: [],
       traced: [],
       traced_fingerprint: null,
+      traced_error: null,
       contracts: [],
     },
     execution_trust: null,

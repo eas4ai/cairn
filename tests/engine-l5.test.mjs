@@ -406,3 +406,24 @@ test("a challenge that does not derive from a confirmed falsifier names the requ
   expect(r.stdout).toContain("a falsifier-derived challenge speaks for the one requirement whose falsifier it realizes; drop the requirements list");
   expect(r.stdout).toContain("(ENG-037)");
 }, TEST_TIMEOUT);
+
+test("a challenge reports a declared environment input it cannot compute, when it writes the record (ENG-126)", () => {
+  const p = project();
+  artifact(p, "challenges/env.fixture");
+  const cmd = ["kind: test", "command:", '  - "true"', "environment:", "  - command:", '      - "/nonexistent/tool"', "challenges:", "  - mechanism: negative-fixture", "    artifact: challenges/env.fixture", "    command:", '      - "false"', "    from_falsifier: true", "    requirement: BRK-001", ""].join("\n");
+  validatorFile(p, "ok", cmd);
+  bind(p, "BRK-001", "ok");
+  commit(p, "a validator whose environment input is not there");
+  run(["trust", "ok"], p);
+  const c = run(["challenge"], p);
+  expect(c.stdout).toContain("environment input command /nonexistent/tool cannot be computed (");
+  expect(c.stdout).toContain("records written now have unknown freshness");
+  expect(c.stdout).toContain("(ENG-126)");
+  expect(c.status).toBe(1);
+  const rec = records(p, "BRK-001").at(-1);
+  expect(rec.sensitivity).toBe("challenged");
+  expect(rec.freshness).toBe("unknown");
+  const e = entry(run(["verify"], p).stdout, "BRK-001");
+  expect(e).toContain("BRK-001  BLOCKED");
+  expect(e).toContain("was not computed at run time");
+}, TEST_TIMEOUT);

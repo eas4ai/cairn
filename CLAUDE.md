@@ -247,8 +247,9 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/009.md
-  (the engine's command line, decomposed); 008 (remediation) is closed; 001 (L1), 002 (L2),
+- The current iteration contract is docs/specs/same-page/iterations/010.md
+  (a trace that failed is not a trace that found nothing); 008
+  (remediation) and 009 (the command line, decomposed) are closed; 001 (L1), 002 (L2),
   003 (the CONF revision), 004 (L3), 005 (L4), 006 (L5), and 007 (L6)
   are closed, and all six construction layers are built. Work outside it is
   captured via /next-iteration -- surfaced and staged, never implemented

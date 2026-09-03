@@ -103,7 +103,7 @@ export function run(root: string, names: string[], asDeveloper: boolean, environ
       out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is listed on no obligation; nothing to record`, rule: "ENG-012" });
       continue;
     }
-    const vr = resolveInputs({ root, def, trust, store: s.store, adapters: s.adapters, snapshotId, reportEnvironmentErrors: true, out });
+    const vr = resolveInputs({ root, def, trust, store: s.store, adapters: s.adapters, snapshotId, out });
     const freshness: EvidenceRecord["freshness"] = (vr.narrowed || snapshotId !== null) && vr.environmentOk && vr.traceOk ? "current" : "unknown";
     const result = runValidator(root, def);
     executed++;
@@ -174,8 +174,8 @@ export function challenge(root: string, names: string[], asDeveloper: boolean, e
     if (def.challenges.length === 0) continue;
     const trust = resolveTrust({ root, def, store: s.store, shared: s.shared, asDeveloper, actor: s.actor, verb: "challenge", out });
     if (!trust) continue;
-    const vr = resolveInputs({ root, def, trust, store: s.store, adapters: s.adapters, snapshotId, reportEnvironmentErrors: false, out });
-    const freshness: EvidenceRecord["freshness"] = (vr.narrowed || snapshotId !== null) && vr.environmentOk ? "current" : "unknown";
+    const vr = resolveInputs({ root, def, trust, store: s.store, adapters: s.adapters, snapshotId, out });
+    const freshness: EvidenceRecord["freshness"] = (vr.narrowed || snapshotId !== null) && vr.environmentOk && vr.traceOk ? "current" : "unknown";
     for (const c of def.challenges) {
       // Every challenge names what it speaks for: the one requirement
       // whose falsifier it realizes, or the list the developer

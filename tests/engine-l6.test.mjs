@@ -289,6 +289,41 @@ test("a supplemental trace widens a record's identity and never narrows its scop
   expect(e).toContain("1 traced input(s)");
 }, TEST_TIMEOUT);
 
+test("a trace that could not be computed is recorded as such, and no record written under it is current (ENG-126, ENG-140, ENG-142)", () => {
+  const p = project();
+  validatorWith(p, "traced", ["kind: test", "command:", '  - "true"', "environment: []", "trace:", "  command:", '    - "/nonexistent/tracer"', ""].join("\n"));
+  bind(p, "BRK-001", "traced");
+  commit(p, "a trace whose command is not there");
+  run(["trust", "traced"], p);
+  const r = run(["run", "traced"], p);
+  expect(r.stdout).toContain("the supplemental trace could not be computed (");
+  expect(r.stdout).toContain("(ENG-041)");
+  const rec = records(p, "BRK-001").at(-1);
+  expect(rec.identity.traced).toEqual([]);
+  expect(rec.identity.traced_fingerprint).toBeNull();
+  expect(rec.identity.traced_error).not.toBeNull();
+  expect(rec.freshness).toBe("unknown");
+  expect(rec.dependency.scope).toBe("repository");
+  // The engine cannot call that record current: inputs it declared were never captured.
+  const e = entry(run(["verify"], p).stdout, "BRK-001");
+  expect(e).toContain("BRK-001  BLOCKED");
+  expect(e).toContain("Reason:      freshness cannot be established: the supplemental trace was not computed at run time (");
+  expect(e).toContain("Freshness:   unknown");
+  // With the tracer present the record is current again, and the traced input is an input.
+  const tracer = join(p.root, "tracer.sh");
+  writeFileSync(join(p.home, "outside.conf"), "one\n");
+  writeFileSync(tracer, `#!/bin/sh\necho ${join(p.home, "outside.conf")}\n`);
+  chmodSync(tracer, 0o755);
+  validatorWith(p, "traced", ["kind: test", "command:", '  - "true"', "environment: []", "trace:", "  command:", `    - ${JSON.stringify(tracer)}`, ""].join("\n"));
+  commit(p, "the tracer exists");
+  run(["trust", "traced"], p);
+  run(["run", "traced"], p);
+  const ok = records(p, "BRK-001").at(-1);
+  expect(ok.identity.traced_error).toBeNull();
+  expect(ok.freshness).toBe("current");
+  expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
+}, TEST_TIMEOUT);
+
 test("a formal result carries the correspondence assumption between the requirement and its model (ENG-166, ENG-167)", () => {
   const p = project();
   validatorWith(p, "prover", ["kind: formal", "command:", '  - "true"', "environment: []", ""].join("\n"));

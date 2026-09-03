@@ -234,13 +234,14 @@ export function resolveInputs(args: {
   store: TrustStore;
   adapters: Record<string, Adapter>;
   snapshotId: string | null;
-  reportEnvironmentErrors: boolean;
   out: Finding[];
 }): ValidatorRun {
-  const { root, def, trust, store, adapters, snapshotId, reportEnvironmentErrors, out } = args;
+  const { root, def, trust, store, adapters, snapshotId, out } = args;
   const environment: EnvironmentInput[] = fingerprintEnvironment(root, def, true);
-  if (reportEnvironmentErrors)
-    for (const e of environment) if (e.error !== null) out.push({ where: `.same-page/validators/${def.name}.yaml`, message: `environment input ${e.input} cannot be computed (${e.error}); records written now have unknown freshness`, rule: "ENG-126" });
+  // Whatever the command, an input the engine cannot compute is said
+  // out loud when the record is written, not left for the next verify
+  // (ENG-126).
+  for (const e of environment) if (e.error !== null) out.push({ where: `.same-page/validators/${def.name}.yaml`, message: `environment input ${e.input} cannot be computed (${e.error}); records written now have unknown freshness`, rule: "ENG-126" });
   const sets = dependencySets(root, def, store, adapters, out);
   const dependency = dependencyChain(snapshotId, sets.closure);
   const narrowed = dependency.scope === "package";
@@ -306,6 +307,7 @@ export function buildRecord(args: {
       environment: vr.environment.map((e) => ({ ...e })),
       traced: vr.sets.trace && vr.sets.trace.error === null ? [...vr.sets.trace.inputs] : [],
       traced_fingerprint: vr.sets.trace && vr.sets.trace.error === null ? vr.sets.trace.fingerprint : null,
+      traced_error: vr.sets.trace ? vr.sets.trace.error : null,
       contracts: [],
     },
     execution_trust: vr.context,

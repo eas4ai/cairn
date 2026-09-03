@@ -57,9 +57,13 @@ export type Identity = {
   dependency_fingerprint: string | null;
   environment: EnvironmentInput[];
   // Inputs a supplemental trace named (ENG-041): they widen the
-  // identity and never narrow the scope.
+  // identity and never narrow the scope. A trace that failed is not a
+  // trace that found nothing, so the failure is recorded: without it a
+  // record would claim freshness over inputs it never captured
+  // (ENG-140).
   traced: string[];
   traced_fingerprint: string | null;
+  traced_error: string | null;
   contracts: string[];
 };
 
@@ -207,6 +211,7 @@ export function recordToYaml(r: EvidenceRecord): YamlMap {
       environment: environmentToYaml(r.identity.environment),
       traced: [...r.identity.traced],
       traced_fingerprint: r.identity.traced_fingerprint,
+      traced_error: r.identity.traced_error,
       contracts: [...r.identity.contracts],
     },
     execution_trust: r.execution_trust ? ({ ...r.execution_trust } as YamlMap) : null,
@@ -278,6 +283,7 @@ function parseIdentity(raw: YamlValue | undefined, where: string, findings: Find
     environment: (env as YamlMap[]).map((e) => ({ input: String(e["input"]), value: strOrNull(e["value"]), error: strOrNull(e["error"]) })),
     traced: strings(raw["traced"]),
     traced_fingerprint: strOrNull(raw["traced_fingerprint"]),
+    traced_error: strOrNull(raw["traced_error"]),
     contracts: strings(raw["contracts"]),
   };
 }

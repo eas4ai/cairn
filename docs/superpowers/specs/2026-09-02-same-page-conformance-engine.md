@@ -1577,6 +1577,21 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 010 built, under
+  docs/specs/same-page/iterations/010.md. A validator's supplemental
+  trace can fail, and a trace that failed is not a trace that found
+  nothing: the record now carries `traced_error` on its identity, the
+  way a declared environment input already carries the reason it could
+  not be computed, and a record with one is never current. The defect
+  was wider than the audit that found it said: `run` and `challenge`
+  both wrote such records, and `verify` compared a traced fingerprint
+  only when the record carried one, so a traced input could change
+  while the record stayed current, which is ENG-140's falsifier.
+  `challenge` now also marks a record `unknown` when its trace failed,
+  as `run` did, and reports a declared environment input it cannot
+  compute at the moment it writes the record, as `run` did. Both
+  commands share one resolution after iteration 009, so each condition
+  is stated once.
 - 2026-09-03 -- Iteration 009 (the command line, decomposed) built,
   under docs/specs/same-page/iterations/009.md. Structure only: every
   command keeps its behavior, its output, and its exit code. The

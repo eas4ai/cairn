@@ -97,6 +97,10 @@ export function assess(o: Obligation, records: StoredRecord[], present: Present,
     if (id.adapter_version !== adapterVersion(id.adapter, registry)) stale.push(`adapter ${id.adapter} was version ${id.adapter_version}, now ${adapterVersion(id.adapter, registry)}`);
     // A supplemental trace widens the identity: what it named is an
     // input like any other (ENG-041).
+    // A trace that could not be computed when the record was written
+    // left inputs out of its identity, so nothing here can establish
+    // that the record is current (ENG-126, ENG-140).
+    if (id.traced_error !== null) unknown.push(`the supplemental trace was not computed at run time (${id.traced_error})`);
     if (id.traced_fingerprint !== null && record.validator) {
       const now = present.traces.get(record.validator);
       if (now === undefined || now === null) unknown.push("the supplemental trace cannot be recomputed now");

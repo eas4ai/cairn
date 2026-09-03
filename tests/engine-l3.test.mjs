@@ -204,7 +204,7 @@ test("every record stores its identity inputs as one block; a record lacking one
   const p = project();
   const { sha } = withEnvironment(p);
   const [rec] = records(p, "BRK-001");
-  expect(Object.keys(rec.identity).sort()).toEqual(["adapter", "adapter_version", "contracts", "dependency_fingerprint", "environment", "falsifier_digest", "obligation_digest", "requirement", "requirement_digest", "snapshot", "traced", "traced_fingerprint", "validator_digest"]);
+  expect(Object.keys(rec.identity).sort()).toEqual(["adapter", "adapter_version", "contracts", "dependency_fingerprint", "environment", "falsifier_digest", "obligation_digest", "requirement", "requirement_digest", "snapshot", "traced", "traced_error", "traced_fingerprint", "validator_digest"]);
   expect(rec.identity.snapshot).toBe(`git:${sha}`);
   expect(rec.identity.dependency_fingerprint).toBe(`git:${sha}`);
   expect(rec.identity.requirement).toBe("BRK-001");

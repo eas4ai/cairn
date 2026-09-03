@@ -175,7 +175,11 @@ a mechanism, a reviewable artifact, and a command that realizes the
 violating state -- `same-page challenge` records what the mechanism
 demonstrated: challenged when the validator noticed, weak sensitivity
 when it passed under the violation, which withdraws every challenged
-claim of that validator until a challenge succeeds again. A policy change that requires less is a
+claim of that validator until a challenge succeeds again. A validator
+that declares a closure gets a boundary narrower than the repository
+when a registered adapter the developer trusted establishes the input
+set, and the narrowing is recorded on the record as a reviewable act; a
+declared trace widens the identity and never narrows it. A policy change that requires less is a
 downgrade, held until the developer runs `same-page policy confirm`
 and the change is logged; a revision of a requirement with a standing
 disproof is held until the developer acknowledges it, `same-page

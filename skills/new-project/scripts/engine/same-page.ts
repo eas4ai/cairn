@@ -4,6 +4,7 @@
 //   same-page verify [--as-developer]        evaluate every obligation against the policy
 //   same-page trust <validator>              grant execution trust, outside the repository
 //   same-page trust --environment <name>     trust a named environment for this repository
+//   same-page trust --adapter <name>         trust a registered adapter for this repository
 //   same-page run [validator...] [--as-developer] [--environment <name>]
 //   same-page challenge [validator...] [--as-developer] [--environment <name>]
 //   same-page attest <REQ-ID> --by <actor> --expires <date> --description <text>
@@ -22,12 +23,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { digest } from "./digest.ts";
-import { adapterVersion } from "./adapters.ts";
+import { BUILTIN, adapterHas, adapterVersion, readRegistry, registrationPath, type Adapter } from "./adapters.ts";
 import { authorityLabel, ciActor, ciConfiguration, configuredAuthority, inCi, type Authority, type Configured } from "./authority.ts";
 import { assess, evaluate, isAuthoritative, type Evaluation, type Present, type Verdict } from "./evaluate.ts";
 import {
   CHALLENGE_ASSUMPTIONS,
   COMMAND_ASSUMPTIONS,
+  FORMAL_ASSUMPTIONS,
   MANUAL_ASSUMPTIONS,
   dependencyChain,
   residualRisk,
@@ -42,6 +44,7 @@ import {
   writeDisproof,
   writeRecord,
   writeRun,
+  type Closure,
   type EvidenceRecord,
   type StoredRecord,
 } from "./evidence.ts";
@@ -50,8 +53,8 @@ import { completeRef, obligationDigest, obligationPath, obligationsDir, obligati
 import { compareStrength, defaultPolicy, loadPolicy, policyText, requiredText, type Finding, type Policy } from "./policy.ts";
 import { currentSnapshot } from "./snapshot.ts";
 import { readCorpus, type Requirement } from "./specs.ts";
-import { EMPTY_STORE, findEnvironmentGrant, findGrant, gitActor, grant, grantEnvironment, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
-import { environmentLabel, fingerprintEnvironment, listValidators, readValidator, runChallenge, runValidator, validatorDigest, type ChallengeDecl, type EnvironmentInput, type ValidatorDef } from "./validators.ts";
+import { EMPTY_STORE, findAdapterGrant, findEnvironmentGrant, findGrant, gitActor, grant, grantAdapter, grantEnvironment, readTrustStore, trustPath, trustStoreInsideRepository, type TrustStore } from "./trust.ts";
+import { closureArgv, computeInputSet, environmentLabel, fingerprintEnvironment, listValidators, readValidator, runChallenge, runValidator, validatorDigest, type EnvironmentInput, type InputSet, type ValidatorDef } from "./validators.ts";
 import type { YamlMap } from "./yaml.ts";
 
 const USAGE = "usage: same-page <elaborate|verify|trust|run|challenge|attest|acknowledge|policy|sync-map> ... [--root DIR]";
@@ -242,6 +245,46 @@ function elaborate(root: string): number {
   return out.length === 0 ? 0 : 1;
 }
 
+// ------------------------------------------------------- dependency sets
+
+// What a validator's declarations establish now: the adapter closure
+// that narrows its boundary, and the supplemental trace that widens it.
+// A closure needs a registered adapter with
+// can_establish_complete_dependencies (ENG-055, ENG-056) and a grant
+// the developer wrote outside the repository (ENG-061, ENG-064);
+// without either, the engine keeps the conservative floor and says so.
+type Sets = { closure: Closure | null; closureSet: InputSet | null; trace: InputSet | null };
+
+function dependencySets(root: string, def: ValidatorDef, store: TrustStore, adapters: Record<string, Adapter>, out: Finding[]): Sets {
+  const where = `.same-page/validators/${def.name}.yaml`;
+  let closure: Closure | null = null;
+  let closureSet: InputSet | null = null;
+  if (def.closure) {
+    const a = adapters[def.closure.adapter];
+    if (!a) {
+      out.push({ where, message: `closure adapter ${def.closure.adapter} is not registered; register it in ${registrationPath()}, outside this repository`, rule: "ENG-055" });
+    } else if (!adapterHas(adapters, a.name, "can_establish_complete_dependencies")) {
+      out.push({ where, message: `adapter ${a.name} is registered without can_establish_complete_dependencies, so it cannot establish a closure; the conservative floor stands`, rule: "ENG-056" });
+    } else {
+      const g = findAdapterGrant(store, root, a.name, a.version);
+      if (!g) {
+        out.push({ where, message: `adapter ${a.name} ${a.version} is not trusted for this repository; run \`same-page trust --adapter ${a.name}\`. Until then the boundary stays the repository`, rule: "ENG-064" });
+      } else {
+        const set = computeInputSet(root, def.cwd, closureArgv(a.name, a.command, def.closure), def.timeout);
+        closureSet = set;
+        if (set.error !== null) out.push({ where, message: `adapter ${a.name} could not establish the closure (${set.error}); the boundary stays the repository`, rule: "ENG-124" });
+        else closure = { adapter: a.name, version: a.version, project: def.closure.project, inputs: set.inputs.length, grantedBy: g.actor };
+      }
+    }
+  }
+  let trace: InputSet | null = null;
+  if (def.trace) {
+    trace = computeInputSet(root, def.cwd, def.trace.command, def.timeout);
+    if (trace.error !== null) out.push({ where, message: `the supplemental trace could not be computed (${trace.error}); it names no inputs and narrows nothing`, rule: "ENG-041" });
+  }
+  return { closure, closureSet, trace };
+}
+
 // ---------------------------------------------------------------- verify
 
 function short(v: string | null): string {
@@ -256,7 +299,9 @@ function boundaryLines(records: EvidenceRecord[]): string[] {
   for (const r of records) {
     const who = r.validator ?? (r.manual ? `manual by ${r.manual.actor}` : r.kind);
     const env = r.boundary.environment.length ? `environment inputs: ${r.boundary.environment.join(", ")}` : "no environment inputs declared";
-    const text = `${r.boundary.scope} at ${r.boundary.root}; ${who}${r.identity.validator_digest ? ` (${short(r.identity.validator_digest)})` : ""}; ${env}`;
+    const where = r.boundary.scope === "package" ? `${r.boundary.scope} ${r.boundary.project ?? "?"} (${r.dependency.inputs} input(s)) inside ${r.boundary.root}` : `${r.boundary.scope} at ${r.boundary.root}`;
+    const traced = r.identity.traced.length ? `; ${r.identity.traced.length} traced input(s)` : "";
+    const text = `${where}; ${who}${r.identity.validator_digest ? ` (${short(r.identity.validator_digest)})` : ""}; ${env}${traced}`;
     seen.set(text, text);
   }
   return [...seen.values()];
@@ -298,7 +343,9 @@ function verify(root: string, asDeveloper: boolean): number {
   // The present value of every identity input (ENG-142): validator
   // digests, and each usable validator's environment fingerprint,
   // computed once (ENG-151: exactly the declared inputs).
-  const present: Present = { snapshot: snapshotId, validatorDigests: new Map(), environments: new Map() };
+  const registry = readRegistry();
+  out.push(...registry.findings);
+  const present: Present = { snapshot: snapshotId, validatorDigests: new Map(), environments: new Map(), closures: new Map(), traces: new Map(), adapters: registry.adapters };
   const defs = new Map<string, ValidatorDef>();
   const store = trustStoreInsideRepository(root) ? EMPTY_STORE : readTrustStore();
   const trusted = new Set<string>();
@@ -348,11 +395,25 @@ function verify(root: string, asDeveloper: boolean): number {
     for (const v of o.validators) {
       if (!present.validatorDigests.has(v.name)) out.push({ where, message: `${id} lists validator ${v.name}, which has no definition under .same-page/validators/`, rule: "ENG-161" });
     }
-    const { records, findings: rf } = readRecords(root, id);
+    const { records, findings: rf } = readRecords(root, id, registry.adapters);
     out.push(...rf);
     recordsById.set(id, records);
     for (const r of records) {
-      if (r.validator && defs.has(r.validator) && !present.environments.has(r.validator)) present.environments.set(r.validator, fingerprintEnvironment(root, defs.get(r.validator)!, trusted.has(r.validator)));
+      if (r.validator && defs.has(r.validator) && !present.environments.has(r.validator)) {
+        const def = defs.get(r.validator)!;
+        const may = trusted.has(r.validator);
+        present.environments.set(r.validator, fingerprintEnvironment(root, def, may));
+        // Recomputing a closure or a trace runs a command, so it needs
+        // the same trust the validator holds (ENG-059).
+        if (may) {
+          const sets = dependencySets(root, def, store, registry.adapters, []);
+          present.closures.set(r.validator, sets.closureSet);
+          present.traces.set(r.validator, sets.trace);
+        } else {
+          present.closures.set(r.validator, null);
+          present.traces.set(r.validator, null);
+        }
+      }
     }
     const weak = readWeak(root, id);
     // ENG-173: a challenge the validator passed is reported, whatever
@@ -455,14 +516,29 @@ function verify(root: string, asDeveloper: boolean): number {
 
 // ---------------------------------------------------------------- trust
 
-function trust(root: string, name: string | undefined, environment: string | undefined): number {
-  if ((!name && !environment) || (name && environment)) {
-    process.stderr.write("usage: same-page trust <validator> | same-page trust --environment <name>\n");
+function trust(root: string, name: string | undefined, environment: string | undefined, adapter: string | undefined): number {
+  const chosen = [name, environment, adapter].filter((x) => x !== undefined && x !== "").length;
+  if (chosen !== 1) {
+    process.stderr.write("usage: same-page trust <validator> | same-page trust --environment <name> | same-page trust --adapter <name>\n");
     return 2;
   }
   if (trustStoreInsideRepository(root)) {
     process.stderr.write(`same-page: the trust store ${trustPath()} is inside the repository it would authorize; set SAME_PAGE_HOME outside it (ENG-062)\n`);
     return 2;
+  }
+  if (adapter) {
+    // ENG-055, ENG-056, ENG-065: a grant names a registered adapter and
+    // the version it carries now.
+    const registry = readRegistry();
+    printFindings(registry.findings);
+    const a = registry.adapters[adapter];
+    if (!a) {
+      process.stderr.write(`same-page: adapter ${adapter} is not registered. Built-in: ${Object.keys(BUILTIN).join(", ")}. Register others in ${registrationPath()}, outside this repository\n`);
+      return 2;
+    }
+    const g = grantAdapter(root, a.name, a.version, gitActor(root));
+    process.stdout.write(`trusted adapter ${a.name} ${a.version} (${a.capabilities.length ? a.capabilities.join(", ") : "no capabilities"}) for ${g.repository} by ${g.actor}; recorded in ${trustPath()}\n`);
+    return 0;
   }
   if (environment) {
     const g = grantEnvironment(root, environment, gitActor(root));
@@ -520,6 +596,8 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
     return 2;
   }
   const store = readTrustStore();
+  const registry = readRegistry();
+  out.push(...registry.findings);
   const actor = gitActor(root);
   // The execution trust context and the authority of the evidence it
   // produces (ENG-060): a named environment the developer trusted, CI
@@ -569,9 +647,14 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
     // record's freshness unknown (ENG-126).
     const environment: EnvironmentInput[] = fingerprintEnvironment(root, def, true);
     for (const e of environment) if (e.error !== null) out.push({ where: `.same-page/validators/${name}.yaml`, message: `environment input ${e.input} cannot be computed (${e.error}); records written now have unknown freshness`, rule: "ENG-126" });
-    const dependency = dependencyChain("command", snapshotId);
+    const sets = dependencySets(root, def, store, registry.adapters, out);
+    const dependency = dependencyChain(snapshotId, sets.closure);
     const declared = def.environment.map(environmentLabel);
-    const freshness: EvidenceRecord["freshness"] = snapshotId !== null && environment.every((e) => e.error === null) ? "current" : "unknown";
+    const narrowed = dependency.scope === "package";
+    const fingerprint = narrowed ? sets.closureSet!.fingerprint : snapshotId;
+    const provenance: EvidenceRecord["dependency_provenance"] = sets.trace && sets.trace.error === null ? "traced_supplemental" : narrowed ? "adapter_derived" : "conservative";
+    const freshness: EvidenceRecord["freshness"] =
+      (narrowed || snapshotId !== null) && environment.every((e) => e.error === null) && (!sets.trace || sets.trace.error === null) ? "current" : "unknown";
     const result = runValidator(root, def);
     executed++;
     const runId = `${stamp(new Date(result.started_at))}-${name}`;
@@ -617,8 +700,10 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
           validator_digest: d,
           adapter: "command",
           adapter_version: adapterVersion("command"),
-          dependency_fingerprint: snapshotId,
+          dependency_fingerprint: fingerprint,
           environment: environment.map((e) => ({ ...e })),
+          traced: sets.trace && sets.trace.error === null ? [...sets.trace.inputs] : [],
+          traced_fingerprint: sets.trace && sets.trace.error === null ? sets.trace.fingerprint : null,
           contracts: [],
         },
         execution_trust: context,
@@ -627,10 +712,10 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
         sensitivity: "unchallenged",
         challenge: null,
         freshness,
-        boundary: { scope: dependency.scope, root, validator: name, environment: declared },
+        boundary: { scope: dependency.scope, root, project: sets.closure ? sets.closure.project : null, validator: name, environment: declared },
         dependency,
-        dependency_provenance: "conservative",
-        assumptions: [...COMMAND_ASSUMPTIONS],
+        dependency_provenance: provenance,
+        assumptions: def.kind === "formal" ? [...COMMAND_ASSUMPTIONS, ...FORMAL_ASSUMPTIONS] : [...COMMAND_ASSUMPTIONS],
         residual_risk: residualRisk(dependency, declared, "command"),
         authority,
         authority_name: authorityName,
@@ -670,6 +755,8 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
     return 2;
   }
   const store = readTrustStore();
+  const registry = readRegistry();
+  out.push(...registry.findings);
   const actor = gitActor(root);
   const resolved = sharedContext(root, environment, store, out);
   if (resolved === "error") {
@@ -707,8 +794,12 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
     }
     const bound = listed.get(name) ?? [];
     const environmentInputs: EnvironmentInput[] = fingerprintEnvironment(root, def, true);
-    const dependency = dependencyChain("command", snapshotId);
+    const sets = dependencySets(root, def, store, registry.adapters, out);
+    const dependency = dependencyChain(snapshotId, sets.closure);
     const declared = def.environment.map(environmentLabel);
+    const narrowed = dependency.scope === "package";
+    const fingerprint = narrowed ? sets.closureSet!.fingerprint : snapshotId;
+    const provenance: EvidenceRecord["dependency_provenance"] = sets.trace && sets.trace.error === null ? "traced_supplemental" : narrowed ? "adapter_derived" : "conservative";
     for (const c of def.challenges) {
       // A falsifier-derived challenge realizes one requirement's
       // falsifier, so its record belongs to that requirement only
@@ -801,8 +892,10 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
             validator_digest: d,
             adapter: "command",
             adapter_version: adapterVersion("command"),
-            dependency_fingerprint: snapshotId,
+            dependency_fingerprint: fingerprint,
             environment: environmentInputs.map((e) => ({ ...e })),
+            traced: sets.trace && sets.trace.error === null ? [...sets.trace.inputs] : [],
+            traced_fingerprint: sets.trace && sets.trace.error === null ? sets.trace.fingerprint : null,
             contracts: [],
           },
           execution_trust: context,
@@ -810,11 +903,11 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
           binding: attested ? { actor: ref.actor!, actor_type: ref.attested_by!, timestamp: ref.attested_at!, snapshot: ref.snapshot!, developer_confirmed: ref.developer_confirmed === true } : null,
           sensitivity: "challenged",
           challenge: { mechanism: c.mechanism, artifact: c.artifact, from_falsifier: c.from_falsifier, falsifier_digest: c.from_falsifier ? falsifierDigest : null },
-          freshness: snapshotId !== null && environmentInputs.every((e) => e.error === null) ? "current" : "unknown",
-          boundary: { scope: dependency.scope, root, validator: name, environment: declared },
+          freshness: (narrowed || snapshotId !== null) && environmentInputs.every((e) => e.error === null) ? "current" : "unknown",
+          boundary: { scope: dependency.scope, root, project: sets.closure ? sets.closure.project : null, validator: name, environment: declared },
           dependency,
-          dependency_provenance: "conservative",
-          assumptions: [...COMMAND_ASSUMPTIONS, ...CHALLENGE_ASSUMPTIONS],
+          dependency_provenance: provenance,
+          assumptions: def.kind === "formal" ? [...COMMAND_ASSUMPTIONS, ...CHALLENGE_ASSUMPTIONS, ...FORMAL_ASSUMPTIONS] : [...COMMAND_ASSUMPTIONS, ...CHALLENGE_ASSUMPTIONS],
           residual_risk: residualRisk(dependency, declared, "command"),
           authority,
           authority_name: authorityName,
@@ -865,7 +958,7 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
     printFindings([{ where: root, message: "the repository snapshot cannot be computed (a directory or file is unreadable); no chain step establishes a boundary, so the record written now has unknown freshness", rule: "ENG-126" }]);
   }
   const now = new Date().toISOString();
-  const dependency = dependencyChain("manual", snapshotId);
+  const dependency = dependencyChain(snapshotId, null);
   const rec: EvidenceRecord = {
     requirement: id,
     kind: opts.inspectionOnly ? "inspected" : "manual",
@@ -885,6 +978,8 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
       adapter_version: adapterVersion("manual"),
       dependency_fingerprint: snapshotId,
       environment: [],
+      traced: [],
+      traced_fingerprint: null,
       contracts: [],
     },
     execution_trust: null,
@@ -893,7 +988,7 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
     sensitivity: "not_applicable",
     challenge: null,
     freshness: snapshotId === null ? "unknown" : "current",
-    boundary: { scope: dependency.scope, root, validator: null, environment: [] },
+    boundary: { scope: dependency.scope, root, project: null, validator: null, environment: [] },
     dependency,
     dependency_provenance: "conservative",
     assumptions: [...MANUAL_ASSUMPTIONS],
@@ -1025,6 +1120,7 @@ function main(): number {
         "addresses-falsifier": { type: "boolean" },
         "inspection-only": { type: "boolean" },
         environment: { type: "string" },
+        adapter: { type: "string" },
       },
       allowPositionals: true,
       strict: true,
@@ -1047,7 +1143,7 @@ function main(): number {
     case "verify":
       return rest.length === 0 ? verify(root, flag("as-developer")) : usage();
     case "trust":
-      return trust(root, rest[0], str("environment"));
+      return trust(root, rest[0], str("environment"), str("adapter"));
     case "run":
       return run(root, rest, flag("as-developer"), str("environment"));
     case "challenge":

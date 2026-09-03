@@ -22,6 +22,12 @@ required:
     - kind: static
     - kind: manual
 validators:
+  - name: engine-typecheck
+    attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-03T16:11:23.198Z
+    snapshot: workspace:e41641d1ad5ba68f634399adc2333afb917e00dca0e8a7a8f24c8a140b0a9d35
+    developer_confirmed: false
   - name: bun-test
     attested_by: agent
     actor: eas4ai <shawn.payments@gmail.com>

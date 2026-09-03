@@ -17,7 +17,11 @@ export type Grant = { repository: string; validator: string; digest: string; act
 // under the environment's trust, and their evidence carries that
 // authority.
 export type EnvironmentGrant = { repository: string; environment: string; actor: string; granted_at: string };
-export type TrustStore = { version: number; grants: Grant[]; environments: EnvironmentGrant[] };
+// A registered adapter the developer trusted for one repository, bound
+// to its name and version (ENG-065): a re-registered adapter at a new
+// version needs a new grant.
+export type AdapterGrant = { repository: string; adapter: string; version: string; actor: string; granted_at: string };
+export type TrustStore = { version: number; grants: Grant[]; environments: EnvironmentGrant[]; adapters: AdapterGrant[] };
 
 export const TRUST_CONTEXTS = ["developer-invocation", "trust-record", "ci", "named-environment"] as const;
 export type TrustContext = (typeof TRUST_CONTEXTS)[number];
@@ -51,14 +55,15 @@ function isMap(v: YamlValue | undefined): v is YamlMap {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }
 
-export const EMPTY_STORE: TrustStore = { version: 1, grants: [], environments: [] };
+export const EMPTY_STORE: TrustStore = { version: 1, grants: [], environments: [], adapters: [] };
 
 export function readTrustStore(): TrustStore {
   const path = trustPath();
-  if (!existsSync(path)) return { version: 1, grants: [], environments: [] };
+  if (!existsSync(path)) return { version: 1, grants: [], environments: [], adapters: [] };
   const raw = parseYaml(readFileSync(path, "utf8"));
   const grants: Grant[] = [];
   const environments: EnvironmentGrant[] = [];
+  const adapters: AdapterGrant[] = [];
   if (isMap(raw) && Array.isArray(raw["grants"])) {
     for (const g of raw["grants"]) {
       if (!isMap(g)) continue;
@@ -75,7 +80,14 @@ export function readTrustStore(): TrustStore {
       if (s("repository") && s("environment")) environments.push({ repository: s("repository"), environment: s("environment"), actor: s("actor"), granted_at: s("granted_at") });
     }
   }
-  return { version: 1, grants, environments };
+  if (isMap(raw) && Array.isArray(raw["adapters"])) {
+    for (const g of raw["adapters"]) {
+      if (!isMap(g)) continue;
+      const s = (k: string) => (typeof g[k] === "string" ? (g[k] as string) : "");
+      if (s("repository") && s("adapter")) adapters.push({ repository: s("repository"), adapter: s("adapter"), version: s("version"), actor: s("actor"), granted_at: s("granted_at") });
+    }
+  }
+  return { version: 1, grants, environments, adapters };
 }
 
 export function writeTrustStore(store: TrustStore): void {
@@ -85,6 +97,7 @@ export function writeTrustStore(store: TrustStore): void {
     version: store.version,
     grants: store.grants.map((g) => ({ ...g }) as YamlMap),
     environments: store.environments.map((g) => ({ ...g }) as YamlMap),
+    adapters: store.adapters.map((g) => ({ ...g }) as YamlMap),
   };
   writeFileSync(
     path,
@@ -92,7 +105,9 @@ export function writeTrustStore(store: TrustStore): void {
       "Same Page execution trust. Each grant binds one repository, one validator",
       "name, and the digest of its definition; a changed definition needs a new",
       "grant. An environments entry names a trusted environment for one",
-      "repository. This file lives outside every repository it authorizes.",
+      "repository, and an adapters entry names a registered adapter and the",
+      "version the developer trusted. This file lives outside every repository it",
+      "authorizes.",
     ])
   );
 }
@@ -123,6 +138,21 @@ export function grantEnvironment(root: string, environment: string, actor: strin
   const g: EnvironmentGrant = { repository: repo, environment, actor, granted_at: new Date().toISOString() };
   store.environments = store.environments.filter((x) => !(x.repository === repo && x.environment === environment));
   store.environments.push(g);
+  writeTrustStore(store);
+  return g;
+}
+
+export function findAdapterGrant(store: TrustStore, root: string, adapter: string, version: string): AdapterGrant | null {
+  const repo = resolve(root);
+  return store.adapters.find((g) => g.repository === repo && g.adapter === adapter && g.version === version) ?? null;
+}
+
+export function grantAdapter(root: string, adapter: string, version: string, actor: string): AdapterGrant {
+  const store = readTrustStore();
+  const repo = resolve(root);
+  const g: AdapterGrant = { repository: repo, adapter, version, actor, granted_at: new Date().toISOString() };
+  store.adapters = store.adapters.filter((x) => !(x.repository === repo && x.adapter === adapter));
+  store.adapters.push(g);
   writeTrustStore(store);
   return g;
 }

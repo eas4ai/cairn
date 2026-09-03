@@ -26,7 +26,10 @@ which `sync-map` is the only engine command that writes.
 `challenge` runs a validator's declared challenges: a challenge the
 validator notices makes the record challenged with its mechanism named,
 and one the validator passes is weak sensitivity, which withdraws every
-challenged claim of that validator. Every record stores its identity inputs as one block; its
+challenged claim of that validator. A validator that declares a
+`closure:` narrows its boundary below the repository when a registered,
+trusted adapter establishes the input set; a `trace:` widens the
+identity and never narrows. Every record stores its identity inputs as one block; its
 freshness is `current`, `stale` (an identity input such as the
 snapshot, the validator definition, or a declared environment input is
 known to differ: INSUFFICIENT, re-run named), or `unknown` (an input
@@ -49,9 +52,9 @@ the relevant one before a structural change:
   verdict lattice, iterations/002.md), L3 (evidence identity, the third
   freshness state `stale`, environment fingerprints, iterations/004.md),
   L4 (verification authority, the machine view
-  against the evidence map, iterations/005.md), and L5 (challenges and
-  the sensitivity axis, iterations/006.md) are built; layer L6 follows
-  as a further contract. Never describe any layer as absent, deferred, or optional.
+  against the evidence map, iterations/005.md), L5 (challenges and the sensitivity
+  axis, iterations/006.md), and L6 (the adapter registry and sound
+  narrowing, iterations/007.md) are built. All six layers are built. Never describe any layer as absent, deferred, or optional.
   Sequencing is the developer's, and so is any deferral.
 
 ## Commands
@@ -120,9 +123,9 @@ environment grants under $SAME_PAGE_HOME or ~/.same-page, never inside
 the repository),
 evidence.ts (records with the identity block, the boundary, the
 dependency chain, and the residual risk; runs, disproofs,
-acknowledgments under .same-page/evidence/), adapters.ts (the
-capability registry: command and manual, each with a version, no
-capabilities), evaluate.ts (three-state freshness over the identity
+acknowledgments under .same-page/evidence/), adapters.ts (the capability registry: the built-in command,
+manual, and tsc-closure, plus registrations under
+$SAME_PAGE_HOME/adapters.yaml), evaluate.ts (three-state freshness over the identity
 inputs and the verdict lattice), same-page.ts (elaborate, verify, trust, run, attest,
 acknowledge, policy confirm, challenge, sync-map;
 exit 0 clean, 1 findings or verdicts below SUFFICIENT, 2 usage).
@@ -229,9 +232,10 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/005.md
-  (engine layer L4, authority and map comparison); 001 (L1), 002 (L2),
-  003 (the CONF revision), and 004 (L3) are closed. Work outside it is
+- The current iteration contract is docs/specs/same-page/iterations/007.md
+  (engine layer L6, ecosystem adapters and sound narrowing); 001 (L1),
+  002 (L2), 003 (the CONF revision), 004 (L3), 005 (L4), and 006 (L5)
+  are closed. Work outside it is
   captured via /next-iteration -- surfaced and staged, never implemented
   ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec

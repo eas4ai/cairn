@@ -9,7 +9,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { digest } from "./digest.ts";
 import { METHODS, type Finding, type Method } from "./policy.ts";
 import { parseYaml, stringifyYaml, type YamlMap, type YamlValue } from "./yaml.ts";
@@ -37,6 +37,19 @@ export type ChallengeDecl = {
   timeout: number;
 };
 
+// A dependency closure an adapter establishes for this validator
+// (ENG-124 step one): the adapter computes the input set, the developer
+// grants the adapter outside the repository, and `runner` names the
+// binary the adapter drives. The adapter owns the flags that make the
+// output a complete list, so the repository never hand-declares one
+// (ENG-122).
+export type ClosureDecl = { adapter: string; runner: string[]; project: string };
+
+// A supplemental trace (ENG-041, ENG-042): further inputs, computed by
+// a command, that widen a record's identity. A trace never narrows a
+// scope and never establishes completeness.
+export type TraceDecl = { command: string[] };
+
 export type ValidatorDef = {
   name: string;
   kind: Method;
@@ -46,9 +59,11 @@ export type ValidatorDef = {
   timeout: number; // seconds
   environment: EnvironmentDecl[];
   challenges: ChallengeDecl[];
+  closure: ClosureDecl | null;
+  trace: TraceDecl | null;
 };
 
-const FIELDS = ["name", "kind", "command", "cwd", "shell", "timeout", "environment", "challenges"];
+const FIELDS = ["name", "kind", "command", "cwd", "shell", "timeout", "environment", "challenges", "closure", "trace"];
 const ENVIRONMENT_TIMEOUT_MS = 60_000;
 
 export function validatorsDir(root: string): string {
@@ -162,6 +177,36 @@ function parseChallenges(root: string, raw: YamlValue | undefined, where: string
   return out;
 }
 
+function parseClosure(raw: YamlValue | undefined, where: string, findings: Finding[]): ClosureDecl | null {
+  if (raw === undefined) return null;
+  if (!isMap(raw) || typeof raw["adapter"] !== "string" || raw["adapter"] === "") {
+    findings.push({ where, message: "a closure names the adapter that establishes it, the runner it drives, and the project it covers", rule: "ENG-055" });
+    return null;
+  }
+  const runner = raw["runner"];
+  if (!isArgv(runner)) {
+    findings.push({ where, message: "a closure names a runner: the argv of the tool the adapter drives", rule: "ENG-128" });
+    return null;
+  }
+  const project = raw["project"];
+  if (typeof project !== "string" || project === "") {
+    findings.push({ where, message: "a closure names the project it covers", rule: "ENG-128" });
+    return null;
+  }
+  for (const k of Object.keys(raw)) if (!["adapter", "runner", "project"].includes(k)) findings.push({ where, message: `unknown closure field ${k}`, rule: "ENG-055" });
+  return { adapter: raw["adapter"], runner, project };
+}
+
+function parseTrace(raw: YamlValue | undefined, where: string, findings: Finding[]): TraceDecl | null {
+  if (raw === undefined) return null;
+  if (!isMap(raw) || !isArgv(raw["command"])) {
+    findings.push({ where, message: "a trace is a command (argv) that names further inputs, one path per line; a trace never narrows a scope", rule: "ENG-042" });
+    return null;
+  }
+  for (const k of Object.keys(raw)) if (k !== "command") findings.push({ where, message: `unknown trace field ${k}`, rule: "ENG-042" });
+  return { command: raw["command"] };
+}
+
 export function readValidator(root: string, name: string): { def: ValidatorDef | null; findings: Finding[] } {
   const where = `.same-page/validators/${name}.yaml`;
   const path = join(validatorsDir(root), `${name}.yaml`);
@@ -193,9 +238,11 @@ export function readValidator(root: string, name: string): { def: ValidatorDef |
   for (const k of Object.keys(raw)) if (!FIELDS.includes(k)) findings.push({ where, message: `unknown field ${k}`, rule: "ENG-161" });
   const environment = parseEnvironment(raw["environment"], where, findings);
   const challenges = parseChallenges(root, raw["challenges"], where, findings);
+  const closure = parseClosure(raw["closure"], where, findings);
+  const trace = parseTrace(raw["trace"], where, findings);
   if (findings.length) return { def: null, findings };
   return {
-    def: { name, kind: kind as Method, command: command as string[], cwd: typeof cwd === "string" ? cwd : ".", shell: shell === true, timeout: typeof timeout === "number" ? timeout : 600, environment, challenges },
+    def: { name, kind: kind as Method, command: command as string[], cwd: typeof cwd === "string" ? cwd : ".", shell: shell === true, timeout: typeof timeout === "number" ? timeout : 600, environment, challenges, closure, trace },
     findings,
   };
 }
@@ -211,6 +258,8 @@ export function validatorText(def: ValidatorDef): string {
   map["environment"] = def.environment.map((d): YamlMap => ("command" in d ? { command: [...d.command] } : { file: d.file }));
   if (def.challenges.length)
     map["challenges"] = def.challenges.map((c): YamlMap => ({ mechanism: c.mechanism, artifact: c.artifact, command: [...c.command], from_falsifier: c.from_falsifier, requirement: c.requirement, timeout: c.timeout }));
+  if (def.closure) map["closure"] = { adapter: def.closure.adapter, runner: [...def.closure.runner], project: def.closure.project };
+  if (def.trace) map["trace"] = { command: [...def.trace.command] };
   return stringifyYaml(map);
 }
 
@@ -289,4 +338,45 @@ function runArgv(root: string, cwdRel: string, command: string[], shell: boolean
   if (r.error) return { ...base, result: "error", error: `${r.error.code === "ETIMEDOUT" ? "timed out" : r.error.message}` };
   if (r.status === null) return { ...base, result: "error", error: `terminated by signal ${r.signal ?? "unknown"}` };
   return { ...base, result: r.status === 0 ? "pass" : "fail", error: null };
+}
+
+// One dependency set an adapter or a trace established: the inputs and
+// the fingerprint over them, or the reason it could not be computed.
+export type InputSet = { inputs: string[]; fingerprint: string | null; error: string | null };
+
+function digestOf(root: string, cwd: string, path: string): string {
+  const full = isAbsolute(path) ? path : join(root, cwd, path);
+  try {
+    if (!existsSync(full) || !statSync(full).isFile()) return "absent";
+    return digest(readFileSync(full, "utf8"));
+  } catch {
+    return "unreadable";
+  }
+}
+
+function fingerprintPaths(root: string, cwd: string, paths: string[]): string {
+  const sorted = [...new Set(paths)].sort();
+  return digest(sorted.map((p) => `${p}=${digestOf(root, cwd, p)}`).join("\n"));
+}
+
+// Run a command that prints one path per line and fingerprint what it
+// named. The engine never reads a path list from a definition
+// (ENG-122): the tool computes it.
+export function computeInputSet(root: string, cwd: string, argv: string[], timeoutSeconds: number): InputSet {
+  const r = spawnSync(argv[0]!, argv.slice(1), { cwd: join(root, cwd), encoding: "utf8", timeout: timeoutSeconds * 1000, maxBuffer: 64 * 1024 * 1024 });
+  if (r.error) return { inputs: [], fingerprint: null, error: r.error.code === "ETIMEDOUT" ? "timed out" : r.error.message };
+  if (r.status !== 0) return { inputs: [], fingerprint: null, error: `exit ${r.status ?? `signal ${r.signal ?? "unknown"}`}: ${(r.stderr ?? "").trim().split("\n")[0] ?? ""}`.trim() };
+  const inputs = (r.stdout ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "");
+  if (inputs.length === 0) return { inputs: [], fingerprint: null, error: "the command named no inputs" };
+  return { inputs, fingerprint: fingerprintPaths(root, cwd, inputs), error: null };
+}
+
+// The built-in tsc closure adapter owns the flags that make the output
+// complete; the definition names only the runner and the project.
+export function closureArgv(adapterName: string, adapterCommand: string[] | null, c: ClosureDecl): string[] {
+  if (adapterName === "tsc-closure") return [...c.runner, "--noEmit", "-p", c.project, "--listFiles"];
+  return [...(adapterCommand ?? []), c.project];
 }

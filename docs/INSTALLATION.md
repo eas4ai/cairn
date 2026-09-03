@@ -58,7 +58,10 @@ name the step at every stage close.
 Execution trust for validators lives under `~/.same-page/trust.yaml`
 (or `$SAME_PAGE_HOME/trust.yaml`), never inside a repository; the
 developer writes it with `same-page trust <validator>`, and names a
-trusted environment with `same-page trust --environment <name>`. A run
-inside CI needs no grant: owner-controlled CI configuration in the
-repository is the trust anchor, and its evidence carries `ci`
-authority.
+trusted environment with `same-page trust --environment <name>`. A run inside CI needs no grant: owner-controlled CI configuration in
+the repository is the trust anchor, and its evidence carries `ci`
+authority. Adapters that establish dependency closures are registered
+in `$SAME_PAGE_HOME/adapters.yaml` (name, version, capabilities,
+command) and trusted per repository with `same-page trust --adapter
+<name>`; the built-in ones are `command`, `manual`, and
+`tsc-closure`.

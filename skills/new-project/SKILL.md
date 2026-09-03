@@ -104,9 +104,17 @@ challenged sensitivity by hand. A challenge the validator passes is
 weak sensitivity: report it as a finding about the mechanism, never as
 a fault in the requirement.
 
-Layers L1 through L5 are built; ecosystem adapters with boundaries
-narrower than the repository are the next layer, under its own
-iteration contract.
+A boundary narrower than the repository needs an adapter that
+established the input set: a validator declares `closure:` with the
+adapter, the runner it drives, and the project, and the developer
+trusts the adapter with `same-page trust --adapter <name>`. Never
+declare a file list by hand, and never claim a narrower scope than an
+adapter established. A declared `trace:` widens what invalidates a
+record and narrows nothing.
+
+All six construction layers are built. An adapter for a new ecosystem
+is a registration in the developer's `$SAME_PAGE_HOME/adapters.yaml`
+with its capabilities, not a change to the engine.
 
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in

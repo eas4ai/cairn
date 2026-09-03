@@ -1000,13 +1000,52 @@ that the validator means the same thing as the sentence: a challenged
 entry carries that correspondence as an assumption, and no engine
 output says proven (ENG-001, ENG-175).
 
+Layer L6 (iteration 007) is where a boundary narrower than the whole
+repository becomes possible without becoming a lie. Every adapter is
+registered with explicit capabilities (ENG-055): `command` and
+`manual` hold none, `tsc-closure` holds
+`can_establish_complete_dependencies`, and further adapters are
+registered by the developer in `$SAME_PAGE_HOME/adapters.yaml`,
+outside the repository, because a repository that could register its
+own capabilities could grant itself anything. A claim the
+registration does not carry is refused (ENG-056).
+
+A validator declares `closure:` naming such an adapter, the runner it
+drives, and the project it covers. The adapter, not the repository,
+owns the flags that make the output complete: for `tsc-closure` that
+is the compiler's own `--listFiles`, which prints every file the
+program reads. The developer trusts the adapter with `same-page trust
+--adapter tsc-closure`, and without that grant the boundary simply
+stays the repository and the entry says so. With it, chain step one
+succeeds: the record's scope becomes `package`, its provenance
+`adapter_derived`, its dependency fingerprint covers the closure
+instead of the snapshot, and the narrowing is written down as a
+reviewable act naming the adapter, its version, the project, and the
+input count (ENG-128, ENG-129). On this package the engine's own type
+check narrows to 72 inputs, so editing this manual leaves that record
+current while a change to any file the compiler reads makes it stale.
+That is the only kind of narrowing the engine accepts: one where a
+mechanism established the set, and the act is on the record for a
+person to review.
+
+A trace is the other direction. A validator that declares `trace:`
+runs a command that names further inputs, and those inputs widen the
+record's identity: a traced file outside the repository becomes
+something that can make the record stale. A trace never narrows a
+scope and never establishes completeness (ENG-041, ENG-042). And a
+formal result, when a verifier backend produces one, establishes the
+formalized obligation under its declared preconditions and trusted
+computing base, with the correspondence between the sentence and the
+model recorded as an assumption on every entry (ENG-166, ENG-167).
+
 The engine still writes no spec, and it writes the evidence map only
 through that one command (ENG-011, ENG-197): the engine computes; the
 map remains the human's claim.
 
-The next layer, under its own contract: ecosystem adapters that
-establish backend bindings, complete closures, and boundaries narrower
-than the repository (L6).
+All six layers are built. What the registry leaves open is the
+ecosystem: an adapter for a database schema, a browser surface, a
+service contract, or a formal verifier is a registration and a
+capability, not a new layer.
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof

@@ -21,5 +21,11 @@ required:
     - kind: test
     - kind: static
     - kind: manual
-validators: []
+validators:
+  - name: bun-test
+    attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-03T16:11:23.196Z
+    snapshot: workspace:e41641d1ad5ba68f634399adc2333afb917e00dca0e8a7a8f24c8a140b0a9d35
+    developer_confirmed: false
 sentence: The engine MUST NOT treat a formal proof as eliminating the correspondence assumption between a natural-language requirement and its formal model.

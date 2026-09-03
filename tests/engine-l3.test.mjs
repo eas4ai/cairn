@@ -199,7 +199,7 @@ test("every record stores its identity inputs as one block; a record lacking one
   const p = project();
   const { sha } = withEnvironment(p);
   const [rec] = records(p, "BRK-001");
-  expect(Object.keys(rec.identity).sort()).toEqual(["adapter", "adapter_version", "contracts", "dependency_fingerprint", "environment", "falsifier_digest", "obligation_digest", "requirement", "requirement_digest", "snapshot", "validator_digest"]);
+  expect(Object.keys(rec.identity).sort()).toEqual(["adapter", "adapter_version", "contracts", "dependency_fingerprint", "environment", "falsifier_digest", "obligation_digest", "requirement", "requirement_digest", "snapshot", "traced", "traced_fingerprint", "validator_digest"]);
   expect(rec.identity.snapshot).toBe(`git:${sha}`);
   expect(rec.identity.dependency_fingerprint).toBe(`git:${sha}`);
   expect(rec.identity.requirement).toBe("BRK-001");
@@ -326,6 +326,7 @@ test("the dependency scope comes from the chain, first step that succeeds, recor
       { step: 3, mechanism: "repository boundary", outcome: `established: ${rec.identity.snapshot}` },
     ],
     narrowing: "none",
+    inputs: 0,
   });
   expect(rec.dependency_provenance).toBe("conservative");
   expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
@@ -336,23 +337,30 @@ test("the dependency scope comes from the chain, first step that succeeds, recor
   expect(e).toContain("Dependency:  repository via chain step 3 (1 trusted adapter dependency closure: no mechanism; 2 package or service boundary: no mechanism; 3 repository boundary: established: git:");
   expect(e).toContain("narrowing: none");
   writeFileSync(join(p.root, "b.txt"), "b\n");
-  // A record claiming a narrower scope with no mechanism, or a narrowing act, is refused.
+  // A record claiming a narrower scope with no narrowing act is refused.
   editRecord(p, "BRK-001", (t) => t.replace("  scope: repository\n  step: 3", "  scope: package\n  step: 3"));
   let v = run(["verify"], p);
-  expect(v.stdout).toContain("dependency scope package is narrower than the repository and no registered mechanism established its completeness; the conservative floor is the repository (ENG-128)");
+  expect(v.stdout).toContain("a dependency scope narrower than the repository names the reviewable act that established its completeness (ENG-129)");
   expect(entry(v.stdout, "BRK-001")).toContain("Evidence:    none");
+  // A narrowing act at the conservative floor is refused: nothing was narrowed.
   run(["run", "reads-a"], p);
   editRecord(p, "BRK-001", (t) => t.replace("  narrowing: none", "  narrowing: symbols"));
   v = run(["verify"], p);
-  expect(v.stdout).toContain("dependency narrowing symbols names no reviewable narrowing act");
+  expect(v.stdout).toContain("dependency narrowing symbols claims an act at the conservative floor");
   expect(v.stdout).toContain("(ENG-129)");
+  // A narrowed scope whose act names no capable registered adapter is refused.
+  run(["run", "reads-a"], p);
+  editRecord(p, "BRK-001", (t) => t.replace("  scope: repository\n  step: 3", "  scope: package\n  step: 1").replace("  narrowing: none", "  narrowing: my-tool 9 established a complete closure"));
+  v = run(["verify"], p);
+  expect(v.stdout).toContain("the narrowing act names no registered adapter that can establish complete dependencies");
+  expect(v.stdout).toContain("(ENG-128)");
 });
 
 test("the boundary is a recorded structure and every entry states the residual risk outside it; nothing outside is claimed (ENG-130, ENG-132, ENG-133)", () => {
   const p = project();
   withEnvironment(p);
   const [rec] = records(p, "BRK-001");
-  expect(rec.boundary).toEqual({ scope: "repository", root: p.root, validator: "envv", environment: [`command cat ${join(p.home, "tool-version")}`, "file tool.lock"] });
+  expect(rec.boundary).toEqual({ scope: "repository", root: p.root, project: null, validator: "envv", environment: [`command cat ${join(p.home, "tool-version")}`, "file tool.lock"] });
   expect(rec.assumptions).toEqual(["the declared environment inputs are the inputs that decide this validator's result"]);
   expect(rec.residual_risk).toEqual([
     "inputs outside the repository root: system packages, services, the network, and anything the snapshot does not contain",
@@ -458,7 +466,7 @@ test("a standing disproof on stale evidence stays standing, and manual evidence 
   expect(m.identity.validator_digest).toBeNull();
   expect(m.identity.environment).toEqual([]);
   expect(m.identity.snapshot).toMatch(/^workspace:/);
-  expect(m.boundary).toEqual({ scope: "repository", root: p.root, validator: null, environment: [] });
+  expect(m.boundary).toEqual({ scope: "repository", root: p.root, project: null, validator: null, environment: [] });
   expect(m.dependency.scope).toBe("repository");
   expect(m.residual_risk).toContain("environment drift: manual evidence declares no environment inputs, so no drift is detected");
   const me = entry(run(["verify"], p).stdout, "BRK-001");

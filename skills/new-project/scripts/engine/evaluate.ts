@@ -14,12 +14,12 @@
 // result from any authority is FAILING: a demonstrated counterexample
 // is never hidden behind authority.
 
-import { adapterVersion } from "./adapters.ts";
+import { BUILTIN, adapterVersion, type Adapter } from "./adapters.ts";
 import { authorityLabel, sameAuthority, type Authority } from "./authority.ts";
 import type { Disproof, StoredRecord, WeakSensitivity } from "./evidence.ts";
 import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
-import type { EnvironmentInput } from "./validators.ts";
+import type { EnvironmentInput, InputSet } from "./validators.ts";
 
 export type Verdict = "FAILING" | "BLOCKED" | "INSUFFICIENT" | "SUFFICIENT";
 
@@ -36,6 +36,12 @@ export type Present = {
   snapshot: string | null;
   validatorDigests: Map<string, string | null>;
   environments: Map<string, EnvironmentInput[] | null>;
+  // The dependency sets as they stand now, per validator: the adapter
+  // closure that narrows the boundary, and the supplemental trace that
+  // widens it.
+  closures: Map<string, InputSet | null>;
+  traces: Map<string, InputSet | null>;
+  adapters: Record<string, Adapter>;
 };
 
 export type Evaluation = {
@@ -65,13 +71,34 @@ export function assess(o: Obligation, records: StoredRecord[], present: Present,
     const id = record.identity;
     const unknown: string[] = [];
     const stale: string[] = [];
-    if (id.snapshot === null) unknown.push("recorded with no snapshot: no chain step established a boundary at run time");
-    if (present.snapshot === null) unknown.push("the repository snapshot cannot be computed now");
+    const narrowed = record.dependency.scope === "package";
+    if (id.snapshot === null && !narrowed) unknown.push("recorded with no snapshot: no chain step established a boundary at run time");
+    if (present.snapshot === null && !narrowed) unknown.push("the repository snapshot cannot be computed now");
     if (id.requirement_digest !== o.requirement_digest || id.falsifier_digest !== o.falsifier_digest) stale.push("recorded for a prior requirement or falsifier text");
     if (id.obligation_digest !== obligation) stale.push("the obligation changed since the record (locator, keyword, or validator names)");
-    if (id.snapshot !== null && present.snapshot !== null && id.snapshot !== present.snapshot) stale.push(`recorded at ${id.snapshot}, current snapshot ${present.snapshot}`);
-    if (id.dependency_fingerprint !== id.snapshot) stale.push("the dependency fingerprint does not match the snapshot it was recorded for");
-    if (id.adapter_version !== adapterVersion(id.adapter)) stale.push(`adapter ${id.adapter} was version ${id.adapter_version}, now ${adapterVersion(id.adapter)}`);
+    // A record at the conservative floor is bound to the whole
+    // snapshot; a narrowed record is bound to its closure instead, so a
+    // change outside the closure leaves it current (ENG-125 holds
+    // inside the recorded boundary, ENG-132).
+    if (!narrowed) {
+      if (id.snapshot !== null && present.snapshot !== null && id.snapshot !== present.snapshot) stale.push(`recorded at ${id.snapshot}, current snapshot ${present.snapshot}`);
+      if (id.dependency_fingerprint !== id.snapshot) stale.push("the dependency fingerprint does not match the snapshot it was recorded for");
+    } else if (record.validator) {
+      const now = present.closures.get(record.validator);
+      if (now === undefined || now === null) unknown.push(`the ${record.dependency.narrowing.split(" ")[0] ?? "adapter"} closure cannot be recomputed now`);
+      else if (now.error !== null) unknown.push(`the adapter closure cannot be recomputed now (${now.error})`);
+      else if (now.fingerprint !== id.dependency_fingerprint) stale.push(`the adapter closure changed: ${now.inputs.length} input(s) now fingerprint differently`);
+    }
+    const registry = Object.keys(present.adapters).length ? present.adapters : BUILTIN;
+    if (id.adapter_version !== adapterVersion(id.adapter, registry)) stale.push(`adapter ${id.adapter} was version ${id.adapter_version}, now ${adapterVersion(id.adapter, registry)}`);
+    // A supplemental trace widens the identity: what it named is an
+    // input like any other (ENG-041).
+    if (id.traced_fingerprint !== null && record.validator) {
+      const now = present.traces.get(record.validator);
+      if (now === undefined || now === null) unknown.push("the supplemental trace cannot be recomputed now");
+      else if (now.error !== null) unknown.push(`the supplemental trace cannot be recomputed now (${now.error})`);
+      else if (now.fingerprint !== id.traced_fingerprint) stale.push(`a traced input changed: ${now.inputs.length} traced input(s) now fingerprint differently`);
+    }
     if (record.validator) {
       const d = present.validatorDigests.get(record.validator);
       if (d === undefined) unknown.push(`validator ${record.validator} is not defined now`);

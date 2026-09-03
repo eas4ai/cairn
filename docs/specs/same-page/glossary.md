@@ -269,6 +269,12 @@ those and nothing else. Drift outside the declaration is residual
 risk, never a claim.
 _Avoid_: toolchain hash (when the fingerprint is meant)
 
+**Dependency closure**:
+The input set a registered adapter established as complete inside a
+verification boundary. It is the only ground for a scope narrower than
+the repository, and the narrowing is recorded as a reviewable act.
+_Avoid_: file list (when a closure is meant)
+
 **Verification authority**:
 Which execution context's evidence counts as authoritative for a
 snapshot: `ci`, `local`, or `named-environment`. Non-authoritative

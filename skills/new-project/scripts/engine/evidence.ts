@@ -9,7 +9,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { adapterHas, type AdapterName } from "./adapters.ts";
+import { adapterHas, type Adapter, type AdapterName } from "./adapters.ts";
 import { AUTHORITIES, evidenceRoot, authorityLabel, type Authority } from "./authority.ts";
 import { METHODS, type Finding, type Method } from "./policy.ts";
 import type { TrustContext } from "./trust.ts";
@@ -21,12 +21,20 @@ export const BINDING_BASES = ["none", "attested", "backend"] as const;
 export const SENSITIVITIES = ["unchallenged", "challenged", "not_applicable"] as const;
 export const FRESHNESS = ["current", "stale", "unknown"] as const;
 export const PROVENANCE = ["conservative", "adapter_derived", "traced_supplemental"] as const;
-export const SCOPES = ["repository", "unknown"] as const;
+export const SCOPES = ["repository", "package", "unknown"] as const;
 
 // What a challenged record carries (ENG-035, ENG-036, ENG-037): the
 // mechanism, the reviewable artifact, whether the challenge derives
 // from the confirmed falsifier, and the falsifier digest it realizes.
 export type ChallengeFacts = { mechanism: Mechanism; artifact: string; from_falsifier: boolean; falsifier_digest: string | null };
+
+// ENG-166, ENG-167: a proof establishes the formalized obligation under
+// its declared preconditions and trusted computing base. What it never
+// establishes is that the sentence and the model say the same thing.
+export const FORMAL_ASSUMPTIONS = [
+  "a formal result establishes the formalized obligation under its declared preconditions, assumptions, and trusted computing base",
+  "the correspondence between the requirement sentence and the formal model stays an assumption",
+];
 
 export const CHALLENGE_ASSUMPTIONS = ["a challenge raises sensitivity; the correspondence between the requirement sentence and the validator stays an assumption"];
 
@@ -48,6 +56,10 @@ export type Identity = {
   adapter_version: string;
   dependency_fingerprint: string | null;
   environment: EnvironmentInput[];
+  // Inputs a supplemental trace named (ENG-041): they widen the
+  // identity and never narrow the scope.
+  traced: string[];
+  traced_fingerprint: string | null;
   contracts: string[];
 };
 
@@ -61,13 +73,16 @@ export type Scope = (typeof SCOPES)[number];
 // registry; step three is the repository snapshot; step four is the
 // answer when nothing established a boundary (ENG-126).
 export type ChainStep = { step: number; mechanism: string; outcome: string };
-export type Dependency = { scope: Scope; step: number; chain: ChainStep[]; narrowing: "none" };
+// `narrowing` is "none" at the conservative floor, and otherwise the
+// reviewable act that narrowed it (ENG-129): which adapter, at which
+// version, over which project, establishing how many inputs.
+export type Dependency = { scope: Scope; step: number; chain: ChainStep[]; narrowing: string; inputs: number };
 
 // The envelope inside which the record claims freshness (ENG-130): the
 // scope, the root it was established for, the validator definition (its
 // digest is on the identity), and the declared environment inputs. The
 // record's assumptions axis names the boundary's assumptions.
-export type Boundary = { scope: Scope; root: string; validator: string | null; environment: string[] };
+export type Boundary = { scope: Scope; root: string; project: string | null; validator: string | null; environment: string[] };
 
 export type EvidenceRecord = {
   requirement: string;
@@ -97,22 +112,45 @@ export type EvidenceRecord = {
 export const COMMAND_ASSUMPTIONS = ["the declared environment inputs are the inputs that decide this validator's result"];
 export const MANUAL_ASSUMPTIONS = ["manual evidence: the actor's account is the mechanism", "manual evidence declares no environment inputs"];
 
-export function dependencyChain(adapter: AdapterName, snapshot: string | null): Dependency {
+// The chain of ENG-124, taking the first step that succeeds. Step one
+// succeeds when a trusted adapter established a complete closure; the
+// narrowing it performed is recorded as a reviewable act (ENG-129).
+export type Closure = { adapter: string; version: string; project: string; inputs: number; grantedBy: string };
+
+export function dependencyChain(snapshot: string | null, closure: Closure | null): Dependency {
   const chain: ChainStep[] = [
-    { step: 1, mechanism: "trusted adapter dependency closure", outcome: adapterHas(adapter, "can_establish_complete_dependencies") ? "established" : "no mechanism" },
+    {
+      step: 1,
+      mechanism: "trusted adapter dependency closure",
+      outcome: closure ? `established: ${closure.adapter} ${closure.version} over ${closure.project}, ${closure.inputs} input(s)` : "no mechanism",
+    },
     { step: 2, mechanism: "package or service boundary", outcome: "no mechanism" },
     { step: 3, mechanism: "repository boundary", outcome: snapshot === null ? "not established: the snapshot cannot be computed" : `established: ${snapshot}` },
   ];
-  if (snapshot !== null) return { scope: "repository", step: 3, chain, narrowing: "none" };
+  if (closure)
+    return {
+      scope: "package",
+      step: 1,
+      chain,
+      narrowing: `${closure.adapter} ${closure.version} established a complete closure of ${closure.inputs} input(s) over ${closure.project}, trusted for this repository by ${closure.grantedBy}`,
+      inputs: closure.inputs,
+    };
+  if (snapshot !== null) return { scope: "repository", step: 3, chain, narrowing: "none", inputs: 0 };
   chain.push({ step: 4, mechanism: "none", outcome: "freshness unknown" });
-  return { scope: "unknown", step: 4, chain, narrowing: "none" };
+  return { scope: "unknown", step: 4, chain, narrowing: "none", inputs: 0 };
 }
 
 // ENG-133, ENG-152: what the boundary does not cover, stated on the
 // record so `same-page verify` can state it on the entry.
 export function residualRisk(dep: Dependency, environment: string[], adapter: AdapterName): string[] {
   const out: string[] = [];
-  out.push(dep.scope === "repository" ? "inputs outside the repository root: system packages, services, the network, and anything the snapshot does not contain" : "no dependency scope was established; nothing is inside a boundary");
+  out.push(
+    dep.scope === "repository"
+      ? "inputs outside the repository root: system packages, services, the network, and anything the snapshot does not contain"
+      : dep.scope === "package"
+        ? `inputs outside the ${dep.inputs}-input closure the adapter established, and the assumption that the runner it drove is the tool it claims to be`
+        : "no dependency scope was established; nothing is inside a boundary"
+  );
   if (adapter === "manual") out.push("environment drift: manual evidence declares no environment inputs, so no drift is detected");
   else out.push(environment.length ? `environment drift outside the declared inputs (${environment.join(", ")})` : "environment drift: no environment inputs are declared, so no drift is detected");
   return out;
@@ -167,6 +205,8 @@ export function recordToYaml(r: EvidenceRecord): YamlMap {
       adapter_version: r.identity.adapter_version,
       dependency_fingerprint: r.identity.dependency_fingerprint,
       environment: environmentToYaml(r.identity.environment),
+      traced: [...r.identity.traced],
+      traced_fingerprint: r.identity.traced_fingerprint,
       contracts: [...r.identity.contracts],
     },
     execution_trust: r.execution_trust ? ({ ...r.execution_trust } as YamlMap) : null,
@@ -175,8 +215,8 @@ export function recordToYaml(r: EvidenceRecord): YamlMap {
     sensitivity: r.sensitivity,
     challenge: r.challenge ? ({ ...r.challenge } as YamlMap) : null,
     freshness: r.freshness,
-    boundary: { scope: r.boundary.scope, root: r.boundary.root, validator: r.boundary.validator, environment: [...r.boundary.environment] },
-    dependency: { scope: r.dependency.scope, step: r.dependency.step, chain: r.dependency.chain.map((c) => ({ ...c }) as YamlMap), narrowing: r.dependency.narrowing },
+    boundary: { scope: r.boundary.scope, root: r.boundary.root, project: r.boundary.project, validator: r.boundary.validator, environment: [...r.boundary.environment] },
+    dependency: { scope: r.dependency.scope, step: r.dependency.step, chain: r.dependency.chain.map((c) => ({ ...c }) as YamlMap), narrowing: r.dependency.narrowing, inputs: r.dependency.inputs },
     dependency_provenance: r.dependency_provenance,
     assumptions: [...r.assumptions],
     residual_risk: [...r.residual_risk],
@@ -236,6 +276,8 @@ function parseIdentity(raw: YamlValue | undefined, where: string, findings: Find
     adapter_version: String(raw["adapter_version"]),
     dependency_fingerprint: strOrNull(raw["dependency_fingerprint"]),
     environment: (env as YamlMap[]).map((e) => ({ input: String(e["input"]), value: strOrNull(e["value"]), error: strOrNull(e["error"]) })),
+    traced: strings(raw["traced"]),
+    traced_fingerprint: strOrNull(raw["traced_fingerprint"]),
     contracts: strings(raw["contracts"]),
   };
 }
@@ -249,10 +291,10 @@ function parseBoundary(raw: YamlValue | undefined, where: string, findings: Find
     findings.push({ where, message: "a boundary records scope, root, validator, and the declared environment inputs", rule: "ENG-130" });
     return null;
   }
-  return { scope: raw["scope"], root: raw["root"], validator: strOrNull(raw["validator"]), environment: strings(raw["environment"]) };
+  return { scope: raw["scope"], root: raw["root"], project: strOrNull(raw["project"]), validator: strOrNull(raw["validator"]), environment: strings(raw["environment"]) };
 }
 
-function parseDependency(raw: YamlValue | undefined, where: string, findings: Finding[]): Dependency | null {
+function parseDependency(raw: YamlValue | undefined, where: string, findings: Finding[], adapters: Record<string, Adapter>): Dependency | null {
   if (!isMap(raw)) {
     findings.push({ where, message: "record has no dependency scope; the chain that established it is not recorded", rule: "ENG-124" });
     return null;
@@ -262,8 +304,22 @@ function parseDependency(raw: YamlValue | undefined, where: string, findings: Fi
     findings.push({ where, message: `dependency scope ${String(scope)} is narrower than the repository and no registered mechanism established its completeness; the conservative floor is the repository`, rule: "ENG-128" });
     return null;
   }
-  if (raw["narrowing"] !== "none") {
-    findings.push({ where, message: `dependency narrowing ${String(raw["narrowing"])} names no reviewable narrowing act; no registered mechanism narrows`, rule: "ENG-129" });
+  const narrowing = typeof raw["narrowing"] === "string" ? (raw["narrowing"] as string) : "";
+  // ENG-128, ENG-129: a narrowed scope names the reviewable act that
+  // narrowed it, and that act names a registered adapter holding
+  // can_establish_complete_dependencies.
+  if (scope === "package") {
+    if (narrowing === "none" || narrowing === "") {
+      findings.push({ where, message: "a dependency scope narrower than the repository names the reviewable act that established its completeness", rule: "ENG-129" });
+      return null;
+    }
+    const named = Object.keys(adapters).find((n) => narrowing.startsWith(`${n} `));
+    if (!named || !adapterHas(adapters, named, "can_establish_complete_dependencies")) {
+      findings.push({ where, message: `the narrowing act names no registered adapter that can establish complete dependencies: ${narrowing}`, rule: "ENG-128" });
+      return null;
+    }
+  } else if (narrowing !== "none") {
+    findings.push({ where, message: `dependency narrowing ${narrowing} claims an act at the conservative floor; a record at repository scope narrows nothing`, rule: "ENG-129" });
     return null;
   }
   const chain = raw["chain"];
@@ -272,12 +328,19 @@ function parseDependency(raw: YamlValue | undefined, where: string, findings: Fi
     return null;
   }
   const step = raw["step"];
-  return { scope, step: typeof step === "number" ? step : scope === "repository" ? 3 : 4, chain: (chain as YamlMap[]).map((c) => ({ step: c["step"] as number, mechanism: String(c["mechanism"] ?? ""), outcome: String(c["outcome"] ?? "") })), narrowing: "none" };
+  const inputs = raw["inputs"];
+  return {
+    scope,
+    step: typeof step === "number" ? step : scope === "package" ? 1 : scope === "repository" ? 3 : 4,
+    chain: (chain as YamlMap[]).map((c) => ({ step: c["step"] as number, mechanism: String(c["mechanism"] ?? ""), outcome: String(c["outcome"] ?? "") })),
+    narrowing,
+    inputs: typeof inputs === "number" ? inputs : 0,
+  };
 }
 
 export type Location = { authority: Authority; name: string | null };
 
-export function parseRecord(raw: YamlValue, where: string, location: Location | null = null): { record: EvidenceRecord | null; findings: Finding[] } {
+export function parseRecord(raw: YamlValue, where: string, location: Location | null = null, adapters: Record<string, Adapter> = {}): { record: EvidenceRecord | null; findings: Finding[] } {
   const findings: Finding[] = [];
   if (!isMap(raw)) return { record: null, findings: [{ where, message: "an evidence record is a mapping", rule: "ENG-026" }] };
   // ENG-159: every record states its authority; ENG-194: the stated
@@ -316,11 +379,11 @@ export function parseRecord(raw: YamlValue, where: string, location: Location | 
   // reporting separately: one finding names the record.
   if (!isMap(raw["identity"])) return { record: null, findings };
   const boundary = parseBoundary(raw["boundary"], where, findings);
-  const dependency = parseDependency(raw["dependency"], where, findings);
+  const dependency = parseDependency(raw["dependency"], where, findings, adapters);
   if (!Array.isArray(raw["residual_risk"])) findings.push({ where, message: "record states no residual risk outside its boundary", rule: "ENG-133" });
   if (findings.length || !identity || !boundary || !dependency) return { record: null, findings };
   if (identity.snapshot === null && raw["freshness"] !== "unknown") findings.push({ where, message: "a record with no snapshot has unknown freshness; no chain step established a boundary", rule: "ENG-126" });
-  if (identity.snapshot !== null && dependency.scope !== "repository") findings.push({ where, message: "a record with a snapshot has the repository as its dependency scope", rule: "ENG-124" });
+  if (identity.snapshot !== null && dependency.scope === "unknown") findings.push({ where, message: "a record with a snapshot established at least the repository boundary", rule: "ENG-124" });
   if (findings.length) return { record: null, findings };
   const s = (k: string): string | null => strOrNull(raw[k]);
   const et = raw["execution_trust"];
@@ -376,7 +439,7 @@ export function evidenceLocations(root: string): Location[] {
   return out;
 }
 
-export function readRecords(root: string, id: string): { records: StoredRecord[]; findings: Finding[] } {
+export function readRecords(root: string, id: string, adapters: Record<string, Adapter> = {}): { records: StoredRecord[]; findings: Finding[] } {
   const records: StoredRecord[] = [];
   const findings: Finding[] = [];
   for (const location of evidenceLocations(root)) {
@@ -393,7 +456,7 @@ export function readRecords(root: string, id: string): { records: StoredRecord[]
         findings.push({ where, message: (e as Error).message, rule: "ENG-026" });
         continue;
       }
-      const r = parseRecord(raw, where, location);
+      const r = parseRecord(raw, where, location, adapters);
       if (r.record) records.push({ ...r.record, path: where });
       else findings.push(...r.findings);
     }

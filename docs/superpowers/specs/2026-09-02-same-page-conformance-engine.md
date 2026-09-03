@@ -1577,6 +1577,37 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 007 (layer L6) built, under
+  docs/specs/same-page/iterations/007.md, closing the six construction
+  layers of ENG-240. Implementation-design decisions taken under that
+  contract: (a) the registry holds three built-in adapters --
+  `command`, `manual`, and `tsc-closure` -- and reads further
+  registrations from `$SAME_PAGE_HOME/adapters.yaml`, outside every
+  repository they serve; a registration cannot replace a built-in one,
+  and a capability outside the five is a finding; (b) `tsc-closure`
+  holds `can_establish_complete_dependencies` because a TypeScript
+  compiler run with `--listFiles` prints every file the program reads,
+  so a change outside that set cannot change the check's verdict;
+  (c) a closure declaration names the adapter, the runner, and the
+  project, and the adapter owns the flags that make the output complete,
+  so no repository hand-declares an input list (ENG-122); (d) an adapter
+  grant lives in the trust store beside the validator grants, bound to
+  the adapter name and version, and without it the boundary stays the
+  repository with a finding naming the grant to write; (e) a narrowed
+  record carries scope `package`, step one, provenance
+  `adapter_derived`, a dependency fingerprint over the closure instead
+  of the snapshot, and a narrowing act naming adapter, version, project,
+  and input count; a record claiming a narrower scope with no act, or an
+  act naming no capable registered adapter, is refused; (f) a narrowed
+  record is not staled by the snapshot: its inputs are the closure, and
+  a change elsewhere in the repository leaves it current, which is the
+  whole point of the layer; (g) a `trace:` declaration runs a command
+  that names further inputs, which widen the record's identity and its
+  provenance to `traced_supplemental`; a trace never narrows a scope,
+  and a traced path outside the repository is an input like any other;
+  (h) a record whose method is `formal` carries two assumptions, the
+  declared preconditions and trusted computing base, and the
+  correspondence between the sentence and the model.
 - 2026-09-03 -- Iteration 006 (layer L5) built, under
   docs/specs/same-page/iterations/006.md. Implementation-design
   decisions taken under that contract: (a) a challenge is declared on

@@ -1,0 +1,29 @@
+# The engine's type check as a validator. It addresses one half of
+# PKG-001's falsifier directly: the engine declares the builtin surface
+# it uses in node-builtins.d.ts and no ambient types, so an import of a
+# package that is not a node builtin fails this check.
+#
+# Its dependency closure is established by the tsc-closure adapter: the
+# compiler prints every file the program reads, so a change outside that
+# set cannot change this result. The adapter needs a grant outside the
+# repository: same-page trust --adapter tsc-closure
+kind: static
+command:
+  - bunx
+  - tsc
+  - --noEmit
+  - -p
+  - skills/new-project/scripts/engine
+cwd: .
+timeout: 300
+environment:
+  - command:
+      - bun
+      - --version
+  - file: skills/new-project/scripts/engine/tsconfig.json
+closure:
+  adapter: tsc-closure
+  runner:
+    - bunx
+    - tsc
+  project: skills/new-project/scripts/engine

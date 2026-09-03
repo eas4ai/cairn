@@ -98,11 +98,14 @@ definition declares `challenges:` -- a mechanism (mutation,
 fault-injection, negative-fixture, double, counterexample-search,
 adversarial-input, harness), a reviewable `artifact` that exists, a
 `command` that realizes the violating state and runs the validator, and
-`from_falsifier` with the `requirement` it realizes. Ask the developer
+`from_falsifier` with the `requirement` it realizes, or a
+`requirements` list when it realizes no confirmed falsifier. A
+challenge claims nothing by default. Ask the developer
 before adding one, name the falsifier it realizes, and never claim
-challenged sensitivity by hand. A challenge the validator passes is
-weak sensitivity: report it as a finding about the mechanism, never as
-a fault in the requirement.
+challenged sensitivity by hand. A challenge the validator passes is weak sensitivity: report it as a
+finding about the mechanism, never as a fault in the requirement. It is
+recorded against the validator, so it withdraws that validator's
+challenged claims everywhere until the same challenge is noticed again.
 
 A boundary narrower than the repository needs an adapter that
 established the input set: a validator declares `closure:` with the

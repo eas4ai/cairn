@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L2 (iteration 002): validators run under
 // execution trust, evidence records carry the six axes and a snapshot,
 // policy evaluation yields the verdict lattice, downgrades are held, a
@@ -127,7 +132,7 @@ test("a validator runs only under execution trust; configuration alone is not pe
   expect(r.status).toBe(1);
   expect(existsSync(join(p.root, "ran.marker"))).toBe(false);
   expect(records(p, "BRK-001")).toEqual([]);
-});
+}, TEST_TIMEOUT);
 
 test("the trust record lives outside the repository and binds the definition digest (ENG-061, ENG-062, ENG-065)", () => {
   const p = project();
@@ -150,7 +155,7 @@ test("the trust record lives outside the repository and binds the definition dig
   const r = run(["run"], p);
   expect(r.stdout).toContain("marker is not trusted for this repository at its current definition");
   expect(existsSync(join(p.root, "changed.marker"))).toBe(false);
-});
+}, TEST_TIMEOUT);
 
 test("a run records its trust context, and only the four contexts exist (ENG-060, ENG-165)", () => {
   const p = project();
@@ -167,7 +172,7 @@ test("a run records its trust context, and only the four contexts exist (ENG-060
   [rec] = records(p, "BRK-003");
   expect(rec.execution_trust.context).toBe("developer-invocation");
   expect(["developer-invocation", "trust-record", "ci", "named-environment"]).toContain(rec.execution_trust.context);
-});
+}, TEST_TIMEOUT);
 
 test("argv execution: no shell unless declared (ENG-162, ENG-163, ENG-164)", () => {
   const p = project();
@@ -189,7 +194,7 @@ test("argv execution: no shell unless declared (ENG-162, ENG-163, ENG-164)", () 
   bind(p, "BRK-001", "stringy");
   const r = run(["run", "stringy", "--as-developer"], p);
   expect(r.stdout).toContain("command must be a list of arguments (argv), not a string (ENG-162)");
-});
+}, TEST_TIMEOUT);
 
 test("the engine owns every trust axis; validator output sets nothing (ENG-051, ENG-052, ENG-054, ENG-057)", () => {
   const p = project();
@@ -204,7 +209,7 @@ test("the engine owns every trust axis; validator output sets nothing (ENG-051, 
   expect(rec.adapter).toBe("command");
   const runFile = readFileSync(join(p.root, rec.run), "utf8");
   expect(runFile).toContain("binding_basis: backend");
-});
+}, TEST_TIMEOUT);
 
 test("an evidence record carries the six axes, closed value sets, and a commit snapshot on a clean tree (ENG-026, ENG-027, ENG-029, ENG-034, ENG-038, ENG-040, ENG-046, ENG-047)", () => {
   const p = project();
@@ -225,7 +230,7 @@ test("an evidence record carries the six axes, closed value sets, and a commit s
   expect(rec.authority).toBe("local");
   expect(rec.boundary.scope).toBe("repository");
   expect(rec.identity.validator_digest).toMatch(/^sha256:/);
-});
+}, TEST_TIMEOUT);
 
 test("an attested binding records actor, actor type, timestamp, snapshot, and confirmation (ENG-017, ENG-030)", () => {
   const p = project();
@@ -244,7 +249,7 @@ test("an attested binding records actor, actor type, timestamp, snapshot, and co
   const [bare] = records(p, "BRK-003");
   expect(bare.binding_basis).toBe("none");
   expect(bare.binding).toBeNull();
-});
+}, TEST_TIMEOUT);
 
 test("the verdict lattice: SUFFICIENT, FAILING over any profile, BLOCKED on error, INSUFFICIENT with nothing (ENG-080 through ENG-086)", () => {
   const p = project();
@@ -279,7 +284,7 @@ test("the verdict lattice: SUFFICIENT, FAILING over any profile, BLOCKED on erro
   const w = run(["verify"], q);
   expect(entry(w.stdout, "BRK-001")).toContain("BRK-001  INSUFFICIENT");
   expect(entry(w.stdout, "BRK-001")).toContain("Evidence:    none");
-});
+}, TEST_TIMEOUT);
 
 test("no method ranks above another, and confirmation does not strengthen a mechanism (ENG-028, ENG-031)", () => {
   const p = project();
@@ -292,7 +297,7 @@ test("no method ranks above another, and confirmation does not strengthen a mech
   const v = run(["verify"], p);
   expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  INSUFFICIENT");
   expect(entry(v.stdout, "BRK-001")).toContain("binding attested");
-});
+}, TEST_TIMEOUT);
 
 test("a change anywhere in the source makes evidence stale and the verdict INSUFFICIENT; a re-run at the new snapshot restores it (ENG-007, ENG-008, ENG-039, ENG-048, ENG-050)", () => {
   const p = project();
@@ -319,7 +324,7 @@ test("a change anywhere in the source makes evidence stale and the verdict INSUF
   run(["run"], p);
   expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
   expect(records(p, "BRK-001").length).toBe(3);
-});
+}, TEST_TIMEOUT);
 
 test("two workspaces that differ in a dirty file have different identities (ENG-049)", () => {
   const p = project();
@@ -330,7 +335,7 @@ test("two workspaces that differ in a dirty file have different identities (ENG-
   expect(a).not.toBe(b);
   writeFileSync(join(p.root, "src.txt"), "a\n");
   expect(run(["verify"], p).stdout.match(/authority local \(policy\) @ (workspace:\w+)/)[1]).toBe(a);
-});
+}, TEST_TIMEOUT);
 
 test("a policy edit to the engine's own directory does not stale evidence (ENG-186, acceptance: policy-only change re-evaluates)", () => {
   const p = project();
@@ -343,14 +348,14 @@ test("a policy edit to the engine's own directory does not stale evidence (ENG-1
   const v = run(["verify"], p);
   expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
   expect(v.stdout).toContain("authority local (policy) @ git:");
-});
+}, TEST_TIMEOUT);
 
 test("a validator no definition names does not run (ENG-003, ENG-161)", () => {
   const p = project();
   const r = run(["run", "ghost", "--as-developer"], p);
   expect(r.stdout).toContain("no validator definition named ghost (ENG-161)");
   expect(r.stdout).toContain("0 validator(s) executed");
-});
+}, TEST_TIMEOUT);
 
 test("partial evidence is shown with method and freshness, never discarded (ENG-087, ENG-088)", () => {
   const p = project();
@@ -366,7 +371,7 @@ test("partial evidence is shown with method and freshness, never discarded (ENG-
   expect(e).toContain("Required:    property + test; current freshness");
   expect(e).toContain("Evidence:    test ok pass (current;");
   expect(records(p, "BRK-001").length).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a policy downgrade is surfaced with old, new, and effect, held until confirmed (ENG-101, ENG-102, ENG-103, ENG-105)", () => {
   const p = project();
@@ -391,7 +396,7 @@ test("a policy downgrade is surfaced with old, new, and effect, held until confi
   // A stronger change is taken without ceremony.
   writeFileSync(policy(p), readFileSync(policy(p), "utf8").replace("        - kind: inspected\n", ""));
   expect(run(["elaborate"], p).stdout).not.toContain("downgrade");
-});
+}, TEST_TIMEOUT);
 
 test("a standing disproof survives a revision until the developer acknowledges it, and never inherits sufficiency (ENG-111 through ENG-120)", () => {
   const p = project();
@@ -437,7 +442,7 @@ test("a standing disproof survives a revision until the developer acknowledges i
   expect(records(p, "BRK-003").length).toBe(1);
   // Acknowledging with nothing standing is refused.
   expect(run(["acknowledge", "BRK-001"], p).status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("manual evidence: accepted with its six fields, expiry enforced, bound paths must exist, inspection alone is inspected (ENG-180, ENG-181, ENG-183, ENG-185, ENG-209)", () => {
   const p = project();
@@ -472,7 +477,7 @@ test("manual evidence: accepted with its six fields, expiry enforced, bound path
   const changed = entry(run(["verify"], p).stdout, "BRK-001");
   expect(changed).toContain("BRK-001  INSUFFICIENT");
   expect(changed).toContain("(stale: recorded at git:");
-});
+}, TEST_TIMEOUT);
 
 test("verify prints the seven fields and the assumptions, and a BLOCKED entry states its reason (ENG-044, ENG-045, ENG-215, ENG-218, ENG-219)", () => {
   const p = project();
@@ -487,4 +492,4 @@ test("verify prints the seven fields and the assumptions, and a BLOCKED entry st
   const b = entry(run(["verify"], p).stdout, "BRK-001");
   expect(b).toContain("BRK-001  BLOCKED");
   expect(b).toContain("Reason:      freshness cannot be established: validator ok definition is invalid now");
-});
+}, TEST_TIMEOUT);

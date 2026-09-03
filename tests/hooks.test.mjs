@@ -1,6 +1,11 @@
 import { test, expect } from "bun:test";
 import { readFileSync } from "node:fs";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // PKG-005: every hook registration invokes node (ADR 0003), and the gate
 // spawns nothing (ENG-067, ENG-233).
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -15,10 +20,10 @@ test("both hook registrations run the gate with node (PKG-005)", () => {
   const codexCommand = codex.hooks.Stop[0].hooks[0].command;
   expect(codexCommand).toContain('then node "$f"; fi');
   expect(codexCommand).not.toMatch(/\b(bun|python3?|deno)\b/);
-});
+}, TEST_TIMEOUT);
 
 test("the drift gate spawns no process (ENG-067, ENG-233)", () => {
   const src = readFileSync(`${ROOT}skills/new-project/scripts/spec-drift-gate.mjs`, "utf8");
   expect(src).not.toContain("child_process");
   expect(src).not.toMatch(/\bspawn|\bexec/);
-});
+}, TEST_TIMEOUT);

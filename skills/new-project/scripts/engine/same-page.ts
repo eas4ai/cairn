@@ -37,15 +37,18 @@ import {
   readAcknowledgment,
   readDisproof,
   readRecords,
-  readWeak,
+  clearMiss,
+  readMisses,
+  recordMiss,
   standingDisproof,
-  writeWeak,
+  standingMisses,
   writeAcknowledgment,
   writeDisproof,
   writeRecord,
   writeRun,
   type Closure,
   type EvidenceRecord,
+  type Miss,
   type StoredRecord,
 } from "./evidence.ts";
 import { applyRowChanges, compare, machineView, projectRow, readMap, rowText, type RowChange } from "./map.ts";
@@ -371,6 +374,8 @@ function verify(root: string, asDeveloper: boolean): number {
     out.push(...v.findings);
   }
   const recordsById = new Map<string, StoredRecord[]>();
+  const missesByValidator = new Map<string, Miss[]>();
+  const clearedByObligation = new Map<string, { validator: string; miss: Miss }[]>();
   const evaluations: Evaluation[] = [];
   for (const [id, o] of [...obligations.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     const where = `.same-page/obligations/${id}.yaml`;
@@ -424,12 +429,27 @@ function verify(root: string, asDeveloper: boolean): number {
         }
       }
     }
-    const weak = readWeak(root, id);
-    // ENG-173: a challenge the validator passed is reported, whatever
-    // the verdict is.
-    for (const w of weak)
-      out.push({ where: w.run, message: `weak sensitivity for ${id}: ${w.validator} passed the ${w.mechanism} challenge ${w.artifact}, which realizes the confirmed falsifier; the mechanism does not notice the violating state`, rule: "ENG-173" });
-    const assessed = assess({ ...o, required }, records, present, now, weak);
+    // ENG-173, ENG-174: what each mechanism behind this obligation has
+    // failed to notice. A miss belongs to the validator, so it counts
+    // here whichever requirement it was recorded against; a cleared
+    // miss is history and withdraws nothing.
+    const standingByValidator = new Map<string, Miss[]>();
+    const cleared: { validator: string; miss: Miss }[] = [];
+    for (const name of [...new Set(records.map((r) => r.validator).filter((v): v is string => v !== null))]) {
+      if (!missesByValidator.has(name)) missesByValidator.set(name, readMisses(root, name));
+      const all = missesByValidator.get(name)!;
+      const live = standingMisses(all);
+      if (live.length) standingByValidator.set(name, live);
+      for (const m of all) if (m.cleared_at !== null) cleared.push({ validator: name, miss: m });
+    }
+    for (const [name, live] of standingByValidator)
+      for (const m of live)
+        out.push({
+          where: m.run,
+          message: `weak sensitivity: ${name} passed the ${m.mechanism} challenge ${m.artifact}, which realizes the confirmed falsifier of ${m.requirement}; the mechanism does not notice that violating state, so no challenged claim of ${name} stands, ${id} included. Run \`same-page challenge ${name}\` again once the mechanism notices it`,
+          rule: "ENG-173",
+        });
+    const assessed = assess({ ...o, required }, records, present, now, standingByValidator);
     const standing = standingDisproof(root, id, records);
     const history = standing ? null : readDisproof(root, id);
     // A profile may name the authority its evidence comes from (ENG-071);
@@ -442,6 +462,7 @@ function verify(root: string, asDeveloper: boolean): number {
       writeDisproof(root, disproof);
       ev = { ...ev, standing: disproof, history: null };
     }
+    clearedByObligation.set(id, cleared);
     evaluations.push(ev);
   }
   for (const r of corpus.requirements) {
@@ -490,6 +511,10 @@ function verify(root: string, asDeveloper: boolean): number {
           ? "no evidence"
           : "unchallenged: no challenge has demonstrated that the mechanism notices the falsifier";
     lines.push(`  Sensitivity: ${sensitivity}`);
+    // A cleared miss is history: the mechanism was blind to that state
+    // once, and a subsequent challenge showed it notices it now.
+    for (const { validator, miss } of clearedByObligation.get(ev.id) ?? [])
+      lines.push(`  Prior weak sensitivity: ${validator} passed the ${miss.mechanism} challenge ${miss.artifact} at ${miss.recorded_at}; cleared ${miss.cleared_at}`);
     const live = ev.records.filter((a) => !a.expired);
     const freshness = ev.records.length === 0 ? "no evidence" : live.some((a) => a.freshness === "current") ? "current" : live.some((a) => a.freshness === "stale") ? "stale" : live.some((a) => a.freshness === "unknown") ? "unknown" : "expired";
     lines.push(`  Freshness:   ${freshness}`);
@@ -781,6 +806,7 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
   let executed = 0;
   let recordsWritten = 0;
   let weakWritten = 0;
+  let cleared = 0;
   for (const name of targets) {
     const v = readValidator(root, name);
     if (!v.def) {
@@ -814,25 +840,28 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
       // falsifier, so its record belongs to that requirement only
       // (ENG-037); a challenge that is not falsifier-derived speaks for
       // every obligation the validator is bound to.
-      let subjects: Obligation[];
-      if (c.from_falsifier) {
-        const o = obligations.get(c.requirement!);
+      // Every challenge names what it speaks for: the one requirement
+      // whose falsifier it realizes, or the list the developer
+      // confirmed. Nothing is claimed by default.
+      const named = c.from_falsifier ? [c.requirement!] : c.requirements;
+      const subjects: Obligation[] = [];
+      let bad = false;
+      for (const id of named) {
+        const o = obligations.get(id);
         if (!o) {
-          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${c.requirement}, which has no obligation; elaborate first`, rule: "ENG-206" });
+          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${id}, which has no obligation; elaborate first`, rule: "ENG-206" });
+          bad = true;
           continue;
         }
         if (!o.validators.some((x) => x.name === name)) {
-          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${c.requirement}, which does not list validator ${name}; a challenge speaks for a mechanism the requirement uses`, rule: "ENG-037" });
+          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${id}, which does not list validator ${name}; a challenge speaks for a mechanism the requirement uses`, rule: "ENG-037" });
+          bad = true;
           continue;
         }
-        subjects = [o];
-      } else {
-        if (bound.length === 0) {
-          out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is listed on no obligation; nothing to record`, rule: "ENG-012" });
-          continue;
-        }
-        subjects = bound;
+        subjects.push(o);
       }
+      if (bad || subjects.length === 0) continue;
+      void bound;
       const result = runChallenge(root, def, c);
       executed++;
       const runId = `${stamp(new Date(result.started_at))}-${name}-challenge`;
@@ -863,25 +892,39 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
       // The challenge command's status is the validator's under the
       // violating state: pass means the validator did not notice.
       const noticed = result.result === "fail";
+      const at = new Date().toISOString();
       if (result.result === "error") {
         out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} ${c.artifact} did not complete (${result.error ?? "unknown"}); no sensitivity is claimed (${runPath})`, rule: "ENG-172" });
         process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}: did not complete; no claim\n`);
         continue;
       }
+      // A miss belongs to the mechanism, so it is recorded once against
+      // the validator, not once per subject (ENG-174).
+      if (!noticed) {
+        const rel = recordMiss(
+          root,
+          name,
+          { mechanism: c.mechanism, artifact: c.artifact, requirement: subjects[0]!.requirement, from_falsifier: c.from_falsifier, snapshot: snapshotId, run: runPath, recorded_at: at, cleared_at: null, cleared_run: null },
+          authority,
+          authorityName
+        );
+        weakWritten++;
+        out.push({
+          where: rel,
+          message: `weak sensitivity: ${name} passed the ${c.mechanism} challenge ${c.artifact}, which realizes the confirmed falsifier of ${subjects[0]!.requirement}; the mechanism does not notice that violating state, so no challenged claim of ${name} stands`,
+          rule: "ENG-173",
+        });
+        process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}${c.from_falsifier ? ` (falsifier-derived, ${c.requirement})` : ""}: the validator passed under the violating state (exit ${result.exit_code}) under ${context.context}; weak sensitivity recorded for ${name}\n`);
+        continue;
+      }
+      const clearedMiss = clearMiss(root, name, c.mechanism, c.artifact, at, runPath, authority, authorityName);
+      if (clearedMiss) {
+        cleared++;
+        process.stdout.write(`cleared the weak sensitivity ${name} carried since ${clearedMiss.recorded_at}: the ${c.mechanism} challenge ${c.artifact} is noticed now\n`);
+      }
       for (const o of subjects) {
         const req = corpus.requirements.find((r) => r.id === o.requirement);
         const falsifierDigest = req && req.falsifier !== null ? digest(req.falsifier) : o.falsifier_digest;
-        if (!noticed) {
-          const weakPathRel = writeWeak(
-            root,
-            { requirement: o.requirement, validator: name, mechanism: c.mechanism, artifact: c.artifact, from_falsifier: c.from_falsifier, snapshot: snapshotId, run: runPath, recorded_at: new Date().toISOString() },
-            authority,
-            authorityName
-          );
-          weakWritten++;
-          out.push({ where: weakPathRel, message: `weak sensitivity for ${o.requirement}: ${name} passed the ${c.mechanism} challenge ${c.artifact}, which realizes the confirmed falsifier; the mechanism does not notice the violating state`, rule: "ENG-173" });
-          continue;
-        }
         const ref = completeRef(o.validators.find((x) => x.name === name) ?? { name }, snapshotId ?? "unknown", actor);
         const attested = ref.attested_by !== undefined;
         const rec: EvidenceRecord = {
@@ -925,11 +968,11 @@ function challenge(root: string, names: string[], asDeveloper: boolean, environm
         writeRecord(root, rec, `${name}-challenge`);
         recordsWritten++;
       }
-      process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}${c.from_falsifier ? ` (falsifier-derived, ${c.requirement})` : ""}: ${noticed ? "the validator noticed" : "the validator passed under the violating state"} (exit ${result.exit_code}) under ${context.context}; ${subjects.length} ${noticed ? "record" : "weak-sensitivity record"}(s) at ${snapshotId ?? "unknown (no snapshot)"}\n`);
+      process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}${c.from_falsifier ? ` (falsifier-derived, ${c.requirement})` : ""}: the validator noticed (exit ${result.exit_code}) under ${context.context}; ${subjects.length} record(s) at ${snapshotId ?? "unknown (no snapshot)"}\n`);
     }
   }
   printFindings(out);
-  process.stdout.write(`same-page challenge: ${executed} challenge(s) run, ${recordsWritten} challenged record(s), ${weakWritten} weak-sensitivity record(s), ${out.length} finding(s)\n`);
+  process.stdout.write(`same-page challenge: ${executed} challenge(s) run, ${recordsWritten} challenged record(s), ${weakWritten} weak-sensitivity record(s), ${cleared} cleared, ${out.length} finding(s)\n`);
   return out.length === 0 ? 0 : 1;
 }
 

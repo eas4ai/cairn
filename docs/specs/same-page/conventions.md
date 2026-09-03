@@ -71,3 +71,12 @@ verification authority (`local`, ENG-158).
 - 2026-09-02 -- Written from evidence by /existing-project Path A:
   the commands are the ones CLAUDE.md and the test suite already run,
   plus the type check the engine adds.
+
+## Derived engine state
+
+.same-page/evidence/ and .same-page/artifacts/ hold one record per
+obligation per validator run, plus the captured output of each run.
+The engine never deletes a record, so both directories grow with the
+project. Both are gitignored derived state: clearing them loses the
+history and nothing else, and the next `same-page run` rebuilds what is
+current.

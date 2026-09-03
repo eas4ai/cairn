@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L4 (iteration 005): verification
 // authority and map comparison. The policy names whose evidence counts
 // (ci, local, or a named environment), the default follows the
@@ -187,7 +192,7 @@ test("the policy names the authority, a value outside the three is a finding, an
   // The first elaborate writes the default explicitly (no CI configuration: local).
   const fresh = layout(false);
   expect(readFileSync(policy(fresh), "utf8")).toContain("authority: local\n");
-});
+}, TEST_TIMEOUT);
 
 test("the first elaborate under CI configuration writes authority ci (ENG-157)", () => {
   const base = mkdtempSync(join(tmpdir(), "same-page-l4-ci-"));
@@ -202,7 +207,7 @@ test("the first elaborate under CI configuration writes authority ci (ENG-157)",
   expect(r.stdout).toContain("authority ci, CI configuration at .github/workflows");
   expect(readFileSync(policy(p), "utf8")).toContain("authority: ci\n");
   expect(run(["verify"], p).stdout).toContain("Authority:   ci @");
-});
+}, TEST_TIMEOUT);
 
 test("only evidence of the configured authority at its exact snapshot counts; other evidence is shown with its authority, never passes, and lives only in its own place (ENG-155, ENG-159, ENG-160, ENG-194)", () => {
   const p = project();
@@ -269,7 +274,7 @@ test("only evidence of the configured authority at its exact snapshot counts; ot
   expect(noCi.status).toBe(1);
   expect(recordFilesUnder(q, ".same-page/artifacts/ci", "BRK-001")).toEqual([]);
   expect(recordFilesUnder(q, ".same-page/evidence", "BRK-001")).toEqual([]);
-});
+}, TEST_TIMEOUT);
 
 test("a named environment is trusted outside the repository, writes its own artifact, and is authoritative only when configured (ENG-060, ENG-156, ENG-160)", () => {
   const p = project();
@@ -303,7 +308,7 @@ test("a named environment is trusted outside the repository, writes its own arti
   e = entry(run(["verify"], p).stdout, "BRK-001");
   expect(e).toContain("BRK-001  INSUFFICIENT");
   expect(e).toContain("not yet established by authoritative named-environment other");
-});
+}, TEST_TIMEOUT);
 
 test("verify compares the machine view with the map and names every disagreeing row; sync-map is the one engine write and touches nothing else (ENG-195, ENG-196, ENG-197, ENG-198, ENG-199, ENG-200)", () => {
   const p = project();
@@ -358,4 +363,4 @@ test("verify compares the machine view with the map and names every disagreeing 
   run(["trust", "fail"], p);
   run(["run", "fail"], p);
   expect(run(["verify"], p).stdout).toContain("0 map disagreement(s)");
-});
+}, TEST_TIMEOUT);

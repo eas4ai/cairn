@@ -4,6 +4,11 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "nod
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // The Codex adapter is a shell command in .codex/hooks.json that resolves
 // the gate script at a documented path under the target repository. These
 // tests run that exact command string, so the adapter and INSTALLATION.md
@@ -49,7 +54,7 @@ test("Codex adapter fires the gate when the script is vendored at the documented
   const r = runAdapter(root);
   expect(r.status).toBe(2);
   expect(r.stderr).toContain("Same Page drift gate");
-});
+}, TEST_TIMEOUT);
 
 // False-block guard: a missing script must not surface as a node error
 // that wedges the session; fail-open extends to the adapter itself.
@@ -58,7 +63,7 @@ test("Codex adapter exits 0 and stays silent when the script is not vendored", (
   const r = runAdapter(root);
   expect(r.status).toBe(0);
   expect(r.stderr).toBe("");
-});
+}, TEST_TIMEOUT);
 
 // False-block guard: no git top level means no resolvable path; stay silent.
 test("Codex adapter exits 0 outside a git repository", () => {
@@ -66,4 +71,4 @@ test("Codex adapter exits 0 outside a git repository", () => {
   const r = runAdapter(root);
   expect(r.status).toBe(0);
   expect(r.stderr).toBe("");
-});
+}, TEST_TIMEOUT);

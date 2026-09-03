@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L6 (iteration 007): ecosystem adapters
 // and sound narrowing. Every adapter is registered with explicit
 // capabilities, outside the repository; a closure adapter the developer
@@ -197,7 +202,7 @@ test("an adapter is registered with explicit capabilities, outside the repositor
   r = run(["run", "closes", "--as-developer"], p);
   expect(r.stdout).toContain("manual is a built-in adapter; a registration cannot replace it");
   expect(records(p, "BRK-001").every((x) => x.binding_basis !== "backend")).toBe(true);
-});
+}, TEST_TIMEOUT);
 
 test("a repository cannot grant itself an adapter; the grant lives outside it and binds the version (ENG-061, ENG-064, ENG-065)", () => {
   const p = project();
@@ -216,7 +221,7 @@ test("a repository cannot grant itself an adapter; the grant lives outside it an
   expect(readFileSync(join(p.home, "trust.yaml"), "utf8")).toContain("adapter: tsc-closure");
   expect(readdirSync(p.root).some((n) => n.includes("trust.yaml"))).toBe(false);
   expect(run(["trust", "--adapter", "nope"], p).status).toBe(2);
-});
+}, TEST_TIMEOUT);
 
 test("a trusted closure adapter narrows the boundary below the repository, records the narrowing as a reviewable act, and binds the record to its inputs (ENG-124, ENG-127, ENG-128, ENG-129, ENG-131)", () => {
   const p = project();
@@ -255,7 +260,7 @@ test("a trusted closure adapter narrows the boundary below the repository, recor
   expect(e).toContain("BRK-001  INSUFFICIENT");
   expect(e).toContain("the adapter closure changed:");
   expect(e).toContain("Freshness:   stale");
-});
+}, TEST_TIMEOUT);
 
 test("a supplemental trace widens a record's identity and never narrows its scope (ENG-041, ENG-042)", () => {
   const p = project();
@@ -282,7 +287,7 @@ test("a supplemental trace widens a record's identity and never narrows its scop
   expect(e).toContain("BRK-001  INSUFFICIENT");
   expect(e).toContain("a traced input changed:");
   expect(e).toContain("1 traced input(s)");
-});
+}, TEST_TIMEOUT);
 
 test("a formal result carries the correspondence assumption between the requirement and its model (ENG-166, ENG-167)", () => {
   const p = project();
@@ -299,4 +304,4 @@ test("a formal result carries the correspondence assumption between the requirem
   expect(e).toContain("BRK-001  SUFFICIENT");
   expect(e).toContain("the correspondence between the requirement sentence and the formal model stays an assumption");
   expect(e).not.toMatch(/proven|proves|verified correct/i);
-});
+}, TEST_TIMEOUT);

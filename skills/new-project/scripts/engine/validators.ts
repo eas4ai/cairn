@@ -33,7 +33,8 @@ export type ChallengeDecl = {
   artifact: string;
   command: string[];
   from_falsifier: boolean;
-  requirement: string | null; // named when from_falsifier is true (ENG-037)
+  requirement: string | null; // the requirement whose falsifier it realizes (ENG-037)
+  requirements: string[]; // what a challenge that is not falsifier-derived speaks for
   timeout: number;
 };
 
@@ -120,8 +121,8 @@ function parseEnvironment(raw: YamlValue | undefined, where: string, findings: F
   return out;
 }
 
-const CHALLENGE_KEYS = ["mechanism", "artifact", "command", "from_falsifier", "requirement", "timeout"];
-const CHALLENGE_HELP = `a challenge declares a mechanism (${MECHANISMS.join(", ")}), an artifact path that exists, a command (argv) that realizes the violating state and runs the validator, and from_falsifier; when from_falsifier is true it names the requirement whose falsifier it realizes`;
+const CHALLENGE_KEYS = ["mechanism", "artifact", "command", "from_falsifier", "requirement", "requirements", "timeout"];
+const CHALLENGE_HELP = `a challenge declares a mechanism (${MECHANISMS.join(", ")}), an artifact path that exists, a command (argv) that realizes the violating state and runs the validator, and from_falsifier; when from_falsifier is true it names the requirement whose falsifier it realizes, and otherwise it names the requirements it speaks for`;
 
 function parseChallenges(root: string, raw: YamlValue | undefined, where: string, findings: Finding[]): ChallengeDecl[] {
   if (raw === undefined) return [];
@@ -167,12 +168,31 @@ function parseChallenges(root: string, raw: YamlValue | undefined, where: string
       findings.push({ where: at, message: "a falsifier-derived challenge names the requirement whose confirmed falsifier it realizes", rule: "ENG-037" });
       return;
     }
+    // A challenge claims nothing by default: one that does not derive
+    // from a confirmed falsifier names the requirements it speaks for.
+    const requirements = item["requirements"];
+    if (from === false && (!Array.isArray(requirements) || requirements.length === 0 || !requirements.every((r) => typeof r === "string" && r !== ""))) {
+      findings.push({ where: at, message: "a challenge that does not derive from a confirmed falsifier names the requirements it speaks for, as a requirements list; it claims nothing by default", rule: "ENG-036" });
+      return;
+    }
+    if (from === true && requirements !== undefined) {
+      findings.push({ where: at, message: "a falsifier-derived challenge speaks for the one requirement whose falsifier it realizes; drop the requirements list", rule: "ENG-037" });
+      return;
+    }
     const timeout = item["timeout"];
     if (timeout !== undefined && (typeof timeout !== "number" || timeout <= 0)) {
       findings.push({ where: at, message: "timeout must be a positive number of seconds", rule: "ENG-170" });
       return;
     }
-    out.push({ mechanism: mechanism as Mechanism, artifact, command: item["command"], from_falsifier: from, requirement: typeof requirement === "string" && requirement !== "" ? requirement : null, timeout: typeof timeout === "number" ? timeout : 600 });
+    out.push({
+      mechanism: mechanism as Mechanism,
+      artifact,
+      command: item["command"],
+      from_falsifier: from,
+      requirement: typeof requirement === "string" && requirement !== "" ? requirement : null,
+      requirements: from === false ? (requirements as string[]) : [],
+      timeout: typeof timeout === "number" ? timeout : 600,
+    });
   });
   return out;
 }
@@ -257,7 +277,7 @@ export function validatorText(def: ValidatorDef): string {
   if (def.timeout !== 600) map["timeout"] = def.timeout;
   map["environment"] = def.environment.map((d): YamlMap => ("command" in d ? { command: [...d.command] } : { file: d.file }));
   if (def.challenges.length)
-    map["challenges"] = def.challenges.map((c): YamlMap => ({ mechanism: c.mechanism, artifact: c.artifact, command: [...c.command], from_falsifier: c.from_falsifier, requirement: c.requirement, timeout: c.timeout }));
+    map["challenges"] = def.challenges.map((c): YamlMap => ({ mechanism: c.mechanism, artifact: c.artifact, command: [...c.command], from_falsifier: c.from_falsifier, requirement: c.requirement, requirements: [...c.requirements], timeout: c.timeout }));
   if (def.closure) map["closure"] = { adapter: def.closure.adapter, runner: [...def.closure.runner], project: def.closure.project };
   if (def.trace) map["trace"] = { command: [...def.trace.command] };
   return stringifyYaml(map);

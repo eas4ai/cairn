@@ -1,6 +1,11 @@
 import { test, expect } from "bun:test";
 import { parseYaml, stringifyYaml, YamlError } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // The engine's YAML subset (iteration 001, ENG-188): every file the
 // engine writes round-trips through its own reader, and hand edits in
 // the same subset parse; anything outside it is an error with a line.
@@ -19,7 +24,7 @@ test("round-trips nested mappings, sequences, and scalars", () => {
   const text = stringifyYaml(value, ["header line"]);
   expect(text.startsWith("# header line\n")).toBe(true);
   expect(parseYaml(text)).toEqual(value);
-});
+}, TEST_TIMEOUT);
 
 test("quotes the strings that would otherwise change meaning", () => {
   const value = {
@@ -40,7 +45,7 @@ test("quotes the strings that would otherwise change meaning", () => {
   expect(text).toContain('colon: "a: b"');
   expect(text).toContain('bool: "true"');
   expect(text).toContain('multi: "line one\\nline two"');
-});
+}, TEST_TIMEOUT);
 
 test("reads comments, literal blocks, and sequences of mappings", () => {
   const text = [
@@ -68,7 +73,7 @@ test("reads comments, literal blocks, and sequences of mappings", () => {
     empty_list: [],
     empty_map: {},
   });
-});
+}, TEST_TIMEOUT);
 
 test("reports what is outside the subset, with the line", () => {
   const bad = [
@@ -89,9 +94,9 @@ test("reports what is outside the subset, with the line", () => {
     expect(err).toBeInstanceOf(YamlError);
     expect(err.message).toMatch(re);
   }
-});
+}, TEST_TIMEOUT);
 
 test("an empty document is an empty mapping", () => {
   expect(parseYaml("")).toEqual({});
   expect(parseYaml("# only a comment\n")).toEqual({});
-});
+}, TEST_TIMEOUT);

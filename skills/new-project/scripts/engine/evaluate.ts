@@ -16,7 +16,7 @@
 
 import { BUILTIN, adapterVersion, type Adapter } from "./adapters.ts";
 import { authorityLabel, sameAuthority, type Authority } from "./authority.ts";
-import type { Disproof, StoredRecord, WeakSensitivity } from "./evidence.ts";
+import type { Disproof, Miss, StoredRecord } from "./evidence.ts";
 import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
 import type { EnvironmentInput, InputSet } from "./validators.ts";
@@ -65,7 +65,10 @@ function short(v: string | null): string {
 // ENG-142: compare every recorded identity input with its present
 // value. An input that cannot be computed now, or was not computed when
 // the record was made, is unknown; unknown wins over stale.
-export function assess(o: Obligation, records: StoredRecord[], present: Present, now: Date, weak: WeakSensitivity[] = []): Assessed[] {
+// `misses` are the uncleared misses of every validator that produced a
+// record here, whichever requirement each was recorded against
+// (ENG-174: the claim belongs to the mechanism).
+export function assess(o: Obligation, records: StoredRecord[], present: Present, now: Date, misses: Map<string, Miss[]> = new Map()): Assessed[] {
   const obligation = obligationDigest(o);
   return records.map((record) => {
     const id = record.identity;
@@ -132,9 +135,10 @@ export function assess(o: Obligation, records: StoredRecord[], present: Present,
     // ENG-174: a validator that passed a challenge realizing the
     // falsifier keeps no challenged claim. The record stays; the claim
     // does not.
-    const missed = record.sensitivity === "challenged" && record.validator ? weak.find((w) => w.validator === record.validator) : undefined;
+    const missed = record.sensitivity === "challenged" && record.validator ? (misses.get(record.validator) ?? [])[0] : undefined;
     if (missed) {
-      const demoted = `${missed.validator} passed the ${missed.mechanism} challenge ${missed.artifact}, which realizes the falsifier; the challenged claim does not stand`;
+      const where = missed.requirement === o.requirement ? "" : `, recorded against ${missed.requirement}`;
+      const demoted = `${record.validator} passed the ${missed.mechanism} challenge ${missed.artifact}${where}, which realizes a confirmed falsifier; no challenged claim of this validator stands`;
       return { record: { ...record, sensitivity: "unchallenged" as const }, freshness, expired, why, demoted };
     }
     return { record, freshness, expired, why, demoted: null };

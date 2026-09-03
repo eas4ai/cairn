@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L3 (iteration 004): conservative
 // freshness. Every record stores its identity inputs as one block; a
 // known difference is `stale`, an input that cannot be computed is
@@ -193,7 +198,7 @@ test("a validator declares its environment; without the declaration it produces 
   const [none] = records(p, "BRK-003");
   expect(none.identity.environment).toEqual([]);
   expect(none.residual_risk).toContain("environment drift: no environment inputs are declared, so no drift is detected");
-});
+}, TEST_TIMEOUT);
 
 test("every record stores its identity inputs as one block; a record lacking one is refused; policy is never among them (ENG-141, ENG-143)", () => {
   const p = project();
@@ -222,7 +227,7 @@ test("every record stores its identity inputs as one block; a record lacking one
   editRecord(p, "BRK-001", (t) => t.replace("  contracts: []\n", "  contracts: []\n  profile: default\n"));
   v = run(["verify"], p);
   expect(v.stdout).toContain("record identity carries policy (profile); policy is never an identity input (ENG-143)");
-});
+}, TEST_TIMEOUT);
 
 test("any identity input that differs ends current: environment, validator definition, obligation, adapter version, requirement text (ENG-140, ENG-142)", () => {
   const p = project();
@@ -271,7 +276,7 @@ test("any identity input that differs ends current: environment, validator defin
   e = entry(run(["verify"], r).stdout, "BRK-001");
   expect(e).toContain("BRK-001  INSUFFICIENT");
   expect(e).toContain("recorded for a prior requirement or falsifier text");
-});
+}, TEST_TIMEOUT);
 
 test("a policy change re-evaluates current evidence under the new profile and never stales it (ENG-144, ENG-145)", () => {
   const p = project();
@@ -294,7 +299,7 @@ test("a policy change re-evaluates current evidence under the new profile and ne
   expect(e).toContain("BRK-001  SUFFICIENT");
   expect(e).toContain("Freshness:   current");
   expect(records(p, "BRK-001").length).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("the dependency scope comes from the chain, first step that succeeds, recorded with no narrowing; nothing hand-declared or traced decides freshness (ENG-122, ENG-123, ENG-124, ENG-125, ENG-128, ENG-129)", () => {
   const p = project();
@@ -354,7 +359,7 @@ test("the dependency scope comes from the chain, first step that succeeds, recor
   v = run(["verify"], p);
   expect(v.stdout).toContain("the narrowing act names no registered adapter that can establish complete dependencies");
   expect(v.stdout).toContain("(ENG-128)");
-});
+}, TEST_TIMEOUT);
 
 test("the boundary is a recorded structure and every entry states the residual risk outside it; nothing outside is claimed (ENG-130, ENG-132, ENG-133)", () => {
   const p = project();
@@ -376,7 +381,7 @@ test("the boundary is a recorded structure and every entry states the residual r
   const v = run(["verify"], p);
   expect(v.stdout).toContain("record has no recorded verification boundary (ENG-130)");
   expect(entry(v.stdout, "BRK-001")).toContain("Residual risk: everything; no evidence is inside any boundary");
-});
+}, TEST_TIMEOUT);
 
 test("when no chain step succeeds freshness is unknown, and unknown is BLOCKED while stale is INSUFFICIENT (ENG-084, ENG-085, ENG-121, ENG-126)", () => {
   // A tree without git whose directory the engine cannot read: git
@@ -443,7 +448,7 @@ test("when no chain step succeeds freshness is unknown, and unknown is BLOCKED w
   expect(e).toContain("Freshness:   stale");
   expect(e).toContain("Reason:      evidence is stale: recorded at git:");
   expect(e).toContain("run `same-page run envv` at this snapshot");
-});
+}, TEST_TIMEOUT);
 
 test("a standing disproof on stale evidence stays standing, and manual evidence carries the same identity block (ENG-111, ENG-141, ENG-180)", () => {
   const p = project();
@@ -473,7 +478,7 @@ test("a standing disproof on stale evidence stays standing, and manual evidence 
   expect(me).toContain("BRK-001  SUFFICIENT");
   expect(me).toContain("Environment: none recorded (manual evidence)");
   expect(me).toContain("Residual risk: inputs outside the repository root");
-});
+}, TEST_TIMEOUT);
 
 test("verify runs a declared environment command only under the validator's trust grant or --as-developer; otherwise the input is unknown (ENG-059, ENG-126)", () => {
   const p = project();
@@ -489,4 +494,4 @@ test("verify runs a declared environment command only under the validator's trus
   expect(e).toContain("BRK-001  SUFFICIENT");
   run(["trust", "envv"], p);
   expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
-});
+}, TEST_TIMEOUT);

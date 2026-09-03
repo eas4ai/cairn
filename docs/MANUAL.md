@@ -885,8 +885,11 @@ output is captured and stored, never parsed. `same-page attest`
 records manual evidence the same way, by a named human, with an
 expiry the engine enforces (ENG-181, ENG-183).
 
-`same-page verify` evaluates. The verdict for each requirement is one
-of four, in this order (ENG-081): FAILING when a current result
+`same-page verify` evaluates. It is not a passive report: it executes
+the environment commands each validator declares and recomputes any
+adapter closure, under the same execution trust as `run`, so it spawns
+processes and takes seconds rather than milliseconds. The verdict for
+each requirement is one of four, in this order (ENG-081): FAILING when a current result
 demonstrates the falsifier, whatever the profile says (ENG-082,
 ENG-083); BLOCKED when a precondition cannot be established, with the
 reason stated (ENG-084, ENG-219); INSUFFICIENT when evaluation is
@@ -990,10 +993,16 @@ non-zero means the validator noticed, and the record carries
 sensitivity `challenged` with the mechanism, the artifact, and the
 falsifier digest (ENG-035, ENG-036). Zero is the interesting answer.
 It means the mechanism passed while the falsifier was realized, which
-is weak or vacuous sensitivity: the engine records it, `verify`
-reports it, and every earlier challenged claim of that validator stops
-counting (ENG-173, ENG-174). The old record stays where it is; the
-claim it carried does not. A profile that requires `sensitivity:
+is weak or vacuous sensitivity. The engine records the miss against
+the validator, not against one requirement, because sensitivity is a
+property of the mechanism: while that miss stands, no challenged claim
+of that validator counts anywhere it is used (ENG-173, ENG-174). The
+records themselves stay where they are; the claims they carried do
+not. Run the same challenge again once the mechanism notices the
+state, and it clears the miss, which stays in the file as history with
+the moment it was cleared. A challenge names what it speaks for: the
+one requirement whose falsifier it realizes, or an explicit list. It
+claims nothing by default. A profile that requires `sensitivity:
 challenged` is satisfied only by a live claim (ENG-074), and every
 entry states its sensitivity. What a challenge never establishes is
 that the validator means the same thing as the sentence: a challenged
@@ -1046,6 +1055,13 @@ All six layers are built. What the registry leaves open is the
 ecosystem: an adapter for a database schema, a browser surface, a
 service contract, or a formal verifier is a registration and a
 capability, not a new layer.
+
+Evidence accumulates. Every run writes one record per obligation it
+covers, and the engine never deletes one (ENG-087, ENG-117), so
+.same-page/evidence/ grows for as long as the project runs. That
+directory is derived state, uncommitted and under the developer's
+control: clearing it costs nothing but the history, and the next run
+rebuilds what is current.
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof

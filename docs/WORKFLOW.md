@@ -156,8 +156,10 @@ with the re-run named; `unknown` when one cannot be computed, which is
 BLOCKED. Policy is not an identity input, so a policy edit
 re-evaluates and stales nothing.
 `same-page attest` records manual evidence by a named human with an
-expiry. `same-page verify` reports, per requirement, one verdict in
-the order FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT, with what the
+expiry. `same-page verify` executes the declared environment commands and
+recomputes adapter closures under the same trust as `run`, so it spawns
+processes; it reports, per requirement, one verdict in the order
+FAILING, BLOCKED, INSUFFICIENT, SUFFICIENT, with what the
 policy requires, the evidence present and its freshness, the authority
 and snapshot, the boundary, the dependency chain, the environment
 fingerprint, the residual risk, and the assumptions; an obligation whose
@@ -173,9 +175,10 @@ command that writes the map, and a workflow proposes the same changes
 through the confirm-back loop. Where a validator declares challenges --
 a mechanism, a reviewable artifact, and a command that realizes the
 violating state -- `same-page challenge` records what the mechanism
-demonstrated: challenged when the validator noticed, weak sensitivity
-when it passed under the violation, which withdraws every challenged
-claim of that validator until a challenge succeeds again. A validator
+demonstrated: challenged for the requirements the challenge names,
+weak sensitivity when it passed under the violation, which withdraws
+every challenged claim of that validator until the same challenge is
+noticed again and clears the miss. A validator
 that declares a closure gets a boundary narrower than the repository
 when a registered adapter the developer trusted establishes the input
 set, and the narrowing is recorded on the record as a reviewable act; a

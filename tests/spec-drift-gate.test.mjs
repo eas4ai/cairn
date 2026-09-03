@@ -4,6 +4,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 const HOOK = new URL("../skills/new-project/scripts/spec-drift-gate.mjs", import.meta.url).pathname;
 
 function runHook({ cwd, stateDir, input, specsDir, home }) {
@@ -47,7 +52,7 @@ test("exits 0 when project has no spec set", () => {
     input: { session_id: "s1" },
   });
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // False-pass guard: spec set present, first completion -> must block.
 test("exits 2 with audit prompt when spec set exists and no marker", () => {
@@ -61,7 +66,7 @@ test("exits 2 with audit prompt when spec set exists and no marker", () => {
   expect(r.stderr).toContain("out-of-contract");
   expect(r.stderr).toContain("glossary");
   expect(r.stderr).toContain("docs/specs/demo/iterations/001.md");
-});
+}, TEST_TIMEOUT);
 
 // Observed specs (from /existing-project) are not contract: the audit
 // must ask whether unconfirmed text was relied on.
@@ -74,7 +79,7 @@ test("audit asks about Observed spec sections", () => {
   expect(r.status).toBe(2);
   expect(r.stderr).toContain("Observed (as-built; unconfirmed)");
   expect(r.stderr).toContain("mark it Agreed");
-});
+}, TEST_TIMEOUT);
 
 // False-block guard: the gate fires once per session, never loops.
 test("exits 0 on second run in same session (marker present)", () => {
@@ -85,7 +90,7 @@ test("exits 0 on second run in same session (marker present)", () => {
   expect(existsSync(join(stateDir, "same-page-gate-s3"))).toBe(true);
   const second = runHook({ cwd, stateDir, input: { session_id: "s3" } });
   expect(second.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // Fail-open: garbage input must never wedge a session.
 test("exits 0 on malformed stdin", () => {
@@ -96,7 +101,7 @@ test("exits 0 on malformed stdin", () => {
     env: { ...process.env, SAME_PAGE_STATE_DIR: tempStateDir() },
   });
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // cwd from hook input wins over process cwd.
 test("uses cwd field from hook input when provided", () => {
@@ -107,7 +112,7 @@ test("uses cwd field from hook input when provided", () => {
     input: { session_id: "s4", cwd: specProject },
   });
   expect(r.status).toBe(2);
-});
+}, TEST_TIMEOUT);
 
 // Robustness: iterations as plain file (ENOTDIR) must not crash; gate functions with degraded prompt.
 test("exits 2 (not 1) when iterations is a plain file, not a directory", () => {
@@ -128,7 +133,7 @@ test("exits 2 (not 1) when iterations is a plain file, not a directory", () => {
   expect(r.status).toBe(2);
   // Should handle gracefully, showing "none found" since iterations path is corrupt
   expect(r.stderr).toContain("none found");
-});
+}, TEST_TIMEOUT);
 
 // SAME_PAGE_SPECS_DIR override: spec set at a non-default location must still be found.
 test("exits 2 when spec set lives under SAME_PAGE_SPECS_DIR override", () => {
@@ -144,7 +149,7 @@ test("exits 2 when spec set lives under SAME_PAGE_SPECS_DIR override", () => {
     specsDir: "custom/specs",
   });
   expect(r.status).toBe(2);
-});
+}, TEST_TIMEOUT);
 
 // Rule 13: the audit carries the production self-evaluation, referencing
 // the nearest BEST_PRACTICES.md (repo copy wins) when one exists.
@@ -161,7 +166,7 @@ test("audit includes rule 13 referencing project BEST_PRACTICES.md when present"
   expect(r.status).toBe(2);
   expect(r.stderr).toContain("Rule 13");
   expect(r.stderr).toContain(join(cwd, "BEST_PRACTICES.md"));
-});
+}, TEST_TIMEOUT);
 
 // Rule 13 fallback: no ruleset found anywhere -> the rule's own text is
 // embedded so the self-evaluation still happens.
@@ -176,4 +181,4 @@ test("audit includes embedded rule 13 self-evaluation when no ruleset found", ()
   expect(r.status).toBe(2);
   expect(r.stderr).toContain("Rule 13 self-evaluation");
   expect(r.stderr).toContain("deficient");
-});
+}, TEST_TIMEOUT);

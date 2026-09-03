@@ -6,6 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L1 (iteration 001). Each test names the
 // engine-spec requirement whose falsifier state it produces; the test
 // passes when the engine refuses that state. The engine is exercised
@@ -75,14 +80,14 @@ test("elaborate projects each Agreed MUST and MUST NOT into one YAML obligation 
   expect(o.validators).toEqual([]);
   expect(o.sentence).toBe("When a request arrives, the broker MUST log the request before dispatch.");
   expect(obligation(root, "BRK-003").keyword).toBe("MUST NOT");
-});
+}, TEST_TIMEOUT);
 
 test("acceptance criteria never receive identifiers or obligations (ENG-014)", () => {
   const { root } = project();
   run(["elaborate", "--root", root], root);
   expect(readdirSync(join(root, ".same-page", "obligations")).sort()).toEqual(["BRK-001.yaml", "BRK-003.yaml"]);
   for (const name of ["BRK-001.yaml", "BRK-003.yaml"]) expect(readFileSync(join(root, ".same-page", "obligations", name), "utf8")).not.toContain("Acceptance");
-});
+}, TEST_TIMEOUT);
 
 test("an obligation file keyed on a different identifier than its name is a finding (ENG-013)", () => {
   const { root } = project();
@@ -92,7 +97,7 @@ test("an obligation file keyed on a different identifier than its name is a find
   const r = run(["verify", "--root", root], root);
   expect(r.stdout).toContain("file is named BRK-003 but keys on BRK-001 (ENG-013)");
   expect(r.status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a permission-only MAY gets no obligation, and a MAY with a falsifier is a finding (ENG-024)", () => {
   const { root } = project();
@@ -103,7 +108,7 @@ test("a permission-only MAY gets no obligation, and a MAY with a falsifier is a 
   expect(r.stdout).toContain("BRK-002 is a permission-only MAY and carries a falsifier (ENG-024)");
   expect(r.status).toBe(1);
   expect(existsSync(join(bad.root, ".same-page", "obligations", "BRK-002.yaml"))).toBe(false);
-});
+}, TEST_TIMEOUT);
 
 test("an Agreed MUST with no Falsifier line is refused, not elaborated (ENG-205)", () => {
   const { root } = project({ "01-broker.md": DOMAIN.replace("Falsifier: a request arrives and the log has no entry for it.\n", "") });
@@ -113,7 +118,7 @@ test("an Agreed MUST with no Falsifier line is refused, not elaborated (ENG-205)
   expect(r.status).toBe(1);
   expect(existsSync(join(root, ".same-page", "obligations", "BRK-001.yaml"))).toBe(false);
   expect(existsSync(join(root, ".same-page", "obligations", "BRK-003.yaml"))).toBe(true);
-});
+}, TEST_TIMEOUT);
 
 test("only Agreed requirements are elaborated: a Draft file contributes only its Agreed sections (ENG-010)", () => {
   const draft = [
@@ -150,7 +155,7 @@ test("only Agreed requirements are elaborated: a Draft file contributes only its
   const r = run(["elaborate", "--root", root], root);
   expect(r.status).toBe(0);
   expect(readdirSync(join(root, ".same-page", "obligations")).sort()).toEqual(["BRK-001.yaml", "BRK-003.yaml", "ENG-001.yaml"]);
-});
+}, TEST_TIMEOUT);
 
 test("neither command writes a spec or the evidence map (ENG-011, ENG-197)", () => {
   const { root, read } = project();
@@ -158,7 +163,7 @@ test("neither command writes a spec or the evidence map (ENG-011, ENG-197)", () 
   run(["elaborate", "--root", root], root);
   run(["verify", "--root", root], root);
   expect(["00-overview.md", "01-broker.md", "conformance.md"].map(read)).toEqual(before);
-});
+}, TEST_TIMEOUT);
 
 test("a changed requirement or falsifier invalidates its obligation until re-elaboration (ENG-019, ENG-020)", () => {
   const { root, specs } = project();
@@ -176,7 +181,7 @@ test("a changed requirement or falsifier invalidates its obligation until re-ela
   const re = run(["elaborate", "--root", root], root);
   expect(re.stdout).toContain("(1 written, 1 unchanged)");
   expect(run(["verify", "--root", root], root).stdout).toContain("0 finding(s)");
-});
+}, TEST_TIMEOUT);
 
 test("re-wrapping a requirement keeps its digest; digests are computed, never asked for (ENG-211)", () => {
   const { root, specs } = project();
@@ -185,7 +190,7 @@ test("re-wrapping a requirement keeps its digest; digests are computed, never as
   const r = run(["verify", "--root", root], root);
   expect(r.stdout).toContain("0 finding(s)");
   expect(run(["elaborate", "--root", root], root).stdout).toContain("(0 written, 2 unchanged)");
-});
+}, TEST_TIMEOUT);
 
 test("re-elaboration is idempotent and preserves a hand-set profile and validators (ENG-217)", () => {
   const { root } = project();
@@ -208,7 +213,7 @@ test("re-elaboration is idempotent and preserves a hand-set profile and validato
   expect(run(["elaborate", "--root", root], root).stdout).toContain("(0 written, 2 unchanged)");
   const v = run(["verify", "--root", root], root);
   expect(v.stdout).toContain("BRK-003  INSUFFICIENT\n  Requirement: The broker MUST NOT serve an error response from the cache.\n  Required:    integration + sensitivity challenged; current freshness\n  Evidence:    none");
-});
+}, TEST_TIMEOUT);
 
 test("an obligation naming a profile the policy does not define is a finding (ENG-016)", () => {
   const { root } = project();
@@ -218,7 +223,7 @@ test("an obligation naming a profile the policy does not define is a finding (EN
   const r = run(["verify", "--root", root], root);
   expect(r.stdout).toContain("BRK-001 names profile ghost, which the policy does not define (ENG-016)");
   expect(r.status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a domain override is the nearest inherited default for its prefix (ENG-076, ENG-077)", () => {
   const { root } = project();
@@ -249,7 +254,7 @@ test("a domain override is the nearest inherited default for its prefix (ENG-076
   expect(run(["elaborate", "--root", root], root).status).toBe(0);
   expect(obligation(root, "BRK-001").profile).toBe("strict");
   expect(obligation(root, "BRK-001").profile_from).toBe("project default");
-});
+}, TEST_TIMEOUT);
 
 test("the policy file is validated: a scalar profile, a freshness setting, and a missing or undefined default are findings (ENG-070, ENG-073, ENG-075)", () => {
   const { root } = project();
@@ -271,7 +276,7 @@ test("the policy file is validated: a scalar profile, a freshness setting, and a
     expect(e.stdout).toContain("finding(s) in the policy file");
     expect(e.status).toBe(1);
   }
-});
+}, TEST_TIMEOUT);
 
 test("the .same-page layout: committed text for obligations and policy, evidence and cache ignored, no lock file, no database (ENG-186, ENG-189, ENG-190, ENG-192, ENG-193)", () => {
   const { root } = project();
@@ -283,7 +288,7 @@ test("the .same-page layout: committed text for obligations and policy, evidence
   expect(readdirSync(join(base, "cache"))).toEqual([]);
   const o = readFileSync(join(base, "obligations", "BRK-001.yaml"), "utf8");
   for (const forbidden of ["freshness", "evidence", "verdict"]) expect(o).not.toContain(`${forbidden}:`);
-});
+}, TEST_TIMEOUT);
 
 test("a stale obligation is reported, never deleted (ENG-010, ENG-118 spirit)", () => {
   const { root, specs } = project();
@@ -295,7 +300,7 @@ test("a stale obligation is reported, never deleted (ENG-010, ENG-118 spirit)", 
   expect(existsSync(join(root, ".same-page", "obligations", "BRK-003.yaml"))).toBe(true);
   const v = run(["verify", "--root", root], root);
   expect(v.stdout).toContain("BRK-003 has no Agreed MUST or MUST NOT requirement behind it");
-});
+}, TEST_TIMEOUT);
 
 test("verify reports an Agreed requirement with no obligation (ENG-206)", () => {
   const { root } = project();
@@ -306,14 +311,14 @@ test("verify reports an Agreed requirement with no obligation (ENG-206)", () => 
   const r = run(["verify", "--root", other], other);
   expect(r.stdout).toContain("BRK-001 is Agreed and has no obligation; run `same-page elaborate` (ENG-206)");
   expect(r.status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a falsifier is stored as text, verbatim, whatever it says (ENG-021, ENG-023)", () => {
   const { root } = project({ "01-broker.md": DOMAIN.replace("Falsifier: an error response is served from the cache.", "Falsifier: the operator runs `rm -rf /tmp/cache` and an error: response is served.") });
   const r = run(["elaborate", "--root", root], root);
   expect(r.status).toBe(0);
   expect(obligation(root, "BRK-003").falsifier).toBe("the operator runs `rm -rf /tmp/cache` and an error: response is served.");
-});
+}, TEST_TIMEOUT);
 
 test("the first elaborate writes the policy with the project default and the spec directories; SAME_PAGE_SPECS_DIR seeds it (ENG-075, ENG-189)", () => {
   const { root } = project();
@@ -330,7 +335,7 @@ test("the first elaborate writes the policy with the project default and the spe
   const r2 = run(["elaborate", "--root", custom], custom, { env: { SAME_PAGE_SPECS_DIR: "spec" } });
   expect(r2.stdout).toContain("(specs: spec; authority local, no CI configuration)");
   expect(r2.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 test("exit codes: usage 2, no spec set 2, verify before elaborate 2", () => {
   const { root } = project();
@@ -341,7 +346,7 @@ test("exit codes: usage 2, no spec set 2, verify before elaborate 2", () => {
   const r = run(["elaborate", "--root", empty], empty);
   expect(r.stderr).toContain("no spec set found");
   expect(r.status).toBe(2);
-});
+}, TEST_TIMEOUT);
 
 test("the engine runs under bun exactly as under node (PKG-002)", () => {
   const { root } = project();
@@ -351,7 +356,7 @@ test("the engine runs under bun exactly as under node (PKG-002)", () => {
   const v = run(["verify", "--root", root], root, { runtime: "bun" });
   expect(v.stdout).toContain("0 SUFFICIENT, 2 INSUFFICIENT");
   expect(run(["elaborate", "--root", root], root).stdout).toContain("(0 written, 2 unchanged)");
-});
+}, TEST_TIMEOUT);
 
 test("the engine imports node builtins only (PKG-001)", () => {
   const dir = new URL("../skills/new-project/scripts/engine/", import.meta.url).pathname;
@@ -362,4 +367,4 @@ test("the engine imports node builtins only (PKG-001)", () => {
   const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url).pathname, "utf8"));
   expect(pkg.dependencies).toBeUndefined();
   expect(pkg.devDependencies).toBeUndefined();
-});
+}, TEST_TIMEOUT);

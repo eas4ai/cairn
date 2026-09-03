@@ -517,36 +517,107 @@ export function writeAcknowledgment(root: string, a: Acknowledgment): void {
   writeFileSync(acknowledgmentPath(root, a.requirement), stringifyYaml({ ...a } as YamlMap, ["Same Page: the developer acknowledged that a revision clears or changes a standing disproof (ENG-115)."]));
 }
 
-// ---------------------------------------------------------------- weak sensitivity
+// -------------------------------------------------------- weak sensitivity
 
-// ENG-173, ENG-174: a challenge the validator passed. Recorded per
-// requirement and validator, so every earlier challenged claim of that
-// validator stops counting and `verify` reports it. History, like a
-// disproof: the engine writes it and never deletes it.
-export type WeakSensitivity = { requirement: string; validator: string; mechanism: Mechanism; artifact: string; from_falsifier: boolean; snapshot: string | null; run: string; recorded_at: string };
+// ENG-173, ENG-174: a challenge the validator passed. Sensitivity is a
+// property of the mechanism, not of one requirement, so a miss is
+// recorded against the validator and withdraws that validator's
+// challenged claims wherever they stand. The record names which
+// requirement's falsifier the challenge realized, for review.
+//
+// A miss is cleared when the same challenge -- the same mechanism on
+// the same artifact -- is run again and the validator notices it. The
+// cleared entry stays in the file as history, with the moment it was
+// cleared; only an uncleared miss withdraws a claim.
+export type Miss = {
+  mechanism: Mechanism;
+  artifact: string;
+  requirement: string;
+  from_falsifier: boolean;
+  snapshot: string | null;
+  run: string;
+  recorded_at: string;
+  cleared_at: string | null;
+  cleared_run: string | null;
+};
 
-export function weakPath(root: string, id: string, authority: Authority, name: string | null): string {
-  return join(root, evidenceRoot(authority, name), id, "weak-sensitivity.yaml");
+export type Mechanism_Record = { validator: string; misses: Miss[] };
+
+export function mechanismPath(root: string, validator: string, authority: Authority, name: string | null): string {
+  return join(root, evidenceRoot(authority, name), "_mechanisms", `${validator}.yaml`);
 }
 
-export function readWeak(root: string, id: string): WeakSensitivity[] {
-  const out: WeakSensitivity[] = [];
+function parseMiss(raw: YamlValue): Miss | null {
+  if (!isMap(raw)) return null;
+  const s = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : "");
+  if (!s("mechanism") || !s("artifact")) return null;
+  return {
+    mechanism: s("mechanism") as Mechanism,
+    artifact: s("artifact"),
+    requirement: s("requirement"),
+    from_falsifier: raw["from_falsifier"] === true,
+    snapshot: strOrNull(raw["snapshot"]),
+    run: s("run"),
+    recorded_at: s("recorded_at"),
+    cleared_at: strOrNull(raw["cleared_at"]),
+    cleared_run: strOrNull(raw["cleared_run"]),
+  };
+}
+
+// Every miss recorded against one validator, across every authority's
+// evidence.
+export function readMisses(root: string, validator: string): Miss[] {
+  const out: Miss[] = [];
   for (const location of evidenceLocations(root)) {
-    const p = weakPath(root, id, location.authority, location.name);
+    const p = mechanismPath(root, validator, location.authority, location.name);
     if (!existsSync(p)) continue;
     const raw = parseYaml(readFileSync(p, "utf8"));
-    if (!isMap(raw)) continue;
-    const s = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : "");
-    out.push({ requirement: s("requirement"), validator: s("validator"), mechanism: s("mechanism") as Mechanism, artifact: s("artifact"), from_falsifier: raw["from_falsifier"] === true, snapshot: strOrNull(raw["snapshot"]), run: s("run"), recorded_at: s("recorded_at") });
+    if (!isMap(raw) || !Array.isArray(raw["misses"])) continue;
+    for (const m of raw["misses"]) {
+      const parsed = parseMiss(m);
+      if (parsed) out.push(parsed);
+    }
   }
   return out;
 }
 
-export function writeWeak(root: string, w: WeakSensitivity, authority: Authority, name: string | null): string {
-  const p = weakPath(root, w.requirement, authority, name);
-  mkdirSync(join(root, evidenceRoot(authority, name), w.requirement), { recursive: true });
-  writeFileSync(p, stringifyYaml({ ...w } as YamlMap, ["Same Page weak sensitivity: this validator passed a challenge that realizes the", "confirmed falsifier, so no challenged claim of it counts (ENG-173, ENG-174)."]));
-  return `${evidenceRoot(authority, name)}/${w.requirement}/weak-sensitivity.yaml`;
+// Only an uncleared miss withdraws a claim (ENG-174).
+export function standingMisses(misses: Miss[]): Miss[] {
+  return misses.filter((m) => m.cleared_at === null);
+}
+
+function writeMisses(root: string, validator: string, misses: Miss[], authority: Authority, name: string | null): string {
+  const rel = `${evidenceRoot(authority, name)}/_mechanisms/${validator}.yaml`;
+  mkdirSync(join(root, evidenceRoot(authority, name), "_mechanisms"), { recursive: true });
+  writeFileSync(
+    join(root, rel),
+    stringifyYaml({ validator, misses: misses.map((m) => ({ ...m }) as YamlMap) } as YamlMap, [
+      "Same Page weak sensitivity: challenges this validator passed while the",
+      "confirmed falsifier was realized. An uncleared miss withdraws every",
+      "challenged claim of this validator (ENG-173, ENG-174). A miss is cleared",
+      "when the same challenge is run again and the validator notices it; the",
+      "entry stays as history.",
+    ])
+  );
+  return rel;
+}
+
+// Record a miss, replacing any earlier entry for the same challenge.
+export function recordMiss(root: string, validator: string, miss: Miss, authority: Authority, name: string | null): string {
+  const misses = readMisses(root, validator).filter((m) => !(m.mechanism === miss.mechanism && m.artifact === miss.artifact));
+  misses.push(miss);
+  return writeMisses(root, validator, misses, authority, name);
+}
+
+// Clear the miss this challenge left, if any. Returns the cleared entry.
+export function clearMiss(root: string, validator: string, mechanism: Mechanism, artifact: string, at: string, run: string, authority: Authority, name: string | null): Miss | null {
+  const misses = readMisses(root, validator);
+  const target = misses.find((m) => m.mechanism === mechanism && m.artifact === artifact && m.cleared_at === null);
+  if (!target) return null;
+  target.cleared_at = at;
+  target.cleared_run = run;
+  writeMisses(root, validator, misses, authority, name);
+  return target;
 }
 
 // A disproof stands while the latest record for the requirement is a

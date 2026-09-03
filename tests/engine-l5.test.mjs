@@ -5,6 +5,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseYaml } from "../skills/new-project/scripts/engine/yaml.ts";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // Same Page Conformance, layer L5 (iteration 006): sensitivity
 // mechanisms. A validator declares challenges: deliberate attempts to
 // realize the confirmed falsifier, each with a reviewable artifact.
@@ -160,6 +165,7 @@ function challenger(p, name, command, challenges, extra = "") {
       if (c.command) lines.push("    command:\n" + c.command.map((x) => `      - ${JSON.stringify(x)}`).join("\n"));
       if (c.from_falsifier !== undefined) lines.push(`    from_falsifier: ${c.from_falsifier}`);
       if (c.requirement) lines.push(`    requirement: ${c.requirement}`);
+      if (c.requirements) lines.push("    requirements:\n" + c.requirements.map((r) => `      - ${r}`).join("\n"));
       return lines.join("\n");
     })
     .join("\n");
@@ -190,28 +196,28 @@ test("a challenge is any deliberate attempt to realize the falsifier, not only m
   const p = project();
   const r = noticed(p);
   expect(r.stdout).toContain("challenged ok with negative-fixture challenges/broker-001.fixture (falsifier-derived, BRK-001): the validator noticed (exit 1)");
-  expect(r.stdout).toContain("1 challenged record(s), 0 weak-sensitivity record(s), 0 finding(s)");
+  expect(r.stdout).toContain("1 challenged record(s), 0 weak-sensitivity record(s), 0 cleared, 0 finding(s)");
   expect(r.status).toBe(0);
   const rec = records(p, "BRK-001").find((x) => x.sensitivity === "challenged");
   expect(rec.challenge.mechanism).toBe("negative-fixture");
   // Every listed mechanism is accepted, and no mechanism ranks above another.
   for (const mechanism of ["mutation", "fault-injection", "negative-fixture", "double", "counterexample-search", "adversarial-input", "harness"]) {
-    challenger(p, "ok", ["true"], [{ mechanism, artifact: "challenges/broker-001.fixture", command: ["false"], from_falsifier: false }]);
+    challenger(p, "ok", ["true"], [{ mechanism, artifact: "challenges/broker-001.fixture", command: ["false"], from_falsifier: false, requirements: ["BRK-001"] }]);
     run(["trust", "ok"], p);
     const c = run(["challenge"], p);
     expect(c.stdout).toContain(`challenged ok with ${mechanism} challenges/broker-001.fixture:`);
     expect(c.status).toBe(0);
   }
-  challenger(p, "ok", ["true"], [{ mechanism: "code-review", artifact: "challenges/broker-001.fixture", command: ["false"], from_falsifier: false }]);
+  challenger(p, "ok", ["true"], [{ mechanism: "code-review", artifact: "challenges/broker-001.fixture", command: ["false"], from_falsifier: false, requirements: ["BRK-001"] }]);
   const bad = run(["challenge", "ok", "--as-developer"], p);
   expect(bad.stdout).toContain("mechanism must be one of mutation, fault-injection, negative-fixture, double, counterexample-search, adversarial-input, harness; no mechanism ranks above another");
   expect(bad.stdout).toContain("(ENG-170)");
   expect(bad.stdout).toContain("0 challenge(s) run");
-});
+}, TEST_TIMEOUT);
 
 test("a challenged record cites a reviewable artifact; without one there is no challenged record (ENG-171, ENG-172)", () => {
   const p = project();
-  challenger(p, "ok", ["true"], [{ mechanism: "mutation", command: ["false"], from_falsifier: false }]);
+  challenger(p, "ok", ["true"], [{ mechanism: "mutation", command: ["false"], from_falsifier: false, requirements: ["BRK-001"] }]);
   bind(p, "BRK-001", "ok");
   let r = run(["challenge", "ok", "--as-developer"], p);
   expect(r.stdout).toContain("a challenge cites a reviewable artifact");
@@ -219,7 +225,7 @@ test("a challenged record cites a reviewable artifact; without one there is no c
   expect(r.stdout).toContain("0 challenged record(s)");
   expect(records(p, "BRK-001")).toEqual([]);
   // An artifact that is not in the snapshot is not reviewable.
-  challenger(p, "ok", ["true"], [{ mechanism: "mutation", artifact: "challenges/absent.fixture", command: ["false"], from_falsifier: false }]);
+  challenger(p, "ok", ["true"], [{ mechanism: "mutation", artifact: "challenges/absent.fixture", command: ["false"], from_falsifier: false, requirements: ["BRK-001"] }]);
   r = run(["challenge", "ok", "--as-developer"], p);
   expect(r.stdout).toContain("challenge artifact challenges/absent.fixture does not exist in the snapshot");
   expect(r.stdout).toContain("(ENG-171)");
@@ -230,7 +236,7 @@ test("a challenged record cites a reviewable artifact; without one there is no c
   const v = run(["verify"], p);
   expect(v.stdout).toContain("a challenged record names its challenge mechanism and artifact");
   expect(v.stdout).toContain("(ENG-035)");
-});
+}, TEST_TIMEOUT);
 
 test("a challenged record names its mechanism, states whether it derives from the falsifier, and cites that falsifier's digest (ENG-033, ENG-035, ENG-036, ENG-037)", () => {
   const p = project();
@@ -244,7 +250,7 @@ test("a challenged record names its mechanism, states whether it derives from th
   expect(records(p, "BRK-003")).toEqual([]);
   // No validator output sets the sensitivity axis.
   artifact(p, "challenges/liar.fixture");
-  challenger(p, "liar", ["true"], [{ mechanism: "harness", artifact: "challenges/liar.fixture", command: ["sh", "-c", "echo 'sensitivity: challenged'; echo 'from_falsifier: true'; exit 1"], from_falsifier: false }]);
+  challenger(p, "liar", ["true"], [{ mechanism: "harness", artifact: "challenges/liar.fixture", command: ["sh", "-c", "echo 'sensitivity: challenged'; echo 'from_falsifier: true'; exit 1"], from_falsifier: false, requirements: ["BRK-003"] }]);
   bind(p, "BRK-003", "liar");
   commit(p, "liar");
   run(["trust", "liar"], p);
@@ -258,7 +264,7 @@ test("a challenged record names its mechanism, states whether it derives from th
   const r = run(["challenge", "liar", "--as-developer"], p);
   expect(r.stdout).toContain("names requirement BRK-001, which does not list validator liar");
   expect(r.stdout).toContain("(ENG-037)");
-});
+}, TEST_TIMEOUT);
 
 test("a challenge the validator passes is weak sensitivity: reported, and no challenged claim of that validator stands (ENG-173, ENG-174)", () => {
   const p = project();
@@ -270,21 +276,21 @@ test("a challenge the validator passes is weak sensitivity: reported, and no cha
   run(["trust", "ok"], p);
   const c = run(["challenge"], p);
   expect(c.stdout).toContain("the validator passed under the violating state (exit 0)");
-  expect(c.stdout).toContain("weak sensitivity for BRK-001: ok passed the mutation challenge challenges/broker-001.fixture, which realizes the confirmed falsifier; the mechanism does not notice the violating state");
+  expect(c.stdout).toContain("weak sensitivity: ok passed the mutation challenge challenges/broker-001.fixture, which realizes the confirmed falsifier of BRK-001; the mechanism does not notice that violating state, so no challenged claim of ok stands");
   expect(c.stdout).toContain("(ENG-173)");
-  expect(c.stdout).toContain("0 challenged record(s), 1 weak-sensitivity record(s)");
+  expect(c.stdout).toContain("0 challenged record(s), 1 weak-sensitivity record(s), 0 cleared");
   expect(c.status).toBe(1);
-  expect(existsSync(join(p.root, ".same-page", "evidence", "BRK-001", "weak-sensitivity.yaml"))).toBe(true);
+  expect(existsSync(join(p.root, ".same-page", "evidence", "_mechanisms", "ok.yaml"))).toBe(true);
   const v = run(["verify"], p);
   e = entry(v.stdout, "BRK-001");
-  expect(v.stdout).toContain("weak sensitivity for BRK-001: ok passed the mutation challenge");
+  expect(v.stdout).toContain("weak sensitivity: ok passed the mutation challenge");
   expect(v.stdout).toContain("(ENG-173)");
-  expect(e).toContain("Sensitivity: weak: ok passed the mutation challenge challenges/broker-001.fixture, which realizes the falsifier; the challenged claim does not stand");
+  expect(e).toContain("Sensitivity: weak: ok passed the mutation challenge challenges/broker-001.fixture, which realizes a confirmed falsifier; no challenged claim of this validator stands");
   // The earlier challenged record is kept and shown, and counts as unchallenged.
   expect(records(p, "BRK-001").some((r) => r.sensitivity === "challenged")).toBe(true);
   expect(e).toContain("unchallenged;");
   expect(e).not.toContain("; challenged;");
-});
+}, TEST_TIMEOUT);
 
 test("a profile that requires challenged sensitivity is satisfied only by a live challenged claim (ENG-034, ENG-074)", () => {
   const p = project();
@@ -302,7 +308,7 @@ test("a profile that requires challenged sensitivity is satisfied only by a live
   run(["challenge"], p);
   v = run(["verify"], p);
   expect(entry(v.stdout, "BRK-001")).toContain("BRK-001  INSUFFICIENT");
-});
+}, TEST_TIMEOUT);
 
 test("a challenge is not proof that the validator equals the requirement (ENG-001, ENG-175)", () => {
   const p = project();
@@ -313,4 +319,90 @@ test("a challenge is not proof that the validator equals the requirement (ENG-00
   expect(e).toContain("Assumptions: the declared environment inputs are the inputs that decide this validator's result; a challenge raises sensitivity; the correspondence between the requirement sentence and the validator stays an assumption");
   expect(e).not.toMatch(/proven|proves|correct\b|equivalent|guarantee/i);
   expect(v.stdout).not.toMatch(/proven|equivalent/i);
-});
+}, TEST_TIMEOUT);
+
+test("a miss clears when the same challenge is noticed again, and the cleared miss stays as history (ENG-173, ENG-174)", () => {
+  const p = project();
+  noticed(p);
+  expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("Sensitivity: challenged (negative-fixture");
+  // The mechanism goes blind: the same challenge now passes.
+  challenger(p, "ok", ["true"], [{ mechanism: "negative-fixture", artifact: "challenges/broker-001.fixture", command: ["true"], from_falsifier: true, requirement: "BRK-001" }]);
+  run(["trust", "ok"], p);
+  expect(run(["challenge"], p).stdout).toContain("1 weak-sensitivity record(s), 0 cleared");
+  let v = run(["verify"], p);
+  expect(entry(v.stdout, "BRK-001")).toContain("Sensitivity: weak:");
+  expect(v.stdout).toContain("(ENG-173)");
+  // The mechanism is fixed: the same challenge is noticed again.
+  challenger(p, "ok", ["true"], [{ mechanism: "negative-fixture", artifact: "challenges/broker-001.fixture", command: ["false"], from_falsifier: true, requirement: "BRK-001" }]);
+  run(["trust", "ok"], p);
+  const c = run(["challenge"], p);
+  expect(c.stdout).toContain("cleared the weak sensitivity ok carried since");
+  expect(c.stdout).toContain("1 challenged record(s), 0 weak-sensitivity record(s), 1 cleared, 0 finding(s)");
+  expect(c.status).toBe(0);
+  v = run(["verify"], p);
+  const e = entry(v.stdout, "BRK-001");
+  expect(e).toContain("Sensitivity: challenged (negative-fixture challenges/broker-001.fixture, falsifier-derived)");
+  expect(v.stdout).not.toContain("(ENG-173)");
+  // The miss is history, not a deletion.
+  expect(e).toContain("Prior weak sensitivity: ok passed the negative-fixture challenge challenges/broker-001.fixture at ");
+  expect(e).toContain("; cleared ");
+  const file = readFileSync(join(p.root, ".same-page", "evidence", "_mechanisms", "ok.yaml"), "utf8");
+  expect(file).toContain("cleared_at:");
+  expect(parseYaml(file).misses.length).toBe(1);
+}, TEST_TIMEOUT);
+
+test("a miss withdraws that validator's challenged claims on every requirement it serves (ENG-174)", () => {
+  const p = project();
+  artifact(p, "challenges/one.fixture");
+  artifact(p, "challenges/three.fixture");
+  const both = (first) => [
+    { mechanism: "negative-fixture", artifact: "challenges/one.fixture", command: [first], from_falsifier: true, requirement: "BRK-001" },
+    { mechanism: "negative-fixture", artifact: "challenges/three.fixture", command: ["false"], from_falsifier: true, requirement: "BRK-003" },
+  ];
+  challenger(p, "ok", ["true"], both("false"));
+  bind(p, "BRK-001", "ok");
+  bind(p, "BRK-003", "ok");
+  commit(p, "two challenges");
+  run(["trust", "ok"], p);
+  run(["run"], p);
+  run(["challenge"], p);
+  let v = run(["verify"], p);
+  expect(entry(v.stdout, "BRK-001")).toContain("Sensitivity: challenged (negative-fixture challenges/one.fixture");
+  expect(entry(v.stdout, "BRK-003")).toContain("Sensitivity: challenged (negative-fixture challenges/three.fixture");
+  // One challenge goes blind. The claim on the other requirement falls too:
+  // sensitivity is a property of the mechanism, not of one requirement.
+  challenger(p, "ok", ["true"], both("true"));
+  run(["trust", "ok"], p);
+  run(["challenge"], p);
+  v = run(["verify"], p);
+  expect(entry(v.stdout, "BRK-001")).toContain("Sensitivity: weak:");
+  const three = entry(v.stdout, "BRK-003");
+  expect(three).toContain("Sensitivity: weak:");
+  expect(three).toContain("recorded against BRK-001");
+  expect(v.stdout).toContain("no challenged claim of ok stands, BRK-003 included");
+}, TEST_TIMEOUT);
+
+test("a challenge that does not derive from a confirmed falsifier names the requirements it speaks for, and claims nothing by default (ENG-036)", () => {
+  const p = project();
+  artifact(p, "challenges/generic.fixture");
+  challenger(p, "ok", ["true"], [{ mechanism: "harness", artifact: "challenges/generic.fixture", command: ["false"], from_falsifier: false }]);
+  bind(p, "BRK-001", "ok");
+  bind(p, "BRK-003", "ok");
+  commit(p, "generic challenge");
+  let r = run(["challenge", "ok", "--as-developer"], p);
+  expect(r.stdout).toContain("a challenge that does not derive from a confirmed falsifier names the requirements it speaks for, as a requirements list; it claims nothing by default");
+  expect(r.stdout).toContain("(ENG-036)");
+  expect(records(p, "BRK-001")).toEqual([]);
+  expect(records(p, "BRK-003")).toEqual([]);
+  // Named: it speaks for those requirements and no others.
+  challenger(p, "ok", ["true"], [{ mechanism: "harness", artifact: "challenges/generic.fixture", command: ["false"], from_falsifier: false, requirements: ["BRK-003"] }]);
+  r = run(["challenge", "ok", "--as-developer"], p);
+  expect(r.stdout).toContain("1 record(s) at");
+  expect(records(p, "BRK-001")).toEqual([]);
+  expect(records(p, "BRK-003").filter((x) => x.sensitivity === "challenged").length).toBe(1);
+  // A falsifier-derived challenge does not carry a list.
+  challenger(p, "ok", ["true"], [{ mechanism: "harness", artifact: "challenges/generic.fixture", command: ["false"], from_falsifier: true, requirement: "BRK-001", requirements: ["BRK-003"] }]);
+  r = run(["challenge", "ok", "--as-developer"], p);
+  expect(r.stdout).toContain("a falsifier-derived challenge speaks for the one requirement whose falsifier it realizes; drop the requirements list");
+  expect(r.stdout).toContain("(ENG-037)");
+}, TEST_TIMEOUT);

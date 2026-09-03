@@ -1577,6 +1577,31 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 008 (remediation) built, under
+  docs/specs/same-page/iterations/008.md, after a release audit found
+  three defects in layer L5. No requirement text changed; the engine
+  moved to what the agreed sentences already say. Decisions, the
+  developer having deferred the two open ones to the model:
+  (a) a miss is recorded against the validator, in
+  `.same-page/evidence/_mechanisms/<validator>.yaml`, because
+  sensitivity is a property of the mechanism; while it stands it
+  withdraws that validator's challenged claims for every requirement it
+  serves, which is ENG-174 read as written rather than scoped to the
+  requirement the challenge named; (b) a miss is cleared when the same
+  challenge -- the same mechanism on the same artifact -- is run again
+  and the validator notices it; the entry stays in the file with the
+  moment it was cleared, and `verify` shows it as prior weak
+  sensitivity rather than a finding. The defect corrected: a miss
+  withdrew every challenged claim recorded after it, permanently, while
+  the workflow documentation promised the claim returns;
+  (c) every challenge names its subjects -- one `requirement` when it
+  derives from that requirement's falsifier, an explicit `requirements`
+  list otherwise -- and claims nothing by default. The defect
+  corrected: one demonstration granted challenged sensitivity to every
+  obligation the validator was bound to; (d) the engine test suites
+  carry an explicit generous timeout, because every test spawns the
+  scripts or the engine and a loaded machine made a correct suite go
+  red.
 - 2026-09-03 -- Iteration 007 (layer L6) built, under
   docs/specs/same-page/iterations/007.md, closing the six construction
   layers of ENG-240. Implementation-design decisions taken under that

@@ -23,10 +23,14 @@ confirmed falsifiers into committed obligation files under .same-page/,
 trust, and `verify` reports each obligation's verdict against the
 policy and compares its machine view of coverage with the evidence map,
 which `sync-map` is the only engine command that writes.
-`challenge` runs a validator's declared challenges: a challenge the
-validator notices makes the record challenged with its mechanism named,
-and one the validator passes is weak sensitivity, which withdraws every
-challenged claim of that validator. A validator that declares a
+`challenge` runs a validator's declared challenges, each naming the
+requirements it speaks for: a challenge the validator notices makes
+those records challenged with its mechanism named, and one the
+validator passes is a miss recorded against the validator, which
+withdraws every challenged claim of that validator until the same
+challenge is noticed again. `verify` executes the declared environment
+commands and recomputes adapter closures under the same execution trust
+as `run`, so it spawns processes and takes seconds. A validator that declares a
 `closure:` narrows its boundary below the repository when a registered,
 trusted adapter establishes the input set; a `trace:` widens the
 identity and never narrows. Every record stores its identity inputs as one block; its
@@ -232,10 +236,10 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/007.md
-  (engine layer L6, ecosystem adapters and sound narrowing); 001 (L1),
-  002 (L2), 003 (the CONF revision), 004 (L3), 005 (L4), and 006 (L5)
-  are closed. Work outside it is
+- The current iteration contract is docs/specs/same-page/iterations/008.md
+  (remediation: sensitivity claims and their reach); 001 (L1), 002 (L2),
+  003 (the CONF revision), 004 (L3), 005 (L4), 006 (L5), and 007 (L6)
+  are closed, and all six construction layers are built. Work outside it is
   captured via /next-iteration -- surfaced and staged, never implemented
   ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec

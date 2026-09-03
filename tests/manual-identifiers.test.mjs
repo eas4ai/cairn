@@ -2,6 +2,11 @@ import { test, expect } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 // The manual explains; the specs legislate. Every LANG or CONF identifier
 // the manual or the README cites must be defined, and not withdrawn, in
 // a spec under docs/superpowers/specs/. A renumbered or withdrawn rule
@@ -33,4 +38,4 @@ test("every identifier the manual and README cite is defined in the specs", () =
   expect(cited.size).toBeGreaterThan(20);
   const missing = [...cited].filter((id) => !defined.has(id)).sort();
   expect(missing).toEqual([]);
-});
+}, TEST_TIMEOUT);

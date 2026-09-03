@@ -4,6 +4,11 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
+// Every test here spawns the scripts or the engine as child
+// processes, so a loaded machine makes them slow rather than wrong.
+// The timeout is generous on purpose: a red suite must mean a defect.
+const TEST_TIMEOUT = 120_000;
+
 const CHECK = new URL(
   "../skills/new-project/scripts/language-check.mjs",
   import.meta.url
@@ -98,7 +103,7 @@ test("clean SPTE spec passes with exit 0", () => {
   const r = run([dir]);
   expect(r.stdout).toContain("no findings");
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // False-block guard: non-normative sections are never scanned.
 test("prose outside normative sections is not scanned", () => {
@@ -107,7 +112,7 @@ test("prose outside normative sections is not scanned", () => {
   });
   const r = run([dir]);
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // False-block guard: mentions are not use (LANG-062 / CONF-013).
 test("quoted terms, code spans, and fenced blocks are exempt", () => {
@@ -116,7 +121,7 @@ test("quoted terms, code spans, and fenced blocks are exempt", () => {
   });
   const r = run([dir]);
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // The "Normative." marker pulls a non-canonical section into scope.
 test("Normative. marker makes a section scannable (LANG-061)", () => {
@@ -127,7 +132,7 @@ test("Normative. marker makes a section scannable (LANG-061)", () => {
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("SHOULD");
   expect(r.stdout).toContain("LANG-005");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- report
 
@@ -147,7 +152,7 @@ test("AUTH-014 fixture reproduces the report format", () => {
   expect(r.stdout).toContain("Did you mean MUST or MAY?");
   expect(r.stdout).toContain("GRACEFULLY\n  Undefined qualitative term. (LANG-030");
   expect(r.stdout).toContain("State the observable required behavior.");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- tokens
 
@@ -158,7 +163,7 @@ test("lowercase normative keywords are reported (CONF-004)", () => {
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("MUST\n  Normative keyword in lower case. (LANG-006");
-});
+}, TEST_TIMEOUT);
 
 test("uppercase OPTIONAL is reported; lowercase optional is not (CONF-003)", () => {
   const bad = specDir({
@@ -169,7 +174,7 @@ test("uppercase OPTIONAL is reported; lowercase optional is not (CONF-003)", () 
     "01-a.md": `# D\n\nStatus: Draft for review\nPrefix: AA\n\n## Capabilities\n\n[AA-001]\nWhen a request carries an optional header, the broker MUST accept the request.\n`,
   });
   expect(run([ok]).status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 test("unqualified Avoid terms fire; qualified ones do not (CONF-006)", () => {
   const dir = specDir({
@@ -181,7 +186,7 @@ test("unqualified Avoid terms fire; qualified ones do not (CONF-006)", () => {
   expect(r.stdout).toContain("LATER");
   // "out of scope" is parenthetically qualified -> pass two, not here.
   expect(r.stdout).not.toContain("OUT OF SCOPE");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- sentences
 
@@ -193,7 +198,7 @@ test("compound requirements are reported (CONF-007)", () => {
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("COMPOUND REQUIREMENT");
   expect(r.stdout).toContain("LANG-020");
-});
+}, TEST_TIMEOUT);
 
 test("pronoun and placeholder subjects are reported (CONF-008)", () => {
   const dir = specDir({
@@ -204,7 +209,7 @@ test("pronoun and placeholder subjects are reported (CONF-008)", () => {
   expect(r.stdout).toContain("IT\n  Pronoun or placeholder subject. (LANG-021");
   expect(r.stdout).toContain("THE SYSTEM\n  Pronoun or placeholder subject. (LANG-021");
   expect(r.stdout).toContain("NO ACTOR\n  Requirement names no actor. (LANG-021");
-});
+}, TEST_TIMEOUT);
 
 test("requirement sentences over 30 words are reported (CONF-009)", () => {
   const words = Array.from({ length: 33 }, (_, i) => `word${i}`).join(" ");
@@ -215,7 +220,7 @@ test("requirement sentences over 30 words are reported (CONF-009)", () => {
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("SENTENCE LENGTH");
   expect(r.stdout).toContain("LANG-024");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- identifiers
 
@@ -236,7 +241,7 @@ test("duplicate, wrong-prefix, short, and undeclared identifiers are reported (C
     "01-a.md": `# D\n\nStatus: Normative design specification\n\n## Capabilities\n\n[AA-001]\nThe broker MUST accept a valid request.\n`,
   });
   expect(run([undeclared]).stdout).toContain("no declared prefix");
-});
+}, TEST_TIMEOUT);
 
 test("unresolved references to a declared prefix are reported", () => {
   const dir = specDir({
@@ -245,7 +250,7 @@ test("unresolved references to a declared prefix are reported", () => {
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("Unresolved requirement reference");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- history
 
@@ -279,7 +284,7 @@ test("removing an identifier is reported; withdrawing is not (CONF-002)", () => 
     )
   );
   expect(run([withdrawn]).status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 test("reusing a withdrawn identifier is reported (CONF-002)", () => {
   const base = `# D\n\nStatus: Draft for review\nPrefix: AA\n\n## Capabilities\n\n[AA-001]\nWithdrawn: 2026-08-01 -- folded into AA-002.\n\n[AA-002]\nThe broker MUST reject an invalid request.\n`;
@@ -294,7 +299,7 @@ test("reusing a withdrawn identifier is reported (CONF-002)", () => {
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("Withdrawn identifier reused");
-});
+}, TEST_TIMEOUT);
 
 test("no git history yields an INFO line, not a finding (CONF-002)", () => {
   const dir = specDir({
@@ -306,7 +311,7 @@ test("no git history yields an INFO line, not a finding (CONF-002)", () => {
   const r = run([dir], tmpdir());
   expect(r.status).toBe(0);
   expect(r.stdout).toContain("identifier-stability check (CONF-002) skipped");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- map
 
@@ -317,7 +322,7 @@ test("agreed identifiers with no conformance.md are reported (CONF-040)", () => 
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("No conformance.md");
-});
+}, TEST_TIMEOUT);
 
 test("Draft and Observed specs do not require map rows (CONF-043)", () => {
   const dir = specDir({
@@ -331,7 +336,7 @@ test("Draft and Observed specs do not require map rows (CONF-043)", () => {
     ).replace(/AA/g, "BB"),
   });
   expect(run([dir]).status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 const MAP_HEAD = "# Evidence map\n\n## AA\n\n| Requirement | Coverage | Method | Evidence |\n|---|---|---|---|\n";
 
@@ -351,7 +356,7 @@ test("map rows are validated: coverage, evidence presence, path, duplicates, unk
   expect(r.stdout).toContain("appears more than once");
   expect(r.stdout).toContain("Evidence path does not exist");
   expect(r.stdout).toContain("identifier no spec defines");
-});
+}, TEST_TIMEOUT);
 
 test("a complete, truthful map passes (CONF-040/041/042)", () => {
   const dir = specDir({
@@ -360,7 +365,7 @@ test("a complete, truthful map passes (CONF-040/041/042)", () => {
     "conformance.md": MAP_HEAD + "| AA-001 | Asserted | inspected | evidence.rs |\n",
   });
   expect(run([dir]).status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // The column split: coverage and method are separate axes, and no
 // check reads a mechanism out of a coverage word.
@@ -373,7 +378,7 @@ test("an unknown method is reported (CONF-045)", () => {
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain('Invalid map method "vibes"');
-});
+}, TEST_TIMEOUT);
 
 test("inspected and Asserted agree in both directions (CONF-046/047)", () => {
   const dir = specDir({
@@ -389,7 +394,7 @@ test("inspected and Asserted agree in both directions (CONF-046/047)", () => {
     "conformance.md": MAP_HEAD + "| AA-001 | Asserted | test | evidence.rs |\n",
   });
   expect(run([other]).stdout).toContain('Coverage Asserted with method "test"');
-});
+}, TEST_TIMEOUT);
 
 test("an Uncovered row carries no method and no evidence (CONF-048/049)", () => {
   const dir = specDir({
@@ -404,7 +409,7 @@ test("an Uncovered row carries no method and no evidence (CONF-048/049)", () => 
     "conformance.md": MAP_HEAD + "| AA-001 | Uncovered | - | evidence.rs |\n",
   });
   expect(run([other]).stdout).toContain("Coverage Uncovered with an evidence citation");
-});
+}, TEST_TIMEOUT);
 
 // A pre-split map is reported as a shape finding, not silently
 // misread with its evidence cell parsed as a method.
@@ -417,7 +422,7 @@ test("a three-column map row is reported (CONF-041/045)", () => {
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("does not carry the four map columns");
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- self
 
@@ -429,7 +434,7 @@ test("the language and evidence-map specs pass their own check", () => {
   expect(r.stdout).toContain("no findings");
   expect(r.stdout).not.toContain("CONF-006) skipped");
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // CONF-010: the check never writes.
 test("the check does not modify scanned files", () => {
@@ -437,7 +442,7 @@ test("the check does not modify scanned files", () => {
   const before = readFileSync(join(dir, "01-broker.md"), "utf8");
   run([dir]);
   expect(readFileSync(join(dir, "01-broker.md"), "utf8")).toBe(before);
-});
+}, TEST_TIMEOUT);
 
 // The shipped templates scaffold a spec set that passes the check:
 // templates can never drift out of the language they teach.
@@ -460,7 +465,7 @@ test("a spec set scaffolded from the shipped templates passes", () => {
   const r = run([dir]);
   expect(r.stdout).toContain("no findings");
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- standard dictionary
 
@@ -478,7 +483,7 @@ test("an edited standard-dictionary entry without a ruling is reported (CONF-014
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("STANDARD DICTIONARY DRIFT: Done");
   expect(r.stdout).toContain("glossary.md:");
-});
+}, TEST_TIMEOUT);
 
 test("an edited standard-dictionary entry with a ruling passes and is listed (CONF-014)", () => {
   const ruled = GLOSSARY.replace(
@@ -491,7 +496,7 @@ test("an edited standard-dictionary entry with a ruling passes and is listed (CO
   expect(r.stdout).toContain("no findings");
   expect(r.stdout).toContain("standard term ruled for this project: Done");
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 test("a missing standard entry and a foreign entry in the section are reported (CONF-014)", () => {
   const withoutDrift = GLOSSARY.replace(/\*\*Drift\*\*:\n[^]*?\n\n/, "");
@@ -501,7 +506,7 @@ test("a missing standard entry and a foreign entry in the section are reported (
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("STANDARD DICTIONARY DRIFT: Drift");
   expect(r.stdout).toContain("NOT A STANDARD TERM: Widget");
-});
+}, TEST_TIMEOUT);
 
 test("a glossary without the Working vocabulary section is reported (CONF-014)", () => {
   const dir = specDir({
@@ -511,7 +516,7 @@ test("a glossary without the Working vocabulary section is reported (CONF-014)",
   const r = run([dir]);
   expect(r.status).toBe(1);
   expect(r.stdout).toContain("STANDARD DICTIONARY MISSING");
-});
+}, TEST_TIMEOUT);
 
 // A script copied without its templates cannot compare; it says so (INFO)
 // and does not fail the run.
@@ -523,7 +528,7 @@ test("a script without its template beside it says so and does not fail (CONF-01
   const r = spawnSync("node", [join(lone, "scripts", "language-check.mjs"), dir], { cwd: dir, encoding: "utf8" });
   expect(r.stdout).toContain("CONF-014) skipped");
   expect(r.status).toBe(0);
-});
+}, TEST_TIMEOUT);
 
 // ---------------------------------------------------------------- section status and falsifier lines (iteration 003)
 
@@ -577,7 +582,7 @@ test("an Agreed section inside a Draft file is held to the map, and its subsecti
   // check only refuses unknown identifiers; what it must not do is require AA-001 or AA-004.
   expect(ok.stdout).not.toContain("AA-001");
   expect(ok.stdout).not.toContain("AA-004");
-});
+}, TEST_TIMEOUT);
 
 test("an Agreed MUST with no Falsifier line is reported; Draft and Observed ones are not (CONF-016)", () => {
   const r = run([specDir({ "01-a.md": SECTIONED.replace("Falsifier: an error response is served from the cache.\n", ""), "conformance.md": SECTIONED_MAP })]);
@@ -585,14 +590,14 @@ test("an Agreed MUST with no Falsifier line is reported; Draft and Observed ones
   expect(r.stdout).not.toContain("AA-001\n  Agreed MUST");
   expect(r.stdout).not.toContain("AA-004\n  Agreed MUST");
   expect(r.status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a Falsifier line under a permission-only MAY is reported (CONF-017)", () => {
   const spec = CLEAN_SPEC.replace("The broker MAY cache a manifest for the duration of a lease.\n", "The broker MAY cache a manifest for the duration of a lease.\nFalsifier: a manifest is cached past its lease.\n");
   const r = run([specDir({ "glossary.md": GLOSSARY, "01-broker.md": spec, "conformance.md": BROKER_MAP })]);
   expect(r.stdout).toContain("BROKER-003\n  Falsifier: line under a permission-only MAY requirement. (LANG-073, CONF-017)");
   expect(r.status).toBe(1);
-});
+}, TEST_TIMEOUT);
 
 test("a normative keyword inside a Falsifier line is reported; a mention is not (CONF-018)", () => {
   const bad = CLEAN_SPEC.replace("broker returns a success response.", "broker MUST return a success response.");
@@ -602,7 +607,7 @@ test("a normative keyword inside a Falsifier line is reported; a mention is not 
   const mention = CLEAN_SPEC.replace("broker returns a success response.", "broker returns a success response although the rule says `MUST`.");
   const m = run([specDir({ "glossary.md": GLOSSARY, "01-broker.md": mention, "conformance.md": BROKER_MAP })]);
   expect(m.stdout).toContain("no findings");
-});
+}, TEST_TIMEOUT);
 
 test("the four rules together produce exactly four findings on the contract's fixture (iteration 003 definition of done)", () => {
   const spec = SECTIONED.replace("Falsifier: an error response is served from the cache.\n", "")
@@ -613,4 +618,4 @@ test("the four rules together produce exactly four findings on the contract's fi
   expect(r.stdout).toContain("CONF-016)");
   expect(r.stdout).toContain("CONF-017)");
   expect(r.stdout).toContain("CONF-018)");
-});
+}, TEST_TIMEOUT);

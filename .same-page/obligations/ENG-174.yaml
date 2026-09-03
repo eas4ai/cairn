@@ -24,4 +24,8 @@ required:
 validators:
   - name: bun-test
     attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-03T15:58:36.661Z
+    snapshot: git:a170a2efc4ce880ac3030884539340e53e4b98e4
+    developer_confirmed: false
 sentence: When a validator passes a challenge that realizes the violating state, the engine MUST NOT preserve a `challenged` sensitivity claim for that validator.

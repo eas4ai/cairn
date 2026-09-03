@@ -876,8 +876,8 @@ definition's digest, so a changed definition needs a new grant
 record per obligation that lists it, under .same-page/evidence/,
 carrying the six independent axes the engine owns (ENG-026): the
 method, the binding basis (`attested` when the obligation's entry
-says who vouched for the mapping, ENG-030), the sensitivity
-(`unchallenged` until L5), the freshness, the dependency provenance
+says who vouched for the mapping, ENG-030), the sensitivity (`unchallenged` until a challenge speaks),
+the freshness, the dependency provenance
 (`conservative`), and the assumptions, plus the source snapshot: `git:<sha>` on a clean tree,
 `workspace:<digest>` otherwise (ENG-047, ENG-048). Nothing the
 validator prints can set any of those axes (ENG-052, ENG-054); its
@@ -969,14 +969,44 @@ writes `-` and no citation on Uncovered, and never writes a freshness
 value or a verdict (ENG-195, ENG-196). Every other byte of
 conformance.md stays as written.
 
+Layer L5 (iteration 006) asks the question a passing test cannot
+answer: does this mechanism notice the violating state at all? A
+validator definition carries `challenges:`, and each declaration names
+a mechanism -- mutation, fault injection, a negative fixture, a
+controlled double, a counterexample search, an adversarial input, or a
+harness, seven mechanisms with no rank among them (ENG-170) -- a
+reviewable artifact that exists in the snapshot (ENG-171, ENG-172), a
+command, and whether the challenge derives from the confirmed
+falsifier. A falsifier-derived declaration names the requirement whose
+falsifier it realizes (ENG-037). On this package, the `language-check`
+validator declares a negative fixture for CONF-016: a spec file with
+an Agreed MUST and no Falsifier line, exactly the state that rule
+forbids.
+
+`same-page challenge` runs those declarations under the same execution
+trust as `run`. The command realizes the violating state and runs the
+validator, so its exit status is the validator's under the violation:
+non-zero means the validator noticed, and the record carries
+sensitivity `challenged` with the mechanism, the artifact, and the
+falsifier digest (ENG-035, ENG-036). Zero is the interesting answer.
+It means the mechanism passed while the falsifier was realized, which
+is weak or vacuous sensitivity: the engine records it, `verify`
+reports it, and every earlier challenged claim of that validator stops
+counting (ENG-173, ENG-174). The old record stays where it is; the
+claim it carried does not. A profile that requires `sensitivity:
+challenged` is satisfied only by a live claim (ENG-074), and every
+entry states its sensitivity. What a challenge never establishes is
+that the validator means the same thing as the sentence: a challenged
+entry carries that correspondence as an assumption, and no engine
+output says proven (ENG-001, ENG-175).
+
 The engine still writes no spec, and it writes the evidence map only
 through that one command (ENG-011, ENG-197): the engine computes; the
 map remains the human's claim.
 
-The next layers, each under its own contract: challenges that
-demonstrate sensitivity (L5); ecosystem adapters that establish
-backend bindings, complete closures, and boundaries narrower than the
-repository (L6).
+The next layer, under its own contract: ecosystem adapters that
+establish backend bindings, complete closures, and boundaries narrower
+than the repository (L6).
 
 Three things the engine is not. It is not an auto-rewriter: it never
 edits a spec or the map without an explicit action. It is not a proof

@@ -16,7 +16,7 @@
 
 import { adapterVersion } from "./adapters.ts";
 import { authorityLabel, sameAuthority, type Authority } from "./authority.ts";
-import type { Disproof, StoredRecord } from "./evidence.ts";
+import type { Disproof, StoredRecord, WeakSensitivity } from "./evidence.ts";
 import { obligationDigest, type Obligation } from "./obligations.ts";
 import type { Clause, Profile } from "./policy.ts";
 import type { EnvironmentInput } from "./validators.ts";
@@ -25,7 +25,7 @@ export type Verdict = "FAILING" | "BLOCKED" | "INSUFFICIENT" | "SUFFICIENT";
 
 export type Freshness = "current" | "stale" | "unknown";
 
-export type Assessed = { record: StoredRecord; freshness: Freshness; expired: boolean; why: string };
+export type Assessed = { record: StoredRecord; freshness: Freshness; expired: boolean; why: string; demoted: string | null };
 
 // The present value of every identity input the engine can compute:
 // the snapshot (null when no chain step established a boundary), each
@@ -59,7 +59,7 @@ function short(v: string | null): string {
 // ENG-142: compare every recorded identity input with its present
 // value. An input that cannot be computed now, or was not computed when
 // the record was made, is unknown; unknown wins over stale.
-export function assess(o: Obligation, records: StoredRecord[], present: Present, now: Date): Assessed[] {
+export function assess(o: Obligation, records: StoredRecord[], present: Present, now: Date, weak: WeakSensitivity[] = []): Assessed[] {
   const obligation = obligationDigest(o);
   return records.map((record) => {
     const id = record.identity;
@@ -102,7 +102,15 @@ export function assess(o: Obligation, records: StoredRecord[], present: Present,
     }
     const freshness: Freshness = unknown.length ? "unknown" : stale.length ? "stale" : "current";
     const why = [...unknown, ...stale, ...(expired ? [`manual evidence expired ${record.manual!.expires}`] : [])].join("; ");
-    return { record, freshness, expired, why };
+    // ENG-174: a validator that passed a challenge realizing the
+    // falsifier keeps no challenged claim. The record stays; the claim
+    // does not.
+    const missed = record.sensitivity === "challenged" && record.validator ? weak.find((w) => w.validator === record.validator) : undefined;
+    if (missed) {
+      const demoted = `${missed.validator} passed the ${missed.mechanism} challenge ${missed.artifact}, which realizes the falsifier; the challenged claim does not stand`;
+      return { record: { ...record, sensitivity: "unchallenged" as const }, freshness, expired, why, demoted };
+    }
+    return { record, freshness, expired, why, demoted: null };
   });
 }
 

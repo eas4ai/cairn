@@ -4,12 +4,12 @@
 # survive re-elaboration. A profile you set is marked profile_from:
 # obligation. A validators entry is `- name: <validator>`, plus
 # `attested_by: developer` (or agent) to vouch for the mapping.
-requirement: ENG-035
-locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-035
+requirement: ENG-171
+locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-171
 keyword: MUST
-requirement_digest: sha256:008de9a399cd91d9ee6acde27e5fb6a647b8ce351279359e9ac9e4b2eb7473f0
-falsifier: a record with `sensitivity` `challenged` has no challenge mechanism field.
-falsifier_digest: sha256:6d554aef88228010ced11f7bc0ec2f472f8d0b77cb554aaa086770fd25a61fc6
+requirement_digest: sha256:89559cd3b79a950121a39235946a70544c44bf41271eeca745495b51b3e07214
+falsifier: a record with sensitivity `challenged` cites no artifact, or cites a path absent from the snapshot.
+falsifier_digest: sha256:eb9d3a1e998a0505a545dd3b5b1fe806f720a49e469042b126d70c72f0d54243
 profile: default
 profile_from: project default
 required:
@@ -24,8 +24,4 @@ required:
 validators:
   - name: bun-test
     attested_by: agent
-    actor: eas4ai <shawn.payments@gmail.com>
-    attested_at: 2026-09-03T15:56:32.501Z
-    snapshot: workspace:ea2c78b36bb3e2e91d7eb431956a3f1c0cdb50678e0374f0ffc69ad522c46d25
-    developer_confirmed: false
-sentence: A challenged record MUST name the challenge mechanism.
+sentence: A challenged record MUST cite a reviewable challenge artifact.

@@ -69,7 +69,7 @@ Details and Codex setup: docs/INSTALLATION.md.
   INSUFFICIENT, or SUFFICIENT, with what the policy requires and what
   exists, and compares its machine view of coverage with the evidence
   map; and `sync-map` is the only engine command that writes that map.
-  Layers L1 through L4 of six are built.
+  Layers L1 through L5 of six are built.
   Manual,
   chapter 10.
 

@@ -58,7 +58,8 @@ each with its identity block and the environment fingerprint the
 definition declares;
 `attest <REQ-ID>` records manual evidence by a named human with an
 expiry; `acknowledge <REQ-ID>` records the developer's acknowledgment
-of a revision that clears a standing disproof; `sync-map` writes the
+of a revision that clears a standing disproof; `challenge` runs the challenges a validator declares and records what
+they demonstrated about noticing the falsifier; `sync-map` writes the
 machine view of coverage into the evidence map, and is the only engine
 command that writes it. `verify` then reports,
 per requirement, the verdict (FAILING, BLOCKED, INSUFFICIENT,
@@ -91,9 +92,21 @@ in the confirm-back loop, or by running `same-page sync-map` when the
 machine view is right, and never by editing a row to hide a
 disagreement.
 
-Layers L1 through L4 are built; challenges, and ecosystem adapters with
-boundaries narrower than the repository, are the next layers, each under
-its own iteration contract.
+A challenge is the one question a passing validator cannot answer:
+whether the mechanism notices the violating state. A validator
+definition declares `challenges:` -- a mechanism (mutation,
+fault-injection, negative-fixture, double, counterexample-search,
+adversarial-input, harness), a reviewable `artifact` that exists, a
+`command` that realizes the violating state and runs the validator, and
+`from_falsifier` with the `requirement` it realizes. Ask the developer
+before adding one, name the falsifier it realizes, and never claim
+challenged sensitivity by hand. A challenge the validator passes is
+weak sensitivity: report it as a finding about the mechanism, never as
+a fault in the requirement.
+
+Layers L1 through L5 are built; ecosystem adapters with boundaries
+narrower than the repository are the next layer, under its own
+iteration contract.
 
 - Codex: offer the same command on Stop in .codex/hooks.json.
 - If the developer declines, continue without it and note the decline in

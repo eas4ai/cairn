@@ -169,8 +169,13 @@ with that authority named and never passes as authoritative, while a
 current failing result counts whoever produced it. `same-page verify`
 also compares its machine view of coverage with the evidence map and
 names every row that disagrees; `same-page sync-map` is the only engine
-command that writes the map, and a workflow may propose the same changes
-through the confirm-back loop. A policy change that requires less is a
+command that writes the map, and a workflow proposes the same changes
+through the confirm-back loop. Where a validator declares challenges --
+a mechanism, a reviewable artifact, and a command that realizes the
+violating state -- `same-page challenge` records what the mechanism
+demonstrated: challenged when the validator noticed, weak sensitivity
+when it passed under the violation, which withdraws every challenged
+claim of that validator until a challenge succeeds again. A policy change that requires less is a
 downgrade, held until the developer runs `same-page policy confirm`
 and the change is logged; a revision of a requirement with a standing
 disproof is held until the developer acknowledges it, `same-page

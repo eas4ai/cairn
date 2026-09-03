@@ -4,12 +4,12 @@
 # survive re-elaboration. A profile you set is marked profile_from:
 # obligation. A validators entry is `- name: <validator>`, plus
 # `attested_by: developer` (or agent) to vouch for the mapping.
-requirement: ENG-035
-locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-035
-keyword: MUST
-requirement_digest: sha256:008de9a399cd91d9ee6acde27e5fb6a647b8ce351279359e9ac9e4b2eb7473f0
-falsifier: a record with `sensitivity` `challenged` has no challenge mechanism field.
-falsifier_digest: sha256:6d554aef88228010ced11f7bc0ec2f472f8d0b77cb554aaa086770fd25a61fc6
+requirement: ENG-175
+locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-175
+keyword: MUST NOT
+requirement_digest: sha256:d2f816bdd9e33ecf2a16967b599e0d9ff9cf3e65b321df7f2e183ed269947651
+falsifier: a `same-page verify` entry with challenged evidence states that the requirement is proven, or omits the correspondence assumption between the requirement sentence and the validator.
+falsifier_digest: sha256:f1e74a89b90562f6c56e6f7c837c2bc680804deb88c801b9c85459a5c0e25854
 profile: default
 profile_from: project default
 required:
@@ -24,8 +24,4 @@ required:
 validators:
   - name: bun-test
     attested_by: agent
-    actor: eas4ai <shawn.payments@gmail.com>
-    attested_at: 2026-09-03T15:56:32.501Z
-    snapshot: workspace:ea2c78b36bb3e2e91d7eb431956a3f1c0cdb50678e0374f0ffc69ad522c46d25
-    developer_confirmed: false
-sentence: A challenged record MUST name the challenge mechanism.
+sentence: The engine MUST NOT treat a challenge as proof that a natural-language requirement is equivalent to its validator.

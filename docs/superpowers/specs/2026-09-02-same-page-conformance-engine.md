@@ -1062,8 +1062,12 @@ some uncertainty boundaries inside its verified model.
 
 Normative.
 
+Agreed: 2026-09-03
+
 [ENG-170] The engine MUST accept as a challenge any deliberate attempt
 to realize or expose the confirmed falsifier.
+Falsifier: a declared challenge that deliberately realizes the
+confirmed falsifier is refused because its mechanism is not mutation.
 
 Challenge is not synonymous with mutation. Mechanisms include mutation,
 fault injection, negative fixtures, controlled test doubles,
@@ -1073,20 +1077,33 @@ challenged record to name its mechanism and to state whether the
 challenge derives from the confirmed falsifier.
 
 [ENG-171] A challenged record MUST cite a reviewable challenge artifact.
+Falsifier: a record with sensitivity `challenged` cites no artifact, or
+cites a path absent from the snapshot.
 
 [ENG-172] The engine MUST NOT record a challenge that has no reviewable
 artifact as `challenged`.
+Falsifier: a challenge declaration with no artifact produces a record
+with sensitivity `challenged`.
 
 [ENG-173] When a validator passes both the intended implementation and
 a challenge that realizes the violating state, the engine MUST report
 weak or vacuous sensitivity for that requirement.
+Falsifier: a challenge realizes the violating state, the validator
+passes anyway, and `same-page verify` reports no weak sensitivity for
+that requirement.
 
 [ENG-174] When a validator passes a challenge that realizes the
 violating state, the engine MUST NOT preserve a `challenged`
 sensitivity claim for that validator.
+Falsifier: a validator passed a challenge that realizes the violating
+state and an earlier `challenged` record of that validator still counts
+as challenged.
 
 [ENG-175] The engine MUST NOT treat a challenge as proof that a
 natural-language requirement is equivalent to its validator.
+Falsifier: a `same-page verify` entry with challenged evidence states
+that the requirement is proven, or omits the correspondence assumption
+between the requirement sentence and the validator.
 
 Rationale: challenge raises the bar. It does not close the semantic
 gap between the requirement and the mechanism that checks it.
@@ -1560,6 +1577,40 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 006 (layer L5) built, under
+  docs/specs/same-page/iterations/006.md. Implementation-design
+  decisions taken under that contract: (a) a challenge is declared on
+  the validator whose sensitivity it tests, as a `challenges:` list of
+  mechanism, artifact, command, `from_falsifier`, optional
+  `requirement`, and optional timeout; the list is part of the
+  definition digest, so a changed challenge needs a new trust grant;
+  (b) the seven mechanisms are mutation, fault-injection,
+  negative-fixture, double, counterexample-search, adversarial-input,
+  and harness, with no rank among them, and a mechanism outside the
+  list is a finding; (c) an artifact absent from the snapshot is not
+  reviewable, so the declaration produces no record; (d) the challenge
+  command realizes the violating state and runs the validator, so a
+  non-zero exit means the validator noticed and a zero exit means it
+  passed under the violation; an error that prevents the run claims
+  nothing; (e) a falsifier-derived challenge writes its record for the
+  requirement it names, and only for a requirement whose obligation
+  lists that validator; a challenge that is not falsifier-derived
+  writes for every obligation the validator is bound to; (f) weak
+  sensitivity is a file, `weak-sensitivity.yaml`, beside the
+  requirement's records under the authority that ran the challenge; it
+  is history the engine never deletes, `verify` reports it as a
+  finding, and while it stands every challenged record of that
+  validator evaluates as `unchallenged` with the reason named;
+  (g) `challenge` is a separate command, never part of `run`, because a
+  challenge is a deliberate act on a mechanism; (h) every `verify`
+  entry carries a `Sensitivity:` line, and a challenged record adds the
+  correspondence assumption to the entry's assumptions, so no output
+  reads as proof of equivalence.
+- 2026-09-03 -- Confirmed Agreed by the developer with falsifiers at
+  the close of iteration 005, for iteration 006 (layer L5): Challenge
+  and sensitivity model. The evidence-record sensitivity requirements
+  ENG-033 through ENG-037 were Agreed on 2026-09-02 and are built under
+  the same contract.
 - 2026-09-03 -- Iteration 005 (layer L4) built, under
   docs/specs/same-page/iterations/005.md. Implementation-design
   decisions taken under that contract: (a) the policy carries

@@ -21,5 +21,11 @@ required:
     - kind: test
     - kind: static
     - kind: manual
-validators: []
+validators:
+  - name: bun-test
+    attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-03T15:56:32.501Z
+    snapshot: workspace:ea2c78b36bb3e2e91d7eb431956a3f1c0cdb50678e0374f0ffc69ad522c46d25
+    developer_confirmed: false
 sentence: The engine MUST NOT accept a backend binding from a free-form claim in a validator result.

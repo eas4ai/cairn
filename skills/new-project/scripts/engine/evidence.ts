@@ -13,6 +13,7 @@ import { adapterHas, type AdapterName } from "./adapters.ts";
 import { AUTHORITIES, evidenceRoot, authorityLabel, type Authority } from "./authority.ts";
 import { METHODS, type Finding, type Method } from "./policy.ts";
 import type { TrustContext } from "./trust.ts";
+import { MECHANISMS, type Mechanism } from "./validators.ts";
 import type { EnvironmentInput } from "./validators.ts";
 import { parseYaml, stringifyYaml, type YamlMap, type YamlValue } from "./yaml.ts";
 
@@ -21,6 +22,13 @@ export const SENSITIVITIES = ["unchallenged", "challenged", "not_applicable"] as
 export const FRESHNESS = ["current", "stale", "unknown"] as const;
 export const PROVENANCE = ["conservative", "adapter_derived", "traced_supplemental"] as const;
 export const SCOPES = ["repository", "unknown"] as const;
+
+// What a challenged record carries (ENG-035, ENG-036, ENG-037): the
+// mechanism, the reviewable artifact, whether the challenge derives
+// from the confirmed falsifier, and the falsifier digest it realizes.
+export type ChallengeFacts = { mechanism: Mechanism; artifact: string; from_falsifier: boolean; falsifier_digest: string | null };
+
+export const CHALLENGE_ASSUMPTIONS = ["a challenge raises sensitivity; the correspondence between the requirement sentence and the validator stays an assumption"];
 
 export type Binding = { actor: string; actor_type: "developer" | "agent"; timestamp: string; snapshot: string; developer_confirmed: boolean };
 
@@ -74,6 +82,7 @@ export type EvidenceRecord = {
   binding_basis: (typeof BINDING_BASES)[number];
   binding: Binding | null;
   sensitivity: (typeof SENSITIVITIES)[number];
+  challenge: ChallengeFacts | null;
   freshness: (typeof FRESHNESS)[number];
   boundary: Boundary;
   dependency: Dependency;
@@ -164,6 +173,7 @@ export function recordToYaml(r: EvidenceRecord): YamlMap {
     binding_basis: r.binding_basis,
     binding: r.binding ? ({ ...r.binding } as YamlMap) : null,
     sensitivity: r.sensitivity,
+    challenge: r.challenge ? ({ ...r.challenge } as YamlMap) : null,
     freshness: r.freshness,
     boundary: { scope: r.boundary.scope, root: r.boundary.root, validator: r.boundary.validator, environment: [...r.boundary.environment] },
     dependency: { scope: r.dependency.scope, step: r.dependency.step, chain: r.dependency.chain.map((c) => ({ ...c }) as YamlMap), narrowing: r.dependency.narrowing },
@@ -290,7 +300,17 @@ export function parseRecord(raw: YamlValue, where: string, location: Location | 
     if (!ok) findings.push({ where, message: "an attested binding records actor, actor_type, timestamp, snapshot, developer_confirmed", rule: "ENG-030" });
   }
   if (raw["binding_basis"] === "backend") findings.push({ where, message: "no registered adapter can establish a backend binding", rule: "ENG-032" });
-  if (raw["sensitivity"] === "challenged") findings.push({ where, message: "no challenge mechanism exists to record a challenged sensitivity", rule: "ENG-035" });
+  // ENG-035 through ENG-037, ENG-171: what a challenged record must carry.
+  const ch = raw["challenge"];
+  if (raw["sensitivity"] === "challenged") {
+    if (!isMap(ch)) findings.push({ where, message: "a challenged record names its challenge mechanism and artifact", rule: "ENG-035" });
+    else {
+      if (typeof ch["mechanism"] !== "string" || !(MECHANISMS as readonly string[]).includes(ch["mechanism"] as string)) findings.push({ where, message: `a challenged record names a mechanism from ${MECHANISMS.join(", ")}`, rule: "ENG-035" });
+      if (typeof ch["artifact"] !== "string" || ch["artifact"] === "") findings.push({ where, message: "a challenged record cites a reviewable challenge artifact", rule: "ENG-171" });
+      if (ch["from_falsifier"] !== true && ch["from_falsifier"] !== false) findings.push({ where, message: "a challenged record states whether the challenge derives from the confirmed falsifier", rule: "ENG-036" });
+      if (ch["from_falsifier"] === true && (typeof ch["falsifier_digest"] !== "string" || ch["falsifier_digest"] === "")) findings.push({ where, message: "a falsifier-derived challenge cites the digest of the falsifier it realizes", rule: "ENG-037" });
+    }
+  }
   const identity = parseIdentity(raw["identity"], where, findings);
   // A record with no identity at all has no boundary or chain worth
   // reporting separately: one finding names the record.
@@ -322,6 +342,9 @@ export function parseRecord(raw: YamlValue, where: string, location: Location | 
         ? { actor: String(b["actor"]), actor_type: b["actor_type"] as Binding["actor_type"], timestamp: String(b["timestamp"]), snapshot: String(b["snapshot"]), developer_confirmed: b["developer_confirmed"] === true }
         : null,
       sensitivity: raw["sensitivity"] as EvidenceRecord["sensitivity"],
+      challenge: isMap(ch)
+        ? { mechanism: ch["mechanism"] as Mechanism, artifact: String(ch["artifact"]), from_falsifier: ch["from_falsifier"] === true, falsifier_digest: strOrNull(ch["falsifier_digest"]) }
+        : null,
       freshness: raw["freshness"] as EvidenceRecord["freshness"],
       boundary,
       dependency,
@@ -429,6 +452,38 @@ export function readAcknowledgment(root: string, id: string): Acknowledgment | n
 export function writeAcknowledgment(root: string, a: Acknowledgment): void {
   mkdirSync(evidenceDir(root, a.requirement), { recursive: true });
   writeFileSync(acknowledgmentPath(root, a.requirement), stringifyYaml({ ...a } as YamlMap, ["Same Page: the developer acknowledged that a revision clears or changes a standing disproof (ENG-115)."]));
+}
+
+// ---------------------------------------------------------------- weak sensitivity
+
+// ENG-173, ENG-174: a challenge the validator passed. Recorded per
+// requirement and validator, so every earlier challenged claim of that
+// validator stops counting and `verify` reports it. History, like a
+// disproof: the engine writes it and never deletes it.
+export type WeakSensitivity = { requirement: string; validator: string; mechanism: Mechanism; artifact: string; from_falsifier: boolean; snapshot: string | null; run: string; recorded_at: string };
+
+export function weakPath(root: string, id: string, authority: Authority, name: string | null): string {
+  return join(root, evidenceRoot(authority, name), id, "weak-sensitivity.yaml");
+}
+
+export function readWeak(root: string, id: string): WeakSensitivity[] {
+  const out: WeakSensitivity[] = [];
+  for (const location of evidenceLocations(root)) {
+    const p = weakPath(root, id, location.authority, location.name);
+    if (!existsSync(p)) continue;
+    const raw = parseYaml(readFileSync(p, "utf8"));
+    if (!isMap(raw)) continue;
+    const s = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : "");
+    out.push({ requirement: s("requirement"), validator: s("validator"), mechanism: s("mechanism") as Mechanism, artifact: s("artifact"), from_falsifier: raw["from_falsifier"] === true, snapshot: strOrNull(raw["snapshot"]), run: s("run"), recorded_at: s("recorded_at") });
+  }
+  return out;
+}
+
+export function writeWeak(root: string, w: WeakSensitivity, authority: Authority, name: string | null): string {
+  const p = weakPath(root, w.requirement, authority, name);
+  mkdirSync(join(root, evidenceRoot(authority, name), w.requirement), { recursive: true });
+  writeFileSync(p, stringifyYaml({ ...w } as YamlMap, ["Same Page weak sensitivity: this validator passed a challenge that realizes the", "confirmed falsifier, so no challenged claim of it counts (ENG-173, ENG-174)."]));
+  return `${evidenceRoot(authority, name)}/${w.requirement}/weak-sensitivity.yaml`;
 }
 
 // A disproof stands while the latest record for the requirement is a

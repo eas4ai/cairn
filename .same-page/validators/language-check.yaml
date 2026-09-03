@@ -1,0 +1,26 @@
+# The package's self-hosting language check as a validator: it is the
+# mechanism behind the CONF rules. Its challenge is a negative fixture
+# that realizes CONF-016's confirmed falsifier, so the record it writes
+# says what the mechanism has demonstrated about noticing that state.
+kind: static
+command:
+  - node
+  - skills/new-project/scripts/language-check.mjs
+  - docs/specs/same-page
+  - docs/superpowers/specs
+cwd: .
+timeout: 120
+environment:
+  - command:
+      - node
+      - --version
+  - file: skills/new-project/scripts/language-check.mjs
+challenges:
+  - mechanism: negative-fixture
+    artifact: tests/challenges/conf-016
+    command:
+      - node
+      - scripts/challenges/conf-016.mjs
+    from_falsifier: true
+    requirement: CONF-016
+    timeout: 120

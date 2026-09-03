@@ -5,6 +5,7 @@
 //   same-page trust <validator>              grant execution trust, outside the repository
 //   same-page trust --environment <name>     trust a named environment for this repository
 //   same-page run [validator...] [--as-developer] [--environment <name>]
+//   same-page challenge [validator...] [--as-developer] [--environment <name>]
 //   same-page attest <REQ-ID> --by <actor> --expires <date> --description <text>
 //                   [--bindings a,b] [--addresses-falsifier] [--inspection-only]
 //   same-page acknowledge <REQ-ID>           acknowledge a disproof-clearing revision
@@ -25,6 +26,7 @@ import { adapterVersion } from "./adapters.ts";
 import { authorityLabel, ciActor, ciConfiguration, configuredAuthority, inCi, type Authority, type Configured } from "./authority.ts";
 import { assess, evaluate, isAuthoritative, type Evaluation, type Present, type Verdict } from "./evaluate.ts";
 import {
+  CHALLENGE_ASSUMPTIONS,
   COMMAND_ASSUMPTIONS,
   MANUAL_ASSUMPTIONS,
   dependencyChain,
@@ -33,7 +35,9 @@ import {
   readAcknowledgment,
   readDisproof,
   readRecords,
+  readWeak,
   standingDisproof,
+  writeWeak,
   writeAcknowledgment,
   writeDisproof,
   writeRecord,
@@ -47,10 +51,10 @@ import { compareStrength, defaultPolicy, loadPolicy, policyText, requiredText, t
 import { currentSnapshot } from "./snapshot.ts";
 import { readCorpus, type Requirement } from "./specs.ts";
 import { EMPTY_STORE, findEnvironmentGrant, findGrant, gitActor, grant, grantEnvironment, readTrustStore, trustPath, trustStoreInsideRepository } from "./trust.ts";
-import { environmentLabel, fingerprintEnvironment, listValidators, readValidator, runValidator, validatorDigest, type EnvironmentInput, type ValidatorDef } from "./validators.ts";
+import { environmentLabel, fingerprintEnvironment, listValidators, readValidator, runChallenge, runValidator, validatorDigest, type ChallengeDecl, type EnvironmentInput, type ValidatorDef } from "./validators.ts";
 import type { YamlMap } from "./yaml.ts";
 
-const USAGE = "usage: same-page <elaborate|verify|trust|run|attest|acknowledge|policy|sync-map> ... [--root DIR]";
+const USAGE = "usage: same-page <elaborate|verify|trust|run|challenge|attest|acknowledge|policy|sync-map> ... [--root DIR]";
 
 function gitRoot(from: string): string | null {
   const r = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: from, encoding: "utf8" });
@@ -350,7 +354,12 @@ function verify(root: string, asDeveloper: boolean): number {
     for (const r of records) {
       if (r.validator && defs.has(r.validator) && !present.environments.has(r.validator)) present.environments.set(r.validator, fingerprintEnvironment(root, defs.get(r.validator)!, trusted.has(r.validator)));
     }
-    const assessed = assess({ ...o, required }, records, present, now);
+    const weak = readWeak(root, id);
+    // ENG-173: a challenge the validator passed is reported, whatever
+    // the verdict is.
+    for (const w of weak)
+      out.push({ where: w.run, message: `weak sensitivity for ${id}: ${w.validator} passed the ${w.mechanism} challenge ${w.artifact}, which realizes the confirmed falsifier; the mechanism does not notice the violating state`, rule: "ENG-173" });
+    const assessed = assess({ ...o, required }, records, present, now, weak);
     const standing = standingDisproof(root, id, records);
     const history = standing ? null : readDisproof(root, id);
     // A profile may name the authority its evidence comes from (ENG-071);
@@ -399,6 +408,18 @@ function verify(root: string, asDeveloper: boolean): number {
         lines.push(`  ${i === 0 ? "Evidence:   " : "            "} ${r.kind} ${who} ${r.result} (${state}; ${auth}binding ${r.binding_basis}; ${r.sensitivity}; ${r.path})`);
       });
     }
+    // ENG-034, ENG-173: what the mechanisms have demonstrated about
+    // noticing the falsifier.
+    const challenged = ev.records.filter((a) => a.record.sensitivity === "challenged");
+    const demoted = ev.records.filter((a) => a.demoted !== null);
+    const sensitivity = challenged.length
+      ? `challenged (${[...new Set(challenged.map((a) => `${a.record.challenge!.mechanism} ${a.record.challenge!.artifact}${a.record.challenge!.from_falsifier ? ", falsifier-derived" : ""}`))].join("; ")})`
+      : demoted.length
+        ? `weak: ${[...new Set(demoted.map((a) => a.demoted!))].join("; ")}`
+        : ev.records.length === 0
+          ? "no evidence"
+          : "unchallenged: no challenge has demonstrated that the mechanism notices the falsifier";
+    lines.push(`  Sensitivity: ${sensitivity}`);
     const live = ev.records.filter((a) => !a.expired);
     const freshness = ev.records.length === 0 ? "no evidence" : live.some((a) => a.freshness === "current") ? "current" : live.some((a) => a.freshness === "stale") ? "stale" : live.some((a) => a.freshness === "unknown") ? "unknown" : "expired";
     lines.push(`  Freshness:   ${freshness}`);
@@ -462,6 +483,31 @@ function trust(root: string, name: string | undefined, environment: string | und
 
 // ---------------------------------------------------------------- run
 
+type Shared = { context: NonNullable<EvidenceRecord["execution_trust"]>; authority: Authority; name: string | null };
+
+// The trust context and authority a whole invocation runs under, when
+// it is not per validator: a named environment the developer trusted,
+// or owner-controlled CI (ENG-060).
+function sharedContext(root: string, environment: string | undefined, store: ReturnType<typeof readTrustStore>, out: Finding[]): Shared | null | "error" {
+  if (environment) {
+    const g = findEnvironmentGrant(store, root, environment);
+    if (!g) {
+      out.push({ where: trustPath(), message: `environment ${environment} is not trusted for this repository; run \`same-page trust --environment ${environment}\``, rule: "ENG-058" });
+      return "error";
+    }
+    return { context: { context: "named-environment", actor: `${environment} (${g.actor})` }, authority: "named-environment", name: environment };
+  }
+  if (inCi(process.env)) {
+    const ci = ciConfiguration(root);
+    if (!ci) {
+      out.push({ where: root, message: "CI is set in the environment but the repository carries no CI configuration at a recognized path; nothing anchors trust for a ci run", rule: "ENG-060" });
+      return "error";
+    }
+    return { context: { context: "ci", actor: ciActor(process.env) }, authority: "ci", name: null };
+  }
+  return null;
+}
+
 function run(root: string, names: string[], asDeveloper: boolean, environment: string | undefined): number {
   const loaded = requirePolicy(root, "run");
   if (typeof loaded === "number") return loaded;
@@ -479,24 +525,12 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
   // produces (ENG-060): a named environment the developer trusted, CI
   // under owner-controlled configuration, or, per validator below, a
   // trust record or an explicit developer invocation, both local.
-  let shared: { context: NonNullable<EvidenceRecord["execution_trust"]>; authority: Authority; name: string | null } | null = null;
-  if (environment) {
-    const g = findEnvironmentGrant(store, root, environment);
-    if (!g) {
-      out.push({ where: trustPath(), message: `environment ${environment} is not trusted for this repository; run \`same-page trust --environment ${environment}\``, rule: "ENG-058" });
-      printFindings(out);
-      return 1;
-    }
-    shared = { context: { context: "named-environment", actor: `${environment} (${g.actor})` }, authority: "named-environment", name: environment };
-  } else if (inCi(process.env)) {
-    const ci = ciConfiguration(root);
-    if (!ci) {
-      out.push({ where: root, message: "CI is set in the environment but the repository carries no CI configuration at a recognized path; nothing anchors trust for a ci run", rule: "ENG-060" });
-      printFindings(out);
-      return 1;
-    }
-    shared = { context: { context: "ci", actor: ciActor(process.env) }, authority: "ci", name: null };
+  const resolved = sharedContext(root, environment, store, out);
+  if (resolved === "error") {
+    printFindings(out);
+    return 1;
   }
+  const shared: Shared | null = resolved;
   // Which validators: the named ones, else every one an obligation lists.
   const listed = new Map<string, Obligation[]>();
   for (const o of obligations.values()) for (const v of o.validators) listed.set(v.name, [...(listed.get(v.name) ?? []), o]);
@@ -591,6 +625,7 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
         binding_basis: attested ? "attested" : "none",
         binding: attested ? { actor: ref.actor!, actor_type: ref.attested_by!, timestamp: ref.attested_at!, snapshot: ref.snapshot!, developer_confirmed: ref.developer_confirmed === true } : null,
         sensitivity: "unchallenged",
+        challenge: null,
         freshness,
         boundary: { scope: dependency.scope, root, validator: name, environment: declared },
         dependency,
@@ -609,6 +644,190 @@ function run(root: string, names: string[], asDeveloper: boolean, environment: s
   }
   printFindings(out);
   process.stdout.write(`same-page run: ${executed} validator(s) executed, ${recordsWritten} record(s) written, ${out.length} finding(s)\n`);
+  return out.length === 0 ? 0 : 1;
+}
+
+// ---------------------------------------------------------------- challenge
+
+// `same-page challenge` runs the challenges a validator declares, under
+// the same execution trust as `run` (ENG-059). The command realizes the
+// violating state and runs the validator, so its exit status is the
+// validator's: nonzero means the validator noticed, and the record
+// carries sensitivity `challenged` with the mechanism, artifact, and
+// falsifier digest (ENG-035 through ENG-037). Zero means the validator
+// passed under the violating state: weak sensitivity, recorded and
+// reported, and no challenged claim of that validator stands (ENG-173,
+// ENG-174).
+function challenge(root: string, names: string[], asDeveloper: boolean, environment: string | undefined): number {
+  const loaded = requirePolicy(root, "challenge");
+  if (typeof loaded === "number") return loaded;
+  const { policy } = loaded;
+  const corpus = readCorpus(root, policy.specs);
+  const { obligations, findings } = loadObligations(root);
+  const out: Finding[] = [...findings];
+  if (trustStoreInsideRepository(root)) {
+    process.stderr.write(`same-page: the trust store ${trustPath()} is inside the repository; set SAME_PAGE_HOME outside it (ENG-062)\n`);
+    return 2;
+  }
+  const store = readTrustStore();
+  const actor = gitActor(root);
+  const resolved = sharedContext(root, environment, store, out);
+  if (resolved === "error") {
+    printFindings(out);
+    return 1;
+  }
+  const shared: Shared | null = resolved;
+  const listed = new Map<string, Obligation[]>();
+  for (const o of obligations.values()) for (const v of o.validators) listed.set(v.name, [...(listed.get(v.name) ?? []), o]);
+  const targets = names.length ? names : [...listed.keys()].sort();
+  const snapshot = currentSnapshot(root);
+  const snapshotId = snapshot?.id ?? null;
+  let executed = 0;
+  let recordsWritten = 0;
+  let weakWritten = 0;
+  for (const name of targets) {
+    const v = readValidator(root, name);
+    if (!v.def) {
+      out.push(...v.findings);
+      continue;
+    }
+    const def: ValidatorDef = v.def;
+    if (def.challenges.length === 0) continue;
+    const d = validatorDigest(def);
+    const g = findGrant(store, root, name, d);
+    let context: NonNullable<EvidenceRecord["execution_trust"]>;
+    const authority: Authority = shared ? shared.authority : "local";
+    const authorityName = shared ? shared.name : null;
+    if (shared) context = shared.context;
+    else if (g) context = { context: "trust-record", actor: g.actor };
+    else if (asDeveloper) context = { context: "developer-invocation", actor };
+    else {
+      out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is not trusted for this repository at its current definition (${d}); run \`same-page trust ${name}\`, or the developer runs \`same-page challenge ${name} --as-developer\``, rule: "ENG-058" });
+      continue;
+    }
+    const bound = listed.get(name) ?? [];
+    const environmentInputs: EnvironmentInput[] = fingerprintEnvironment(root, def, true);
+    const dependency = dependencyChain("command", snapshotId);
+    const declared = def.environment.map(environmentLabel);
+    for (const c of def.challenges) {
+      // A falsifier-derived challenge realizes one requirement's
+      // falsifier, so its record belongs to that requirement only
+      // (ENG-037); a challenge that is not falsifier-derived speaks for
+      // every obligation the validator is bound to.
+      let subjects: Obligation[];
+      if (c.from_falsifier) {
+        const o = obligations.get(c.requirement!);
+        if (!o) {
+          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${c.requirement}, which has no obligation; elaborate first`, rule: "ENG-206" });
+          continue;
+        }
+        if (!o.validators.some((x) => x.name === name)) {
+          out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} names requirement ${c.requirement}, which does not list validator ${name}; a challenge speaks for a mechanism the requirement uses`, rule: "ENG-037" });
+          continue;
+        }
+        subjects = [o];
+      } else {
+        if (bound.length === 0) {
+          out.push({ where: `.same-page/validators/${name}.yaml`, message: `${name} is listed on no obligation; nothing to record`, rule: "ENG-012" });
+          continue;
+        }
+        subjects = bound;
+      }
+      const result = runChallenge(root, def, c);
+      executed++;
+      const runId = `${stamp(new Date(result.started_at))}-${name}-challenge`;
+      const runPath = writeRun(
+        root,
+        runId,
+        {
+          validator: name,
+          validator_digest: d,
+          challenge_mechanism: c.mechanism,
+          challenge_artifact: c.artifact,
+          from_falsifier: c.from_falsifier,
+          requirement: c.requirement,
+          command: [...c.command],
+          cwd: def.cwd,
+          started_at: result.started_at,
+          duration_ms: result.duration_ms,
+          exit_code: result.exit_code,
+          signal: result.signal,
+          result: result.result,
+          error: result.error,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        } as YamlMap,
+        authority,
+        authorityName
+      );
+      // The challenge command's status is the validator's under the
+      // violating state: pass means the validator did not notice.
+      const noticed = result.result === "fail";
+      if (result.result === "error") {
+        out.push({ where: `.same-page/validators/${name}.yaml`, message: `challenge ${c.mechanism} ${c.artifact} did not complete (${result.error ?? "unknown"}); no sensitivity is claimed (${runPath})`, rule: "ENG-172" });
+        process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}: did not complete; no claim\n`);
+        continue;
+      }
+      for (const o of subjects) {
+        const req = corpus.requirements.find((r) => r.id === o.requirement);
+        const falsifierDigest = req && req.falsifier !== null ? digest(req.falsifier) : o.falsifier_digest;
+        if (!noticed) {
+          const weakPathRel = writeWeak(
+            root,
+            { requirement: o.requirement, validator: name, mechanism: c.mechanism, artifact: c.artifact, from_falsifier: c.from_falsifier, snapshot: snapshotId, run: runPath, recorded_at: new Date().toISOString() },
+            authority,
+            authorityName
+          );
+          weakWritten++;
+          out.push({ where: weakPathRel, message: `weak sensitivity for ${o.requirement}: ${name} passed the ${c.mechanism} challenge ${c.artifact}, which realizes the confirmed falsifier; the mechanism does not notice the violating state`, rule: "ENG-173" });
+          continue;
+        }
+        const ref = completeRef(o.validators.find((x) => x.name === name) ?? { name }, snapshotId ?? "unknown", actor);
+        const attested = ref.attested_by !== undefined;
+        const rec: EvidenceRecord = {
+          requirement: o.requirement,
+          kind: def.kind,
+          adapter: "command",
+          validator: name,
+          result: "pass",
+          run: runPath,
+          recorded_at: new Date().toISOString(),
+          identity: {
+            snapshot: snapshotId,
+            requirement: o.requirement,
+            requirement_digest: req ? digest(req.text) : o.requirement_digest,
+            falsifier_digest: falsifierDigest,
+            obligation_digest: obligationDigest(o),
+            validator_digest: d,
+            adapter: "command",
+            adapter_version: adapterVersion("command"),
+            dependency_fingerprint: snapshotId,
+            environment: environmentInputs.map((e) => ({ ...e })),
+            contracts: [],
+          },
+          execution_trust: context,
+          binding_basis: attested ? "attested" : "none",
+          binding: attested ? { actor: ref.actor!, actor_type: ref.attested_by!, timestamp: ref.attested_at!, snapshot: ref.snapshot!, developer_confirmed: ref.developer_confirmed === true } : null,
+          sensitivity: "challenged",
+          challenge: { mechanism: c.mechanism, artifact: c.artifact, from_falsifier: c.from_falsifier, falsifier_digest: c.from_falsifier ? falsifierDigest : null },
+          freshness: snapshotId !== null && environmentInputs.every((e) => e.error === null) ? "current" : "unknown",
+          boundary: { scope: dependency.scope, root, validator: name, environment: declared },
+          dependency,
+          dependency_provenance: "conservative",
+          assumptions: [...COMMAND_ASSUMPTIONS, ...CHALLENGE_ASSUMPTIONS],
+          residual_risk: residualRisk(dependency, declared, "command"),
+          authority,
+          authority_name: authorityName,
+          manual: null,
+        };
+        writeRecord(root, rec, `${name}-challenge`);
+        recordsWritten++;
+      }
+      process.stdout.write(`challenged ${name} with ${c.mechanism} ${c.artifact}${c.from_falsifier ? ` (falsifier-derived, ${c.requirement})` : ""}: ${noticed ? "the validator noticed" : "the validator passed under the violating state"} (exit ${result.exit_code}) under ${context.context}; ${subjects.length} ${noticed ? "record" : "weak-sensitivity record"}(s) at ${snapshotId ?? "unknown (no snapshot)"}\n`);
+    }
+  }
+  printFindings(out);
+  process.stdout.write(`same-page challenge: ${executed} challenge(s) run, ${recordsWritten} challenged record(s), ${weakWritten} weak-sensitivity record(s), ${out.length} finding(s)\n`);
   return out.length === 0 ? 0 : 1;
 }
 
@@ -672,6 +891,7 @@ function attest(root: string, id: string | undefined, opts: { by?: string; expir
     binding_basis: "attested",
     binding: { actor: opts.by, actor_type: "developer", timestamp: now, snapshot: snapshotId ?? "unknown", developer_confirmed: true },
     sensitivity: "not_applicable",
+    challenge: null,
     freshness: snapshotId === null ? "unknown" : "current",
     boundary: { scope: dependency.scope, root, validator: null, environment: [] },
     dependency,
@@ -830,6 +1050,8 @@ function main(): number {
       return trust(root, rest[0], str("environment"));
     case "run":
       return run(root, rest, flag("as-developer"), str("environment"));
+    case "challenge":
+      return challenge(root, rest, flag("as-developer"), str("environment"));
     case "attest":
       return attest(root, rest[0], { by: str("by"), expires: str("expires"), description: str("description"), bindings: str("bindings"), addressesFalsifier: flag("addresses-falsifier"), inspectionOnly: flag("inspection-only") });
     case "acknowledge":

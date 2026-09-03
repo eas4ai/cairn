@@ -210,6 +210,12 @@ counterexample search, an adversarial input, a harness. A challenge
 that derives from the falsifier is recorded as such.
 _Avoid_: mutation (as a synonym for challenge)
 
+**Weak sensitivity**:
+What the engine records when a validator passes a challenge that
+realizes the confirmed falsifier: the mechanism does not notice the
+violating state, so no challenged claim of that validator stands.
+_Avoid_: false negative (when weak sensitivity is meant)
+
 **Freshness**:
 Whether an evidence record is current for its exact recorded inputs
 and source snapshot, inside the recorded verification boundary:

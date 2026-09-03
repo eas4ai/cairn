@@ -4,12 +4,12 @@
 # survive re-elaboration. A profile you set is marked profile_from:
 # obligation. A validators entry is `- name: <validator>`, plus
 # `attested_by: developer` (or agent) to vouch for the mapping.
-requirement: ENG-035
-locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-035
+requirement: ENG-173
+locator: docs/superpowers/specs/2026-09-02-same-page-conformance-engine.md::ENG-173
 keyword: MUST
-requirement_digest: sha256:008de9a399cd91d9ee6acde27e5fb6a647b8ce351279359e9ac9e4b2eb7473f0
-falsifier: a record with `sensitivity` `challenged` has no challenge mechanism field.
-falsifier_digest: sha256:6d554aef88228010ced11f7bc0ec2f472f8d0b77cb554aaa086770fd25a61fc6
+requirement_digest: sha256:b6b28143d4c650e1994eb27aca36a7a54f65bcc708fd346f573ebb8606ccedc8
+falsifier: a challenge realizes the violating state, the validator passes anyway, and `same-page verify` reports no weak sensitivity for that requirement.
+falsifier_digest: sha256:4da8e9dfa999217ed562603f7836dcdefcac5bbb5011c1240ac1422b4f189d37
 profile: default
 profile_from: project default
 required:
@@ -24,8 +24,4 @@ required:
 validators:
   - name: bun-test
     attested_by: agent
-    actor: eas4ai <shawn.payments@gmail.com>
-    attested_at: 2026-09-03T15:56:32.501Z
-    snapshot: workspace:ea2c78b36bb3e2e91d7eb431956a3f1c0cdb50678e0374f0ffc69ad522c46d25
-    developer_confirmed: false
-sentence: A challenged record MUST name the challenge mechanism.
+sentence: When a validator passes both the intended implementation and a challenge that realizes the violating state, the engine MUST report weak or vacuous sensitivity for that requirement.

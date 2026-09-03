@@ -215,11 +215,11 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/004.md
-  (engine layer L3, conservative freshness); 001 (L1), 002 (L2), and 003
-  (the CONF revision) are closed. Work outside it is captured via
-  /next-iteration -- surfaced and staged, never implemented ad hoc, never
-  silently dropped.
+- The current iteration contract is docs/specs/same-page/iterations/005.md
+  (engine layer L4, authority and map comparison); 001 (L1), 002 (L2),
+  003 (the CONF revision), and 004 (L3) are closed. Work outside it is
+  captured via /next-iteration -- surfaced and staged, never implemented
+  ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec
   and confirm the change deliberately before acting.
 - New or collided terms go to glossary.md the moment they surface.

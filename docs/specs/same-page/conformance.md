@@ -169,6 +169,12 @@ like any other. The language check verifies the map's integrity.
 | ENG-150 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
 | ENG-151 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
 | ENG-152 | Covered | test | tests/engine-l3.test.mjs::ENG-150 |
+| ENG-155 | Uncovered | - |  |
+| ENG-156 | Uncovered | - |  |
+| ENG-157 | Uncovered | - |  |
+| ENG-158 | Uncovered | - |  |
+| ENG-159 | Uncovered | - |  |
+| ENG-160 | Uncovered | - |  |
 | ENG-161 | Covered | test | tests/engine-l2.test.mjs::ENG-161 |
 | ENG-162 | Covered | test | tests/engine-l2.test.mjs::ENG-162 |
 | ENG-163 | Covered | test | tests/engine-l2.test.mjs::ENG-163 |

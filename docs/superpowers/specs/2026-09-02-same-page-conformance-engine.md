@@ -956,23 +956,38 @@ Conformance does not pretend to be a hermetic build system.
 
 Normative.
 
+Agreed: 2026-09-03
+
 [ENG-155] The engine MUST treat evidence as authoritative only for the
 exact source snapshot the evidence describes.
+Falsifier: a record made at one snapshot is treated as authoritative
+for a different snapshot.
 
 [ENG-156] The configured verification authority MUST be one of `ci`,
 `local`, or `named-environment`.
+Falsifier: the policy's authority is a value outside those three and
+`same-page verify` evaluates under it instead of reporting a finding.
 
 [ENG-157] When owner-controlled CI configuration exists, the default
 verification authority MUST be `ci`.
+Falsifier: a repository carries owner-controlled CI configuration, the
+policy names no authority, and the engine evaluates under an authority
+other than `ci`.
 
 [ENG-158] The developer MAY configure `local` or `named-environment`
 authority explicitly.
 
 [ENG-159] The engine MUST report non-authoritative evidence with its
 authority stated.
+Falsifier: a `same-page verify` entry shows a record whose authority
+differs from the configured authority and does not name that record's
+authority.
 
 [ENG-160] The engine MUST NOT let non-authoritative evidence overwrite
 or pass as authoritative evidence.
+Falsifier: a record whose authority is not the configured one yields
+`SUFFICIENT`, or is stored where the engine reads authoritative
+evidence.
 
 Rationale: a project without CI can choose local authority. A named
 environment serves specialized verification such as hardware in the
@@ -1545,6 +1560,12 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Confirmed Agreed by the developer with falsifiers at
+  the close of iteration 004, for iteration 005 (layer L4):
+  Verification authority. The map comparison and synchronization
+  requirements of the Evidence map section and the workflow
+  requirements were Agreed on 2026-09-02 and are built or asserted
+  under the same contract.
 - 2026-09-03 -- Iteration 004 (layer L3) built, under
   docs/specs/same-page/iterations/004.md. Implementation-design
   decisions taken under that contract: (a) every record stores its

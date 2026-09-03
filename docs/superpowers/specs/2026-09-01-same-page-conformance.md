@@ -150,6 +150,42 @@ an entry carries a `_Ruling_:` line, the script MUST list the ruling
 as information rather than report it. When the template is not beside
 the script, the script MUST say so rather than pass silently.
 
+#### Section status and falsifier lines
+
+Agreed: 2026-09-02
+
+A spec file's Status line sets the authority of every requirement in
+it; a section can carry its own. The check reads the section
+convention the workflows write: an `Agreed: <date>` line, or a
+`Status: Observed` line, placed after a heading and before the
+section's first requirement, and a marker applies to that section and
+its subsections until a heading of the same or higher level. The
+engine reads the same convention, so the two never disagree about
+which identifiers are Agreed.
+
+[CONF-015] When a section carries an `Agreed:` line before its first
+requirement, the script MUST treat every requirement in that section
+as Agreed, whatever the file's Status line says.
+Falsifier: a Draft or Observed file holds a section with an `Agreed:`
+line, and the script requires no map row for that section's
+identifiers.
+
+[CONF-016] The script MUST report an Agreed `MUST` or `MUST NOT`
+requirement that has no `Falsifier:` line directly under it (enforces
+LANG-070, LANG-075).
+Falsifier: an Agreed requirement with `MUST` or `MUST NOT` and no
+`Falsifier:` line passes the check with no finding.
+
+[CONF-017] The script MUST report a `Falsifier:` line under a
+requirement whose only keyword is `MAY` (enforces LANG-073).
+Falsifier: a requirement whose only keyword is `MAY` carries a
+`Falsifier:` line and passes with no finding.
+
+[CONF-018] The script MUST report a `Falsifier:` line that contains a
+normative keyword outside a mention (enforces LANG-077).
+Falsifier: a `Falsifier:` line containing `MUST`, `MUST NOT`, or `MAY`
+outside backticks or quotes passes with no finding.
+
 ### Pass two -- judgment (the model, in-session)
 
 The findings a script cannot make honestly: a term used in two senses
@@ -376,6 +412,19 @@ repo's sync rules:
 
 ## Decisions and revisions
 
+- 2026-09-02 -- Iteration 003 (the CONF revision, developer confirmed
+  the four rules with their falsifiers): CONF-015 through CONF-018
+  added in a section that carries its own `Agreed:` line while this
+  file stays Draft for review, so the revision exercises the rule it
+  adds. Before this, the check read only a file's Status line and a
+  section-level `Status: Observed`, so an Agreed section inside a
+  Draft file was held to the evidence map by the contract and the
+  engine, not by the check (recon.md Gap 1); and nothing checked the
+  falsifier-line rules LANG-070, LANG-073, LANG-075, and LANG-077
+  (Gap 6). Section markers now inherit to subsections until a heading
+  of the same or higher level, which is the engine's reading; the old
+  reset at every heading made a subsection of an Observed section
+  read as Agreed.
 - 2026-09-02 -- The engine spec exists:
   2026-09-02-same-page-conformance-engine.md (ENG). This spec's two
   parts are what the engine is built on; ENG-195 through ENG-201 bind

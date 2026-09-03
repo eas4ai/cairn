@@ -390,13 +390,41 @@ function scanFile(path, displayPath, report, corpus) {
   // opens a line (LANG-050); everything else bracketed is a reference,
   // and bare PREFIX-NNN tokens are references too.
   let fenced = false;
-  let sectionObserved = false;
+  // Section status (CONF-015): a heading stack; a section's own
+  // `Agreed: <date>` or `Status: Observed` line, placed before its first
+  // requirement, sets the status for it and its subsections until a
+  // heading of the same or higher level. The engine (specs.ts) reads
+  // the same convention.
+  const AGREED_LINE_RE = /^Agreed:\s*\d{4}-\d{2}-\d{2}\s*$/;
+  const OBSERVED_LINE_RE = /^Status:\s*Observed/i;
+  const stack = []; // { level, status: "agreed" | "observed" | null }
+  const sectionStatus = () => (stack.length ? stack[stack.length - 1].status : null);
+  const stopsBlock = (l) => {
+    const t = l.trim();
+    return t === "" || /^\s*\[[A-Z][A-Z0-9]*-\d+\]/.test(l) || headingLevel(l) || /^(```|~~~)/.test(t) || /^Falsifier:/.test(t) || /^\|/.test(t);
+  };
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i];
     if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
     if (fenced) continue;
-    if (headingLevel(line)) sectionObserved = false;
-    if (/^Status:\s*Observed/i.test(line.trim())) sectionObserved = true;
+    const h = headingLevel(line);
+    if (h) {
+      while (stack.length && stack[stack.length - 1].level >= h.level) stack.pop();
+      let sstatus = stack.length ? stack[stack.length - 1].status : null;
+      for (let j = i + 1; j < rawLines.length; j++) {
+        const t = rawLines[j].trim();
+        if (headingLevel(rawLines[j]) || /^\s*\[[A-Z][A-Z0-9]*-\d+\]/.test(rawLines[j])) break;
+        if (AGREED_LINE_RE.test(t)) {
+          sstatus = "agreed";
+          break;
+        }
+        if (OBSERVED_LINE_RE.test(t)) {
+          sstatus = "observed";
+          break;
+        }
+      }
+      stack.push({ level: h.level, status: sstatus });
+    }
     const defMatch = /^\s*\[([A-Z][A-Z0-9]*)-(\d+)\]/.exec(line);
     if (defMatch) {
       const id = `${defMatch[1]}-${defMatch[2]}`;
@@ -411,6 +439,9 @@ function scanFile(path, displayPath, report, corpus) {
         }
       }
       const withdrawn = /^Withdrawn:/.test(after);
+      const sec = sectionStatus();
+      const observed = sec === "observed" || (sec !== "agreed" && /Observed/i.test(status));
+      const draft = sec !== "agreed" && /Draft/i.test(status);
       if (defMatch[2].length !== 3) {
         report.add(
           `${displayPath}:${i + 1}`,
@@ -432,9 +463,56 @@ function scanFile(path, displayPath, report, corpus) {
         fileInfo.definitions.set(id, {
           line: i + 1,
           withdrawn,
-          observed: sectionObserved || /Observed/i.test(status),
-          draft: /Draft/i.test(status),
+          observed,
+          draft,
         });
+      }
+      // The requirement block and its Falsifier line (CONF-016..018).
+      const block = [rest];
+      let j = i + 1;
+      while (j < rawLines.length && !stopsBlock(rawLines[j])) {
+        block.push(rawLines[j]);
+        j++;
+      }
+      const kws = new Set(findKeywords(stripMentionsInline(block.join(" "))).map((k) => k.kw));
+      let falsifier = null;
+      if (j < rawLines.length && /^Falsifier:/.test(rawLines[j].trim())) {
+        const fl = [rawLines[j].trim().replace(/^Falsifier:\s*/, "")];
+        let k = j + 1;
+        while (k < rawLines.length && !stopsBlock(rawLines[k])) {
+          fl.push(rawLines[k]);
+          k++;
+        }
+        falsifier = { line: j + 1, text: fl.join(" ") };
+      }
+      const agreed = !withdrawn && !observed && !draft;
+      const obligates = kws.has("MUST") || kws.has("MUST NOT");
+      if (agreed && obligates && !falsifier) {
+        report.add(
+          `${displayPath}:${i + 1}`,
+          line.trim(),
+          id,
+          "Agreed MUST or MUST NOT requirement with no Falsifier: line. (LANG-070, LANG-075, CONF-016)",
+          "Ask what observable state would violate it; record the confirmed falsifier on a Falsifier: line directly under the requirement."
+        );
+      }
+      if (!obligates && kws.has("MAY") && falsifier) {
+        report.add(
+          `${displayPath}:${falsifier.line}`,
+          rawLines[falsifier.line - 1].trim(),
+          id,
+          "Falsifier: line under a permission-only MAY requirement. (LANG-073, CONF-017)",
+          "A permission has no falsifier; state a limit as its own MUST or MUST NOT requirement."
+        );
+      }
+      if (falsifier && findKeywords(stripMentionsInline(falsifier.text)).length > 0) {
+        report.add(
+          `${displayPath}:${falsifier.line}`,
+          rawLines[falsifier.line - 1].trim(),
+          id,
+          "Normative keyword inside a Falsifier: line. (LANG-077, CONF-018)",
+          "A falsifier describes a state; the obligation lives in the requirement above it."
+        );
       }
       if (prefix && defMatch[1] !== prefix) {
         report.add(

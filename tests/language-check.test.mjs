@@ -64,10 +64,14 @@ Plain prose that may ramble and will not be scanned, gracefully.
 [BROKER-001]
 When a plugin sends an invalid request, the broker MUST reject the
 request.
+Falsifier: a request with a malformed header reaches dispatch and the
+broker returns a success response.
 
 [BROKER-002]
 The broker MUST NOT execute an operation that the plugin is not
 authorized to use.
+Falsifier: a plugin without the operation's capability calls it and
+the broker completes it.
 
 [BROKER-003]
 The broker MAY cache a manifest for the duration of a lease.
@@ -306,7 +310,7 @@ test("no git history yields an INFO line, not a finding (CONF-002)", () => {
 
 // ---------------------------------------------------------------- map
 
-const MAP_SPEC = `# D\n\nStatus: Normative design specification\nPrefix: AA\n\n## Capabilities\n\n[AA-001]\nThe broker MUST accept a valid request.\n`;
+const MAP_SPEC = `# D\n\nStatus: Normative design specification\nPrefix: AA\n\n## Capabilities\n\n[AA-001]\nThe broker MUST accept a valid request.\nFalsifier: a valid request arrives and the broker rejects it.\n`;
 
 test("agreed identifiers with no conformance.md are reported (CONF-040)", () => {
   const dir = specDir({ "01-a.md": MAP_SPEC });
@@ -519,4 +523,94 @@ test("a script without its template beside it says so and does not fail (CONF-01
   const r = spawnSync("node", [join(lone, "scripts", "language-check.mjs"), dir], { cwd: dir, encoding: "utf8" });
   expect(r.stdout).toContain("CONF-014) skipped");
   expect(r.status).toBe(0);
+});
+
+// ---------------------------------------------------------------- section status and falsifier lines (iteration 003)
+
+const SECTIONED = `# D
+
+Status: Draft for review
+Prefix: AA
+
+## Drafted
+
+Normative.
+
+[AA-001]
+The broker MUST accept a valid request.
+
+## Confirmed
+
+Normative.
+
+Agreed: 2026-09-02
+
+[AA-002]
+The broker MUST reject an invalid request.
+Falsifier: an invalid request arrives and the broker accepts it.
+
+### Inherits the section's agreement
+
+[AA-003]
+The broker MUST NOT cache an error response.
+Falsifier: an error response is served from the cache.
+
+### Observed part
+
+Status: Observed (as-built; unconfirmed)
+
+[AA-004]
+The broker MUST log every request.
+`;
+const SECTIONED_MAP = "# Evidence map\n\n## AA\n\n| Requirement | Coverage | Method | Evidence |\n|---|---|---|---|\n| AA-002 | Uncovered | - | |\n| AA-003 | Uncovered | - | |\n";
+
+test("an Agreed section inside a Draft file is held to the map, and its subsections inherit; an Observed subsection does not (CONF-015)", () => {
+  const missing = run([specDir({ "01-a.md": SECTIONED })]);
+  expect(missing.stdout).toContain("No conformance.md, but 2 Agreed requirement(s) exist. (CONF-040)");
+  expect(missing.status).toBe(1);
+  const partial = run([specDir({ "01-a.md": SECTIONED, "conformance.md": SECTIONED_MAP.replace("| AA-003 | Uncovered | - | |\n", "") })]);
+  expect(partial.stdout).toContain("AA-003\n  Agreed requirement missing from the map");
+  const ok = run([specDir({ "01-a.md": SECTIONED, "conformance.md": SECTIONED_MAP })]);
+  expect(ok.stdout).toContain("no findings");
+  expect(ok.status).toBe(0);
+  // A row for the Observed requirement is a row for an identifier the map may not hold (CONF-043 spirit), but the
+  // check only refuses unknown identifiers; what it must not do is require AA-001 or AA-004.
+  expect(ok.stdout).not.toContain("AA-001");
+  expect(ok.stdout).not.toContain("AA-004");
+});
+
+test("an Agreed MUST with no Falsifier line is reported; Draft and Observed ones are not (CONF-016)", () => {
+  const r = run([specDir({ "01-a.md": SECTIONED.replace("Falsifier: an error response is served from the cache.\n", ""), "conformance.md": SECTIONED_MAP })]);
+  expect(r.stdout).toContain("AA-003\n  Agreed MUST or MUST NOT requirement with no Falsifier: line. (LANG-070, LANG-075, CONF-016)");
+  expect(r.stdout).not.toContain("AA-001\n  Agreed MUST");
+  expect(r.stdout).not.toContain("AA-004\n  Agreed MUST");
+  expect(r.status).toBe(1);
+});
+
+test("a Falsifier line under a permission-only MAY is reported (CONF-017)", () => {
+  const spec = CLEAN_SPEC.replace("The broker MAY cache a manifest for the duration of a lease.\n", "The broker MAY cache a manifest for the duration of a lease.\nFalsifier: a manifest is cached past its lease.\n");
+  const r = run([specDir({ "glossary.md": GLOSSARY, "01-broker.md": spec, "conformance.md": BROKER_MAP })]);
+  expect(r.stdout).toContain("BROKER-003\n  Falsifier: line under a permission-only MAY requirement. (LANG-073, CONF-017)");
+  expect(r.status).toBe(1);
+});
+
+test("a normative keyword inside a Falsifier line is reported; a mention is not (CONF-018)", () => {
+  const bad = CLEAN_SPEC.replace("broker returns a success response.", "broker MUST return a success response.");
+  const r = run([specDir({ "glossary.md": GLOSSARY, "01-broker.md": bad, "conformance.md": BROKER_MAP })]);
+  expect(r.stdout).toContain("BROKER-001\n  Normative keyword inside a Falsifier: line. (LANG-077, CONF-018)");
+  expect(r.status).toBe(1);
+  const mention = CLEAN_SPEC.replace("broker returns a success response.", "broker returns a success response although the rule says `MUST`.");
+  const m = run([specDir({ "glossary.md": GLOSSARY, "01-broker.md": mention, "conformance.md": BROKER_MAP })]);
+  expect(m.stdout).toContain("no findings");
+});
+
+test("the four rules together produce exactly four findings on the contract's fixture (iteration 003 definition of done)", () => {
+  const spec = SECTIONED.replace("Falsifier: an error response is served from the cache.\n", "")
+    .replace("[AA-004]\nThe broker MUST log every request.\n", "[AA-004]\nThe broker MUST log every request.\n\n## Permissions\n\nNormative.\n\nAgreed: 2026-09-02\n\n[AA-005]\nThe broker MAY cache a manifest.\nFalsifier: a manifest is cached.\n\n[AA-006]\nThe broker MUST NOT serve a stale manifest.\nFalsifier: the broker MUST serve a fresh manifest.\n");
+  const r = run([specDir({ "01-a.md": spec })]);
+  expect(r.stdout).toContain("language check: 4 finding(s)");
+  expect(r.stdout).toContain("(CONF-040)");
+  expect(r.stdout).toContain("CONF-016)");
+  expect(r.stdout).toContain("CONF-017)");
+  expect(r.stdout).toContain("CONF-018)");
 });

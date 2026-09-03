@@ -173,6 +173,10 @@ future session:
   `Agreed: <date>` as their first line; the file becomes Agreed when every
   section has.
 - Only Agreed sections may appear in an iteration contract's In list.
+- The language check reads this convention (CONF-015): an Agreed
+  section's identifiers are required in the evidence map whatever the
+  file's status, and each Agreed MUST or MUST NOT needs its Falsifier:
+  line (CONF-016).
 
 Path A -- write. 00-overview.md and one numbered domain spec per domain
 inside the blast radius, using new-project's templates (fallback: the

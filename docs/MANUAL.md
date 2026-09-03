@@ -512,6 +512,20 @@ lexical, and structural, with zero false authority. It reports:
 It finds normative text exactly as the language spec defines it
 (CONF-012). It reports nothing from mentions (CONF-013).
 
+It reads the status convention the workflows write. A file's Status
+line sets the authority of every requirement in it, and a section can
+carry its own: an "Agreed: date" line placed after a heading and
+before the section's first requirement makes that section's
+requirements Agreed whatever the file says, and the marker applies to
+the section's subsections too, which is how the engine reads it
+(CONF-015). On an Agreed section the falsifier rules bite: an Agreed
+MUST or MUST NOT with no Falsifier: line directly under it is a finding
+(CONF-016), a Falsifier: line under a permission-only MAY is a finding
+(CONF-017), and a normative keyword inside a Falsifier: line is a
+finding (CONF-018). So on the broker, BROKER-021 confirmed without its
+falsifier is reported before the section can close, and BROKER-023, a
+MAY, is reported if someone writes one for it.
+
 The script never modifies a file (CONF-010). It writes its report to
 stdout and exits zero on no findings and nonzero otherwise (CONF-011).
 When a check cannot run, such as git history being unavailable or the

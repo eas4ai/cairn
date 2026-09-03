@@ -203,8 +203,8 @@ working.
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/002.md
-  (engine layer L2); 001 (L1) is closed. Work outside it is captured via /next-iteration --
+- The current iteration contract is docs/specs/same-page/iterations/003.md
+  (the CONF revision); 001 (L1) and 002 (L2) are closed. Work outside it is captured via /next-iteration --
   surfaced and staged, never implemented ad hoc, never silently dropped.
 - When incoming direction contradicts a confirmed spec, return to the spec
   and confirm the change deliberately before acting.

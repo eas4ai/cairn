@@ -32,6 +32,15 @@ like any other. The language check verifies the map's integrity.
 | PKG-006 | Asserted | inspected | skills/new-project/scripts/ |
 | PKG-007 | Covered | test | tests/language-check.test.mjs::scaffolded-templates-pass |
 
+## CONF
+
+| Requirement | Coverage | Method | Evidence |
+|---|---|---|---|
+| CONF-015 | Covered | test | tests/language-check.test.mjs::CONF-015 |
+| CONF-016 | Covered | test | tests/language-check.test.mjs::CONF-016 |
+| CONF-017 | Covered | test | tests/language-check.test.mjs::CONF-017 |
+| CONF-018 | Covered | test | tests/language-check.test.mjs::CONF-018 |
+
 ## ENG
 
 | Requirement | Coverage | Method | Evidence |

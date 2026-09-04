@@ -1,4 +1,5 @@
 .cairn/evidence/
+.cairn/in-progress
 node_modules/
 .remember/
 reference/

@@ -43,3 +43,22 @@ test("PKG-013: deferral language, but not in code, quotes, or a rule", () => {
   assert.equal(ok.status, 0, ok.stdout);
 });
 test("this repository passes the package lint", () => { const r = lint(ROOT); assert.equal(r.status, 0, r.stdout); });
+
+test("a tracked path deleted from the working tree is skipped, not a crash", () => {
+  const root = repo({ "docs/gone.md": "# gone\n" });
+  spawnSync("rm", [join(root, "docs/gone.md")]);
+  const r = lint(root);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stderr, /ENOENT/);
+});
+
+test("a sentence in a Formats section is not a record kind", () => {
+  const r = lint(repo({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nThe suite adds, each spawning the CLI:\n\n    x\n" }));
+  assert.equal(r.status, 0, r.stdout);
+});
+
+test("a record kind named by its path alone is checked", () => {
+  finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nAn escalation, .cairn/escalations/<slug>.md:\n\n    x\n" }, "PKG-003");
+});
+
+test("PKG-002: a tracked in-progress record", () => finds({ ".cairn/in-progress": "action: implement\n" }, "PKG-002"));

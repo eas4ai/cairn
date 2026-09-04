@@ -37,6 +37,18 @@ roadmap stands; no file in this repository states that separately.
 preceded it. It is the input to the specification, not the
 specification.
 
+## Install
+
+    git clone git@github.com:eas4ai/cairn.git
+    cairn/scripts/link.sh
+
+The script links `cairn` into `$HOME/.local/bin` and each skill into
+`$HOME/.agents/skills`, so a pull keeps them current. Pass `--bin DIR`
+or `--skills DIR` for other places, `--force` to replace a link another
+package left under the same name, and `--unlink` to take it all away.
+The skills follow the Agent Skills layout, `skills/<name>/SKILL.md`, so
+any skills installer reads them as they are.
+
 ## Background
 
 Cairn succeeds Same Page, which established the specification phase and

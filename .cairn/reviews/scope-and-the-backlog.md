@@ -1,5 +1,5 @@
 commitment: scope-and-the-backlog
-commit: 6f60efd
+commit: 74afb61
 examined:
   - breaches() cost: git log -S over roadmap.md only, so bounded by roadmap history, not repository history
   - a new file matching a declared glob, added in a commit: tracked at HEAD, so covered
@@ -9,5 +9,5 @@ examined:
   - the empty-inputs case in breaches()
   - the action verb wake prints for a breach
 findings:
-  - open: breaches() passes a fake path "--nothing--" to git ls-files when the commitment has no declared inputs; guard the empty case instead
-  - open: wake prints "declare <path>" for a footprint breach and "declare <REQ>" for a requirement with no mechanism; two different acts under one verb; the breach should read "scope <path>"
+  - resolved: breaches() passes a fake path "--nothing--" to git ls-files when the commitment has no declared inputs; guard the empty case instead
+  - resolved: wake prints "declare <path>" for a footprint breach and "declare <REQ>" for a requirement with no mechanism; two different acts under one verb; the breach should read "scope <path>"

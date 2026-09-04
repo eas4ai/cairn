@@ -10,6 +10,8 @@
 //                  --if-wrong W --instead I [--level Blocking]
 //   cairn answer <slug> <reply...>  record the developer's reply
 //   cairn backlog --title T --body B [--from X]   capture out-of-scope work
+//   cairn supersede <old> --cause C ...decide fields...
+//   cairn reversals                 report reversals by decider, cause, domain
 //
 // Exit: 0 Done, 1 Resolve (the agent acts), 2 Escalate (the developer
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
@@ -79,6 +81,19 @@ function breaches(root, slug, mechs, requirements) {
   const covered = inputs.length ? inputFiles(root, inputs) : [];
   return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
 }
+
+// Every decision record with its header fields. A record's domain is the
+// set of requirement prefixes in its Rests on: line; one that rests on
+// prose alone is in the domain "unspecified".
+function decisions(root) {
+  const dir = join(root, "docs", "decisions");
+  return list(dir).map((n) => {
+    const f = fields(read(join(dir, n)));
+    const ids = [...(f["Rests on"] ?? "").matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
+    return { slug: n.replace(/\.md$/, ""), ...f, domain: ids.length ? [...new Set(ids)] : ["unspecified"] };
+  });
+}
+const reversed = (root) => decisions(root).filter((d) => "Superseded by" in d);
 
 // A decision is unrealized when its Realized by section lists no commit.
 // A superseded decision is history, not work.
@@ -277,10 +292,21 @@ function decide(root, o) {
   const slug = slugify(o.title);
   const path = join(root, "docs", "decisions", `${slug}.md`);
   if (existsSync(path)) return usage(`decide: ${rel(root, path)} exists; supersede it rather than overwrite it`);
+  const oldPath = o.supersedes ? join(root, "docs", "decisions", `${o.supersedes}.md`) : null;
+  if (oldPath && !existsSync(oldPath)) return usage(`decide: --supersedes names ${o.supersedes}, and no such record exists`);
+  // DEC-012: in a domain that has seen reversals, the record says what the history changed.
+  const ids = [...o["rests-on"].matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
+  const domain = ids.length ? [...new Set(ids)] : ["unspecified"];
+  const prior = reversed(root).filter((d) => d.domain.some((x) => domain.includes(x)));
+  if (prior.length && !o.history) return usage(`decide: ${domain.join("/")} carries ${prior.length} reversal(s): ${prior.map((d) => d.slug).join(", ")}; pass --history stating what that history changed about the level (DEC-012)`);
   const head = [`# ${o.title}`, "", `Level: ${o.level}`, `Decided by: ${o["decided-by"]}`];
   if (o.supersedes) head.push(`Supersedes: ${o.supersedes}`, `Cause: ${o.cause}`);
-  head.push(`Rests on: ${o["rests-on"]}`, `Would be wrong if: ${o["wrong-if"]}`, "", "## Decision", "", o.body, "", "## Realized by", "", "(none yet: recorded, not built)", "");
+  head.push(`Rests on: ${o["rests-on"]}`, `Would be wrong if: ${o["wrong-if"]}`);
+  if (o.history) head.push(`History: ${o.history}`);
+  head.push("", "## Decision", "", o.body, "", "## Realized by", "", "(none yet: recorded, not built)", "");
   writeFileSync(path, head.join("\n"));
+  // The old record learns it was superseded; nothing in it is removed (DEC-008, DEC-010).
+  if (oldPath) writeFileSync(oldPath, read(oldPath).replace(/^(# .*\n)/, `$1\nSuperseded by: ${slug}\n`));
   if (o.level === "Consequential") writeFileSync(join(root, ".cairn", "queue", slug), `decision: ${slug}\nqueued: ${new Date().toISOString()}\n`);
   process.stdout.write(`recorded ${rel(root, path)}${o.level === "Consequential" ? " and queued it for review" : ""}\n`);
   return 0;
@@ -334,6 +360,17 @@ function backlog(root, o) {
   return 0;
 }
 
+// ------------------------------------------------------------ reversals
+
+function reversals(root) {
+  const all = decisions(root), rev = all.filter((d) => "Superseded by" in d);
+  const tally = (f) => { const m = new Map(); for (const d of rev) for (const k of [].concat(f(d))) m.set(k, (m.get(k) ?? 0) + 1); return [...m].sort().map(([k, v]) => `${k} ${v}`).join(", ") || "none"; };
+  const causeOf = (d) => all.find((x) => x.slug === d["Superseded by"])?.Cause ?? "unrecorded";
+  process.stdout.write([`reversals: ${rev.length} of ${all.length} decisions`, `by decider: ${tally((d) => d["Decided by"] ?? "unrecorded")}`,
+    `by cause: ${tally(causeOf)}`, `by domain: ${tally((d) => d.domain)}`, ...rev.map((d) => `  ${d.slug} -> ${d["Superseded by"]} (${causeOf(d)})`)].join("\n") + "\n");
+  return 0;
+}
+
 // ------------------------------------------------------------ main
 
 function usage(msg) { process.stderr.write(`cairn: ${msg}\n`); return 3; }
@@ -344,7 +381,7 @@ function main() {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
-      from: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
+      from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   const root = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
@@ -352,7 +389,9 @@ function main() {
   if (cmd === "escalate") return escalate(root, a.values);
   if (cmd === "answer") return answer(root, rest[0], rest.slice(1).join(" "));
   if (cmd === "backlog") return backlog(root, a.values);
-  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog> [--root DIR]");
+  if (cmd === "supersede") return rest[0] ? decide(root, { ...a.values, supersedes: rest[0] }) : usage("usage: cairn supersede <old-slug> --cause C ...decide fields");
+  if (cmd === "reversals") return reversals(root);
+  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md)`);
   if (cmd === "check") return check(root, rest);
   const w = wake(root);

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -51,9 +51,11 @@ test("a missing field is a usage error and nothing is written", () => {
   assert.equal(readdirSync(join(root, "docs/decisions")).length, 0);
 });
 
-test("supersedes requires a classified cause", () => {
+test("supersedes requires a classified cause, and the old record must exist", () => {
   const root = repo();
-  assert.equal(decide(root, "--level", "Judged", "--supersedes", "old").status, 3);
+  assert.equal(decide(root, "--level", "Judged", "--supersedes", "old", "--cause", "the premise was false").status, 3, "no such record");
+  writeFileSync(join(root, "docs/decisions/old.md"), "# Old\n\nLevel: Judged\nRests on: Q-1\n\n## Realized by\n\n- abc1234  x\n");
+  assert.equal(decide(root, "--level", "Judged", "--supersedes", "old").status, 3, "no cause");
   const r = decide(root, "--level", "Judged", "--supersedes", "old", "--cause", "the premise was false");
   assert.equal(r.status, 0, r.stderr);
   const t = readFileSync(join(root, "docs/decisions/sessions-live-in-sqlite.md"), "utf8");

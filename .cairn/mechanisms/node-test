@@ -49,3 +49,8 @@ requirements:
   - LOOP-016
   - LOOP-029
   - LOOP-035
+  - DEC-008
+  - DEC-009
+  - DEC-010
+  - DEC-011
+  - DEC-012

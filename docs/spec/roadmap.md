@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: supersession-and-the-experience-log
+Current: the-specification-phase
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.

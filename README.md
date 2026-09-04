@@ -20,11 +20,22 @@ before, for someone who arrives with no memory of them.
 
 ## Status
 
-Design only. Nothing is built yet.
+The kernel is `bin/cairn.mjs`: one file, run by node, no dependencies
+and no build step. `cairn wake` reads the repository and names the next
+action. `cairn check` runs the current commitment's mechanisms against
+a committed tree and records evidence with receipts. `cairn decide`,
+`escalate`, `answer`, `backlog`, `supersede`, and `reversals` write
+the records the loop runs on. The skills under `skills/` carry the
+specification phase.
 
-`docs/design-record.md` holds the decisions taken so far, the
-measurements behind them, and the questions still open. It is the input
-to the specification, not the specification.
+Cairn bootstraps on itself: its own specification is the input to its
+own loop. Run `cairn wake` here and the referee reports where its
+roadmap stands; no file in this repository states that separately.
+
+`docs/spec/` is the specification, Agreed 2026-09-04.
+`docs/design-record.md` holds the decisions and measurements that
+preceded it. It is the input to the specification, not the
+specification.
 
 ## Background
 

@@ -1,11 +1,13 @@
 command: node scripts/pkg-lint.mjs
 inputs:
-  - scripts/pkg-lint.mjs
+  - scripts/
   - bin/
   - skills/
   - docs/
   - package.json
   - .gitignore
+  - README.md
+  - tests/
 requirements:
   - PKG-001
   - PKG-002

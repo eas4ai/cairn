@@ -128,6 +128,30 @@ fail against the same inputs.
 A demonstrated counterexample is the most valuable thing a mechanism
 produces. It stays after the fix.
 
+[LOOP-030] The agent MUST record evidence only against a committed
+state of the code.
+Falsifier: an evidence record was produced while a declared input had
+uncommitted changes.
+Status: Draft
+
+Evidence from a half-edited tree describes a state that exists nowhere.
+Freezing the candidate gives every observation one identity, so an
+assessment cannot combine behavior from two versions. The agent's own
+test runs while editing are not evidence; they are how it works.
+
+[LOOP-031] When a requirement's latest evidence fails and earlier
+evidence for it passed, the agent MUST resolve it before a requirement
+that has never passed.
+Falsifier: the loop works on a never-passed requirement while a
+regression stands.
+Status: Draft
+
+A regression is a preservation constraint that broke. Left standing
+while features are added, the artifact degrades under the loop that is
+supposed to be improving it. Harness-of-Harness reopened 17 of 81
+issues over 70 loops, and its planner puts blockers and regressions
+ahead of extensions for that reason.
+
 ## Escalation
 
 [LOOP-009] An escalation MUST be durable on disk.
@@ -209,6 +233,20 @@ one.
 MUST examine the work for defects and MUST record what it examined.
 Falsifier: a commitment reports complete and no record names what the
 review examined.
+
+[LOOP-032] The agent MUST NOT change code during a review.
+Falsifier: the working tree differs between the start and the end of a
+review.
+Status: Draft
+
+A review that can repair what it examines becomes implementation and
+stops being a review. Fixes are their own work, with their own
+transition, after the review has recorded what it found.
+
+The mechanism is the independent verifier, and the review is not
+acceptance. A requirement is met when its mechanism passes against a
+committed state; the review is the agent looking for what the
+mechanisms would miss.
 
 ## Completion
 

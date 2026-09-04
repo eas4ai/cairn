@@ -201,3 +201,31 @@ must be structurally prevented.
 - Adversarial review is a requirement in both phases (SPEC-014, SPEC-015,
   LOOP-020), after the first draft's own review found eight defects in
   forty-eight requirements.
+
+## External evidence (2026-09-04)
+
+Harness-of-Harness (Yan et al., arXiv 2609.01481, Shanghai AI Lab)
+runs a fixed coding harness in a planning-coding-testing loop and
+carries two states across iterations: the artifact and the evidence
+bundle. It is an orchestrator, which Cairn is not (PKG-012), so what
+transfers is mechanism, not architecture. Its ablations on 45
+GameCraft-Bench tasks, Codex with GPT-5.5, T=3:
+
+- without evidence-conditioned replanning: -8.13 points
+- without evidence feedback to the planner: -6.28
+- without warm start from the previous artifact: -7.85
+
+Those are the three things Cairn's wake does structurally: it derives
+the next action from evidence on disk, against the repository as it
+stands. The paper is the first quantitative support for that design
+choice that did not come from this project.
+
+Three mechanisms entered as Draft (LOOP-030, LOOP-031, LOOP-032):
+evidence only against a committed state; regressions before never-passed
+requirements; reviews that cannot change code. Each names the failure
+the paper documents.
+
+Its reference [11], "Proof-or-stop: don't trust the agent, trust the
+evidence" (arXiv 2607.14890), is adjacent enough to Cairn's thesis to
+be worth the developer's eyes.
+

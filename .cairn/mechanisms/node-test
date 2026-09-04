@@ -1,0 +1,24 @@
+command: node --test tests/*.test.mjs
+inputs:
+  - bin/
+  - tests/
+requirements:
+  - LOOP-001
+  - LOOP-002
+  - LOOP-003
+  - LOOP-018
+  - LOOP-019
+  - LOOP-021
+  - LOOP-022
+  - LOOP-027
+  - LOOP-028
+  - DEC-001
+  - DEC-002
+  - DEC-003
+  - DEC-004
+  - DEC-005
+  - DEC-006
+  - DEC-007
+  - DEC-013
+  - DEC-014
+  - DEC-015

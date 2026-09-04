@@ -1,0 +1,9 @@
+{
+  "name": "cairn",
+  "version": "0.1.0",
+  "description": "The referee for agent-led software development: reads the repository, names the next action.",
+  "bin": { "cairn": "bin/cairn.mjs" },
+  "scripts": { "test": "node --test tests/*.test.mjs" },
+  "license": "UNLICENSED",
+  "private": true
+}

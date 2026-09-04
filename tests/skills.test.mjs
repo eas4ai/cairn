@@ -20,3 +20,27 @@ test("understanding is restated before writing (SPEC-003)", () => has(NEW, "Stat
 }); test("Observed is marked, and is not contract (SPEC-016, SPEC-017)", () => { has(EXISTING, "Status: Observed", "SPEC-016"); has(EXISTING, "only Agreed text is contract", "SPEC-017"); has(EXISTING, "The loop refuses a commitment that names an Observed requirement", "SPEC-017 mechanism");
 }); test("nothing from the Same Page engine survives in the skills", () => { for (const s of ["same-page elaborate", "same-page verify", ".same-page/", "validators/", "trust <", "conformance.md", "iterations/001.md", "/next-iteration"]) lacks(BOTH, s, "port");
 });
+
+// The working agreement: the file a consumer-repo agent reads at wake.
+const TEMPLATE = flat("../skills/new-project/templates/AGENTS.md");
+const raw = (u) => readFileSync(new URL(u, import.meta.url), "utf8");
+test("the working agreement names the agent's move for each verdict and the write-ahead record (LOOP-036)", () => {
+  has(TEMPLATE, "Resolvable: do the one action named. Then run `cairn wake` again", "LOOP-036 Resolvable");
+  has(TEMPLATE, "Escalate: present the escalation", "LOOP-036 Escalate");
+  has(TEMPLATE, "Done: the commitment is complete", "LOOP-036 Done");
+  for (const f of ["action:", "target:", "base:", "started:"]) has(TEMPLATE, f, "LOOP-022 record field");
+  has(TEMPLATE, "records evidence only against a committed tree", "LOOP-030");
+});
+test("the working agreement names the developer's moves (LOOP-036, DEC-014)", () => {
+  has(TEMPLATE, "cairn answer <slug>", "LOOP-014 answer");
+  has(TEMPLATE, "removing the queue entry in a commit is the review", "DEC-014 exit");
+});
+test("this repository runs by the file it ships", () => {
+  assert.equal(raw("../AGENTS.md"), raw("../skills/new-project/templates/AGENTS.md"), "AGENTS.md is the template byte for byte");
+  assert.match(raw("../CLAUDE.md"), /AGENTS\.md/, "the other name includes it");
+});
+test("both skills write the working agreement without naming a vendor's file (LOOP-036, PKG-006)", () => {
+  has(NEW, "copying templates/AGENTS.md", "new-project writes it");
+  has(EXISTING, "the working agreement, AGENTS.md", "existing-project writes or verifies it");
+  lacks(BOTH, "CLAUDE.md", "PKG-006");
+});

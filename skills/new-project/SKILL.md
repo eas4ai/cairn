@@ -111,12 +111,20 @@ and its predecessors deliver.
 
 For each requirement in the first commitment, write its mechanism under
 .cairn/mechanisms/<name>: the command, the paths it reads, and the
-requirements it speaks for. Nothing else is scaffolded.
+requirements it speaks for.
+
+Write the working agreement: AGENTS.md at the repository root, by
+copying templates/AGENTS.md beside this skill verbatim (LOOP-036). It
+states the agent's move for each verdict and the developer's move for
+an escalation and for a queued decision. A harness that reads a
+differently named instructions file gets a one-line file of that name
+that includes it. Nothing else is scaffolded.
 
 ## Closing
 
 Run the spec lint over docs/spec. Summarize what exists and where. The
-loop takes over: `cairn wake` names the next action from the repository
-alone. An idea outside the current commitment goes to `cairn backlog`,
+loop takes over under the working agreement: `cairn wake` names the
+next action from the repository alone, and AGENTS.md says what to do
+with it. An idea outside the current commitment goes to `cairn backlog`,
 and enters a commitment only when the developer writes it into the
 specification and names it there.

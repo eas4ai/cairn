@@ -112,6 +112,11 @@ for it exactly as /new-project Stage 4 describes. A defect's commitment
 names the Agreed requirement it violates and a mechanism that reproduces
 the failure; its done-when is that mechanism passing.
 
+Both paths: the working agreement, AGENTS.md at the repository root, is
+present and matches templates/AGENTS.md beside /new-project (LOOP-036).
+Write it when it is missing; replace it when it differs, and say so in
+the summary.
+
 A roadmap exists (Path B): read the current commitment's requirements
 against the blast radius. In scope: proceed under it. Out of scope, the
 usual case for work that arrived after the roadmap was agreed:
@@ -128,5 +133,5 @@ work starts.
 
 Run the spec lint. Summarize: recon.md, the glossary, the Observed and
 Agreed specs, the roadmap and commitment, and what `cairn wake` says.
-The loop takes over. Remind the developer that Observed sections are not
+The loop takes over under the working agreement. Remind the developer that Observed sections are not
 contract, and that the loop will refuse a commitment that names one.

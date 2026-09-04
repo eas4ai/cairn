@@ -1,5 +1,5 @@
 commitment: the-working-agreement
-commit: 885086f
+commit: a1e166f
 examined:
   - the template against PKG-013 and PKG-006 through pkg-lint, which scans skills/ and so scans the template
   - the template's moves against the spec verdict by verdict, and its decision levels against DEC-001 through DEC-004 and DEC-016
@@ -11,6 +11,7 @@ examined:
   - the sequence used: tests and implementation committed together and checked once, because node-test speaks for sixty-seven requirements and a red run would have recorded a false regression against every one of them
   - what /existing-project does to a consumer's existing AGENTS.md
   - what the template tells the agent to read at wake, against LOOP-002's falsifier
+  - the two fixes: the existing-project wording for an AGENTS.md that already holds a project's instructions, and the template's wake step, each with a test asserting it; and AGENTS.md still byte for byte the template after the copy
 findings:
-  - open: /existing-project says to replace AGENTS.md when it differs, so a project's own instructions in that file would be lost; the skill must append the template and verify containment, not equality
-  - open: the template's wake step omits the roadmap, which LOOP-002's falsifier names
+  - resolved: /existing-project said to replace AGENTS.md when it differs, so a project's own instructions in that file would be lost; it now appends the template to a file with other content, keeps the rest, and replaces only the copy it holds
+  - resolved: the template's wake step omitted the roadmap, which LOOP-002's falsifier names; it reads it now

@@ -1,5 +1,5 @@
 commitment: cairn-installs-by-one-script
-commit: 74f2d76
+commit: 258e2ea
 examined:
   - the README's two commands from a fresh clone: the script resolves the repository from its own location, so the working directory does not matter
   - the script under set -u with no --skills given: the default is assigned before the array is expanded
@@ -11,5 +11,6 @@ examined:
   - PKG-006 in the script's defaults and the README: no harness is named; the cross-vendor skill directory is the default
   - PKG-014's falsifier against the README on a machine where the default bin directory is not on the path
   - the README after the fix: it names the path condition and the flag that avoids it
+  - the skills CLI against this repository, from the private GitHub remote with the developer's credentials and from the local checkout: both list new-project and existing-project with no manifest, so the README now carries the command it withheld while unverified
 findings:
   - resolved: the README links cairn into $HOME/.local/bin and does not say that directory must be on the path, so following its steps on a machine where it is not leaves cairn off the path, which is the falsifier; the README now says so and names --bin for a directory that is

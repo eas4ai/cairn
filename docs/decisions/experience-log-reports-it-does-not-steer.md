@@ -1,5 +1,7 @@
 # The experience log reports; it does not steer
 
+Superseded by: experience-log-steers-by-judgment
+
 Level: Consequential
 Decided by: agent
 Rests on: DEC-012, PKG-003

@@ -62,6 +62,19 @@ vendor provides.
 Falsifier: a documented workflow step cannot be performed by an agent
 outside one specific product.
 
+## No deferral
+
+[PKG-013] Cairn's specification and documentation MUST NOT describe work
+the specification includes as deferred, optional, or belonging to a
+later version.
+Falsifier: a document names a version, a phase, or a later stage for
+work a requirement or a commitment already includes.
+
+The specification is the scope. A concept that is not in it is not
+postponed; it is absent until a named failure brings it in. A concept
+that is in it is built. There is no third state, because the third state
+is where debt lives.
+
 ## The boundary
 
 [PKG-012] Cairn MUST NOT call a model or manage an agent's execution.

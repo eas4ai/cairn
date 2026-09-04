@@ -51,14 +51,15 @@ LOOP-016, and LOOP-029.
 
 ## 5. Supersession and the experience log
 
-Delivers: reversals classified by cause, and reversal rate by decider,
-reported. Covers DEC-008 through DEC-012.
+Delivers: reversals classified by cause, reversal rate by decider, and
+every new decision in a reversed domain accounting for that history in
+its level. Covers DEC-008 through DEC-012.
 
-Reporting, not control. Tuning the level threshold from history needs
-enough decisions, honest reversals, and a defensible policy for changing
-it, and none of those exist before the loop has run. DEC-012 asks the
-agent to consult history and say what it did with it, which is all the
-spec requires.
+The threshold moves by the agent's recorded judgment, per decision, with
+the history in front of it. That is the whole mechanism. A formula that
+moves the threshold from a rate is not in the specification; if a
+failure ever forces one, it enters the way every concept does, through
+PKG-003.
 
 ## 6. The specification phase
 

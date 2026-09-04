@@ -67,3 +67,10 @@ test("an existing record is not overwritten", () => {
   assert.equal(r.status, 3);
   assert.match(r.stderr, /exists/);
 });
+
+test("a queued decision stays queued; nothing but the developer removes it (DEC-014)", () => {
+  const root = repo();
+  decide(root, "--level", "Consequential");
+  spawnSync("node", [CLI, "wake"], { cwd: root, encoding: "utf8" });
+  assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
+});

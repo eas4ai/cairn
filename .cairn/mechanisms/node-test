@@ -6,12 +6,27 @@ requirements:
   - LOOP-001
   - LOOP-002
   - LOOP-003
+  - LOOP-004
+  - LOOP-005
+  - LOOP-006
+  - LOOP-007
+  - LOOP-008
+  - LOOP-017
   - LOOP-018
   - LOOP-019
+  - LOOP-020
   - LOOP-021
   - LOOP-022
+  - LOOP-023
+  - LOOP-024
+  - LOOP-025
   - LOOP-027
   - LOOP-028
+  - LOOP-030
+  - LOOP-031
+  - LOOP-032
+  - LOOP-033
+  - LOOP-034
   - DEC-001
   - DEC-002
   - DEC-003
@@ -22,3 +37,4 @@ requirements:
   - DEC-013
   - DEC-014
   - DEC-015
+  - DEC-016

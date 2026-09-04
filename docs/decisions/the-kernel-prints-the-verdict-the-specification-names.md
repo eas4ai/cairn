@@ -14,4 +14,4 @@ The specification is cement, so the code follows it. The kernel prints Resolvabl
 
 ## Realized by
 
-(none yet: recorded, not built)
+- a11c081  The kernel prints Resolvable, the verdict the specification names

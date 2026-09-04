@@ -118,5 +118,8 @@ An escalation: the six-line format from LOOP-026, followed by Status
   states the same. This is the primary test of the system.
 - Stopping after any persisted transition and restarting produces no
   duplicated and no contradicted work.
-- Every requirement listed above has a mechanism and current passing
-  evidence.
+- Every requirement listed above names a mechanism, and that mechanism
+  passes.
+
+Recording evidence is cairn check, which the next commitment delivers.
+See docs/decisions/a-commitment-is-done-by-its-own-deliverables.md.

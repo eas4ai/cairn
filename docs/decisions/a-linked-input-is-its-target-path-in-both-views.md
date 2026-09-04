@@ -16,4 +16,4 @@ The alternative was to follow links to their tracked targets in both views. That
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 9e4d460  A linked input is its target path in both views

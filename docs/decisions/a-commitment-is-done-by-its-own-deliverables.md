@@ -1,5 +1,7 @@
 # A commitment is done by its own deliverables
 
+Superseded by: check-belongs-to-the-first-commitment
+
 Level: Judged
 Decided by: agent
 Rests on: LOOP-019, the commitment's done-when

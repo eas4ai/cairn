@@ -61,6 +61,7 @@ stopping to re-establish it.
 
 Agreed 2026-09-04. The developer reviewed every requirement and its
 falsifier by exception, after one self-review and two independent
-reviews, and corrected none. A later requirement is Draft until the
+reviews, and corrected none. Seven requirements drawn from two papers
+later that day were presented the same way and confirmed the same way. A later requirement is Draft until the
 developer confirms it and its falsifier; the loop MUST NOT treat a Draft
 requirement as contract.

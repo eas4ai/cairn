@@ -21,7 +21,7 @@ The agent takes the first level that fits.
 | Routine | The specification, the conventions, or common practice determines it. | Decide. No record. |
 | Judged | A real alternative exists, reversal is cheap, and it is inside the commitment. | Decide. Write the record. |
 | Consequential | Reversal is expensive, or it crosses the project boundary. | Decide. Write the record. Add to the review queue. |
-| Blocking | It changes what gets built, needs a fact only the developer holds, is irreversible and externally visible, or the agent has no recommendation. | Stop. Escalate. |
+| Blocking | It changes what gets built, needs a fact only the developer holds, is irreversible and externally visible, has had three attempts without new passing evidence, or the agent has no recommendation. | Stop. Escalate. |
 
 [DEC-001] The agent MUST assign a level to every decision that has an
 alternative.
@@ -44,12 +44,11 @@ new passing evidence, the agent MUST classify the next decision about
 it Blocking.
 Falsifier: a requirement's evidence history shows four or more
 consecutive failing records with no escalation between them.
-Status: Draft
 
 Repair is bounded or it is a spin. This trigger was agreed in the
 design conversation and never reached the specification; Proof-or-Stop
 names the failure as its scenario B10, repeated retry with no progress.
-On confirmation, "not converging" joins the Blocking row of the scale.
+Confirmed 2026-09-04; "not converging" is in the Blocking row.
 
 ## The review queue
 

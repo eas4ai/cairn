@@ -110,7 +110,6 @@ Falsifier: a change to a file no mechanism declares makes evidence stale.
 working directory, its exit code, and a digest of its output.
 Falsifier: an evidence record reports a result and no command, exit
 code, or output digest that produced it.
-Status: Draft
 
 A record that says pass and nothing else is a claim in a file. The
 receipt is what makes it evidence: anyone can re-run the command and
@@ -144,7 +143,6 @@ produces. It stays after the fix.
 state of the code.
 Falsifier: an evidence record was produced while a declared input had
 uncommitted changes.
-Status: Draft
 
 Evidence from a half-edited tree describes a state that exists nowhere.
 Freezing the candidate gives every observation one identity, so an
@@ -156,7 +154,6 @@ evidence for it passed, the agent MUST resolve it before a requirement
 that has never passed.
 Falsifier: the loop works on a never-passed requirement while a
 regression stands.
-Status: Draft
 
 A regression is a preservation constraint that broke. Left standing
 while features are added, the artifact degrades under the loop that is
@@ -234,7 +231,6 @@ outside the declared inputs of that commitment's mechanisms, other than
 Cairn's own records.
 Falsifier: a commit changes a file that no mechanism of the current
 commitment declares and that is not under .cairn/ or docs/.
-Status: Draft
 
 This makes LOOP-015 observable. The commitment's footprint is already
 on disk as the union of its mechanisms' declared inputs, so no new
@@ -262,7 +258,6 @@ review examined.
 [LOOP-032] The agent MUST NOT change code during a review.
 Falsifier: the working tree differs between the start and the end of a
 review.
-Status: Draft
 
 A review that can repair what it examines becomes implementation and
 stops being a review. Fixes are their own work, with their own
@@ -277,7 +272,6 @@ mechanisms would miss.
 commitment reports complete.
 Falsifier: a commitment reports complete while a review record names a
 defect with no resolution.
-Status: Draft
 
 Proof-or-Stop isolated this with the same reviewer signal in two arms:
 treated as advice, it shipped 14 of 1800 injected green-but-wrong

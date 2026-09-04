@@ -12,61 +12,58 @@ every commitment rather than to one.
 Cairn bootstraps on itself: its own specification is the input to its
 own loop, so the loop is built before the specification phase is ported.
 
-## 1. The record and the wake
+Every commitment must be able to reach Done under LOOP-017 with only
+what it and its predecessors deliver. The first draft split evidence
+from the wake and left the first commitment unable to finish; see
+docs/decisions/check-belongs-to-the-first-commitment.md.
 
-The state on disk, and the ability to reconstruct a position from it.
+## 1. The record, the wake, and the check
 
-Delivers: `cairn wake` and `cairn decide`. A roadmap, a current
-commitment, and decision records that an agent with no memory can read
-to learn what is done, what is in progress, and what remains. Covers
-LOOP-001 through LOOP-003, LOOP-018, LOOP-019, LOOP-021, LOOP-022,
-LOOP-027, LOOP-028, DEC-001 through DEC-007, and DEC-013 through
-DEC-015.
+The loop's happy path, end to end: know where you are, decide and
+record, run mechanisms against a committed tree, record evidence with
+receipts, review, and report Done only when LOOP-017 holds.
 
-This is first because nothing else works without knowing where state
-lives, and because resumability is the constraint that shapes every
-later decision.
+Delivers: `cairn wake`, `cairn decide`, `cairn check`. Covers LOOP-001
+through LOOP-008, LOOP-017 through LOOP-025, LOOP-027, LOOP-028,
+LOOP-030 through LOOP-034, DEC-001 through DEC-007, and DEC-013 through
+DEC-016.
 
-## 2. Evidence and freshness
+First because nothing else works without it, and because a commitment
+that can complete itself is the proof that the loop exists.
 
-Mechanisms, their results, and whether a result still describes the code.
+## 2. Escalation
 
-Delivers: `cairn check`. Verdicts classified by who acts next, and
-stale evidence that the agent resolves without asking. Covers LOOP-004
-through LOOP-008, LOOP-017, and LOOP-023 through LOOP-025.
+Delivers: `cairn escalate` and `cairn answer`. One escalation at a time,
+format-checked, durable on disk, resolvable by an agent that did not
+raise it, and never able to suppress a Blocking decision. Covers
+LOOP-009 through LOOP-014 and LOOP-026.
 
-## 3. Escalation
+## 3. Scope and the backlog
 
-The format, the format check, and the queue.
+Delivers: `cairn backlog`, and the footprint check in `check` and
+`wake`. Out-of-commitment work captured rather than implemented or
+discarded, promoted only by the developer, and a commit outside the
+commitment's declared footprint made visible. Covers LOOP-015,
+LOOP-016, LOOP-029, and LOOP-035.
 
-Delivers: `cairn answer`. One escalation at a time, durable on disk,
-resolvable by an agent that did not raise it. Covers LOOP-009 through
-LOOP-014 and LOOP-026.
+## 4. Supersession and the experience log
 
-## 4. Scope and the backlog
-
-Delivers: out-of-commitment work captured rather than implemented or
-discarded, and promoted only by the developer. Covers LOOP-015,
-LOOP-016, and LOOP-029.
-
-## 5. Supersession and the experience log
-
-Delivers: reversals classified by cause, reversal rate by decider, and
-every new decision in a reversed domain accounting for that history in
-its level. Covers DEC-008 through DEC-012.
+Delivers: `cairn supersede` and `cairn reversals`. Reversals classified
+by cause and never deleted, reversal rate by decider, and every new
+decision in a reversed domain accounting for that history. Covers
+DEC-008 through DEC-012.
 
 The threshold moves by the agent's recorded judgment, per decision, with
-the history in front of it. That is the whole mechanism. A formula that
-moves the threshold from a rate is not in the specification; if a
-failure ever forces one, it enters the way every concept does, through
-PKG-003.
+the history in front of it. A formula that moves it from a rate is not
+in the specification.
 
-## 6. The specification phase
+## 5. The specification phase
 
 Ported from Same Page with the four repairs: ambiguity resolved and
 recorded rather than asked, falsifiers confirmed by exception, depth
-inferred, and the phase ending at the first commitment. Covers SPEC-001
-through SPEC-012.
+inferred, and the phase ending at the first commitment. Delivers the
+skills, and a spec-lint mechanism for PKG-007 and PKG-010. Covers
+SPEC-001 through SPEC-017.
 
 Last because the specification phase already works. It needs its
 over-asking removed, not a redesign.

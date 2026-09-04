@@ -32,7 +32,7 @@ The footprint (LOOP-035):
   and docs/. Nothing new is declared; it is derived.
 - check, before running anything, compares the files changed by commits
   since the commitment began (the first commit after Current: named it)
-  against the footprint. A file outside it is reported: Resolve, either
+  against the footprint. A file outside it is reported as Resolve: scope <path>, either
   declare it as an input of the mechanism that should cover it, or
   write it to the backlog and revert it.
 - wake reports the same, ahead of running mechanisms, because a

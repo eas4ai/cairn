@@ -76,7 +76,7 @@ function breaches(root, slug, mechs, requirements) {
   if (!began) return [];
   const changed = git(root, "diff", "--name-only", "-z", began, "HEAD").stdout.split("\0").filter(Boolean);
   const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
-  const covered = inputFiles(root, inputs.length ? inputs : ["--nothing--"]);
+  const covered = inputs.length ? inputFiles(root, inputs) : [];
   return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
 }
 
@@ -189,7 +189,7 @@ function wake(root) {
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolve", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) return { verdict: "Resolve", action: `declare ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
+  if (breach) return { verdict: "Resolve", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
   const ctx = context(root, mechs);
   const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
@@ -227,7 +227,7 @@ function check(root, only) {
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) { process.stdout.write(`Resolve: declare ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
+  if (breach) { process.stdout.write(`Resolve: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
   const runs = new Map();
   for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   const head = headSha(root);

@@ -7,6 +7,8 @@ inputs:
   - package.json
   - .gitignore
   - README.md
+  - AGENTS.md
+  - CLAUDE.md
   - tests/
 requirements:
   - PKG-001

@@ -1,6 +1,7 @@
 # The review queue has no documented exit
 
 Surfaced from: DEC-014
+Promoted to: the-working-agreement (2026-09-04, on the developer's word)
 Captured: 2026-09-04T21:57:33.327Z
 
 DEC-014 says a decision stays in the review queue until the developer marks it reviewed, and nothing says how. cairn decide writes the queue entry and nothing reads or removes it; there is no command and no documented convention, so the developer cannot discharge the queue in a way the next agent recognizes.

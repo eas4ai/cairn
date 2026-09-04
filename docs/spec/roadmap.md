@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: every-commitment-satisfies-the-package
+Current: the-working-agreement
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -77,3 +77,14 @@ Done means the package holds too (PKG-011); `scripts/pkg-lint.mjs`, a
 mechanism for the PKG requirements a program can observe; and PKG-003
 revised to name what a concept is, so it can be observed at all. Covers
 PKG-001 through PKG-013.
+
+## 7. The working agreement
+
+Promoted from the backlog on the developer's word, 2026-09-04, with the
+review queue's exit folded in.
+
+Delivers: the working agreement, one vendor-neutral file at the
+repository root that states the agent's move for each verdict and the
+developer's move for an escalation and for a queued decision; both
+skills write it; and Cairn's own copy, so the loop that builds Cairn
+runs by the file Cairn ships. Covers LOOP-036 and DEC-014.

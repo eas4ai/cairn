@@ -4,7 +4,10 @@ inputs:
   - tests/
   - skills/
   - scripts/
+  - AGENTS.md
+  - CLAUDE.md
 requirements:
+  - LOOP-036
   - LOOP-001
   - LOOP-002
   - LOOP-003

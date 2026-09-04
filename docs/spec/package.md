@@ -41,6 +41,12 @@ Falsifier: that line count exceeds 1500.
 under the ceiling.
 Falsifier: a test file contains logic the shipped code calls.
 
+The ceiling measures the kernel: the code that reads state, runs
+mechanisms, decides freshness, and names the next action. Mechanisms a
+project supplies are that project's, not Cairn's. The test behind the
+number is whether Cairn is still a legible referee or has become a
+second application that must itself be administered.
+
 The ceiling is a backstop, not a target. Reaching it means a concept
 should leave, not that the ceiling should rise.
 

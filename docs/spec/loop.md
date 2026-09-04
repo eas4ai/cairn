@@ -30,17 +30,37 @@ next action.
 Falsifier: the agent begins an action and the previous transition is not
 on disk.
 
-[LOOP-022] On wake, the agent MUST treat uncommitted changes in the
-working tree as work in progress on the most recent unrealized decision
-or unmet requirement.
-Falsifier: the agent discards or overwrites uncommitted changes it did
-not read.
+[LOOP-022] Before the agent begins an action that changes code, it MUST
+record the action, its target, and the base commit.
+Falsifier: uncommitted changes exist and no record names the action that
+produced them.
+
+[LOOP-027] On wake, when an in-progress record exists, the agent MUST
+reconcile the working tree against it before it chooses new work.
+Falsifier: the agent begins new work while an in-progress record names
+an unfinished action.
+
+The in-progress record is the write-ahead entry. Without it, the wake
+has to guess which unfinished action the uncommitted changes belong to.
+With it, reconciliation is the first and deterministic step.
 
 The persisted transitions are: a decision recorded, code committed,
 evidence recorded, an escalation written, an escalation answered. Files
 and git give storage, not atomicity. Naming the transitions is what makes
 "stopped at any point" honest: an interruption between two of them leaves
 a state the wake can read, and the wake reads it before acting.
+
+## Facts, not status
+
+[LOOP-028] The agent MUST NOT record a status that can be derived from
+other facts on disk.
+Falsifier: two artifacts state the same status and disagree.
+
+A requirement is met when its mechanisms have current passing evidence.
+A commitment is complete when every requirement in it is met and no
+decision for it is unrealized. An escalation is open when its file has no
+answer. A decision is unrealized when it names no commit. Each of those
+is derived, never stored, so there is one truth and it cannot drift.
 
 ## Verdicts
 
@@ -58,8 +78,8 @@ Falsifier: a verdict that only the agent can resolve is presented to the
 developer.
 
 [LOOP-005] The loop MUST treat missing evidence, stale evidence, a
-failing mechanism, an unmet requirement, and an unrealized decision as
-Resolvable.
+failing mechanism, an unmet requirement, an unrealized decision, and a
+malformed artifact the agent can repair as Resolvable.
 Falsifier: the developer is asked to act on a verdict the agent could
 have resolved by re-running a mechanism, fixing the code, or building a
 recorded decision.
@@ -164,6 +184,14 @@ Falsifier: the loop implements something no commitment includes.
 [LOOP-016] The agent MUST NOT discard work it declined to implement.
 Falsifier: the agent identifies out-of-scope work and no artifact
 records it.
+
+[LOOP-029] A backlog item MUST NOT enter a commitment without the
+developer's confirmation.
+Falsifier: a commitment includes a requirement the developer did not
+confirm.
+
+Capture is the agent's. Promotion changes what gets built, which is
+Blocking by the scale, so it is the developer's.
 
 ## Commitments
 

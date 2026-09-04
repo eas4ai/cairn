@@ -1,15 +1,18 @@
 # The record and the wake
 
 Slug: the-record-and-the-wake
-Status: current
 Requirements: LOOP-001, LOOP-002, LOOP-003, LOOP-021, LOOP-022,
-DEC-001, DEC-002, DEC-003, DEC-004, DEC-005, DEC-006, DEC-007, DEC-013,
+LOOP-027, LOOP-028, DEC-001, DEC-002, DEC-003, DEC-004, DEC-005, DEC-006, DEC-007, DEC-013,
 DEC-014, DEC-015
 Inherits: every PKG requirement
 
 ## Goal
 
 Given only the repository, name the next legal action.
+
+Delivers two commands. `cairn wake` reads the repository and emits
+exactly one next action. `cairn decide` writes a decision record and,
+for a Consequential decision, adds it to the review queue.
 
 An agent with no memory of any earlier session reads the files below,
 reconstructs its position, and knows what to do. Nothing else in Cairn
@@ -21,6 +24,7 @@ works until this does, and every later decision is shaped by it.
     docs/spec/roadmap.md       ordered commitments; a Current: line names one
     docs/commitments/<slug>.md one file per commitment
     docs/decisions/<slug>.md   decision records
+    .cairn/in-progress         the write-ahead record for the current action
     .cairn/mechanisms/<name>   what runs, and the paths it reads
     .cairn/evidence/<REQ>/     results; rebuildable, so gitignored
     .cairn/escalations/<slug>  a parked Blocking decision; committed
@@ -36,18 +40,23 @@ The agent's position is the set of:
 - the current commitment, from the roadmap's Current: line;
 - for each requirement in it, the latest evidence and whether its digest
   still matches;
+- the in-progress record, if one exists;
 - the open escalation, if one exists;
 - every decision record whose realized-by list is empty;
 - uncommitted changes in the working tree.
+
+Every element is a fact. Status is derived from them and never stored,
+so no two files can disagree about what is done.
 
 ## Wake precedence
 
 On wake the agent takes the first that applies:
 
-1. An open escalation exists: present it. Nothing else until it is
+1. An in-progress record exists: reconcile the working tree against it
+   and finish or abandon that action. Nothing else until the record is
+   cleared.
+2. An open escalation exists: present it. Nothing else until it is
    answered.
-2. Uncommitted changes exist: read them as work in progress on the most
-   recent unrealized decision or unmet requirement, and continue it.
 3. A decision record has an empty realized-by list: build it.
 4. Evidence for a requirement is missing, stale, or failing: run the
    mechanism, or fix the code and run it.
@@ -72,6 +81,14 @@ that files and git do not provide.
 
 A commitment file is this file's shape: title, Slug, Status, Requirements,
 Inherits, then prose.
+
+The in-progress record, written before any action that changes code and
+removed when the action's transition is persisted:
+
+    action: implement | build-decision | run-mechanism
+    target: <requirement or decision slug>
+    base: <commit identifier>
+    started: <iso timestamp>
 
 A mechanism declaration:
 
@@ -98,7 +115,7 @@ An escalation: the six-line format from LOOP-026, followed by Status
 
 - An agent given this repository and nothing else states its position
   and its next action, and a second agent given the same repository
-  states the same.
+  states the same. This is the primary test of the system.
 - Stopping after any persisted transition and restarting produces no
   duplicated and no contradicted work.
 - Every requirement listed above has a mechanism and current passing

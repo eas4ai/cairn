@@ -47,15 +47,6 @@ fail. A test, a type check, a lint rule, a script.
 codebase and not yet confirmed by the developer. Observed text describes
 what is; it is not contract.
 
-**Part.** A requirement that establishes one component of a parent
-requirement. A parent with parts is met when every part is met, and
-carries no evidence of its own.
-
-**Derivation.** The tree from a requirement down through its parts to
-the evidence receipt that establishes each leaf. Cairn's proof object:
-mechanically checkable and reproducible from the repository, sound
-relative to the agreed decomposition.
-
 **Reversal.** A decision record superseding an earlier one, with the
 cause of the earlier decision's failure classified.
 

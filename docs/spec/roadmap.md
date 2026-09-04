@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: Draft. Not normative.
+Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 

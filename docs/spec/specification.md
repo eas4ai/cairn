@@ -1,6 +1,6 @@
 # The specification phase
 
-Status: Draft
+Status: Agreed 2026-09-04
 Prefix: SPEC
 
 Normative.

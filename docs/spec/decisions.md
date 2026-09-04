@@ -1,6 +1,6 @@
 # Decisions and the record
 
-Status: Draft
+Status: Agreed 2026-09-04
 Prefix: DEC
 
 Normative.

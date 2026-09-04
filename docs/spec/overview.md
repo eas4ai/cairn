@@ -1,6 +1,6 @@
 # Cairn -- keystone
 
-Status: Draft
+Status: Agreed 2026-09-04
 
 This file says what Cairn is and where each part is specified. It holds
 no requirements of its own. Each domain spec owns its prefix.
@@ -59,6 +59,8 @@ stopping to re-establish it.
 
 ## Status of this specification
 
-Every requirement is Draft until the developer confirms it and its
-falsifier. A requirement without a confirmed falsifier is not Agreed, and
-the loop MUST NOT treat it as contract.
+Agreed 2026-09-04. The developer reviewed every requirement and its
+falsifier by exception, after one self-review and two independent
+reviews, and corrected none. A later requirement is Draft until the
+developer confirms it and its falsifier; the loop MUST NOT treat a Draft
+requirement as contract.

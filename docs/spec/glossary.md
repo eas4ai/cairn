@@ -1,6 +1,6 @@
 # Glossary
 
-Status: Draft
+Status: Agreed 2026-09-04
 
 This file owns Cairn's vocabulary. When a term here conflicts with a
 prior meaning, this file wins.

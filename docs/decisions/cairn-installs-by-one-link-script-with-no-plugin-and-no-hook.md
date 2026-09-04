@@ -14,4 +14,4 @@ Two channels Same Page shipped are not shipped. A plugin manifest is a second co
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 7e42ed3  Cairn installs by one link script

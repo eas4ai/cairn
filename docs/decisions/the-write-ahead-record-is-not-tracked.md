@@ -18,4 +18,4 @@ Reversing this is one line in .gitignore.
 
 ## Realized by
 
-(none yet: recorded, not built)
+- ee8d1bd  The write-ahead record is not tracked; the lint survives a deleted path

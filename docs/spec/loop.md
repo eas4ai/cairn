@@ -204,14 +204,15 @@ developer sees it. A gate protecting the developer's attention must not
 be able to override the developer's authority.
 
 [LOOP-014] The agent MUST resume from an escalation using the record and
-the developer's answer, and MUST NOT require the session that raised it.
+the developer's answer. The agent MUST NOT require the session that
+raised it.
 Falsifier: an escalation cannot be resolved by an agent that did not
 raise it.
 
 ## Scope
 
 [LOOP-015] The agent MUST write work that falls outside the current
-commitment to the backlog and MUST NOT implement it.
+commitment to the backlog. The agent MUST NOT implement it.
 Falsifier: the loop implements something no commitment includes.
 
 [LOOP-016] The agent MUST NOT discard work it declined to implement.
@@ -251,7 +252,8 @@ one.
 ## Review
 
 [LOOP-020] Before the agent reports a commitment complete, the agent
-MUST examine the work for defects and MUST record what it examined.
+MUST examine the work for defects. The agent MUST record what it
+examined.
 Falsifier: a commitment reports complete and no record names what the
 review examined.
 

@@ -1,0 +1,9 @@
+command: node scripts/spec-lint.mjs docs/spec
+inputs:
+  - docs/spec/
+  - scripts/spec-lint.mjs
+requirements:
+  - SPEC-001
+  - SPEC-002
+  - PKG-007
+  - PKG-010

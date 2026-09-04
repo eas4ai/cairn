@@ -36,6 +36,14 @@ test("a Consequential decision is queued for review", () => {
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
 });
 
+test("a Consequential decision is queued even when .cairn/queue does not exist yet", () => {
+  const root = mkdtempSync(join(tmpdir(), "cairn-"));
+  mkdirSync(join(root, "docs/decisions"), { recursive: true });
+  const r = decide(root, "--level", "Consequential");
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
+});
+
 test("Routine is refused: routine decisions produce no record", () => {
   const root = repo();
   const r = decide(root, "--level", "Routine");

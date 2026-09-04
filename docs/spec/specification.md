@@ -37,8 +37,9 @@ before it writes an artifact.
 Falsifier: the agent writes a spec section whose content the developer
 has not seen restated.
 
-[SPEC-004] The agent MUST propose the falsifiers for a domain as one set
-and MUST ask the developer to correct only the ones that are wrong.
+[SPEC-004] The agent MUST propose the falsifiers for a domain as one set.
+The agent MUST ask the developer to correct only the ones that are
+wrong.
 Falsifier: the agent asks the developer to approve falsifiers one at a
 time.
 
@@ -70,13 +71,14 @@ is where a reading belongs, because that is what the developer reads.
 
 ## Depth and shape
 
-[SPEC-008] The agent MUST infer documentation depth from the project and
-MUST NOT ask the developer to choose it before any domain is specified.
+[SPEC-008] The agent MUST infer documentation depth from the project.
+The agent MUST NOT ask the developer to choose it before any domain is
+specified.
 Falsifier: the agent asks how much documentation is warranted before the
 project's domains are known.
 
-[SPEC-009] The agent MUST derive the set of domains from the project and
-MUST NOT impose a fixed set.
+[SPEC-009] The agent MUST derive the set of domains from the project.
+The agent MUST NOT impose a fixed set.
 Falsifier: a project's spec set contains a domain the project has no
 content for.
 
@@ -131,8 +133,8 @@ first commitment is Agreed.
 Falsifier: the loop starts while a requirement inside the first
 commitment has no confirmed falsifier.
 
-[SPEC-012] The agent MUST specify a later commitment during the loop,
-and MUST NOT require the whole roadmap to be specified before work
-starts.
+[SPEC-012] The agent MUST specify a later commitment during the loop.
+The agent MUST NOT require the whole roadmap to be specified before
+work starts.
 Falsifier: a documented step tells the developer that every commitment
 must be specified before implementation begins.

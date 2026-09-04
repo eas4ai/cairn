@@ -36,7 +36,7 @@ Falsifier: a decision with a real alternative and a reversal cost appears
 only in the code.
 
 [DEC-004] The agent MUST add a Consequential decision to the review
-queue and MUST NOT wait for the developer to read it.
+queue. The agent MUST NOT wait for the developer to read it.
 Falsifier: the loop pauses for a decision it classified Consequential.
 
 [DEC-016] When three consecutive attempts at a requirement produce no

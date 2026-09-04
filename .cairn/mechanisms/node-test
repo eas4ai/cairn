@@ -2,6 +2,8 @@ command: node --test tests/*.test.mjs
 inputs:
   - bin/
   - tests/
+  - skills/
+  - scripts/
 requirements:
   - LOOP-001
   - LOOP-002
@@ -54,3 +56,18 @@ requirements:
   - DEC-010
   - DEC-011
   - DEC-012
+  - SPEC-003
+  - SPEC-004
+  - SPEC-005
+  - SPEC-006
+  - SPEC-007
+  - SPEC-008
+  - SPEC-009
+  - SPEC-010
+  - SPEC-011
+  - SPEC-012
+  - SPEC-013
+  - SPEC-014
+  - SPEC-015
+  - SPEC-016
+  - SPEC-017

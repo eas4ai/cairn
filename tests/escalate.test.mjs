@@ -41,6 +41,12 @@ test("a Blocking escalation that fails the format is written anyway, naming the 
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
 });
 
+test("a --level other than Blocking is refused rather than silently losing the bypass", () => {
+  const root = repo();
+  const r = esc(root, "--level", "Blokcing");
+  assert.equal(r.status, 3); assert.match(r.stderr, /Blokcing/); assert.ok(!existsSync(file(root)));
+});
+
 test("a second escalation while one is open is refused (LOOP-011)", () => {
   const root = repo();
   esc(root);

@@ -261,6 +261,7 @@ const ESC_FIELDS = [["question", "Question:  "], ["recommend", "Recommend: "], [
 
 function escalate(root, o) {
   if (!o.concerns) return usage("escalate: missing --concerns");
+  if (o.level !== undefined && o.level !== "Blocking") return usage(`escalate: --level must be Blocking or absent, not ${o.level}`);
   const [open] = openEscalations(root);
   if (open) return usage(`escalate: ${open.name} is open; one escalation at a time (LOOP-011)`);
   // Every field present, each on one line (LOOP-026). A Blocking decision

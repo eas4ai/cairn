@@ -65,3 +65,6 @@ reviews, and corrected none. Seven requirements drawn from two papers
 later that day were presented the same way and confirmed the same way. A later requirement is Draft until the
 developer confirms it and its falsifier; the loop MUST NOT treat a Draft
 requirement as contract.
+
+LOOP-036 was drafted from the backlog on 2026-09-04, presented with its
+falsifier, and confirmed the same way.

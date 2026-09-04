@@ -8,7 +8,8 @@ Normative.
 ## What this phase produces
 
 The keystone, the glossary, one domain spec per domain the project has,
-the roadmap, and the first commitment. Nothing else is scaffolded.
+the roadmap, the first commitment, and the working agreement
+(LOOP-036). Nothing else is scaffolded.
 
 [SPEC-001] The agent MUST NOT create a domain spec it has no
 requirements for.

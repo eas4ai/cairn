@@ -493,3 +493,74 @@ test("verify prints the seven fields and the assumptions, and a BLOCKED entry st
   expect(b).toContain("BRK-001  BLOCKED");
   expect(b).toContain("Reason:      freshness cannot be established: validator ok definition is invalid now");
 }, TEST_TIMEOUT);
+
+test("a falsifier is data: the engine never runs or parses its lines as commands (ENG-022, ENG-023)", () => {
+  const p = project();
+  const marker = join(p.root, "falsifier.marker");
+  // A falsifier whose sequence reads as commands, in a requirement the
+  // engine elaborates, evaluates, and prints.
+  const spec = DOMAIN.replace(
+    "Falsifier: an error response is served from the cache.",
+    [
+      "Falsifier: the broker serves an error from the cache after this sequence:",
+      "1. `touch " + marker + "`",
+      "2. $(touch " + marker + ")",
+      "3. ; rm -rf / ; echo pwned > " + marker,
+    ].join("\n")
+  );
+  writeFileSync(join(p.specs, "01-broker.md"), spec);
+  validator(p, "ok", ["true"], []);
+  bind(p, "BRK-003", "ok");
+  commit(p, "a falsifier that reads as commands");
+  run(["trust", "ok"], p);
+  expect(run(["elaborate"], p).status).toBe(0);
+  run(["run"], p);
+  const v = run(["verify"], p);
+  expect(v.stdout).toContain("BRK-003");
+  // Nothing ran. The falsifier is text on the obligation and on the record.
+  expect(existsSync(marker)).toBe(false);
+  const ob = readFileSync(join(p.root, ".same-page", "obligations", "BRK-003.yaml"), "utf8");
+  expect(ob).toContain("touch " + marker);
+  expect(parseYaml(ob).falsifier).toContain("rm -rf /");
+  expect(existsSync(marker)).toBe(false);
+});
+
+test("a record claiming a backend binding no registered adapter can establish is refused (ENG-032, ENG-033)", () => {
+  const p = project();
+  validator(p, "ok", ["true"], []);
+  bind(p, "BRK-001", "ok");
+  run(["trust", "ok"], p);
+  run(["run"], p);
+  const file = join(p.root, ".same-page", "evidence", "BRK-001", records(p, "BRK-001").length ? readdirSync(join(p.root, ".same-page", "evidence", "BRK-001")).filter((n) => n.endsWith(".yaml"))[0] : "");
+  writeFileSync(file, readFileSync(file, "utf8").replace("binding_basis: none", "binding_basis: backend"));
+  const v = run(["verify"], p);
+  expect(v.stdout).toContain("no registered adapter can establish a backend binding");
+  expect(v.stdout).toContain("(ENG-032)");
+  expect(entry(v.stdout, "BRK-001")).toContain("Evidence:    none");
+  expect(entry(v.stdout, "BRK-001")).not.toContain("BRK-001  SUFFICIENT");
+});
+
+test("no profile yields SUFFICIENT over evidence whose freshness is stale or unknown (ENG-072)", () => {
+  const p = project();
+  validator(p, "ok", ["true"], []);
+  bind(p, "BRK-001", "ok");
+  const sha = commit(p, "validator");
+  run(["trust", "ok"], p);
+  run(["run"], p);
+  expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  SUFFICIENT");
+  // Stale: the source moved under the record.
+  writeFileSync(join(p.root, "src.txt"), "moved\n");
+  for (const require of ["      any:\n        - kind: test\n", "      all:\n        - kind: test\n"]) {
+    writeFileSync(policy(p), readFileSync(policy(p), "utf8").replace(/      (any|all):\n(?:        - kind: \w+\n)+/, require));
+    run(["elaborate"], p);
+    run(["policy", "confirm"], p);
+    const e = entry(run(["verify"], p).stdout, "BRK-001");
+    expect(e).not.toContain("BRK-001  SUFFICIENT");
+    expect(e).toContain("Required:    ");
+    expect(e).toContain("; current freshness");
+  }
+  // Unknown: the definition the record names is unreadable now.
+  writeFileSync(join(p.root, ".same-page", "validators", "ok.yaml"), "kind: nope\n");
+  expect(entry(run(["verify"], p).stdout, "BRK-001")).toContain("BRK-001  BLOCKED");
+  expect(sha).toMatch(/^[0-9a-f]{40}$/);
+});

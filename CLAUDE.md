@@ -242,14 +242,15 @@ working.
 | docs/superpowers/specs/ | The four normative specs (design, LANG, CONF, ENG) |
 | skills/<name>/ | The three skills and their templates |
 | skills/new-project/scripts/ | The drift gate, the language check, and engine/ (Same Page Conformance) |
+| scripts/checks/ | Repository checks that ship as validators: the ASCII gate |
 | tests/ | The suites; scripts and the engine are exercised through their CLI |
 | .agents/adr/ | Package-level decisions |
 
 ## Scope and re-anchor rules
 
-- The current iteration contract is docs/specs/same-page/iterations/010.md
-  (a trace that failed is not a trace that found nothing); 008
-  (remediation) and 009 (the command line, decomposed) are closed; 001 (L1), 002 (L2),
+- The current iteration contract is docs/specs/same-page/iterations/011.md
+  (every agreed requirement gets a mechanism); 008 (remediation), 009
+  (the command line, decomposed), and 010 (the failed trace) are closed; 001 (L1), 002 (L2),
   003 (the CONF revision), 004 (L3), 005 (L4), 006 (L5), and 007 (L6)
   are closed, and all six construction layers are built. Work outside it is
   captured via /next-iteration -- surfaced and staged, never implemented

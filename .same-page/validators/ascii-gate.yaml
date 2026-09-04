@@ -1,0 +1,15 @@
+# The ASCII gate of conventions.md, as a validator. PKG-003's falsifier
+# is "the ASCII gate in conventions.md returns a line", so this runs
+# that gate over the same file set: every tracked text file outside
+# reference/ and .remember/.
+kind: static
+command:
+  - node
+  - scripts/checks/ascii-gate.mjs
+cwd: .
+timeout: 120
+environment:
+  - command:
+      - node
+      - --version
+  - file: scripts/checks/ascii-gate.mjs

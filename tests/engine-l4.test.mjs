@@ -364,3 +364,21 @@ test("verify compares the machine view with the map and names every disagreeing 
   run(["run", "fail"], p);
   expect(run(["verify"], p).stdout).toContain("0 map disagreement(s)");
 }, TEST_TIMEOUT);
+
+test("manual evidence projects to Covered only when the actor addressed the falsifier (ENG-184, ENG-185)", () => {
+  const p = project();
+  writeFileSync(mapPath(p), MAP_HEAD + "| BRK-001 | Uncovered | - |  |\n| BRK-003 | Uncovered | - |  |\n");
+  // Inspection alone: the actor read the code and no more.
+  run(["attest", "BRK-001", "--by", "Dev", "--expires", "2099-01-01", "--description", "read the dispatch path", "--inspection-only"], p);
+  // Manual evidence that exercised the falsifier.
+  run(["attest", "BRK-003", "--by", "Dev", "--expires", "2099-01-01", "--description", "served an error and watched the cache", "--addresses-falsifier"], p);
+  const v = run(["verify"], p);
+  expect(v.stdout).toContain("BRK-001: map says Uncovered; machine view: Asserted: inspection only (manual by Dev)");
+  expect(v.stdout).toContain("BRK-003: map says Uncovered; machine view: Covered by manual (manual by Dev)");
+  run(["sync-map"], p);
+  const after = readFileSync(mapPath(p), "utf8");
+  expect(after).toContain("| BRK-001 | Asserted | inspected |");
+  expect(after).toContain("| BRK-003 | Covered | manual |");
+  // A manual record that did not address the falsifier never projects to Covered.
+  expect(after).not.toContain("| BRK-001 | Covered");
+}, TEST_TIMEOUT);

@@ -21,5 +21,11 @@ required:
     - kind: test
     - kind: static
     - kind: manual
-validators: []
+validators:
+  - name: bun-test
+    attested_by: agent
+    actor: eas4ai <shawn.payments@gmail.com>
+    attested_at: 2026-09-04T00:33:31.537Z
+    snapshot: workspace:117b05ac946c1569c692d9769c93cf1c10df8bdf4f0e2dccbf70b8d37db1c409
+    developer_confirmed: false
 sentence: A backend binding MUST be established by a trusted adapter capability.

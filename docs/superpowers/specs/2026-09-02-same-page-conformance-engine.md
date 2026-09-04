@@ -1577,6 +1577,27 @@ correctly.
 
 ## Decisions and revisions
 
+- 2026-09-03 -- Iteration 011 built, under
+  docs/specs/same-page/iterations/011.md. The developer ruled that an
+  Agreed requirement with no evidence mechanism is a defect, not a
+  standing decision, so twelve of the twenty-three that carried none now
+  have one: PKG-003, PKG-004, PKG-006, ENG-023, ENG-032, ENG-072,
+  ENG-184, ENG-216, ENG-229, ENG-232, ENG-240, and ENG-241. Decisions:
+  (a) a check that reads the repository's own text is a validator like
+  any other, so the ASCII gate of conventions.md ships as
+  scripts/checks/ascii-gate.mjs and runs under a trust grant;
+  (b) a text scan states the falsifier it looks for and proves it finds
+  it, so each scan carries a fixture that realizes the state and a
+  fixture that only mentions it, the way the language check separates a
+  keyword's use from its mention; (c) PKG-003's falsifier names the
+  gate in conventions.md, and that gate reads text files, so the
+  validator reads the same set: a tracked image is bytes and no gate can
+  ask it to be ASCII. The requirement's own text says every tracked
+  file, which the repository's card image contradicts, and that wording
+  stands open for the developer; (d) the eleven requirements whose
+  falsifier occurs inside a live workflow session keep no mechanism
+  under this contract, and the contract's Out section names each one
+  with what it needs, so none is silently dropped.
 - 2026-09-03 -- Iteration 010 built, under
   docs/specs/same-page/iterations/010.md. A validator's supplemental
   trace can fail, and a trace that failed is not a trace that found

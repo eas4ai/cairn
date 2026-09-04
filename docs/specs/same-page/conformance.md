@@ -26,10 +26,10 @@ like any other. The language check verifies the map's integrity.
 |---|---|---|---|
 | PKG-001 | Covered | test | tests/engine.test.mjs::PKG-001 |
 | PKG-002 | Covered | test | tests/engine.test.mjs::PKG-002 |
-| PKG-003 | Uncovered | - |  |
-| PKG-004 | Uncovered | - |  |
+| PKG-003 | Covered | test | tests/package.test.mjs::PKG-003 |
+| PKG-004 | Covered | test | tests/package.test.mjs::PKG-004 |
 | PKG-005 | Covered | test | tests/hooks.test.mjs::PKG-005 |
-| PKG-006 | Asserted | inspected | skills/new-project/scripts/ |
+| PKG-006 | Covered | test | tests/package.test.mjs::PKG-006 |
 | PKG-007 | Covered | test | tests/language-check.test.mjs::scaffolded-templates-pass |
 
 ## CONF
@@ -66,7 +66,7 @@ like any other. The language check verifies the map's integrity.
 | ENG-020 | Covered | test | tests/engine.test.mjs::ENG-020 |
 | ENG-021 | Covered | test | tests/engine.test.mjs::ENG-021 |
 | ENG-022 | Uncovered | - |  |
-| ENG-023 | Asserted | inspected | skills/new-project/scripts/engine/same-page.ts |
+| ENG-023 | Covered | test | tests/engine-l2.test.mjs::ENG-023 |
 | ENG-024 | Covered | test | tests/engine.test.mjs::ENG-024 |
 | ENG-025 | Uncovered | - |  |
 | ENG-026 | Covered | test | tests/engine-l2.test.mjs::ENG-026 |
@@ -75,7 +75,7 @@ like any other. The language check verifies the map's integrity.
 | ENG-029 | Covered | test | tests/engine-l2.test.mjs::ENG-029 |
 | ENG-030 | Covered | test | tests/engine-l2.test.mjs::ENG-030 |
 | ENG-031 | Covered | test | tests/engine-l2.test.mjs::ENG-031 |
-| ENG-032 | Uncovered | - |  |
+| ENG-032 | Covered | test | tests/engine-l2.test.mjs::ENG-032 |
 | ENG-033 | Covered | test | tests/engine-l5.test.mjs::ENG-035 |
 | ENG-034 | Covered | test | tests/engine-l2.test.mjs::ENG-034 |
 | ENG-035 | Covered | test | tests/engine-l5.test.mjs::ENG-035 |
@@ -113,7 +113,7 @@ like any other. The language check verifies the map's integrity.
 | ENG-067 | Covered | test | tests/hooks.test.mjs::ENG-067 |
 | ENG-070 | Covered | test | tests/engine.test.mjs::ENG-070 |
 | ENG-071 | Uncovered | - |  |
-| ENG-072 | Asserted | inspected | skills/new-project/scripts/engine/same-page.ts |
+| ENG-072 | Covered | test | tests/engine-l2.test.mjs::ENG-072 |
 | ENG-073 | Covered | test | tests/engine.test.mjs::ENG-073 |
 | ENG-074 | Covered | test | tests/engine-l5.test.mjs::ENG-034 |
 | ENG-075 | Covered | test | tests/engine.test.mjs::ENG-075 |
@@ -192,7 +192,7 @@ like any other. The language check verifies the map's integrity.
 | ENG-181 | Covered | test | tests/engine-l2.test.mjs::ENG-181 |
 | ENG-182 | Covered | test | tests/engine-l2.test.mjs::ENG-180 |
 | ENG-183 | Covered | test | tests/engine-l2.test.mjs::ENG-183 |
-| ENG-184 | Uncovered | - |  |
+| ENG-184 | Covered | test | tests/engine-l4.test.mjs::ENG-184 |
 | ENG-185 | Covered | test | tests/engine-l2.test.mjs::ENG-185 |
 | ENG-186 | Covered | test | tests/engine.test.mjs::ENG-186 |
 | ENG-187 | Covered | test | tests/engine.test.mjs::ENG-187 |
@@ -218,7 +218,7 @@ like any other. The language check verifies the map's integrity.
 | ENG-210 | Covered | test | tests/engine-l2.test.mjs::ENG-017 |
 | ENG-211 | Covered | test | tests/engine.test.mjs::ENG-211 |
 | ENG-215 | Covered | test | tests/engine-l2.test.mjs::ENG-215 |
-| ENG-216 | Asserted | inspected | skills/new-project/SKILL.md |
+| ENG-216 | Covered | test | tests/package.test.mjs::ENG-216 |
 | ENG-217 | Covered | test | tests/engine.test.mjs::ENG-217 |
 | ENG-218 | Covered | test | tests/engine-l2.test.mjs::ENG-218 |
 | ENG-219 | Covered | test | tests/engine-l2.test.mjs::ENG-219 |
@@ -226,12 +226,12 @@ like any other. The language check verifies the map's integrity.
 | ENG-226 | Asserted | inspected | skills/existing-project/SKILL.md |
 | ENG-227 | Asserted | inspected | skills/existing-project/SKILL.md |
 | ENG-228 | Asserted | inspected | skills/new-project/SKILL.md |
-| ENG-229 | Asserted | inspected | skills/existing-project/SKILL.md |
+| ENG-229 | Covered | test | tests/package.test.mjs::ENG-229 |
 | ENG-230 | Asserted | inspected | skills/next-iteration/SKILL.md |
 | ENG-231 | Asserted | inspected | skills/next-iteration/SKILL.md |
-| ENG-232 | Asserted | inspected | skills/new-project/scripts/spec-drift-gate.mjs |
+| ENG-232 | Covered | test | tests/package.test.mjs::ENG-232 |
 | ENG-233 | Covered | test | tests/hooks.test.mjs::ENG-233 |
 | ENG-234 | Uncovered | - |  |
 | ENG-235 | Covered | test | tests/hooks.test.mjs::ENG-233 |
-| ENG-240 | Asserted | inspected | docs/specs/same-page/iterations/001.md |
-| ENG-241 | Asserted | inspected | docs/specs/same-page/iterations/001.md |
+| ENG-240 | Covered | test | tests/package.test.mjs::ENG-240 |
+| ENG-241 | Covered | test | tests/package.test.mjs::ENG-241 |

@@ -80,3 +80,8 @@ The engine never deletes a record, so both directories grow with the
 project. Both are gitignored derived state: clearing them loses the
 history and nothing else, and the next `same-page run` rebuilds what is
 current.
+
+The ASCII gate also ships as a program, scripts/checks/ascii-gate.mjs,
+which exits 0 when every tracked text file outside reference/ and
+.remember/ is ASCII and 1 when one is not, naming it. That is the form
+the engine runs it in, as the `ascii-gate` validator behind PKG-003.

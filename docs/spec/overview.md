@@ -67,4 +67,6 @@ developer confirms it and its falsifier; the loop MUST NOT treat a Draft
 requirement as contract.
 
 LOOP-036 was drafted from the backlog on 2026-09-04, presented with its
-falsifier, and confirmed the same way.
+falsifier, and confirmed the same way. PKG-014 was drafted the same day
+on the developer's instruction to fix the remaining backlog items, its
+falsifier open to correction by exception.

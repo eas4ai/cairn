@@ -69,6 +69,16 @@ vendor provides.
 Falsifier: a documented workflow step cannot be performed by an agent
 outside one specific product.
 
+[PKG-014] Cairn MUST be installable by the commands its README
+documents, onto the path and into an agent's skill directory.
+Falsifier: following the README's install steps on a machine with node
+and git leaves `cairn` off the path or a skill unreachable by the
+agent.
+
+Confirmed 2026-09-04 from the backlog. The kernel was on no path and
+the skills were linked into no agent's skill directory, so the only way
+to use Cairn on another repository was by absolute path.
+
 ## No deferral
 
 [PKG-013] Cairn's specification and documentation MUST NOT describe work

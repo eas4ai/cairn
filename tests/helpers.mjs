@@ -23,12 +23,13 @@ export function repo(overrides = {}) {
   const root = mkdtempSync(join(tmpdir(), "cairn-"));
   const w = (rel, text) => { mkdirSync(join(root, rel, ".."), { recursive: true }); writeFileSync(join(root, rel), text); };
   w("docs/spec/roadmap.md", "# Roadmap\n\nCurrent: first\n");
+  w("docs/spec/test.md", "# Test\n\nStatus: Agreed 2026-09-04\nPrefix: R\n\n[R-001] The thing MUST work.\nFalsifier: it does not.\n\n[R-002] The other thing MUST work.\nFalsifier: it does not.\n");
   w("docs/commitments/first.md", "# First\n\nSlug: first\nRequirements: R-001, R-002\n");
   w("src/exit", "0\n");
   w("src/other", "x\n");
   w("unrelated.txt", "y\n");
   w(".gitignore", ".cairn/evidence/\n");
-  for (const d of ["docs/decisions", ".cairn/escalations", ".cairn/mechanisms", ".cairn/queue", ".cairn/reviews"]) mkdirSync(join(root, d), { recursive: true });
+  for (const d of ["docs/decisions", ".cairn/escalations", ".cairn/mechanisms", ".cairn/queue", ".cairn/reviews", ".cairn/backlog"]) mkdirSync(join(root, d), { recursive: true });
   for (const [rel, text] of Object.entries(overrides)) text === null ? rmSync(join(root, rel), { force: true }) : w(rel, text);
   git(root, "init", "-q", "-b", "main"); commit(root, "init");
   return root;

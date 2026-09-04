@@ -50,7 +50,7 @@ test("a commit changing a declared input makes evidence stale; an undeclared one
   const root = repo();
   cairn(root, "check"); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/);
-  writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root); review(root);
+  writeFileSync(join(root, "docs/notes.md"), "z\n"); commit(root); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/, "undeclared change: still Done");
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root); review(root);
   const r = cairn(root, "wake");
@@ -97,7 +97,7 @@ test("the review gate: no review, stale review, open finding, then Done", () => 
   review(root, ["resolved: the digest is computed twice"]);
   r = cairn(root, "wake");
   assert.equal(r.status, 0); assert.match(r.stdout, /^Done: first/);
-  writeFileSync(join(root, "src/other"), "changed\n"); commit(root);
+  writeFileSync(join(root, "docs/notes.md"), "changed\n"); commit(root);
   r = cairn(root, "wake");
   assert.match(r.stdout, /^Done: first/, "a commit touching no declared input does not stale the review");
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root);

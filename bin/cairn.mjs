@@ -9,6 +9,7 @@
 //   cairn escalate --concerns X --question Q --recommend R --because B
 //                  --if-wrong W --instead I [--level Blocking]
 //   cairn answer <slug> <reply...>  record the developer's reply
+//   cairn backlog --title T --body B [--from X]   capture out-of-scope work
 //
 // Exit: 0 Done, 1 Resolve (the agent acts), 2 Escalate (the developer
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
@@ -54,6 +55,29 @@ function currentCommitment(root) {
   const reqs = (fields(read(cp))["Requirements"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (reqs.length === 0) return { repair: rel(root, cp), why: "no Requirements: line names what the commitment includes" };
   return { slug, requirements: reqs };
+}
+
+// The requirement ids the spec set declares as Agreed: a file whose
+// Status: line begins Agreed, and every [ID] at a line start in it.
+function agreedRequirements(root) {
+  const dir = join(root, "docs", "spec"), out = new Set();
+  for (const n of list(dir).filter((n) => n.endsWith(".md"))) {
+    const t = read(join(dir, n));
+    if (!/^Status: Agreed/m.test(t)) continue;
+    for (const m of t.matchAll(/^\[([A-Z]+-\d+)\]/gm)) out.add(m[1]);
+  }
+  return out;
+}
+// Files changed by commits since the commitment began: since the commit
+// that wrote its Current: line. The footprint is the union of its
+// mechanisms' declared inputs plus Cairn's own records.
+function breaches(root, slug, mechs, requirements) {
+  const began = git(root, "log", "--reverse", "--format=%H", `-SCurrent: ${slug}`, "--", "docs/spec/roadmap.md").stdout.split("\n").filter(Boolean)[0];
+  if (!began) return [];
+  const changed = git(root, "diff", "--name-only", "-z", began, "HEAD").stdout.split("\0").filter(Boolean);
+  const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
+  const covered = inputFiles(root, inputs.length ? inputs : ["--nothing--"]);
+  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
 }
 
 // A decision is unrealized when its Realized by section lists no commit.
@@ -161,6 +185,11 @@ function wake(root) {
   const c = currentCommitment(root);
   if (c.repair) return { verdict: "Resolve", action: `repair ${c.repair}`, why: c.why };
   const mechs = mechanisms(root);
+  const agreed = agreedRequirements(root);
+  const unknown = c.requirements.find((r) => !agreed.has(r));
+  if (unknown) return { verdict: "Resolve", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
+  const [breach] = breaches(root, c.slug, mechs, c.requirements);
+  if (breach) return { verdict: "Resolve", action: `declare ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
   const ctx = context(root, mechs);
   const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
@@ -197,6 +226,8 @@ function check(root, only) {
   if (c.repair) { process.stdout.write(`Resolve: repair ${c.repair}\n  ${c.why}\n`); return 1; }
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
+  const [breach] = breaches(root, c.slug, mechs, c.requirements);
+  if (breach) { process.stdout.write(`Resolve: declare ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
   const runs = new Map();
   for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   const head = headSha(root);
@@ -290,6 +321,19 @@ function answer(root, slug, reply) {
   return 0;
 }
 
+// ------------------------------------------------------------ backlog
+
+function backlog(root, o) {
+  if (!o.title || !o.body) return usage("backlog: missing --title or --body");
+  const dir = join(root, ".cairn", "backlog");
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, `${slugify(o.title)}.md`);
+  if (existsSync(path)) return usage(`backlog: ${rel(root, path)} exists; the backlog never overwrites (LOOP-016)`);
+  writeFileSync(path, `# ${o.title}\n\nSurfaced from: ${o.from ?? "unstated"}\nCaptured: ${new Date().toISOString()}\n\n${o.body}\n`);
+  process.stdout.write(`captured ${rel(root, path)}\n`);
+  return 0;
+}
+
 // ------------------------------------------------------------ main
 
 function usage(msg) { process.stderr.write(`cairn: ${msg}\n`); return 3; }
@@ -300,14 +344,15 @@ function main() {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
-      concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
+      from: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   const root = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   if (cmd === "decide") return decide(root, a.values);
   if (cmd === "escalate") return escalate(root, a.values);
   if (cmd === "answer") return answer(root, rest[0], rest.slice(1).join(" "));
-  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer> [--root DIR]");
+  if (cmd === "backlog") return backlog(root, a.values);
+  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md)`);
   if (cmd === "check") return check(root, rest);
   const w = wake(root);

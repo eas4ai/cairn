@@ -39,12 +39,15 @@ decide, extended (DEC-012):
 
 ## Formats
 
-A decision record gains two optional lines after Level:
+A decision record gains optional lines: Superseded by after the title
+on the old record; Supersedes and Cause after Decided by on the new
+record; History after Would be wrong if, when the domain carries
+reversals.
 
-    Superseded by: <slug>         on the old record
-    Supersedes: <slug>            on the new record
-    Cause: <one of four>          on the new record
-    History: <one line>           when the domain carries reversals
+    Superseded by: <slug>         old record, after its title
+    Supersedes: <slug>            new record
+    Cause: <one of four>          new record
+    History: <one line>           new record, after Would be wrong if
 
 ## Tests
 

@@ -306,7 +306,11 @@ function decide(root, o) {
   head.push("", "## Decision", "", o.body, "", "## Realized by", "", "(none yet: recorded, not built)", "");
   writeFileSync(path, head.join("\n"));
   // The old record learns it was superseded; nothing in it is removed (DEC-008, DEC-010).
-  if (oldPath) writeFileSync(oldPath, read(oldPath).replace(/^(# .*\n)/, `$1\nSuperseded by: ${slug}\n`));
+  if (oldPath) {
+    const t = read(oldPath);
+    if (!/^# /.test(t)) { unlinkSync(path); return usage(`decide: ${o.supersedes} has no title line to stamp; nothing was written`); }
+    writeFileSync(oldPath, t.replace(/^(# .*\n)/, `$1\nSuperseded by: ${slug}\n`));
+  }
   if (o.level === "Consequential") writeFileSync(join(root, ".cairn", "queue", slug), `decision: ${slug}\nqueued: ${new Date().toISOString()}\n`);
   process.stdout.write(`recorded ${rel(root, path)}${o.level === "Consequential" ? " and queued it for review" : ""}\n`);
   return 0;

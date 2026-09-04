@@ -31,6 +31,14 @@ test("supersede of a record that does not exist is refused", () => {
   assert.equal(r.status, 3); assert.match(r.stderr, /ghost/);
 });
 
+test("a predecessor with no title line cannot be stamped, so nothing is written", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/bare.md"), "Level: Judged\nRests on: R-001\n");
+  const r = cairn(root, "supersede", "bare", "--title", "N", "--level", "Judged", "--rests-on", "R-001", "--cause", "the premise was false", ...fields);
+  assert.equal(r.status, 3); assert.match(r.stderr, /no title line/);
+  assert.equal(readFileSync(join(root, "docs/decisions/bare.md"), "utf8"), "Level: Judged\nRests on: R-001\n");
+});
+
 test("reversals reports counts by decider, cause, and domain (DEC-011)", () => {
   const root = repo(); old(root, "a", "R-001"); old(root, "b", "Q-007");
   cairn(root, "supersede", "a", "--title", "A2", "--level", "Judged", "--rests-on", "R-001", "--cause", "the premise was false", ...fields, "--history", "h");

@@ -42,5 +42,7 @@ test("this repository runs by the file it ships", () => {
 test("both skills write the working agreement without naming a vendor's file (LOOP-036, PKG-006)", () => {
   has(NEW, "copying templates/AGENTS.md", "new-project writes it");
   has(EXISTING, "the working agreement, AGENTS.md", "existing-project writes or verifies it");
+  has(EXISTING, "append the template after a blank line and keep the rest", "a consumer's own AGENTS.md survives");
+  has(TEMPLATE, "the roadmap, the current commitment, and the decision records", "LOOP-002: what wake reads");
   lacks(BOTH, "CLAUDE.md", "PKG-006");
 });

@@ -8,8 +8,8 @@ file says what each party does when it is their turn.
 ## The agent
 
 Wake. Before anything else, run `cairn wake`. Read the glossary, the
-keystone, the current commitment, and the decision records for what it
-names. Nothing you remember from an earlier session counts; the
+keystone, the roadmap, the current commitment, and the decision records
+for what it names. Nothing you remember from an earlier session counts; the
 repository does.
 
 Act on the verdict, and only on it.

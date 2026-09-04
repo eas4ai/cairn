@@ -112,10 +112,12 @@ for it exactly as /new-project Stage 4 describes. A defect's commitment
 names the Agreed requirement it violates and a mechanism that reproduces
 the failure; its done-when is that mechanism passing.
 
-Both paths: the working agreement, AGENTS.md at the repository root, is
-present and matches templates/AGENTS.md beside /new-project (LOOP-036).
-Write it when it is missing; replace it when it differs, and say so in
-the summary.
+Both paths: the working agreement, AGENTS.md at the repository root,
+contains templates/AGENTS.md beside /new-project, verbatim (LOOP-036).
+Write it when it is missing. When the file exists with the project's
+own instructions, append the template after a blank line and keep the
+rest. When the copy it holds differs from the template, replace that
+copy alone and say so in the summary.
 
 A roadmap exists (Path B): read the current commitment's requirements
 against the blast radius. In scope: proceed under it. Out of scope, the

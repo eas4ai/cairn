@@ -32,7 +32,8 @@ Delivers three things.
   verbatim; the paths it names are the ones every Cairn repository has.
 - Both skills write it: /new-project at Stage 4 beside the roadmap;
   /existing-project when it writes a roadmap, and on Path B it verifies
-  the file is present and matches the template. A harness that reads a
+  the file contains the template, keeping the project's own
+  instructions around it. A harness that reads a
   differently named instructions file gets a one-line file of that
   name that includes it; no vendor is named (PKG-006).
 - Cairn's own copy: this repository's AGENTS.md is the template, byte

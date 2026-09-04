@@ -19,7 +19,7 @@
 import { parseArgs } from "node:util";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
 
 // ------------------------------------------------------------ reading
@@ -131,9 +131,13 @@ function mechanisms(root) {
 }
 // The tracked files a mechanism declares, and a digest over their content.
 const inputFiles = (root, inputs) => git(root, "ls-files", "-z", "--", ...inputs).stdout.split("\0").filter(Boolean).sort();
+// A link is its target path, as git stores it, so the tree and a commit
+// digest it the same way. A mechanism that reads through a link declares
+// the target too.
+const blob = (p) => (lstatSync(p).isSymbolicLink() ? readlinkSync(p) : readFileSync(p));
 function inputsDigest(root, inputs) {
   const h = createHash("sha256");
-  for (const f of inputFiles(root, inputs)) { h.update(f); h.update("\0"); h.update(readFileSync(join(root, f))); h.update("\0"); }
+  for (const f of inputFiles(root, inputs)) { h.update(f); h.update("\0"); h.update(blob(join(root, f))); h.update("\0"); }
   return "sha256:" + h.digest("hex");
 }
 // The same digest over the tree as it was at a commit, for records that

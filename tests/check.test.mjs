@@ -2,7 +2,7 @@
 // and records evidence with receipts. Fixtures are real git repositories.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, symlinkSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { repo as base, cairn, commit, head, records, review, fromFile, failing } from "./helpers.mjs";
 
@@ -124,4 +124,15 @@ test("check writes and clears an in-progress record around the run", () => {
   const root = repo();
   cairn(root, "check");
   assert.ok(!existsSync(join(root, ".cairn/in-progress")), "cleared after a completed run");
+});
+
+test("a linked declared input digests the same at a commit and in the tree (LOOP-023, LOOP-024)", () => {
+  const root = repo({ ".cairn/mechanisms/m": "command: node -e 0\ninputs:\n  - src/link\nrequirements:\n  - R-001\n  - R-002\n" });
+  symlinkSync("exit", join(root, "src/link")); commit(root, "link");
+  cairn(root, "check"); review(root);
+  const r = cairn(root, "wake");
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(r.stdout, /^Done: first/, "the review examined a commit whose link digests as the tree's does");
+  rmSync(join(root, "src/link")); symlinkSync("other", join(root, "src/link")); commit(root, "relink");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/, "re-pointing the link changes the declared input");
 });

@@ -16,4 +16,4 @@ An independent reviewer had flagged this class; three were fixed by hand and eig
 
 ## Realized by
 
-(none yet: recorded, not built)
+- e6a091a  The specification phase: two skills ported with the four repairs, and the spec lint

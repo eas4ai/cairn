@@ -15,4 +15,4 @@ The referee found this itself. Its first wake on this repository said run LOOP-0
 
 ## Realized by
 
-(none yet: recorded, not built)
+- ccc24c8  The first commitment is done by its own deliverables

@@ -242,6 +242,43 @@ declaration is needed: a change outside it is either scope creep or a
 missing declaration, and the agent resolves which by declaring or by
 writing to the backlog.
 
+## Parts and derivation
+
+A requirement may name parts. Each part is a requirement with its own
+falsifier. The parent is a conjunction, and its status is derived.
+
+[LOOP-036] When a requirement names parts, the agent MUST derive that
+the requirement is met from every part being met, and MUST NOT record
+evidence against the requirement itself.
+Falsifier: a requirement with parts has evidence recorded directly
+against it, or reports met while one of its parts does not.
+Status: Draft
+
+[LOOP-037] When the parts of a requirement are built across more than
+one commitment, each commitment MUST name the parts it builds.
+Falsifier: a commitment names a whole requirement and builds only some
+of its parts.
+Status: Draft
+
+[LOOP-038] For every requirement it reports met, the agent MUST be able
+to print the derivation from the repository alone: each part, and the
+receipt of the evidence that establishes each leaf.
+Falsifier: a requirement reports met and the derivation cannot be
+produced without information outside the repository.
+Status: Draft
+
+The failure this prevents is partial coverage reported as full. LOOP-003
+names five transitions; one mechanism that exercises three of them
+would report the requirement met. With parts, the two it does not
+exercise stay visibly unmet.
+
+A formal verifier is a mechanism like any other: a program that checks
+a requirement and exits pass or fail. Where a project writes a proof for
+a leaf, the proof composes into the derivation through its receipt, and
+Cairn need not understand it. The derivation is sound relative to the
+decomposition; whether the parts exhaust the parent is a judgment the
+developer makes once, at agreement time, by exception.
+
 ## Commitments
 
 [LOOP-018] A commitment MUST name the requirements it includes.

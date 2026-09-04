@@ -39,6 +39,23 @@ only in the code.
 queue and MUST NOT wait for the developer to read it.
 Falsifier: the loop pauses for a decision it classified Consequential.
 
+## The review queue
+
+The queue exists so that a Consequential decision reaches the developer
+without stopping the agent.
+
+[DEC-013] The review queue MUST be durable on disk.
+Falsifier: a Consequential decision is surfaced only in a session
+transcript.
+
+[DEC-014] A decision MUST stay in the review queue until the developer
+marks it reviewed.
+Falsifier: a decision leaves the queue without the developer acting on
+it.
+
+[DEC-015] The agent MUST NOT wait on the review queue.
+Falsifier: the loop stops because the queue is not empty.
+
 ## The record
 
 [DEC-005] A decision record MUST name what it rests on, who decided it,
@@ -88,10 +105,14 @@ changes.
 Falsifier: the reversal rate cannot be computed separately for decisions
 the agent made and decisions the developer made.
 
-[DEC-012] The agent MUST consult the reversal history for the domain
-before it assigns a level.
-Falsifier: the agent assigns Routine in a domain where its own decisions
-have been reversed, and no record shows it consulted the history.
+[DEC-012] A decision record in a domain that carries prior reversals
+MUST state what the reversal history changed about its level.
+Falsifier: a decision record exists in a domain with prior reversals and
+does not refer to them.
+
+The rule binds where records already exist. Requiring a Routine decision
+to record that it consulted the history would make Routine decisions
+produce records, which is the cost this level exists to avoid.
 
 The threshold between deciding and escalating is then empirical, per
 project and per domain, rather than fixed by this specification.

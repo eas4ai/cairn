@@ -32,8 +32,14 @@ naming the failure that forced it.
 Falsifier: a concept appears in the specification or the code and no
 decision record names the failure it answers.
 
-[PKG-004] Cairn's executable code MUST NOT exceed 1500 lines.
-Falsifier: the line count of Cairn's executable code exceeds 1500.
+[PKG-004] The files Cairn ships and executes at run time, excluding
+tests and excluding specification text, MUST NOT exceed 1500 lines in
+total.
+Falsifier: that line count exceeds 1500.
+
+[PKG-009] Cairn MUST NOT move run-time logic into test files to stay
+under the ceiling.
+Falsifier: a test file contains logic the shipped code calls.
 
 The ceiling is a backstop, not a target. Reaching it means a concept
 should leave, not that the ceiling should rise.

@@ -10,9 +10,9 @@ Normative.
 The keystone, the glossary, one domain spec per domain the project has,
 the roadmap, and the first commitment. Nothing else is scaffolded.
 
-[SPEC-001] The agent MUST NOT create a spec file it has no content for.
-Falsifier: a spec file exists whose sections are headings with no
-requirements under them.
+[SPEC-001] The agent MUST NOT create a domain spec it has no
+requirements for.
+Falsifier: a file declaring a requirement prefix contains no requirement.
 
 ## Agreement
 
@@ -20,6 +20,17 @@ requirements under them.
 developer confirms its falsifier.
 Falsifier: a requirement carries an Agreed marker and no confirmed
 falsifier.
+
+[SPEC-013] The agent MUST NOT record a requirement as Agreed unless it
+can name a mechanism that could observe the falsifier.
+Falsifier: a requirement is Agreed and no mechanism could produce
+evidence for or against it.
+
+Same Page discovered this at the end: eleven Agreed requirements whose
+falsifiers occur inside a live session, which no mechanism in that
+repository could observe. They stranded permanently. A falsifier no
+mechanism can observe is a falsifier that is not finished, and the place
+to find that out is while it is being written.
 
 [SPEC-003] The agent MUST state its understanding in its own words
 before it writes an artifact.
@@ -48,10 +59,14 @@ repository.
 Falsifier: the agent asks a question that the specification already
 answers.
 
-[SPEC-007] The agent MUST record every ambiguity it resolved without
-asking, where the developer can review it.
-Falsifier: the agent resolved an ambiguity and no artifact records the
-reading it chose.
+[SPEC-007] When the agent resolves an ambiguity without asking, the
+artifact it writes MUST state the reading it chose.
+Falsifier: a specification sentence rests on a reading the agent chose
+and no artifact states that reading.
+
+Recording every resolved ambiguity in a separate log reproduces the
+volume failure this workflow exists to prevent. The specification text
+is where a reading belongs, because that is what the developer reads.
 
 ## Depth and shape
 

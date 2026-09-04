@@ -76,32 +76,47 @@ Falsifier: an escalation reaches the developer with no recommendation.
 Falsifier: the developer receives two open escalations in one message.
 
 [LOOP-012] An escalation that does not meet the format MUST return to
-the agent and MUST NOT reach the developer.
+the agent for rewriting.
 Falsifier: the developer receives an escalation longer than the format
 permits.
 
-A decision that cannot be stated in the format is a decision the agent
-does not yet understand well enough to ask about. It is decided,
-recorded, and classified Consequential instead.
+[LOOP-013] The agent MUST deliver a Blocking escalation to the developer
+even when it cannot be stated in the format.
+Falsifier: a decision the agent classified Blocking is decided by the
+agent because the escalation failed the format check.
 
-[LOOP-013] The agent MUST resume from an escalation using the record and
+The format check governs how an escalation is written, never whether the
+developer sees it. A gate protecting the developer's attention must not
+be able to override the developer's authority.
+
+[LOOP-014] The agent MUST resume from an escalation using the record and
 the developer's answer, and MUST NOT require the session that raised it.
 Falsifier: an escalation cannot be resolved by an agent that did not
 raise it.
 
 ## Scope
 
-[LOOP-014] The agent MUST write work that falls outside the current
+[LOOP-015] The agent MUST write work that falls outside the current
 commitment to the backlog and MUST NOT implement it.
 Falsifier: the loop implements something no commitment includes.
 
-[LOOP-015] The agent MUST NOT discard work it declined to implement.
+[LOOP-016] The agent MUST NOT discard work it declined to implement.
 Falsifier: the agent identifies out-of-scope work and no artifact
 records it.
 
+## Commitments
+
+[LOOP-018] A commitment MUST name the requirements it includes.
+Falsifier: a commitment exists and the set of requirements it covers
+cannot be determined from it.
+
+[LOOP-019] The agent MUST work against exactly one commitment at a time.
+Falsifier: the loop produces work for a commitment other than the current
+one.
+
 ## Completion
 
-[LOOP-016] The loop MUST report a commitment complete only when every
+[LOOP-017] The loop MUST report a commitment complete only when every
 Agreed requirement in it has current evidence that it is met.
 Falsifier: a commitment reports complete while one of its requirements
 has no evidence, or has evidence that predates a later change.

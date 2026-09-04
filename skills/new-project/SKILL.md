@@ -23,7 +23,10 @@ with no memory of this conversation.
    resolve it and state the reading in the artifact you write (SPEC-005,
    SPEC-007). Ask the developer only when the answer is a preference, a
    priority, or a fact outside the repository (SPEC-006). A question the
-   specification already answers is the failure this rule prevents.
+   specification already answers is the failure this rule prevents. A
+   choice at Judged or above -- a domain partition, a depth call, a
+   reading with a real alternative -- is recorded with `cairn decide`
+   (DEC-003), so the next agent inherits why and not only what.
 2. Restate before you write. State your understanding in your own words
    before writing any artifact (SPEC-003). Parroting hides
    misunderstanding; restating exposes it.

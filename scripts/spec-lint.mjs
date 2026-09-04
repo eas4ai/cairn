@@ -27,10 +27,9 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
     const m = /^\[([A-Z]+-\d+)\]\s*(.*)$/.exec(lines[i]);
     if (!m) continue;
     const id = m[1]; let body = m[2], j = i + 1, falsifier = false;
-    while (j < lines.length && !/^\[[A-Z]+-\d+\]/.test(lines[j]) && !/^## /.test(lines[j])) {
+    while (j < lines.length && lines[j].trim() !== "" && !/^\[[A-Z]+-\d+\]/.test(lines[j]) && !/^## /.test(lines[j])) {
       if (/^Falsifier:/.test(lines[j])) falsifier = true;
-      else if (!falsifier && lines[j].trim() !== "") body += " " + lines[j].trim();
-      if (falsifier && lines[j].trim() === "") break;
+      else if (!falsifier) body += " " + lines[j].trim();
       j++;
     }
     if (status === "Agreed" && !falsifier) findings.push(`${name}: ${id} is Agreed and carries no Falsifier: line (SPEC-002)`);

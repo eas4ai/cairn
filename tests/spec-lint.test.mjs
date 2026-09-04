@@ -35,6 +35,11 @@ test("an Agreed requirement with no falsifier is named (SPEC-002); a Draft one i
   assert.equal(r.status, 0, r.stdout);
 });
 
+test("prose after a Draft requirement with no falsifier is not scanned as requirement text", () => {
+  const r = lint(fixture("# X\n\nStatus: Draft\nPrefix: X\n\n[X-001] The agent MUST act.\n\nThis prose says MUST and MUST NOT freely, because it is prose.\n"));
+  assert.equal(r.status, 0, r.stdout);
+});
+
 test("a spec declaring a prefix with no requirement is named (SPEC-001)", () => {
   const r = lint(fixture(AGREED + "## Nothing here\n"));
   assert.equal(r.status, 1); assert.match(r.stdout, /declares Prefix: X and holds no requirement.*SPEC-001/);

@@ -188,11 +188,16 @@ must be structurally prevented.
 - "No ambiguity" restated achievably: a requirement with no agreed
   falsifier is not agreed.
 
-## Open
+## Resolved after this record was written
 
-- The quirks in the pre-engine version: conversation-side (staging
-  tedious, agent asks too much or too little) or artifact-side (bundle
-  comes out wrong)? Determines where v2's work goes.
-- Does freshness stay in the core? Load-bearing for autonomy, and the
-  source of the "stale on every commit" friction.
-- Where the new repo lives.
+- The pre-engine quirks: the developer confirmed the diagnosis. Over-asking
+  was the conversation-side defect (standing rule 1 made asking the only
+  response to ambiguity); the missing Phase B was the real gap. See
+  specification.md and docs/decisions/loop-before-specification-phase.md.
+- Freshness stays in the core. Specs going stale is the quirk it exists to
+  catch. The "stale on every commit" friction is a classification
+  problem, solved by the Resolvable verdict (LOOP-005, LOOP-008).
+- The repo lives at ~/workspace2/cairn, github.com/eas4ai/cairn, private.
+- Adversarial review is a requirement in both phases (SPEC-014, SPEC-015,
+  LOOP-020), after the first draft's own review found eight defects in
+  forty-eight requirements.

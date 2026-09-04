@@ -16,4 +16,4 @@ The developer reviews a queued decision by reading its record and removing the q
 
 ## Realized by
 
-(none yet: recorded, not built)
+- cc7bd7e  The working agreement: AGENTS.md, its template, and both skills write it

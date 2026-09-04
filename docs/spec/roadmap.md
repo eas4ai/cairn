@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-working-agreement
+Current: the-two-views-of-an-input-agree
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -88,3 +88,22 @@ repository root that states the agent's move for each verdict and the
 developer's move for an escalation and for a queued decision; both
 skills write it; and Cairn's own copy, so the loop that builds Cairn
 runs by the file Cairn ships. Covers LOOP-036 and DEC-014.
+
+## 8. The two views of an input agree
+
+Promoted from the backlog on the developer's word, 2026-09-04.
+
+A defect against LOOP-023 and LOOP-024: a declared input that is a
+symbolic link digests as its content in the tree and as its target
+path at a commit, so a review that examined it is stale forever.
+Delivers the test that reproduces it and the kernel reading a link the
+same way in both views. Covers LOOP-023 and LOOP-024.
+
+## 9. Cairn installs by one script
+
+Promoted from the backlog on the developer's word, 2026-09-04.
+
+Delivers: scripts/link.sh, which links the kernel onto the path and the
+skills into any agent's skill directories; the README's install
+section; and a test that runs the script into a temporary home and
+runs the linked cairn. Covers PKG-014, PKG-005, and PKG-006.

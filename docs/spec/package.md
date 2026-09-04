@@ -27,10 +27,17 @@ The failure this prevents is recorded: Same Page grew a verification
 engine of 4,443 lines to govern 1,932 lines of software, and the
 apparatus became the interface.
 
-[PKG-003] A concept MUST NOT enter Cairn without a decision record
-naming the failure that forced it.
-Falsifier: a concept appears in the specification or the code and no
-decision record names the failure it answers.
+[PKG-003] A command, a record kind, or a directory under .cairn/ MUST
+NOT enter Cairn without a decision record that names it and the failure
+that forced it.
+Falsifier: a command in the kernel's usage text, a record kind in a
+commitment's formats, or a directory under .cairn/ is named by no
+decision record.
+
+The first text of this requirement said "a concept," which no mechanism
+can observe. An independent review said so before the spec was
+cemented, and it was cemented anyway. A command, a record kind, and a
+directory are what a concept is when it has entered the code.
 
 [PKG-004] The files Cairn ships and executes at run time, excluding
 tests and excluding specification text, MUST NOT exceed 1500 lines in

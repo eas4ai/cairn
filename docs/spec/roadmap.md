@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-specification-phase
+Current: every-commitment-satisfies-the-package
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -67,3 +67,13 @@ SPEC-001 through SPEC-017.
 
 Last because the specification phase already works. It needs its
 over-asking removed, not a redesign.
+
+## 6. Every commitment satisfies the package
+
+Promoted from the backlog on the developer's word, 2026-09-04.
+
+Delivers: the PKG requirements folded into every commitment's set, so
+Done means the package holds too (PKG-011); `scripts/pkg-lint.mjs`, a
+mechanism for the PKG requirements a program can observe; and PKG-003
+revised to name what a concept is, so it can be observed at all. Covers
+PKG-001 through PKG-013.

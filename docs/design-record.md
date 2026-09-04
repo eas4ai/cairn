@@ -229,3 +229,48 @@ Its reference [11], "Proof-or-stop: don't trust the agent, trust the
 evidence" (arXiv 2607.14890), is adjacent enough to Cairn's thesis to
 be worth the developer's eyes.
 
+## External evidence, second paper (2026-09-04)
+
+Proof-or-Stop (Huang et al., arXiv 2607.14890) is a referee, not an
+orchestrator, and says so: "agent frameworks orchestrate agents;
+Proof-or-Stop controls which agent claims a lifecycle is allowed to act
+on." It was built under its own gate (565 stories), powered-tested
+(9,240 cells), and cross-vendor reviewed. Its design converges with
+Cairn's on every load-bearing point, independently:
+
+- agent output is a claim, never state; only evidence advances
+- evidence is bound to code identity and goes stale the instant the
+  tree changes
+- never a false DONE; fail closed, repair within a bound, or stop
+- the experience layer is advisory, marked gateEvidence:false, and
+  cannot satisfy a gate -- the ruling this project made two hours
+  before reading it
+- git-native durable state; work outlives the dead host
+- self-application: "the tool gated its own author"
+
+Three results shape Cairn directly:
+
+- Review as advice amplified 14/1800 green-but-wrong artifacts; the
+  same review as an enforced gate amplified 2/1800. Enforcement is the
+  mechanism, not the reviewer. Cairn had the advice shape (LOOP-033).
+- On clean, well-specified work the gated loop is pure overhead, 2x
+  cost, no benefit. Its value is entirely the green-but-wrong case.
+  "Expensive exactly where being wrong is expensive, cheap everywhere
+  else." That is the argument for the scale and for review once per
+  commitment rather than once per requirement.
+- 26 of 28 deep-set review findings were filed while the author's own
+  tests were green. A green mechanism is not the end of the question.
+
+Where Cairn draws a line the paper does not: Proof-or-Stop signs
+receipts, tracks producer identity, rejects 18 tamper classes, and
+runs 3x2 review quorums. That apparatus is sized for forged evidence
+and compromised hosts. Cairn's threat is the forgetful agent that games
+a visible signal, not the adversarial one. The receipt enters
+(LOOP-034); signing does not, until an agent is observed writing
+evidence by hand. See docs/decisions/threat-model-forgetful-not-
+adversarial.md.
+
+Four requirements entered as Draft: LOOP-033, LOOP-034, LOOP-035,
+DEC-016. The last recovers an escalation trigger that was agreed in
+conversation and lost before it reached the spec.
+

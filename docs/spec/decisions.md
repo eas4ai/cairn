@@ -39,6 +39,18 @@ only in the code.
 queue and MUST NOT wait for the developer to read it.
 Falsifier: the loop pauses for a decision it classified Consequential.
 
+[DEC-016] When three consecutive attempts at a requirement produce no
+new passing evidence, the agent MUST classify the next decision about
+it Blocking.
+Falsifier: a requirement's evidence history shows four or more
+consecutive failing records with no escalation between them.
+Status: Draft
+
+Repair is bounded or it is a spin. This trigger was agreed in the
+design conversation and never reached the specification; Proof-or-Stop
+names the failure as its scenario B10, repeated retry with no progress.
+On confirmation, "not converging" joins the Blocking row of the scale.
+
 ## The review queue
 
 The queue exists so that a Consequential decision reaches the developer

@@ -106,6 +106,18 @@ agent MUST NOT treat a change outside a mechanism's declared inputs as
 making its evidence stale.
 Falsifier: a change to a file no mechanism declares makes evidence stale.
 
+[LOOP-034] Evidence MUST carry the command that ran, its arguments, its
+working directory, its exit code, and a digest of its output.
+Falsifier: an evidence record reports a result and no command, exit
+code, or output digest that produced it.
+Status: Draft
+
+A record that says pass and nothing else is a claim in a file. The
+receipt is what makes it evidence: anyone can re-run the command and
+compare the digest. It is also the cheapest defense against an agent
+that writes a passing record by hand, because a hand-written record has
+no receipt to check.
+
 Cairn's own state files are never a mechanism's input. Freshness by
 global commit is the Same Page failure: every record stale after every
 commit, including commits that touched nothing the requirement governs.
@@ -217,6 +229,19 @@ confirm.
 Capture is the agent's. Promotion changes what gets built, which is
 Blocking by the scale, so it is the developer's.
 
+[LOOP-035] A commit made during a commitment MUST NOT change a file
+outside the declared inputs of that commitment's mechanisms, other than
+Cairn's own records.
+Falsifier: a commit changes a file that no mechanism of the current
+commitment declares and that is not under .cairn/ or docs/.
+Status: Draft
+
+This makes LOOP-015 observable. The commitment's footprint is already
+on disk as the union of its mechanisms' declared inputs, so no new
+declaration is needed: a change outside it is either scope creep or a
+missing declaration, and the agent resolves which by declaring or by
+writing to the backlog.
+
 ## Commitments
 
 [LOOP-018] A commitment MUST name the requirements it includes.
@@ -247,6 +272,17 @@ The mechanism is the independent verifier, and the review is not
 acceptance. A requirement is met when its mechanism passes against a
 committed state; the review is the agent looking for what the
 mechanisms would miss.
+
+[LOOP-033] A defect a review records MUST be resolved before the
+commitment reports complete.
+Falsifier: a commitment reports complete while a review record names a
+defect with no resolution.
+Status: Draft
+
+Proof-or-Stop isolated this with the same reviewer signal in two arms:
+treated as advice, it shipped 14 of 1800 injected green-but-wrong
+artifacts; enforced as a gate, 2 of 1800. The difference is not the
+review. It is whether a finding can block.
 
 ## Completion
 

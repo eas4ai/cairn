@@ -13,7 +13,7 @@
 //   cairn supersede <old> --cause C ...decide fields...
 //   cairn reversals                 report reversals by decider, cause, domain
 //
-// Exit: 0 Done, 1 Resolve (the agent acts), 2 Escalate (the developer
+// Exit: 0 Done, 1 Resolvable (the agent acts), 2 Escalate (the developer
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
 
 import { parseArgs } from "node:util";
@@ -164,7 +164,7 @@ function reviewOf(root, slug) {
 
 // ------------------------------------------------------------ wake
 
-const VERDICT = { Done: 0, Resolve: 1, Escalate: 2 };
+const VERDICT = { Done: 0, Resolvable: 1, Escalate: 2 };
 
 // What is the same for every requirement a mechanism speaks for: computed once.
 function context(root, mechs) {
@@ -196,45 +196,45 @@ function wake(root) {
   const ip = join(root, ".cairn", "in-progress");
   if (existsSync(ip)) {
     const f = fields(read(ip));
-    return { verdict: "Resolve", action: `reconcile ${f.action ?? "?"} ${f.target ?? "?"} at ${f.base ?? "?"}`, why: ".cairn/in-progress names an unfinished action; finish or abandon it, then remove the record" };
+    return { verdict: "Resolvable", action: `reconcile ${f.action ?? "?"} ${f.target ?? "?"} at ${f.base ?? "?"}`, why: ".cairn/in-progress names an unfinished action; finish or abandon it, then remove the record" };
   }
   const [esc] = openEscalations(root);
   if (esc) return { verdict: "Escalate", action: `present ${esc.name}`, why: `.cairn/escalations/${esc.name}.md has no Answer` };
   const [dec] = unrealizedDecisions(root);
-  if (dec) return { verdict: "Resolve", action: `build ${dec}`, why: "the record names no commit that realized it" };
+  if (dec) return { verdict: "Resolvable", action: `build ${dec}`, why: "the record names no commit that realized it" };
   const c = currentCommitment(root);
-  if (c.repair) return { verdict: "Resolve", action: `repair ${c.repair}`, why: c.why };
+  if (c.repair) return { verdict: "Resolvable", action: `repair ${c.repair}`, why: c.why };
   const mechs = mechanisms(root);
   const agreed = agreedRequirements(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
-  if (unknown) return { verdict: "Resolve", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
+  if (unknown) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
   fold(c, agreed);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) return { verdict: "Resolve", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
+  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
   const ctx = context(root, mechs);
   const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
   let s;
   if ((s = first((x) => x.threeFails && !x.escalatedSince)))
-    return { verdict: "Resolve", action: `escalate ${s.req}`, why: `three consecutive failing records and no escalation since; a fourth attempt is not the next action (DEC-016)` };
+    return { verdict: "Resolvable", action: `escalate ${s.req}`, why: `three consecutive failing records and no escalation since; a fourth attempt is not the next action (DEC-016)` };
   if ((s = first((x) => x.latest?.result === "fail" && x.everPassed && !x.stale)))
-    return { verdict: "Resolve", action: `implement ${s.req}`, why: `regression: latest evidence fails after an earlier pass (${s.mech})` };
+    return { verdict: "Resolvable", action: `implement ${s.req}`, why: `regression: latest evidence fails after an earlier pass (${s.mech})` };
   for (const x of state) {
     if (!x.mech) continue;
-    if (!x.latest) return { verdict: "Resolve", action: `run ${x.req}`, why: `mechanism ${x.mech} has produced no evidence for it` };
-    if (x.stale) return { verdict: "Resolve", action: `run ${x.req}`, why: `evidence is stale: ${x.stale} (${x.mech})` };
-    if (x.latest.result !== "pass") return { verdict: "Resolve", action: `implement ${x.req}`, why: `latest evidence is ${x.latest.result} (${x.mech})` };
+    if (!x.latest) return { verdict: "Resolvable", action: `run ${x.req}`, why: `mechanism ${x.mech} has produced no evidence for it` };
+    if (x.stale) return { verdict: "Resolvable", action: `run ${x.req}`, why: `evidence is stale: ${x.stale} (${x.mech})` };
+    if (x.latest.result !== "pass") return { verdict: "Resolvable", action: `implement ${x.req}`, why: `latest evidence is ${x.latest.result} (${x.mech})` };
   }
-  if ((s = first((x) => !x.mech))) return { verdict: "Resolve", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
+  if ((s = first((x) => !x.mech))) return { verdict: "Resolvable", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
   const head = headSha(root), rv = reviewOf(root, c.slug);
-  if (!rv) return { verdict: "Resolve", action: `review ${c.slug}`, why: `every requirement passes; no review record exists at .cairn/reviews/${c.slug}.md (LOOP-020)` };
+  if (!rv) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `every requirement passes; no review record exists at .cairn/reviews/${c.slug}.md (LOOP-020)` };
   // A review is stale the way evidence is: when a declared input of the
   // commitment's mechanisms changed since the commit it examined. HEAD
   // moving on its own, as it does when the review is committed, is not.
   const inputs = [...new Set(state.filter((x) => x.mech).flatMap((x) => asList(mechs.byName.get(x.mech).def.inputs)))];
   const then = rv.commit ? inputsDigestAt(root, inputs, rv.commit) : null;
-  if (then === null || then !== inputsDigest(root, inputs)) return { verdict: "Resolve", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
-  if (rv.open.length) return { verdict: "Resolve", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
+  if (then === null || then !== inputsDigest(root, inputs)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
+  if (rv.open.length) return { verdict: "Resolvable", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
   return { verdict: "Done", action: c.slug, why: `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean` };
 }
 
@@ -244,12 +244,12 @@ function stamp() { return new Date().toISOString().replace(/[-:]/g, "").replace(
 
 function check(root, only) {
   const c = currentCommitment(root);
-  if (c.repair) { process.stdout.write(`Resolve: repair ${c.repair}\n  ${c.why}\n`); return 1; }
+  if (c.repair) { process.stdout.write(`Resolvable: repair ${c.repair}\n  ${c.why}\n`); return 1; }
   fold(c, agreedRequirements(root));
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) { process.stdout.write(`Resolve: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
+  if (breach) { process.stdout.write(`Resolvable: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
   const runs = new Map();
   for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   const head = headSha(root);
@@ -257,7 +257,7 @@ function check(root, only) {
   for (const [name, reqs] of runs) {
     const m = mechs.byName.get(name), inputs = asList(m.def.inputs);
     const dirty = dirtyInputs(root, inputs);
-    if (dirty.length) { process.stdout.write(`Resolve: commit ${dirty[0]}\n  ${name} declares it as an input and it has uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
+    if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} declares it as an input and it has uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
     // The write-ahead record, unless the agent's own already covers this run.
     const mine = !existsSync(ip);
     if (mine) writeFileSync(ip, `action: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);

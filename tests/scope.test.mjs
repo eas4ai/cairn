@@ -28,9 +28,9 @@ test("a commit inside the footprint: check runs; outside it: check names the pat
   writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root);
   r = cairn(root, "check");
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /^Resolve: scope unrelated\.txt/);
+  assert.match(r.stdout, /^Resolvable: scope unrelated\.txt/);
   assert.doesNotMatch(r.stdout, /recorded/);
-  assert.match(cairn(root, "wake").stdout, /^Resolve: scope unrelated\.txt/, "wake reports the same, ahead of mechanisms");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/, "wake reports the same, ahead of mechanisms");
 });
 
 test("a file under .cairn/ or docs/ is never a breach", () => {
@@ -42,7 +42,7 @@ test("a file under .cairn/ or docs/ is never a breach", () => {
 test("declaring the path as an input clears the breach", () => {
   const root = repo();
   writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root);
-  assert.match(cairn(root, "wake").stdout, /^Resolve: scope unrelated\.txt/);
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/);
   writeFileSync(join(root, ".cairn/mechanisms/m"), fromFile("R-001", "R-002").replace("inputs:\n", "inputs:\n  - unrelated.txt\n")); commit(root);
   assert.doesNotMatch(cairn(root, "wake").stdout, /scope unrelated/);
 });
@@ -50,7 +50,7 @@ test("declaring the path as an input clears the breach", () => {
 test("reverting the change and writing a backlog item clears the breach", () => {
   const root = repo();
   writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root);
-  assert.match(cairn(root, "wake").stdout, /^Resolve: scope unrelated\.txt/);
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/);
   writeFileSync(join(root, "unrelated.txt"), "y\n");
   cairn(root, "backlog", "--title", "Change unrelated", "--body", "Later commitment."); commit(root);
   assert.doesNotMatch(cairn(root, "wake").stdout, /scope unrelated/);
@@ -61,7 +61,7 @@ test("a commitment naming a requirement the spec set does not hold as Agreed is 
   const root = repo({ "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-003\n" });
   const r = cairn(root, "wake");
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /^Resolve: repair docs\/commitments\/first\.md/);
+  assert.match(r.stdout, /^Resolvable: repair docs\/commitments\/first\.md/);
   assert.match(r.stdout, /R-003 is not an Agreed requirement/);
 });
 

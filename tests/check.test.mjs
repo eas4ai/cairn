@@ -37,7 +37,7 @@ test("a nonzero exit records fail, and the receipt keeps the exit code", () => {
   assert.equal(r.status, 1);
   const t = readFileSync(join(root, ".cairn/evidence/R-001", records(root, "R-001")[0]), "utf8");
   assert.ok(t.includes("exit: 3") && t.includes("result: fail"));
-  assert.match(r.stdout, /^Resolve: implement R-001/m);
+  assert.match(r.stdout, /^Resolvable: implement R-001/m);
 });
 
 test("two checks write two records; nothing is overwritten or deleted", () => {
@@ -54,7 +54,7 @@ test("a commit changing a declared input makes evidence stale; an undeclared one
   assert.match(cairn(root, "wake").stdout, /^Done: first/, "undeclared change: still Done");
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root); review(root);
   const r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: run R-001/);
+  assert.match(r.stdout, /^Resolvable: run R-001/);
   assert.match(r.stdout, /stale/);
 });
 
@@ -68,7 +68,7 @@ test("a regression is named before a requirement that never passed", () => {
   writeFileSync(join(root, "src/exit"), "1\n"); commit(root);
   cairn(root, "check");                                  // R-001 now fails after a pass: regression
   const r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: implement R-001/);
+  assert.match(r.stdout, /^Resolvable: implement R-001/);
   assert.match(r.stdout, /regression/);
 });
 
@@ -76,11 +76,11 @@ test("three consecutive fails with no escalation since: wake says escalate, not 
   const root = repo();
   writeFileSync(join(root, "src/exit"), "1\n"); commit(root);
   cairn(root, "check"); cairn(root, "check");
-  assert.match(cairn(root, "wake").stdout, /^Resolve: implement R-001/);
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/);
   cairn(root, "check");
   const r = cairn(root, "wake");
   assert.equal(r.status, 1);
-  assert.match(r.stdout, /^Resolve: escalate R-001/);
+  assert.match(r.stdout, /^Resolvable: escalate R-001/);
   assert.match(r.stdout, /three consecutive/);
   writeFileSync(join(root, ".cairn/escalations/r-001.md"), "Question: x\nConcerns: R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\n");
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/, "an escalation since the run is honored");
@@ -90,10 +90,10 @@ test("the review gate: no review, stale review, open finding, then Done", () => 
   const root = repo();
   cairn(root, "check");
   let r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: review first/);
+  assert.match(r.stdout, /^Resolvable: review first/);
   review(root, ["open: the digest is computed twice"]);
   r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: resolve first/);
+  assert.match(r.stdout, /^Resolvable: resolve first/);
   review(root, ["resolved: the digest is computed twice"]);
   r = cairn(root, "wake");
   assert.equal(r.status, 0); assert.match(r.stdout, /^Done: first/);
@@ -102,16 +102,16 @@ test("the review gate: no review, stale review, open finding, then Done", () => 
   assert.match(r.stdout, /^Done: first/, "a commit touching no declared input does not stale the review");
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root);
   r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: run R-001/, "evidence goes stale first");
+  assert.match(r.stdout, /^Resolvable: run R-001/, "evidence goes stale first");
   cairn(root, "check");
   r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: review first/, "then the review, because a declared input changed since it");
+  assert.match(r.stdout, /^Resolvable: review first/, "then the review, because a declared input changed since it");
 });
 
 test("Done is refused while any requirement lacks current passing evidence", () => {
   const root = repo();
   review(root);
-  assert.match(cairn(root, "wake").stdout, /^Resolve: run R-001/);
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/);
 });
 
 test("check names a requested requirement that no mechanism claims", () => {

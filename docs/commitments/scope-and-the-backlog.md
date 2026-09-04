@@ -32,7 +32,7 @@ The footprint (LOOP-035):
   and docs/. Nothing new is declared; it is derived.
 - check, before running anything, compares the files changed by commits
   since the commitment began (the first commit after Current: named it)
-  against the footprint. A file outside it is reported as Resolve: scope <path>, either
+  against the footprint. A file outside it is reported as Resolvable: scope <path>, either
   declare it as an input of the mechanism that should cover it, or
   write it to the backlog and revert it.
 - wake reports the same, ahead of running mechanisms, because a
@@ -44,7 +44,7 @@ Promotion (LOOP-029):
   developer writes it into a spec with a confirmed falsifier, and
   enters a commitment when the developer names it there. wake checks
   that every requirement a commitment names exists in the spec set as
-  Agreed; one that does not is Resolve: repair the commitment.
+  Agreed; one that does not is Resolvable: repair the commitment.
 
 ## Formats
 

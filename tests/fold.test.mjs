@@ -11,11 +11,11 @@ test("a PKG requirement the commitment does not name is declared, run, and gates
   const root = repo({ "docs/spec/pkg.md": PKG, ".cairn/mechanisms/t": passing("R-001", "R-002") });
   cairn(root, "check"); review(root);
   let r = cairn(root, "wake");
-  assert.equal(r.status, 1); assert.match(r.stdout, /^Resolve: declare PKG-001/);
+  assert.equal(r.status, 1); assert.match(r.stdout, /^Resolvable: declare PKG-001/);
   writeFileSync(join(root, ".cairn/mechanisms/p"), failing("PKG-001"));
   cairn(root, "check"); review(root);
   r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: implement PKG-001/, "failing package evidence blocks Done");
+  assert.match(r.stdout, /^Resolvable: implement PKG-001/, "failing package evidence blocks Done");
   writeFileSync(join(root, ".cairn/mechanisms/p"), passing("PKG-001"));
   cairn(root, "check"); review(root);
   r = cairn(root, "wake");

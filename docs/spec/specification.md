@@ -88,6 +88,27 @@ occurrence.
 Falsifier: a term appears with two meanings across the specification and
 the glossary does not define it.
 
+## Review
+
+Measured on this specification's own first draft: eight defects in
+forty-eight requirements, found by the agent that wrote them, minutes
+later, with no information it did not already have.
+
+[SPEC-014] Before the agent presents a domain's requirements for
+agreement, the agent MUST examine them for contradictions between
+requirements, for falsifiers that would not detect their requirement's
+violation, and for requirements no mechanism can check.
+Falsifier: requirements are presented for agreement and no record names
+what the review examined.
+
+[SPEC-015] The record of a review MUST state what the review attacked,
+not only what it found.
+Falsifier: a review record reports no findings and does not say what was
+examined.
+
+A review that reports nothing is the same shape as a review that did not
+happen. Stating the attack is what separates them.
+
 ## Ending the phase
 
 The loop does not wait for the whole specification. It waits for one

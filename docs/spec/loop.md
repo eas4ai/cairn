@@ -114,6 +114,13 @@ cannot be determined from it.
 Falsifier: the loop produces work for a commitment other than the current
 one.
 
+## Review
+
+[LOOP-020] Before the agent reports a commitment complete, the agent
+MUST examine the work for defects and MUST record what it examined.
+Falsifier: a commitment reports complete and no record names what the
+review examined.
+
 ## Completion
 
 [LOOP-017] The loop MUST report a commitment complete only when every

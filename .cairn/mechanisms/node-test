@@ -38,3 +38,10 @@ requirements:
   - DEC-014
   - DEC-015
   - DEC-016
+  - LOOP-009
+  - LOOP-010
+  - LOOP-011
+  - LOOP-012
+  - LOOP-013
+  - LOOP-014
+  - LOOP-026

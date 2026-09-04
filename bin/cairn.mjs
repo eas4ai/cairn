@@ -6,6 +6,9 @@
 //                                   committed tree; record evidence with receipts
 //   cairn decide --title T --level L --decided-by A --rests-on R
 //                --wrong-if W --body B [--supersedes S --cause C]
+//   cairn escalate --concerns X --question Q --recommend R --because B
+//                  --if-wrong W --instead I [--level Blocking]
+//   cairn answer <slug> <reply...>  record the developer's reply
 //
 // Exit: 0 Done, 1 Resolve (the agent acts), 2 Escalate (the developer
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
@@ -252,6 +255,40 @@ function decide(root, o) {
   return 0;
 }
 
+// ------------------------------------------------------------ escalate, answer
+
+const ESC_FIELDS = [["question", "Question:  "], ["recommend", "Recommend: "], ["because", "Because:   "], ["if-wrong", "If wrong:  "], ["instead", "Instead:   "]];
+
+function escalate(root, o) {
+  if (!o.concerns) return usage("escalate: missing --concerns");
+  const [open] = openEscalations(root);
+  if (open) return usage(`escalate: ${open.name} is open; one escalation at a time (LOOP-011)`);
+  // Every field present, each on one line (LOOP-026). A Blocking decision
+  // is written even when malformed, with the field named (LOOP-014).
+  const bad = ESC_FIELDS.map(([k]) => k).find((k) => !o[k] || /\n/.test(o[k]));
+  if (bad && o.level !== "Blocking") return usage(`escalate: --${bad} must be present and one line; a Blocking decision may pass --level Blocking to be written anyway`);
+  const dir = join(root, ".cairn", "escalations");
+  mkdirSync(dir, { recursive: true });
+  let slug = slugify(o.concerns), path = join(dir, `${slug}.md`), i = 1;
+  while (existsSync(path)) path = join(dir, `${slug}-${++i}.md`);
+  const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${(o[k] ?? "").replace(/\n/g, " ")}`), "", "Reply: ok | instead | ask", "",
+                `Concerns: ${o.concerns}`, "Status: open", `Raised: ${new Date().toISOString()}`];
+  if (bad) body.push(`Malformed: ${bad}`);
+  writeFileSync(path, body.join("\n") + "\n");
+  process.stdout.write(`raised ${rel(root, path)}${bad ? ` (malformed: ${bad}; written because Blocking)` : ""}\n`);
+  return 0;
+}
+
+function answer(root, slug, reply) {
+  if (!slug || !reply) return usage("usage: cairn answer <slug> <reply...>");
+  const path = join(root, ".cairn", "escalations", `${slug}.md`);
+  if (!existsSync(path)) return usage(`answer: no escalation named ${slug}`);
+  if ("Answer" in fields(read(path))) return usage(`answer: ${slug} is already answered`);
+  writeFileSync(path, read(path).replace(/\n?$/, "\n") + `Answer: ${reply}\nAnswered: ${new Date().toISOString()}\n`);
+  process.stdout.write(`answered ${rel(root, path)}\n`);
+  return 0;
+}
+
 // ------------------------------------------------------------ main
 
 function usage(msg) { process.stderr.write(`cairn: ${msg}\n`); return 3; }
@@ -261,12 +298,15 @@ function main() {
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
-      "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" } } });
+      "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
+      concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   const root = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   if (cmd === "decide") return decide(root, a.values);
-  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide> [--root DIR]");
+  if (cmd === "escalate") return escalate(root, a.values);
+  if (cmd === "answer") return answer(root, rest[0], rest.slice(1).join(" "));
+  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md)`);
   if (cmd === "check") return check(root, rest);
   const w = wake(root);

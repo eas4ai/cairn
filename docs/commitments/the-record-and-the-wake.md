@@ -72,8 +72,8 @@ On wake the agent takes the first that applies:
 6. A requirement has a mechanism and its evidence is missing, stale, or
    failing: run the mechanism, or fix the code and run it.
 7. A requirement in the commitment has no mechanism: declare one.
-8. No review record exists for the commitment, or its commit is not the
-   current commit: review (LOOP-020, LOOP-032).
+8. No review record exists for the commitment, or a declared input has
+   changed since the commit it examined: review (LOOP-020, LOOP-032).
 9. The review record names an open finding: resolve it (LOOP-033).
 10. Every requirement has current passing evidence, the review is at
     the current commit, and no finding is open: Done.
@@ -152,8 +152,12 @@ A review record, .cairn/reviews/<slug>.md:
       - open: <one line>
       - resolved: <one line>
 
-The review is stale when its commit is not HEAD; a review that cannot
-change code (LOOP-032) is one whose commit equals HEAD when it ends.
+The review is stale the way evidence is: when a declared input of the
+commitment's mechanisms has changed since the commit it examined. HEAD
+moving on its own, as it does when the review record is committed, does
+not stale it. The first draft of this plan said "when its commit is not
+HEAD," which made committing the review stale the review; the first
+review of this commitment found that.
 
 A decision record: title, Level, Decided by, Rests on, Would be wrong
 if, a Decision section, a Realized by list of commit identifier and

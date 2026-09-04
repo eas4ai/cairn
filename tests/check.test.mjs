@@ -99,13 +99,25 @@ test("the review gate: no review, stale review, open finding, then Done", () => 
   assert.equal(r.status, 0); assert.match(r.stdout, /^Done: first/);
   writeFileSync(join(root, "src/other"), "changed\n"); commit(root);
   r = cairn(root, "wake");
-  assert.match(r.stdout, /^Resolve: review first/, "review at an older commit is stale");
+  assert.match(r.stdout, /^Done: first/, "a commit touching no declared input does not stale the review");
+  writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root);
+  r = cairn(root, "wake");
+  assert.match(r.stdout, /^Resolve: run R-001/, "evidence goes stale first");
+  cairn(root, "check");
+  r = cairn(root, "wake");
+  assert.match(r.stdout, /^Resolve: review first/, "then the review, because a declared input changed since it");
 });
 
 test("Done is refused while any requirement lacks current passing evidence", () => {
   const root = repo();
   review(root);
   assert.match(cairn(root, "wake").stdout, /^Resolve: run R-001/);
+});
+
+test("check names a requested requirement that no mechanism claims", () => {
+  const root = repo();
+  const r = cairn(root, "check", "R-999");
+  assert.match(r.stdout, /skipped R-999: no mechanism claims it/);
 });
 
 test("check writes and clears an in-progress record around the run", () => {

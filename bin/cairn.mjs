@@ -13,7 +13,7 @@
 import { parseArgs } from "node:util";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
 
 // ------------------------------------------------------------ reading
@@ -41,7 +41,6 @@ const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const sha = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
 const git = (root, ...args) => spawnSync("git", args, { cwd: root, encoding: "utf8" });
 const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD"); return r.status === 0 ? r.stdout.trim() : null; };
-const sameCommit = (a, b) => !!a && !!b && (a.startsWith(b) || b.startsWith(a));
 
 function currentCommitment(root) {
   const p = join(root, "docs", "spec", "roadmap.md");
@@ -90,6 +89,18 @@ function inputsDigest(root, inputs) {
   for (const f of inputFiles(root, inputs)) { h.update(f); h.update("\0"); h.update(readFileSync(join(root, f))); h.update("\0"); }
   return "sha256:" + h.digest("hex");
 }
+// The same digest over the tree as it was at a commit, for records that
+// name the commit they examined rather than carrying a digest.
+function inputsDigestAt(root, inputs, commit) {
+  const ls = git(root, "ls-tree", "-r", "--name-only", "-z", commit, "--", ...inputs);
+  if (ls.status !== 0) return null;
+  const h = createHash("sha256");
+  for (const f of ls.stdout.split("\0").filter(Boolean).sort()) {
+    const show = spawnSync("git", ["show", `${commit}:${f}`], { cwd: root });
+    h.update(f); h.update("\0"); h.update(show.stdout); h.update("\0");
+  }
+  return "sha256:" + h.digest("hex");
+}
 const dirtyInputs = (root, inputs) => git(root, "status", "--porcelain", "-z", "--", ...inputs).stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
 
 // Evidence history for a requirement, oldest first.
@@ -108,8 +119,14 @@ function reviewOf(root, slug) {
 
 const VERDICT = { Done: 0, Resolve: 1, Escalate: 2 };
 
+// What is the same for every requirement a mechanism speaks for: computed once.
+function context(root, mechs) {
+  const digests = new Map();
+  for (const [n, m] of mechs.byName) digests.set(n, inputsDigest(root, asList(m.def.inputs)));
+  return { digests, escalations: escalations(root) };
+}
 // One requirement's standing, from facts on disk.
-function assess(root, req, mechs) {
+function assess(root, req, mechs, ctx) {
   const name = mechs.byReq.get(req);
   const m = name ? mechs.byName.get(name) : null;
   const h = history(root, req);
@@ -117,12 +134,12 @@ function assess(root, req, mechs) {
   const everPassed = h.some((e) => e.result === "pass");
   const lastThree = h.slice(-3);
   const threeFails = lastThree.length === 3 && lastThree.every((e) => e.result === "fail");
-  const escalatedSince = threeFails && escalations(root).some((e) => e.Concerns === req && (!e.Raised || e.Raised >= lastThree[0].recorded));
+  const escalatedSince = threeFails && ctx.escalations.some((e) => e.Concerns === req && (!e.Raised || e.Raised >= lastThree[0].recorded));
   let stale = null;
   if (m && latest) {
     const reasons = [];
     if (latest.mechanism_digest !== m.digest) reasons.push("the mechanism changed");
-    if (latest.inputs_digest !== inputsDigest(root, asList(m.def.inputs))) reasons.push("a declared input changed");
+    if (latest.inputs_digest !== ctx.digests.get(name)) reasons.push("a declared input changed");
     stale = reasons.length ? reasons.join(" and ") : null;
   }
   return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stale };
@@ -141,7 +158,8 @@ function wake(root) {
   const c = currentCommitment(root);
   if (c.repair) return { verdict: "Resolve", action: `repair ${c.repair}`, why: c.why };
   const mechs = mechanisms(root);
-  const state = c.requirements.map((r) => assess(root, r, mechs));
+  const ctx = context(root, mechs);
+  const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
   let s;
   if ((s = first((x) => x.threeFails && !x.escalatedSince)))
@@ -157,9 +175,14 @@ function wake(root) {
   if ((s = first((x) => !x.mech))) return { verdict: "Resolve", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
   const head = headSha(root), rv = reviewOf(root, c.slug);
   if (!rv) return { verdict: "Resolve", action: `review ${c.slug}`, why: `every requirement passes; no review record exists at .cairn/reviews/${c.slug}.md (LOOP-020)` };
-  if (!sameCommit(rv.commit, head)) return { verdict: "Resolve", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"}; the tree is at ${head} (LOOP-032)` };
+  // A review is stale the way evidence is: when a declared input of the
+  // commitment's mechanisms changed since the commit it examined. HEAD
+  // moving on its own, as it does when the review is committed, is not.
+  const inputs = [...new Set(state.filter((x) => x.mech).flatMap((x) => asList(mechs.byName.get(x.mech).def.inputs)))];
+  const then = rv.commit ? inputsDigestAt(root, inputs, rv.commit) : null;
+  if (then === null || then !== inputsDigest(root, inputs)) return { verdict: "Resolve", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
   if (rv.open.length) return { verdict: "Resolve", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
-  return { verdict: "Done", action: c.slug, why: `every requirement in ${c.slug} has current passing evidence and the review at ${head} is clean` };
+  return { verdict: "Done", action: c.slug, why: `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean` };
 }
 
 // ------------------------------------------------------------ check
@@ -172,7 +195,7 @@ function check(root, only) {
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
   const runs = new Map();
-  for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); }
+  for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   const head = headSha(root);
   const ip = join(root, ".cairn", "in-progress");
   for (const [name, reqs] of runs) {
@@ -192,7 +215,7 @@ function check(root, only) {
     ];
     for (const req of reqs) {
       const dir = join(root, ".cairn", "evidence", req);
-      spawnSync("mkdir", ["-p", dir]);
+      mkdirSync(dir, { recursive: true });
       let p = join(dir, stamp()), i = 0;
       while (existsSync(p)) p = join(dir, `${stamp()}-${++i}`);       // never overwrite (LOOP-025)
       writeFileSync(p, `requirement: ${req}\n${rec.join("\n")}\n`);

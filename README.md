@@ -47,8 +47,13 @@ path, and each skill into `$HOME/.agents/skills`, so a pull keeps them
 current. Pass `--bin DIR` for a directory that is on your path, or
 `--skills DIR` for another skill directory, `--force` to replace a link another
 package left under the same name, and `--unlink` to take it all away.
-The skills follow the Agent Skills layout, `skills/<name>/SKILL.md`, so
-any skills installer reads them as they are.
+The skills alone also install with the skills CLI, which reads the
+Agent Skills layout Cairn already has:
+
+    npx skills add eas4ai/cairn
+
+That puts the skills in front of the agent. The kernel still comes from
+the clone and the script.
 
 ## Background
 

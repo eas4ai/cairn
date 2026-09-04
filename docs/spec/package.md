@@ -78,7 +78,7 @@ Falsifier: a document names a version, a phase, or a later stage for
 work a requirement or a commitment already includes.
 
 The specification is the scope. A concept that is not in it is not
-postponed; it is absent until a named failure brings it in. A concept
+"postponed"; it is absent until a named failure brings it in. A concept
 that is in it is built. There is no third state, because the third state
 is where debt lives.
 

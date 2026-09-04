@@ -71,3 +71,5 @@ requirements:
   - SPEC-015
   - SPEC-016
   - SPEC-017
+  - PKG-005
+  - PKG-011

@@ -95,6 +95,11 @@ function decisions(root) {
 }
 const reversed = (root) => decisions(root).filter((d) => "Superseded by" in d);
 
+// Every Agreed PKG requirement is part of every commitment (PKG-011).
+function fold(c, agreed) {
+  for (const r of [...agreed].sort()) if (r.startsWith("PKG-") && !c.requirements.includes(r)) c.requirements.push(r);
+}
+
 // A decision is unrealized when its Realized by section lists no commit.
 // A superseded decision is history, not work.
 function unrealizedDecisions(root) {
@@ -203,6 +208,7 @@ function wake(root) {
   const agreed = agreedRequirements(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolve", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
+  fold(c, agreed);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
   if (breach) return { verdict: "Resolve", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
   const ctx = context(root, mechs);
@@ -239,6 +245,7 @@ function stamp() { return new Date().toISOString().replace(/[-:]/g, "").replace(
 function check(root, only) {
   const c = currentCommitment(root);
   if (c.repair) { process.stdout.write(`Resolve: repair ${c.repair}\n  ${c.why}\n`); return 1; }
+  fold(c, agreedRequirements(root));
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);

@@ -20,6 +20,26 @@ function tracked(patterns = []) {
   return patterns.length ? files.filter((p) => patterns.some((x) => p.includes(x))) : files;
 }
 
+// Markdown prose wraps, so a sentence spans lines. A paragraph, the run
+// of non-blank lines between blanks, is the smallest unit that holds a
+// whole sentence, and it is what a prose rule has to read.
+function paragraphs(text) {
+  const out = [];
+  let start = 0;
+  let buffer = [];
+  text.split("\n").forEach((line, i) => {
+    if (line.trim() === "") {
+      if (buffer.length) out.push({ text: buffer.join(" "), line: start + 1 });
+      buffer = [];
+      return;
+    }
+    if (buffer.length === 0) start = i;
+    buffer.push(line.trim());
+  });
+  if (buffer.length) out.push({ text: buffer.join(" "), line: start + 1 });
+  return out;
+}
+
 function walk(dir, out = []) {
   for (const name of readdirSync(dir).sort()) {
     const p = join(dir, name);
@@ -37,7 +57,9 @@ test("the ASCII gate passes on this repository and reports a file that breaks it
   // The falsifier state: a tracked text file with a character outside ASCII.
   const base = mkdtempSync(join(tmpdir(), "same-page-ascii-"));
   spawnSync("git", ["init", "-q", "-b", "main"], { cwd: base });
-  writeFileSync(join(base, "spec.md"), "an em dash — here\n");
+  // The fixture writes the character by escape: this file is tracked,
+  // and the gate it tests reads tracked files.
+  writeFileSync(join(base, "spec.md"), "an em dash \u2014 here\n");
   spawnSync("git", ["add", "-A"], { cwd: base });
   const dirty = spawnSync("node", [gate, base], { encoding: "utf8" });
   expect(dirty.status).toBe(1);
@@ -81,24 +103,34 @@ test("the drift gate, the language check, and the engine live under skills/new-p
 }, TEST_TIMEOUT);
 
 // A layer named in the same sentence as a word that puts it outside the
-// build. A rule forbidding that, and a falsifier describing it, name the
-// words without doing it: those are mentions, the way the language check
-// treats a keyword inside backticks.
+// build. A rule forbidding that, a falsifier describing it, and a
+// sentence about the check that looks for it all name the words without
+// doing it: those are mentions, the way the language check treats a
+// keyword inside backticks. The blind spot this leaves is stated
+// plainly: a sentence that both describes a check and puts a layer out
+// of scope reads as a mention here, and the spec review is what catches
+// that.
 function layersOutOfScope(text, rel = "fixture") {
   const out = [];
-  text.split("\n").forEach((line, i) => {
-    if (!/\bL[1-6]\b|\blayer\b/i.test(line)) return;
-    if (!/\b(optional|out of scope|never built|will not be built|not planned|abandoned)\b/i.test(line)) return;
-    if (/\bnever\b|\bmust not\b|^\s*Falsifier:/i.test(line)) return;
-    out.push(`${rel}:${i + 1}: ${line.trim().slice(0, 100)}`);
-  });
+  for (const { text: p, line } of paragraphs(text)) {
+    if (!/\bL[1-6]\b|\blayer\b/i.test(p)) continue;
+    if (!/\b(optional|out of scope|never built|will not be built|not planned|abandoned)\b/i.test(p)) continue;
+    if (/\bnever\b|\bmust not\b|\bFalsifier:/i.test(p)) continue;
+    if (/\b(scans?|scanned|searche?[sd]?|detects?|flags?|reports?|checks?)\b/i.test(p)) continue;
+    out.push(`${rel}:${line}: ${p.slice(0, 100)}`);
+  }
   return out;
 }
 
 test("no spec, contract, or doc describes a construction layer as optional or out of scope (ENG-240)", () => {
   // The falsifier state, and the check that finds it.
   expect(layersOutOfScope("Layer L5 is optional for small projects.\n")).toEqual(["fixture:1: Layer L5 is optional for small projects."]);
+  expect(layersOutOfScope("Layer L4 is out of scope for this project.\n")).toHaveLength(1);
+  // A sentence that wraps across lines is still one sentence.
+  expect(layersOutOfScope("A test scans the specs, the\ncontracts, and the docs for a layer\ndescribed as optional.\n")).toEqual([]);
+  expect(layersOutOfScope("The developer decided that layer\nL6 is optional here.\n")).toHaveLength(1);
   expect(layersOutOfScope("Never describe any layer as absent, deferred, or optional.\n")).toEqual([]);
+  expect(layersOutOfScope("A test scans the docs for a layer described as optional.\n")).toEqual([]);
   const files = tracked([".md"]).filter((p) => p.endsWith(".md") && !p.startsWith("reference/"));
   const offenders = files.flatMap((rel) => layersOutOfScope(readFileSync(join(ROOT, rel), "utf8"), rel));
   expect(offenders).toEqual([]);
@@ -166,13 +198,13 @@ test("the drift gate's output carries no validator result and no verdict (ENG-23
 // forbidding it is a mention.
 function handAuthoringSteps(text, rel = "fixture") {
   const out = [];
-  text.split("\n").forEach((line, i) => {
-    if (!/\b(write|author|edit|fill in|compute|type)\b/i.test(line)) return;
-    if (!/\b(digest|obligation file|dependency provenance|evidence record)\b/i.test(line)) return;
-    if (!/\bby hand\b|\byourself\b|\bmanually\b/i.test(line)) return;
-    if (/\bnever\b|\bmust not\b|\bdo not\b|^\s*Falsifier:/i.test(line)) return;
-    out.push(`${rel}:${i + 1}: ${line.trim().slice(0, 100)}`);
-  });
+  for (const { text: p, line } of paragraphs(text)) {
+    if (!/\b(write|author|edit|fill in|compute|type)\b/i.test(p)) continue;
+    if (!/\b(digest|obligation file|dependency provenance|evidence record)\b/i.test(p)) continue;
+    if (!/\bby hand\b|\byourself\b|\bmanually\b/i.test(p)) continue;
+    if (/\bnever\b|\bmust not\b|\bdo not\b|\bFalsifier:/i.test(p)) continue;
+    out.push(`${rel}:${line}: ${p.slice(0, 100)}`);
+  }
   return out;
 }
 

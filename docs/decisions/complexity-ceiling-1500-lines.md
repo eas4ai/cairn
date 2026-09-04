@@ -26,4 +26,4 @@ should rise. That is the failure mode this record exists to make visible.
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 6102851  cairn wake and cairn decide: the referee, 151 lines, 20 tests

@@ -91,6 +91,23 @@ implementation.
 The failure this prevents: a system that reports almost everything as
 insufficient after every commit trains the developer to stop reading it.
 
+## The working agreement
+
+The verdicts name who acts. The working agreement, beside the spec set,
+names what each party does when it is their turn, so an agent that has
+never read Cairn's own repository can run the loop from a consumer's.
+
+[LOOP-036] The specification phase MUST leave, beside the spec set, a
+document that states the agent's move for each verdict and the
+developer's move for each record that awaits one.
+Falsifier: a repository has a spec set and a roadmap, and no file in it
+states what the agent does on Resolvable.
+
+Confirmed 2026-09-04 from the backlog. Both skills ended with "the loop
+takes over," and nothing an agent read in a consumer repository said
+what to do with a verdict, so it stopped after its first action, the
+failure Cairn exists to remove.
+
 ## Freshness
 
 [LOOP-006] The agent MUST declare the paths each mechanism reads.

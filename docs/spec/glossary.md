@@ -58,3 +58,7 @@ Defined in decisions.md.
 
 **Wake.** The moment an agent with no memory of previous sessions begins
 work and reconstructs its position from disk.
+
+**Working agreement.** The document beside the spec set that states the
+agent's move for each verdict and the developer's move for each record
+that awaits one. Read at wake, before the roadmap.

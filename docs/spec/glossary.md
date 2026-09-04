@@ -6,7 +6,9 @@ This file owns Cairn's vocabulary. When a term here conflicts with a
 prior meaning, this file wins.
 
 **Agreed.** The state of a requirement whose text and falsifier the
-developer has confirmed. Only Agreed requirements are contract.
+developer has confirmed. An artifact is Agreed when the developer has
+confirmed it and every requirement in it is Agreed. Only Agreed
+requirements are contract.
 
 **Backlog.** Ideas captured during the loop but not promoted into a
 commitment. The scope valve writes here.
@@ -40,6 +42,10 @@ until it is met or until a Blocking decision stops it.
 
 **Mechanism.** A program that checks a requirement and reports pass or
 fail. A test, a type check, a lint rule, a script.
+
+**Observed.** The state of specification text derived from an existing
+codebase and not yet confirmed by the developer. Observed text describes
+what is; it is not contract.
 
 **Reversal.** A decision record superseding an earlier one, with the
 cause of the earlier decision's failure classified.

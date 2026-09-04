@@ -56,13 +56,26 @@ vendor provides.
 Falsifier: a documented workflow step cannot be performed by an agent
 outside one specific product.
 
+## The boundary
+
+[PKG-012] Cairn MUST NOT call a model or manage an agent's execution.
+Falsifier: Cairn's shipped code sends a request to a model, or starts,
+stops, or retries an agent.
+
 ## Language
 
-[PKG-007] Normative specification text MUST state one obligation per
-sentence, MUST use exactly one of MUST, MUST NOT, or MAY, and MUST name
-the actor.
-Falsifier: a normative sentence states two obligations, or states an
-obligation with no actor.
+[PKG-007] A normative sentence MUST state one obligation.
+Falsifier: a normative sentence states two obligations.
+
+[PKG-010] A normative sentence MUST name the actor.
+Falsifier: a normative sentence states an obligation with no actor.
+
+[PKG-011] Every commitment MUST satisfy every PKG requirement.
+Falsifier: a commitment reports complete while the package violates a
+PKG requirement.
+
+PKG requirements are global constraints. They are inherited by every
+commitment rather than assigned to one.
 
 [PKG-008] Every file Cairn ships MUST contain only ASCII characters,
 unless the file is not text.

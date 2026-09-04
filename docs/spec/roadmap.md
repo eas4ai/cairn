@@ -4,6 +4,8 @@ Status: Draft. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
+Current: the-record-and-the-wake
+
 Cairn bootstraps on itself: its own specification is the input to its
 own loop, so the loop is built before the specification phase is ported.
 

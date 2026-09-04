@@ -49,7 +49,7 @@ produced an interrogation. Recording is the third option.
 
 [SPEC-005] When the agent meets an ambiguity it can resolve from the
 specification, the conventions, or common practice, the agent MUST
-resolve it, MUST record the reading, and MUST NOT ask the developer.
+resolve it without asking the developer.
 Falsifier: the agent asks the developer a question whose answer its own
 recorded reasoning already determined.
 
@@ -79,6 +79,17 @@ project's domains are known.
 MUST NOT impose a fixed set.
 Falsifier: a project's spec set contains a domain the project has no
 content for.
+
+## Existing code
+
+[SPEC-016] Specification text the agent derives from an existing
+codebase MUST be marked Observed.
+Falsifier: text describing existing behavior carries no Observed marker
+and no confirmation.
+
+[SPEC-017] The agent MUST NOT treat Observed text as contract.
+Falsifier: the loop works against a requirement whose only status is
+Observed.
 
 ## Vocabulary
 
@@ -114,8 +125,9 @@ happen. Stating the attack is what separates them.
 The loop does not wait for the whole specification. It waits for one
 commitment.
 
-[SPEC-011] The specification phase MUST end when the keystone, the
-glossary, and the first commitment are Agreed.
+[SPEC-011] The specification phase MUST end when the developer has
+confirmed the keystone and the glossary and every requirement in the
+first commitment is Agreed.
 Falsifier: the loop starts while a requirement inside the first
 commitment has no confirmed falsifier.
 

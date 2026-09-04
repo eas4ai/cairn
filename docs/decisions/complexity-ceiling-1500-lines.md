@@ -26,4 +26,4 @@ should rise. That is the failure mode this record exists to make visible.
 
 ## Realized by
 
-- 6093095  Draft specification: four domains, 48 requirements with falsifiers
+(none yet: recorded, not built)

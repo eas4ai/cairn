@@ -17,11 +17,24 @@ attached to one.
 
 The **loop** executes against that agreement. The agent works alone,
 resumes across sessions with no memory of earlier ones, records every
-decision it makes, and stops only for a blocker the human must resolve.
+decision it makes above the routine, and stops only for a blocker the
+human must resolve.
 
 A cairn is a marker left by someone who was here before, for someone who
 arrives with no memory of them. Every artifact this workflow writes
 serves that purpose.
+
+## What Cairn is not
+
+Cairn is not the coding agent, and it does not drive one. An agent from
+any vendor performs the work. Cairn is the referee that makes that
+agent's work durable and resumable: it reads and validates the state on
+disk, runs mechanisms, decides freshness, names the next legal action,
+and formats decisions and escalations.
+
+That boundary is what keeps Cairn a cairn. An orchestrator that drove
+models would need APIs, adapters, retries, credentials, and
+harness-specific behavior, which is the road back to an engine.
 
 ## The problem Cairn solves
 

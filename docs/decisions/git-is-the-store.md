@@ -17,4 +17,4 @@ commits, which is only meaningful inside the repository.
 
 ## Realized by
 
-- 6093095  Draft specification: four domains, 48 requirements with falsifiers
+(none yet: recorded, not built)

@@ -21,4 +21,4 @@ Reversal cost is low now and rises once anything is built.
 
 ## Realized by
 
-- 6093095  Draft specification: four domains, 48 requirements with falsifiers
+(none yet: recorded, not built)

@@ -12,4 +12,4 @@ Use ls-files --with-tree to select historical paths with the same Git pathspec r
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 73b29be Match wildcard inputs consistently across commits and the working tree

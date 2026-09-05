@@ -35,3 +35,11 @@ Automated checks are proxies; they do not establish prose quality.
 
 The documentation is committed, the checks have current passing evidence,
 and the review records source verification and no open finding.
+
+## Production documentation cleanup
+
+Requested by the developer on 2026-09-05. Remove the standalone PoC
+issue report and early design conversation from the release. Keep the
+human guides and Cairn records, and point historical report references
+to the original Git revision. Verify the remaining links and package
+checks before publishing.

@@ -190,7 +190,6 @@ open for a reply.
 | [Working agreement](AGENTS.md) | The exact responsibilities the agent is instructed to follow. |
 | [Specification](docs/spec/overview.md) | Cairn's own requirements and terminology. |
 | [Source map in the manual](docs/manual.md#where-these-explanations-come-from) | The implementation and tests behind the explanations. |
-| [Design record](docs/design-record.md) | Why the workflow was designed this way. |
 
 Cairn's own development uses the same workflow. From this repository,
 `node bin/cairn.mjs wake` reports its current action. Contributors can run

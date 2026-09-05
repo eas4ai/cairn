@@ -8,7 +8,7 @@ Inherits: every PKG requirement
 
 An escalation is a conversation with a resume point at both ends.
 
-Drafted 2026-09-05. Item 7 of docs/issues-from-the-poc.md. After
+Drafted 2026-09-05. Item 7 of [the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md). After
 `cairn answer`, the wake named the requirement and nothing pointed
 the agent at the reply; `answer` accepted any text; an `ask` reply
 marked the escalation answered and closed the channel the developer

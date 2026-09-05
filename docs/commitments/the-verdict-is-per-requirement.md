@@ -15,7 +15,7 @@ gave a mechanism one result; its thirteen records carry one output
 digest and cannot say which requirement moved. The second reached the
 developer with a Judged decision marked Blocking because a baseline
 check and two repairs counted as three attempts. Both are in
-docs/issues-from-the-poc.md, items 1, 2, and 19.
+[the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md), items 1, 2, and 19.
 
 ## Decisions to record
 

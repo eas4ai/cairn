@@ -112,7 +112,7 @@ runs the linked cairn. Covers PKG-014, PKG-005, and PKG-006.
 
 Two live projects ran the loop under existing-project on 2026-09-04
 and 2026-09-05. Their agents' reports, and a review of the kernel
-against what they needed, are in docs/issues-from-the-poc.md and in
+against what they needed, are in [the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md) and in
 twenty backlog items. The five commitments below carry the fixes.
 Each names requirements drafted the same day, which the developer
 confirms by exception before the commitment is named Current.

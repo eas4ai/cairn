@@ -15,7 +15,7 @@ keeps a digest of output it discarded. The same capture killed a
 mechanism at one megabyte of output and recorded the kill as a fail.
 The evidence directory is ignored, so a second worktree begins with no
 history and the rules that read history read nothing. Items 3, 6, and
-13 of docs/issues-from-the-poc.md.
+13 of [the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md).
 
 ## Decisions to record
 

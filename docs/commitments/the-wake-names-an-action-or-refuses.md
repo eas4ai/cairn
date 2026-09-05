@@ -10,7 +10,7 @@ Given only the repository, the wake prints a verdict or a refusal, and
 never a stack trace, a silent hole, or a breach the loop did not make.
 
 Drafted 2026-09-05. Items 4, 5, 10, 11, 12, 14, 17, and 18 of
-docs/issues-from-the-poc.md, each reproduced against the kernel in a
+[the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md), each reproduced against the kernel in a
 temp repository.
 
 ## Decisions to record

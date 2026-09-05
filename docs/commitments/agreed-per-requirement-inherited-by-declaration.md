@@ -10,7 +10,7 @@ The grain the skills promise is the grain the kernel reads, and what
 every commitment inherits is written in the specification and not in
 the kernel.
 
-Drafted 2026-09-05. Items 8, 9, and 15 of docs/issues-from-the-poc.md.
+Drafted 2026-09-05. Items 8, 9, and 15 of [the original PoC report](https://github.com/eas4ai/cairn/blob/a161d4907afa23e5c89ceca8ff00ee45e54130f6/docs/issues-from-the-poc.md).
 The developer ruled on 2026-09-05 that a requirement is Agreed per
 requirement, with a Status: line on the block overriding the file's.
 

@@ -12,4 +12,4 @@ Use one parser for contiguous requirement blocks, fenced examples, file header d
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 5d76475 Read agreement per requirement and declare inherited constraints explicitly

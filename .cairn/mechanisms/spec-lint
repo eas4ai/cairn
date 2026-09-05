@@ -12,3 +12,5 @@ requirements:
   - SPEC-021
   - SPEC-019
   - SPEC-024
+reviewed:
+  - SPEC-019 sha256:778ef8d17a61dd0ae0cab4b0c87569267462e9dfab79810eb91f392cedb1b8bc

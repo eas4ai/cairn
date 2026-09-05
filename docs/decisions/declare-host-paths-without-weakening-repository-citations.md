@@ -11,4 +11,4 @@ Read Host paths only from the existing specification header outside fences. Acce
 
 ## Realized by
 
-(none yet: recorded, not built)
+- a0687c2 Allow declared host paths and preserve placeholder templates in spec lint

@@ -1,6 +1,12 @@
 commitment: the-verdict-is-per-requirement
-commit: 61b0bba
+commit: 3a4e43c
 examined:
+  - writing guidance at 3a4e43c: questions name the choice, recommendation, reason, alternative, and consequences; explanations keep necessary technical distinctions and separate observations from assumptions
+  - manual reading against a draft-saving question and an upload-retry decision: the rules make the behavior explicit and require important limits to remain visible; shorter prose is not permission to change the meaning
+  - agreement by exception: the developer can confirm the set and correct only selected items, but silence or a reply showing misunderstanding is not treated as agreement; no per-item approval loop was added
+  - escalation compatibility: explanations use the existing fields and the Blocking decision still reaches the developer; no language score, new field, or automated comprehension claim was introduced
+  - both skill links resolve to the shipped working agreement, and that template matches the repository's AGENTS.md byte for byte; the guidance is read before specification questions as well as during the loop
+  - verification at 3a4e43c: node-test, spec-lint, and pkg-lint recorded passing evidence; wording was reviewed by reading, not established by the lints or a live-agent trial
   - the skill guidance at 61b0bba against the accepted scope: architecture boundaries and rationale, interaction journeys and recovery, implementation conventions and commands, and glossary relationships or rejected synonyms when ambiguity warrants them
   - manual reading for a small library and a project with cross-domain interactions: the prompts remain conditional, domain files require requirements to own, and feature flows remain with their domain
   - existing-project on a codebase whose technology rationale is undocumented: the new text leaves that reason unverified and applies the existing Observed and drift rules, rather than inventing rationale or changing an agreed contract

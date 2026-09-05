@@ -71,6 +71,12 @@ What the software is, the problem it solves, and what it is not. No
 requirements: the keystone holds a spec map that names each domain spec
 and its prefix. Restate, confirm, write.
 
+Where the system has meaningful component boundaries, describe the
+components, what each owns, and how they communicate. Record the reasons
+for technology choices beside them, linking decision records where a
+choice warrants one. Link cross-cutting constraints to the requirements
+in their owning domain specs; the overview does not duplicate them.
+
 ## Stage 2 -- The glossary -> docs/spec/glossary.md
 
 Propose the terms you expect to matter, five to fifteen, each defined in
@@ -78,7 +84,28 @@ this project's sense. Present them as one set; the developer corrects the
 wrong ones. A term enters when confirmed. The glossary wins over your
 prior when they conflict.
 
+When terms collide, record the rejected synonyms and why they mislead.
+Explain relationships between terms when definitions alone leave their
+use ambiguous. Add these entries as needed by the project.
+
 ## Stage 3 -- Domains and requirements -> docs/spec/<domain>.md
+
+Examine the following where they affect the project's requirements:
+
+- Interaction: how users or callers enter a capability, the actions
+  available on each screen, command, or API, and the system's responses.
+  Trace journeys across domains, branches on user choice or system
+  state, errors and recovery, and relevant platform differences. Keep
+  feature-level detail in its owning domain; use a shared interaction
+  spec only when cross-domain behavior needs requirements of its own.
+- Implementation conventions: error handling, logging, state management,
+  naming, and module organization where consistency matters. State the
+  reason for each choice. Name the verification commands and when they
+  run, referencing the scripts or mechanism declarations that own them.
+
+These are prompts for relevant content, not a fixed set of documents.
+Use existing sections where they fit, and create a domain spec only
+when it has requirements to own (SPEC-001, SPEC-009).
 
 Derive the domains from the keystone: what the software does, decomposed
 where the decomposition is real. Confirm the partition, then write each

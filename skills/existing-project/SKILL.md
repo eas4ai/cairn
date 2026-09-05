@@ -52,6 +52,15 @@ recent history -- the last few dozen commits, open branches, TODO
 markers, and on Path B every commit since the newest Agreed date, which
 is where drift lives.
 
+Where relevant, trace component boundaries and communication, user or
+caller journeys across screens, commands, or APIs, branching, errors
+and recovery, and platform differences. Identify conventions for error
+handling, logging, state management, naming, and module organization,
+plus the verification commands and when they run. Cite the code and
+records that establish each finding. Take reasons for technology and
+convention choices from recorded decisions; an undocumented reason is
+unverified, not an invitation to invent one.
+
 Write docs/recon.md, every row cited: Exists (what the system is and
 does); Documented (which of that the documentation covers, and where);
 Contradicted (where documentation and code disagree, both sides cited;
@@ -76,7 +85,21 @@ for a renamed identifier, a concept in the radius with no entry, or a
 term the docs and the code name differently. Both: present as one set;
 the developer corrects by exception.
 
+For an actual terminology collision, record rejected synonyms and why
+they mislead. Describe relationships between terms when definitions
+alone leave their use ambiguous; preserve meanings already agreed.
+
 ## Stage 2 -- Observed specs, or verification
+
+Carry the relevant architecture, interaction, and convention findings
+into this stage, at the depth the work requires. Use existing sections
+where they fit; these topics do not impose a fixed set of documents.
+The keystone describes the architecture and links cross-cutting
+constraints to their owning domain requirements. Feature flows belong
+in their domain; a shared interaction spec earns its place through
+cross-domain requirements. Reference the scripts or mechanism
+declarations that own verification commands. Apply the Observed and
+drift rules below to this content as to any other specification text.
 
 Path A -- write. The keystone and one domain spec per domain inside the
 blast radius, in the same normative shape a designed spec uses:

@@ -12,4 +12,4 @@ Keep Answer and Reply turns in order in the same file. The developer uses ok, in
 
 ## Realized by
 
-(none yet: recorded, not built)
+- d219628 Keep escalation questions open until the developer decides

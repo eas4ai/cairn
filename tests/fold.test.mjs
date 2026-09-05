@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { repo, cairn, review, passing, failing } from "./helpers.mjs";
+import { repo, cairn, review, passing, failing, commit } from "./helpers.mjs";
 
 const PKG = "# P\n\nStatus: Agreed 2026-09-04\nPrefix: PKG\n\n[PKG-001] Cairn MUST hold.\nFalsifier: it does not.\n";
 
@@ -13,10 +13,12 @@ test("a PKG requirement the commitment does not name is declared, run, and gates
   let r = cairn(root, "wake");
   assert.equal(r.status, 1); assert.match(r.stdout, /^Resolvable: declare PKG-001/);
   writeFileSync(join(root, ".cairn/mechanisms/p"), failing("PKG-001"));
+  commit(root, "declare package check");
   cairn(root, "check"); review(root);
   r = cairn(root, "wake");
   assert.match(r.stdout, /^Resolvable: implement PKG-001/, "failing package evidence blocks Done");
   writeFileSync(join(root, ".cairn/mechanisms/p"), passing("PKG-001"));
+  commit(root, "correct package check");
   cairn(root, "check"); review(root);
   r = cairn(root, "wake");
   assert.equal(r.status, 0, r.stdout); assert.match(r.stdout, /^Done: first/);

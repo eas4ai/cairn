@@ -94,3 +94,5 @@ requirements:
   - SPEC-022
   - SPEC-023
   - PKG-016
+  - LOOP-061
+  - LOOP-062

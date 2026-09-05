@@ -35,6 +35,15 @@ Commit before you check. `cairn check` records evidence only against a
 committed tree and refuses a dirty declared input. Your own test runs
 while editing are how you work; they are not evidence.
 
+When wake says `review mechanism <REQ>`, compare the check with the
+revised requirement and falsifier. Correct the check if needed. Try a
+safe violating example and the corrected case; record what you tried,
+what happened, or why that demonstration is impractical in the existing
+commitment review. Add the exact `REQ sha256:...` entry wake prints to
+the declaration's `reviewed:` list only after that review. Commit before
+check. Copying the digest alone does not establish that the check works.
+Apply the same failure demonstration when building a new check.
+
 Decide by level. Routine: decide, no record. Judged and above: record
 it with `cairn decide` before you build it. Blocking: `cairn escalate`,
 then stop. Three attempts at a requirement without new passing evidence

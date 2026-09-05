@@ -78,6 +78,12 @@ on Path B this is drift, and the bucket that pays for the exercise);
 Unverified (what you could not check). Present it; the developer
 corrects your reading.
 
+Before replacing a previous recon report, carry each unresolved finding
+forward with its evidence, or link it to the backlog entry that already
+tracks it (SPEC-023). Close a finding only with cited resolution evidence
+or the developer's recorded ruling. Work outside this session's scope
+stays recorded; a fresh report is not permission to drop it or fix it.
+
 Then the work. Ask what this session is for: a feature to add, or a
 defect to fix. That is the one question this stage asks. Trace its blast
 radius -- the modules, tests, and spec sections it touches -- and cite
@@ -161,8 +167,16 @@ and names it in a commitment (LOOP-029). Do not implement it in the
 meantime.
 
 For each requirement the commitment names, write or verify its mechanism
-under .cairn/mechanisms/. Run `cairn check`. Its verdict is where the
-work starts.
+under .cairn/mechanisms/. Apply /new-project's guidance for a safe violating
+example to each new or revised check (SPEC-022). For a defect, retain the
+reproduction that fails before the fix and passes after it. Commit the
+specification, declarations, and inputs before `cairn check`. Its verdict
+is where the work starts.
+
+For an existing command that reports individual requirement results,
+declare `results: per-requirement` as /new-project describes. A reporter
+that stops before its first result has established no requirement verdicts;
+its process failure is recorded separately.
 
 ## Closing
 

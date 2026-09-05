@@ -57,5 +57,9 @@ the clone and the script.
 
 ## Background
 
+For a concrete example, follow [one small project with Cairn](docs/walkthrough.md):
+agree on a requirement, catch a failure, fix it, review the result, and
+choose the next piece of work.
+
 The design record explains the workflow's rationale, the failures its
 rules prevent, and the boundary that keeps the referee small.

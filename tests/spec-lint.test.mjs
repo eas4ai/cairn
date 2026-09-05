@@ -54,3 +54,29 @@ test("this repository's own specification passes the lint", () => {
   const r = lint(join(ROOT, "docs", "spec"));
   assert.equal(r.status, 0, r.stdout);
 });
+
+test("duplicate identifiers are rejected within a file and across files (SPEC-020)", () => {
+  const block = "[X-001] The service MUST reject an empty request.\nFalsifier: An empty request succeeds.\n";
+  const dir = fixture(AGREED + block + "\n" + block);
+  assert.match(lint(dir).stdout, /X-001.*duplicate/i);
+  writeFileSync(join(dir, "x.md"), AGREED + block);
+  writeFileSync(join(dir, "y.md"), AGREED + block);
+  const r = lint(dir);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /y.md:.*X-001.*duplicate.*x.md:/i);
+});
+
+test("references resolve across files; missing references name their source (SPEC-021)", () => {
+  const dir = fixture(AGREED + "[X-001] The service MUST follow X-999.\nFalsifier: It ignores the rule.\n");
+  let r = lint(dir);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /x.md:.*X-999.*unresolved/i);
+  writeFileSync(join(dir, "y.md"), AGREED + "[X-999] The service MUST reject empty requests.\nFalsifier: An empty request succeeds.\n");
+  assert.equal(lint(dir).status, 0);
+});
+
+test("code examples and quoted mentions are neither definitions nor references", () => {
+  const dir = fixture(AGREED + '[X-001] The service MUST write `X-999` or "X-998".\nFalsifier: It writes another value.\n\n```md\n[X-001] Example only.\nSee X-997.\n```\n\n~~~~md\n[X-001] Another example.\n~~~\nSee X-996.\n~~~~\n');
+  const r = lint(dir);
+  assert.equal(r.status, 0, r.stdout);
+});

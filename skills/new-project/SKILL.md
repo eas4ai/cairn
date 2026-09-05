@@ -149,6 +149,21 @@ For each requirement in the first commitment, write its mechanism under
 .cairn/mechanisms/<name>: the command, the paths it reads, and the
 requirements it speaks for.
 
+For a command that reports individual requirement results, declare
+`results: per-requirement`. Its stdout uses `cairn: REQ-001: pass` or
+`cairn: REQ-001: fail` for each result it establishes. Missing results stay
+unverified, even if the command stops before printing any result. Omit
+the field only when the command's aggregate exit result is appropriate
+for every requirement it declares.
+
+When implementing a new or revised mechanism, demonstrate that it catches
+a safe example of the stated violation, then that it accepts the corrected
+case (SPEC-022). Use a disposable fixture or controlled fault; check that
+it failed for the expected reason, not a setup error or crash. Record the
+example and result in the existing review. If no safe demonstration is
+practical, record why and what remains untested. Do not delay agreement
+merely because the mechanism has not been built yet.
+
 Write the working agreement: AGENTS.md at the repository root, by
 copying templates/AGENTS.md beside this skill verbatim (LOOP-036). It
 states the agent's move for each verdict and the developer's move for

@@ -1,11 +1,13 @@
 # Checks stay tied to their requirements
 
-Requirements: LOOP-058, LOOP-059, LOOP-060, SPEC-020, SPEC-021, SPEC-022, SPEC-023, PKG-016, LOOP-023, LOOP-024
+Requirements: LOOP-058, LOOP-059, LOOP-060, LOOP-061, LOOP-062, SPEC-020, SPEC-021, SPEC-022, SPEC-023, PKG-016, LOOP-023, LOOP-024
 
 ## What this delivers
 
 The developer accepted all five comparison recommendations and explicitly
-added the large-input Git defect. This commitment carries those six items.
+added the large-input Git defect. This commitment carries the five recommendations and both live-project repairs.
+The developer then supplied the live-project reporting failure; explicit
+per-requirement reporting and separate execution diagnostics are included.
 The existing commitments remain in the roadmap in their existing order.
 
 ## Implementation and footprint
@@ -34,5 +36,5 @@ or human comprehension.
 
 ## Done when
 
-The regression cases pass, the guide's commands work, all inherited
+The regression cases pass, the guide's commands work, explicit reporting never guesses missing verdicts, all inherited
 package checks pass, and the recorded review has no open finding.

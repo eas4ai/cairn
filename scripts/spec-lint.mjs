@@ -14,13 +14,35 @@ const dir = process.argv[2] ?? "docs/spec";
 const findings = [];
 const KEYWORD = /\bMUST NOT\b|\bMUST\b|\bMAY\b/g;
 const strip = (s) => s.replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ");
+const definitions = new Map(), prefixes = new Set(), references = [];
+const withoutFences = (text) => {
+  let fence = null;
+  return text.split(/\r?\n/).map((line) => {
+    if (fence) {
+      if (new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(line)) fence = null;
+      return "";
+    }
+    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (m) { fence = m[1]; return ""; }
+    return line;
+  });
+};
 
 for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
-  const path = join(dir, name), text = readFileSync(path, "utf8"), lines = text.split("\n");
+  const path = join(dir, name), lines = withoutFences(readFileSync(path, "utf8")), text = lines.join("\n");
   const status = /^Status:\s*(\w+)/m.exec(text)?.[1] ?? null;
   const prefix = /^Prefix:\s*([A-Z]+)/m.exec(text)?.[1] ?? null;
   const ids = [...text.matchAll(/^\[([A-Z]+-\d+)\]/gm)].map((m) => m[1]);
   if (prefix && ids.length === 0) findings.push(`${name}: declares Prefix: ${prefix} and holds no requirement (SPEC-001)`);
+  if (prefix) prefixes.add(prefix);
+  for (const [i, line] of lines.entries()) {
+    const clean = strip(line), def = /^\[([A-Z]+-\d+)\]/.exec(clean);
+    if (def) {
+      if (definitions.has(def[1])) findings.push(`${name}:${i + 1}: ${def[1]} duplicate identifier; first defined at ${definitions.get(def[1])} (SPEC-020)`);
+      else definitions.set(def[1], `${name}:${i + 1}`);
+    }
+    for (const m of clean.slice(def ? def[0].length : 0).matchAll(/\b([A-Z]+)-\d+\b/g)) references.push({ id: m[0], prefix: m[1], location: `${name}:${i + 1}` });
+  }
 
   // Requirement blocks: from [ID] to the next [ID], heading, or blank line after the falsifier.
   for (let i = 0; i < lines.length; i++) {
@@ -44,5 +66,6 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
   }
 }
 
+for (const r of references) if (prefixes.has(r.prefix) && !definitions.has(r.id)) findings.push(`${r.location}: ${r.id} unresolved requirement reference (SPEC-021)`);
 if (findings.length) { process.stdout.write(findings.join("\n") + "\n"); process.exit(1); }
 process.stdout.write(`spec lint: ${dir} clean\n`);

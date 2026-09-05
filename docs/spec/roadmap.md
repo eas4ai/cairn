@@ -142,7 +142,9 @@ Delivers: freshness tied to requirement and falsifier text; review of a
 check before evidence for revised text; duplicate ID and broken reference
 checks; safe violating examples when creating checks; preserved recon
 findings; a human walkthrough; and complete Git reads for large inputs.
-Covers LOOP-058 through LOOP-060, SPEC-020 through SPEC-023, PKG-016,
+Also delivers explicit per-requirement reporting and separate execution
+diagnostics from the developer's live-project report.
+Covers LOOP-058 through LOOP-062, SPEC-020 through SPEC-023, PKG-016,
 and revisits LOOP-023 and LOOP-024.
 [Commitment](../commitments/checks-stay-tied-to-their-requirements.md).
 

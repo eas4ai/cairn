@@ -335,11 +335,11 @@ Falsifier: a mechanism that speaks for R-001 prints
 `cairn: R-002: pass`, and R-002 gains a record.
 Status: Agreed 2026-09-05
 
-[LOOP-039] When a mechanism's output reports no result for any
-requirement it speaks for, the agent MUST record every requirement's
-evidence from the command's exit code.
-Falsifier: a mechanism that prints no result line writes a record
-whose result disagrees with its exit code.
+[LOOP-039] When a mechanism has no declared reporting mode and reports
+no result for any requirement it speaks for, the agent MUST record every
+requirement's evidence from the command's exit code.
+Falsifier: a mechanism with no results field and no result line writes
+a record whose result disagrees with its exit code.
 Status: Agreed 2026-09-05
 
 [LOOP-052] When a mechanism's output reports a result for one
@@ -349,8 +349,8 @@ Falsifier: a mechanism prints `cairn: R-001: pass` and exits nonzero,
 and R-002's record says pass or fail.
 Status: Agreed 2026-09-05
 
-A mechanism that says nothing is read by its exit code, as every
-mechanism was before result lines existed; that is the transition,
+A mechanism with no declared reporting mode that says nothing is read
+by its exit code, as every mechanism was before result lines existed; that is the transition,
 and an existing mechanism's output earns nothing new by it. A
 mechanism that speaks is taken at its word for what it said and at
 nothing for what it did not: a run that aborted after the host checks
@@ -551,3 +551,31 @@ HEAD stale at HEAD.
 
 Git listings and blob reads have no imposed output limit. A failed blob
 read produces no digest; bytes received before failure are not evidence.
+
+## Declared per-requirement reporting
+
+Added from the developer's live-project report on 2026-09-05. A shared
+check stopped before publishing any requirement result, and one command
+failure became thirteen requirement failures.
+
+[LOOP-061] For a mechanism declaring per-requirement reporting, the loop
+MUST record every omitted requirement as unverified.
+Falsifier: a declaration with results: per-requirement produces no valid
+result lines and a requirement receives pass or fail from the exit code.
+
+The declaration uses `results: per-requirement` before execution. An
+absent results field retains LOOP-039 and LOOP-052. A present but invalid
+mode is a declaration error; it never silently selects the fallback.
+Accepted result lines still use the exact pass/fail marker and declared
+IDs; contradictory duplicates still fail. No new stdout marker is added.
+
+[LOOP-062] The loop MUST preserve execution diagnostics separately from
+requirement results in each receipt.
+Falsifier: a command fails to start or is killed, and its unverified
+receipt loses the available exit status, signal, spawn error, or stderr.
+
+The existing exit field keeps a numeric status, or -1 when no exit status
+exists. The receipt also carries signal, execution_error, and stderr;
+error details and stderr use JSON values to preserve line breaks.
+Historical receipts stay unchanged. Unverified results neither satisfy
+Done nor add failed requirement attempts, including across changed inputs.

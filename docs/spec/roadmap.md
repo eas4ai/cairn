@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: agreed-per-requirement-inherited-by-declaration
+Current: humans-can-understand-and-use-cairn
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -196,3 +196,10 @@ and revisits SPEC-002, SPEC-016, PKG-011.
 
 Last because it changes contract, and the developer's ruling on the
 grain should stand before the kernel reads it.
+
+## Human documentation
+
+Requested by the developer on 2026-09-05. Explain Cairn in plain language
+through an expanded README, loop diagrams, a human manual grounded in the
+source, and the existing executable walkthrough.
+[Commitment](../commitments/humans-can-understand-and-use-cairn.md).

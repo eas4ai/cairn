@@ -1,5 +1,10 @@
 # One small project with Cairn
 
+This is the hands-on companion to the [human manual](manual.md). The
+manual explains your choices; this example lets you see the commands and
+results in a disposable project. You do not need to type these setup files
+when working with an agent: the project skills handle that preparation.
+
 Cairn tells the agent what needs attention. You decide what the software
 should do. This example builds a name validator: it accepts `Ada` and
 rejects an empty string. A *falsifier* is an observable failure of a
@@ -126,7 +131,10 @@ cairn wake
 
 Cairn reports `Escalate: present app-002` and stops the agent. You can read
 `.cairn/escalations/app-002.md`. Ask the agent to explain the choice another
-way if needed. A request for explanation is not approval.
+way if needed. A request for explanation is not approval. Use `cairn answer app-002 ask
+'Explain why spaces should be rejected.'` to keep the question open. The
+agent records its explanation, then the decision returns to you. See the
+[answering guide](manual.md#answer-a-decision-without-guessing).
 
 If you accept the recommendation, answer it:
 

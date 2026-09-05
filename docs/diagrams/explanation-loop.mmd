@@ -1,0 +1,9 @@
+flowchart TD
+    question["Agent presents a decision"] --> choice{"Is the choice clear?"}
+    choice -->|No: ask| explain["Agent explains"]
+    explain --> choice
+    choice -->|Yes| decide{"Your decision"}
+    decide -->|ok| accept["Accept recommendation"]
+    decide -->|instead| alternative["Give another instruction"]
+    accept --> close["Question closes; run wake"]
+    alternative --> close

@@ -13,7 +13,8 @@ Requested by the developer on 2026-09-05, including source-grounded claims.
 
 - A detailed README covering purpose, responsibilities, installation,
   starting work, limits, and links to deeper guidance.
-- Mermaid diagrams for the work loop and the explanation conversation,
+- Mermaid sources and SVG diagrams rendered with FrankenMermaid for the
+  work loop and the explanation conversation,
   with adjacent prose that works when diagrams are not rendered.
 - docs/manual.md organized around the human's choices and common problems,
   with concrete commands and a source map for behavioral claims.
@@ -25,7 +26,8 @@ Requested by the developer on 2026-09-05, including source-grounded claims.
 
 Run the existing install, walkthrough, escalation, reporting, agreement,
 and recovery tests, plus the required package and specification checks.
-Check local links and diagram syntax. Review each behavior and command
+Check local links and diagram syntax with the installed FrankenMermaid,
+and inspect the rendered documentation with agent-browser. Review each behavior and command
 against source and each human action for an understandable consequence.
 Automated checks are proxies; they do not establish prose quality.
 

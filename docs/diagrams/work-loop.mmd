@@ -1,0 +1,7 @@
+flowchart TD
+    agree["You and agent agree on a goal"] --> wake{"Cairn: what is next?"}
+    wake -->|Resolvable| agent["Agent does the named work"]
+    wake -->|Escalate| human["You decide or ask"]
+    wake -->|Done| done["Agent reports and stops"]
+    agent --> repeat["Repeat: run wake"]
+    human --> repeat

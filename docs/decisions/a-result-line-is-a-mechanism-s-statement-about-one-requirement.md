@@ -12,4 +12,4 @@ An evidence record was the exit code of a command, fanned to every requirement t
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 974e093  The verdict is per requirement

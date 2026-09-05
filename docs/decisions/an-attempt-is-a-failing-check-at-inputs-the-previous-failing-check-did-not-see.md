@@ -12,4 +12,4 @@ The kernel counted the last three records failing, whatever changed between them
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 974e093  The verdict is per requirement

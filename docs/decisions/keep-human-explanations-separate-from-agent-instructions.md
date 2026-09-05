@@ -12,4 +12,4 @@ Use the README as the human introduction, docs/manual.md as the human operating 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 2a1b580 Explain Cairn for humans with a source-grounded manual and loop diagrams

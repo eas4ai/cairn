@@ -12,4 +12,4 @@ Validate each input pathspec against tracked paths and refuse duplicate owners b
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 58ca132 Validate inputs and recover interrupted runs with accurate Git history

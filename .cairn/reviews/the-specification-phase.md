@@ -4,7 +4,7 @@ examined:
   - the skills test's matching strategy, for what a meaning-preserving reflow of a skill would do to it
   - the spec lint's requirement-block boundary, for a Draft requirement with no Falsifier line followed by prose
   - the spec lint's actor heuristic, against every requirement in the cemented spec after the fix
-  - both skills for any surviving Same Page apparatus: elaborate, validators, trust, conformance.md, iterations, next-iteration
+  - both skills for references to commands and artifacts outside Cairn's workflow: elaborate, validators, trust, conformance.md, iterations, next-iteration
   - both skills against each SPEC requirement, for a rule that is stated and a rule that is only implied
   - docs/recon.md as an artifact the existing-project skill introduces that no spec names
   - the eight split requirements, read side by side with their originals, for any changed word inside an obligation

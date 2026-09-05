@@ -9,8 +9,7 @@ node
 
 ## Decision
 
-Cairn runs under node with no build step and no runtime dependencies,
-carried forward from Same Page where it held for the life of the package.
+Cairn runs under node with no build step and no runtime dependencies.
 
 The reasoning is not inertia. A workflow tool that requires installation
 before it can tell you your project is misspecified has failed at its own

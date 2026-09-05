@@ -18,8 +18,7 @@ Proof-or-Stop defends against all of those. Its receipts are signed
 with a local key, its evidence carries producer identity, its verifier
 rejects eighteen tamper classes, and high-risk DONE needs three rounds
 of two independent host verdicts. That is the right apparatus for its
-threat model, and it is the apparatus that put Same Page's engine at
-4,443 lines for a threat that never materialised.
+threat model. Cairn has no observed need for that apparatus.
 
 The line: the receipt enters, because a record with a command, an exit
 code, and an output digest is self-describing and a hand-written one is

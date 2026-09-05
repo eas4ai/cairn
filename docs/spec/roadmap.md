@@ -59,7 +59,7 @@ in the specification.
 
 ## 5. The specification phase
 
-Ported from Same Page with the four repairs: ambiguity resolved and
+The skills apply four rules: ambiguity resolved and
 recorded rather than asked, falsifiers confirmed by exception, depth
 inferred, and the phase ending at the first commitment. Delivers the
 skills, and a spec-lint mechanism for PKG-007 and PKG-010. Covers

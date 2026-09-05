@@ -57,7 +57,5 @@ the clone and the script.
 
 ## Background
 
-Cairn succeeds Same Page, which established the specification phase and
-then grew a verification engine 2.3 times the size of the software it
-governed. The design record explains what carries forward, what does not,
-and why.
+The design record explains the workflow's rationale, the failures its
+rules prevent, and the boundary that keeps the referee small.

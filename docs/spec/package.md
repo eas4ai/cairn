@@ -23,9 +23,8 @@ records depend on.
 
 ## Complexity
 
-The failure this prevents is recorded: Same Page grew a verification
-engine of 4,443 lines to govern 1,932 lines of software, and the
-apparatus became the interface.
+The ceiling prevents verification machinery from becoming a second
+application the developer must administer.
 
 [PKG-003] A command, a record kind, or a directory under .cairn/ MUST
 NOT enter Cairn without a decision record that names it and the failure

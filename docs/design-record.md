@@ -1,13 +1,13 @@
 # Cairn -- design record
 
-(successor to Same Page; CLI command `cairn`)
+(CLI command `cairn`)
 
 Captured 2026-09-04 from the design conversation. Not a spec. The input
 to one.
 
-## Why v2
+## Failures the design addresses
 
-Measured on the current repo:
+Measurements from the workflow evaluated before Cairn was designed:
 
 - engine 4,443 lines / 23 modules; the software it governs 1,932 lines (2.3:1)
 - package was 2,354 lines at 0.3.1 (last release before the engine), 7,022 today
@@ -273,4 +273,3 @@ adversarial.md.
 Four requirements entered as Draft: LOOP-033, LOOP-034, LOOP-035,
 DEC-016. The last recovers an escalation trigger that was agreed in
 conversation and lost before it reached the spec.
-

@@ -11,21 +11,20 @@ Inherits: every PKG requirement
 The human and the agent build the specification together, and the
 agent stops asking questions it can answer.
 
-Delivers the /new-project and /existing-project skills, ported from
-Same Page with the four repairs, and one mechanism: a spec lint for
+Delivers the /new-project and /existing-project skills with the rules
+below, and one mechanism: a spec lint for
 PKG-007 and PKG-010 that also verifies every Agreed requirement carries
 a falsifier and every falsifier names an observable state.
 
-## What is ported, and what changes
+## Skill behavior
 
-From Same Page, kept: the staged confirm-back structure; Observed kept
-distinct from Agreed (SPEC-016, SPEC-017); the falsifier question at
-every agreement point; the glossary owning vocabulary (SPEC-010).
+The skills use a staged confirm-back structure, distinguish Observed
+from Agreed (SPEC-016, SPEC-017), ask for falsifiers at every agreement
+point, and use the glossary's vocabulary (SPEC-010).
 
-The four repairs:
+The four rules:
 
-- Standing rule 1 said "never silently resolve ambiguity; ask." It now
-  says resolve it from the spec, the conventions, or common practice,
+- Resolve ambiguity from the spec, the conventions, or common practice,
   and state the reading in the artifact (SPEC-005, SPEC-006, SPEC-007).
   Asking is for a preference, a priority, or a fact outside the
   repository.
@@ -37,8 +36,8 @@ The four repairs:
   commitment (SPEC-011); later commitments are specified during the
   loop (SPEC-012).
 
-Added: a review of the draft before agreement, recording what it
-attacked (SPEC-014, SPEC-015); and a rule that a requirement is not
+The skills also require a review of the draft before agreement,
+recording what it attacked (SPEC-014, SPEC-015). A requirement is not
 Agreed until a mechanism that could observe its falsifier can be named
 (SPEC-013).
 
@@ -50,9 +49,7 @@ A mechanism, not kernel. Reads docs/spec/*.md and fails on: a normative
 sentence with two obligations (PKG-007); an obligation with no actor
 (PKG-010); an Agreed requirement with no Falsifier line (SPEC-002); a
 domain spec declaring a prefix with no requirement under it (SPEC-001).
-The Same Page language check is the reference; this is the subset Cairn
-needs, and it stays a mechanism so its size does not count against the
-kernel.
+It stays a mechanism so its size does not count against the kernel.
 
 ## Tests
 

@@ -135,10 +135,10 @@ that writes a passing record by hand, because a hand-written record has
 no receipt to check.
 
 Cairn's own state files are never a mechanism's input. Freshness by
-global commit is the Same Page failure: every record stale after every
-commit, including commits that touched nothing the requirement governs.
-Declared inputs are the smallest thing that fixes it. Computing inputs is
-where the adapter registry came from, and it is out.
+global commit makes every record stale after every commit, including
+commits that touched nothing the requirement governs. Declared inputs
+restrict invalidation to the paths the mechanism reads, without adding
+dependency analysis to the kernel.
 
 [LOOP-007] The agent MUST NOT report a requirement as met using evidence
 produced before a change to the code that requirement governs.

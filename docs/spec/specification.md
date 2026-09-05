@@ -27,11 +27,9 @@ can name a mechanism that could observe the falsifier.
 Falsifier: a requirement is Agreed and no mechanism could produce
 evidence for or against it.
 
-Same Page discovered this at the end: eleven Agreed requirements whose
-falsifiers occur inside a live session, which no mechanism in that
-repository could observe. They stranded permanently. A falsifier no
-mechanism can observe is a falsifier that is not finished, and the place
-to find that out is while it is being written.
+A requirement whose falsifier no mechanism can observe cannot produce
+evidence. Find that defect while writing the requirement, before the
+developer agrees to it.
 
 [SPEC-003] The agent MUST state its understanding in its own words
 before it writes an artifact.

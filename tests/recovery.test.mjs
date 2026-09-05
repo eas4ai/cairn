@@ -108,3 +108,26 @@ test("a merged declared input still stales evidence (LOOP-047)", () => {
   git(root, "checkout", "main"); git(root, "merge", "--no-ff", "-m", "merge other", "other");
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001[\s\S]*declared input changed/);
 });
+
+test("wildcard and magic pathspecs select the same historical inputs (LOOP-024, LOOP-032)", () => {
+  for (const input of ["src/*", ":(glob)src/*", ":(literal)src/other"]) {
+    const root = setup({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("src/other", input) });
+    cairn(root, "check"); review(root);
+    assert.equal(cairn(root, "wake").status, 0, input);
+    writeFileSync(join(root, "src/other"), "different"); commit(root); cairn(root, "check");
+    assert.match(cairn(root, "wake").stdout, /^Resolvable: review first/, input);
+  }
+});
+
+test("historical selection retains deleted files and excludes new ones (LOOP-024, LOOP-035)", () => {
+  for (const change of ["add", "delete"]) {
+    const root = setup({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("src/other", "src/*") });
+    cairn(root, "check"); review(root); commit(root);
+    if (change === "add") writeFileSync(join(root, "src/new"), "new");
+    else unlinkSync(join(root, "src/exit"));
+    commit(root); const r = cairn(root, "check");
+    assert.match(r.stdout, /recorded.*R-001.*pass/, r.stdout);
+    assert.match(cairn(root, "wake").stdout, /^Resolvable: review first/, change);
+    review(root); assert.equal(cairn(root, "wake").status, 0);
+  }
+});

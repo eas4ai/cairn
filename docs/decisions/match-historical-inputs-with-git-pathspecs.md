@@ -8,7 +8,7 @@ History: The earlier reversal keeps a commitment able to complete from its own d
 
 ## Decision
 
-Use ls-files --with-tree to select historical paths with the same Git pathspec rules as current input selection. Intersect that selection with the actual historical ls-tree entries so paths added only in the current index cannot enter the old digest. Read the selected objects in the existing cat-file batch. This preserves binary and link content, includes historical deletions, and supports wildcard and magic pathspecs without writing a temporary index.
+Use ls-files --with-tree to select historical paths with the same Git pathspec rules as current input selection. Intersect that selection with the actual historical ls-tree entries so paths added only in the current index cannot enter the old digest. Read the selected objects in the existing cat-file batch. This preserves binary and link content, includes historical deletions, and supports wildcard and magic pathspecs without writing a temporary index. Use diff-tree pathspec matching for the footprint too, so deleting a file covered by a wildcard remains inside its declaration.
 
 ## Realized by
 

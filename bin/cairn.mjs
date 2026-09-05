@@ -110,13 +110,17 @@ function breaches(root, slug, mechs, requirements) {
   }
   if (!began) return [];
   const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${began}..HEAD`);
-  const changes = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z"],
-    { cwd: root, input: ownCommits.stdout, encoding: "utf8", maxBuffer: Infinity });
-  if (ownCommits.error || ownCommits.status !== 0 || changes.error || changes.status !== 0) throw new Error("cannot read the commitment's Git history");
-  const changed = [...new Set(changes.stdout.split("\0").filter(Boolean))];
+  if (ownCommits.error || ownCommits.status !== 0) throw new Error("cannot read the commitment's Git history");
+  const changed = changedPaths(root, ownCommits.stdout);
   const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
-  const covered = inputs.length ? inputFiles(root, inputs) : [];
-  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
+  const covered = new Set(inputs.length ? changedPaths(root, ownCommits.stdout, inputs) : []);
+  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.has(f));
+}
+function changedPaths(root, commits, inputs = []) {
+  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z", "--", ...inputs],
+    { cwd: root, input: commits, encoding: "utf8", maxBuffer: Infinity });
+  if (r.error || r.status !== 0) throw new Error("cannot read the commitment's changed paths");
+  return [...new Set(r.stdout.split("\0").filter(Boolean))];
 }
 
 // Every decision record with its header fields. A record's domain is the
@@ -195,9 +199,11 @@ function inputsDigest(root, inputs) {
 // The same digest over the tree as it was at a commit, for records that
 // name the commit they examined rather than carrying a digest.
 function inputsDigestAt(root, inputs, commit) {
-  const ls = git(root, "ls-tree", "-r", "-z", commit, "--", ...inputs);
-  if (ls.error || ls.status !== 0) return null;
-  const entries = ls.stdout.split("\0").filter(Boolean).map((line) => {
+  const ls = git(root, "ls-tree", "-r", "-z", commit);
+  const matches = git(root, "ls-files", `--with-tree=${commit}`, "-z", "--", ...inputs);
+  if (ls.error || ls.status !== 0 || matches.error || matches.status !== 0) return null;
+  const selected = new Set(matches.stdout.split("\0").filter(Boolean));
+  const entries = ls.stdout.split("\0").filter((line) => line && selected.has(line.slice(line.indexOf("\t") + 1))).map((line) => {
     const m = /^\d+ blob ([0-9a-f]+)\t([\s\S]+)$/.exec(line);
     return m && { oid: m[1], path: m[2] };
   });

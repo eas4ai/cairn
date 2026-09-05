@@ -1,7 +1,7 @@
 # Agreed per requirement, inherited by declaration
 
 Slug: agreed-per-requirement-inherited-by-declaration
-Requirements: SPEC-018, SPEC-019, PKG-015, LOOP-057, SPEC-002, SPEC-016, PKG-011
+Requirements: LOOP-024, LOOP-032, SPEC-018, SPEC-019, PKG-015, LOOP-057, SPEC-002, SPEC-016, PKG-011
 Inherits: every PKG requirement
 
 ## Goal
@@ -66,3 +66,10 @@ requirement, with a Status: line on the block overriding the file's.
 - A review record for this commitment at the current commit with no
   open finding.
 - `cairn wake` says Done.
+
+## Finding from the final review
+
+The combined review of commitments 11-14 found that wildcard inputs
+match tracked files through ls-files but match no historical paths through
+ls-tree. Complete the two-view input rule by applying Git pathspec matching
+to historical selection as well, retaining the same digest and batch read.

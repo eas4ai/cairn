@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-verdict-is-per-requirement
+Current: checks-stay-tied-to-their-requirements
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -134,6 +134,17 @@ First because both live projects are running against it today: one
 collapsed thirteen falsifiers into one bit to fit the kernel, and the
 other reached the developer with a Judged decision marked Blocking
 after two real attempts.
+
+## Checks stay tied to their requirements
+
+Named by the developer on 2026-09-05 after commitment 10 reached Done.
+Delivers: freshness tied to requirement and falsifier text; review of a
+check before evidence for revised text; duplicate ID and broken reference
+checks; safe violating examples when creating checks; preserved recon
+findings; a human walkthrough; and complete Git reads for large inputs.
+Covers LOOP-058 through LOOP-060, SPEC-020 through SPEC-023, PKG-016,
+and revisits LOOP-023 and LOOP-024.
+[Commitment](../commitments/checks-stay-tied-to-their-requirements.md).
 
 ## 11. The output is evidence
 

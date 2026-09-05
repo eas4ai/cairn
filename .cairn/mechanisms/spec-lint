@@ -7,3 +7,5 @@ requirements:
   - SPEC-002
   - PKG-007
   - PKG-010
+  - SPEC-020
+  - SPEC-021

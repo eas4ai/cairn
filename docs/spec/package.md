@@ -115,3 +115,12 @@ commitment rather than assigned to one.
 [PKG-008] Every file Cairn ships MUST contain only ASCII characters,
 unless the file is not text.
 Falsifier: a text file Cairn ships contains a character outside ASCII.
+
+## Learning the workflow
+
+[PKG-016] Cairn MUST provide a linked worked example from agreement
+through a failing check, correction, review, escalation, and next commitment.
+Falsifier: the README provides no walkthrough showing those steps with
+commands and an explanation of the human's choices.
+
+Confirmed 2026-09-05 from the developer's accepted recommendations.

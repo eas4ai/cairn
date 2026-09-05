@@ -34,8 +34,8 @@ requirement, together with the state of the code when it ran.
 **Falsifier.** The observable state that would prove a requirement is
 not met. Confirmed by the developer when the requirement is confirmed.
 
-**Freshness.** Whether evidence still describes the current state of the
-code.
+**Freshness.** Whether evidence still describes the current requirement,
+its falsifier, and the code checked against them.
 
 **Loop.** The autonomous phase. The agent works against one commitment
 until it is met or until a Blocking decision stops it.

@@ -118,10 +118,11 @@ inputs and of the mechanism itself.
 Falsifier: evidence exists with no digest, or with a digest that omits
 the mechanism.
 
-[LOOP-024] Evidence is stale when the digest no longer matches; the
-agent MUST NOT treat a change outside a mechanism's declared inputs as
-making its evidence stale.
-Falsifier: a change to a file no mechanism declares makes evidence stale.
+[LOOP-024] When its requirement and falsifier are unchanged, the agent
+MUST NOT treat a change outside a mechanism's declared inputs as making
+its evidence stale.
+Falsifier: an unrelated file change makes evidence stale while its
+requirement, falsifier, mechanism, and declared inputs are unchanged.
 
 [LOOP-034] Evidence MUST carry the command that ran, its arguments, its
 working directory, its exit code, and a digest of its output.
@@ -514,3 +515,39 @@ An `instead` reply changes what gets built, and nothing in the wake
 pointed the agent that resumed at it; an `ask` reply closed the
 escalation on the developer's question. Both left the resume point
 LOOP-014 promises with no way to reach the answer.
+
+## Evidence follows the agreement
+
+Confirmed 2026-09-05: the developer accepted the comparison's five
+recommendations and added the large-input defect.
+
+[LOOP-058] The loop MUST treat evidence for different requirement or
+falsifier text as stale.
+Falsifier: tightening a response limit from 500 ms to 100 ms leaves
+evidence for the 500 ms limit current.
+
+A receipt carries requirement_digest for its requirement paragraph and
+Falsifier paragraph. Status lines, headings, and separate rationale are
+not part of that digest. Old receipts use the text at their recorded
+commit; unavailable text cannot establish freshness. A commitment review
+is also stale when a requirement it covers changed since its commit.
+
+[LOOP-059] Before recording evidence for revised requirement text, the
+loop MUST require a recorded review of the mechanism against that text.
+Falsifier: rerunning the old 500 ms check records new passing evidence
+for the 100 ms requirement without a mechanism review.
+
+The agent examines the check, corrects it where needed, and records what
+it examined in the commitment's existing review file. It then adds
+`ID sha256:...` to the mechanism declaration's reviewed list, using the
+digest wake prints. This records the agent's judgment, not proof of its
+understanding. The declaration and specification are committed before
+check. A first check with no prior evidence needs no revision marker.
+
+[LOOP-060] The loop MUST digest a declared input identically at a commit
+and in the tree whatever its size.
+Falsifier: a tracked input larger than 1 MiB makes a review that examined
+HEAD stale at HEAD.
+
+Git listings and blob reads have no imposed output limit. A failed blob
+read produces no digest; bytes received before failure are not evidence.

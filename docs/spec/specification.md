@@ -160,3 +160,37 @@ Status: Agreed 2026-09-05
 
 A cairn is for someone with no memory. An absolute path on one machine
 is dead for them; the first adoption wrote five.
+
+## Checks and findings that survive a session
+
+Confirmed 2026-09-05 from the developer's accepted recommendations.
+
+[SPEC-020] The specification checker MUST reject duplicate requirement
+identifiers across the scanned specification.
+Falsifier: two requirement definitions use one identifier and the checker
+reports clean.
+
+[SPEC-021] The specification checker MUST reject unresolved references
+to identifiers in a prefix declared by the scanned specification.
+Falsifier: a spec declaring prefix APP references APP-999, no requirement
+defines it, and the checker reports clean.
+
+Definitions and references inside fenced examples, inline code, and
+quoted mentions do not count. References may cross spec files. The
+checker names the identifier and source location in each finding.
+
+[SPEC-022] When a safe violating example is practical, the agent MUST
+demonstrate that a new or revised mechanism detects its intended violation.
+Falsifier: the agent relies on a passing check without trying an available
+safe example that violates the requirement.
+
+Use a disposable fixture, reproduction, or controlled fault. Establish
+that failure came from the intended violation, not setup or a crash.
+Then check the corrected case. When this cannot be done safely, record
+the reason and the untested limit in the existing review; do not claim
+that a passing result demonstrates detection.
+
+[SPEC-023] When refreshing a recon report, the agent MUST preserve each
+unresolved finding or link it to an existing backlog entry.
+Falsifier: a previously unresolved finding disappears from recon without
+a resolution supported by evidence or a link to its backlog entry.

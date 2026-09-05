@@ -6,6 +6,8 @@ inputs:
   - scripts/
   - AGENTS.md
   - CLAUDE.md
+  - README.md
+  - docs/walkthrough.md
 requirements:
   - LOOP-036
   - LOOP-001
@@ -86,3 +88,9 @@ requirements:
   - LOOP-052
   - LOOP-053
   - DEC-019
+  - LOOP-058
+  - LOOP-059
+  - LOOP-060
+  - SPEC-022
+  - SPEC-023
+  - PKG-016

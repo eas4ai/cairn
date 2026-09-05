@@ -1,6 +1,9 @@
 commitment: the-verdict-is-per-requirement
-commit: 3a4e43c
+commit: 24a43a7
 examined:
+  - clarification invitation at 24a43a7: both skills tell the agent to offer another explanation with decision and agreement prompts, using the sentence in the shared working agreement
+  - escalation presentation: the invitation follows the existing reply options on the same Reply line; no new command, reply type, or record field was added
+  - the repository and shipped working agreements match byte for byte; node-test, spec-lint, and pkg-lint recorded passing evidence; review checks the instruction, not whether every future agent will follow it
   - writing guidance at 3a4e43c: questions name the choice, recommendation, reason, alternative, and consequences; explanations keep necessary technical distinctions and separate observations from assumptions
   - manual reading against a draft-saving question and an upload-retry decision: the rules make the behavior explicit and require important limits to remain visible; shorter prose is not permission to change the meaning
   - agreement by exception: the developer can confirm the set and correct only selected items, but silence or a reply showing misunderstanding is not treated as agreement; no per-item approval loop was added

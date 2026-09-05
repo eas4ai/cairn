@@ -1,0 +1,1032 @@
+✔ a Draft block overrides an Agreed file for both wake and check (SPEC-018) (141.558347ms)
+✔ an Agreed block overrides a Draft file in the kernel and lint (SPEC-018, SPEC-002) (277.835067ms)
+✔ a block Status does not become the file default, including inside examples (SPEC-018) (260.526317ms)
+✔ block status without a value does not inherit Agreed by accident (SPEC-018) (63.598025ms)
+✖ inheritance needs a file Scope and includes only Agreed blocks, regardless of prefix (PKG-015) (273.936474ms)
+✖ Scope inside a requirement or fenced example does not declare inheritance (PKG-015) (0.283091ms)
+✔ check refuses a dirty declared input and names it; a dirty undeclared file does not block (199.017216ms)
+✔ check writes one record per requirement carrying the full receipt (124.565519ms)
+✔ a nonzero exit records fail, and the receipt keeps the exit code (118.318453ms)
+✔ two checks write two records; nothing is overwritten or deleted (235.703614ms)
+✔ a commit changing a declared input makes evidence stale; an undeclared one does not (370.083033ms)
+✖ a regression is named before a requirement that never passed (0.19983ms)
+✖ three attempts with no escalation since: wake says escalate, not a fourth (DEC-016, DEC-017, DEC-018) (0.087099ms)
+✖ the review gate: no review, stale review, open finding, then Done (0.079043ms)
+✖ Done is refused while any requirement lacks current passing evidence (0.072145ms)
+✖ check names a requested requirement that no mechanism claims (0.096041ms)
+✖ check writes and clears an in-progress record around the run (0.059374ms)
+✖ a linked declared input digests the same at a commit and in the tree (LOOP-023, LOOP-024) (0.108633ms)
+✖ a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052) (0.195622ms)
+✖ a mechanism that says nothing is read by its exit code for every requirement (LOOP-039) (0.151551ms)
+✖ unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018) (0.144101ms)
+✖ a result line for a requirement the mechanism does not speak for is named and writes nothing (LOOP-038) (0.113203ms)
+✖ a result line inside ordinary output, or without the marker, does not count (0.106821ms)
+✖ a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040) (0.126707ms)
+✖ two result lines for one requirement: a fail on any line wins (0.106891ms)
+✖ three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053) (0.126143ms)
+✔ writes a record with every required field and an empty realized-by (31.503756ms)
+✔ a Consequential decision is queued for review (36.671966ms)
+✔ a Consequential decision is queued even when .cairn/queue does not exist yet (36.087993ms)
+✔ Routine is refused: routine decisions produce no record (29.315535ms)
+✔ a missing field is a usage error and nothing is written (40.910117ms)
+✔ supersedes requires a classified cause, and the old record must exist (116.499479ms)
+✔ an existing record is not overwritten (72.762353ms)
+✔ a queued decision stays queued; nothing but the developer removes it (DEC-014) (71.434943ms)
+✔ escalate writes the six-line format followed by its facts, and wake presents it (96.769415ms)
+✔ a missing or multi-line field is refused with the field named, and nothing is written (90.067286ms)
+✔ a Blocking escalation that fails the format is written anyway, naming the malformed field (LOOP-014) (94.017303ms)
+✔ a --level other than Blocking is refused rather than silently losing the bypass (40.547384ms)
+✔ a second escalation while one is open is refused (LOOP-011) (84.637101ms)
+✔ answer records the reply; wake no longer presents it; a second answer is refused (186.254996ms)
+✔ answer to an unknown escalation is refused (47.663766ms)
+✔ a stranger resumes from the file alone: question and answer are both in it (LOOP-013) (69.612264ms)
+✔ after an answer, the same concern can be escalated again under a new name (122.199376ms)
+✔ an escalation exists when its file does, committed or not (LOOP-009) (59.362379ms)
+✔ developer answers require one of the three forms and cannot inject fields (LOOP-048) (311.628284ms)
+✖ ask, agent explanation, another ask, and ok stay ordered in one file (LOOP-049, LOOP-050, LOOP-014) (0.294084ms)
+✖ fresh closed answers accompany only concerned requirements until new evidence (LOOP-051) (0.106865ms)
+✔ a PKG requirement the commitment does not name is declared, run, and gates Done (PKG-011) (662.900314ms)
+✔ a PKG requirement in a Draft spec is not folded in (210.090297ms)
+✔ the script links cairn and the skills, and the linked cairn runs (PKG-014, PKG-005) (133.211744ms)
+✔ a link owned by another package is kept; --force replaces it; --unlink removes ours and leaves a stranger's (89.684325ms)
+✔ --force never replaces a real directory (29.457683ms)
+✔ three megabytes are retained exactly once with matching digests (LOOP-041, LOOP-042) (161.708835ms)
+✔ split stdout result lines survive a long non-result line; stderr is never a verdict (165.23547ms)
+✔ signal termination is recorded and logs survive a clone (LOOP-043) (132.216158ms)
+✔ working agreements and ignore changes are Cairn records inside the footprint (137.696834ms)
+✔ a clean package passes (60.953833ms)
+✔ PKG-001: a dependency, or a service manifest (111.519226ms)
+✔ PKG-002: ignoring evidence or other durable state (51.849929ms)
+✔ PKG-003: a command, a directory, or a record kind no decision names (120.00949ms)
+✔ PKG-004: a kernel over 1500 lines (41.257006ms)
+✔ PKG-006: a skill step naming a vendor's product (49.499057ms)
+✔ PKG-008: a non-ASCII character in a tracked text file (44.743542ms)
+✔ PKG-009: the kernel importing from tests (52.010005ms)
+✔ PKG-012: a network call or a model vendor in the kernel (95.574789ms)
+✔ PKG-013: deferral language, but not in code, quotes, or a rule (81.268584ms)
+✔ this repository passes the package lint (87.008138ms)
+✔ a tracked path deleted from the working tree is skipped, not a crash (53.355357ms)
+✔ a sentence in a Formats section is not a record kind (50.200351ms)
+✔ a record kind named by its path alone is checked (40.403604ms)
+✔ PKG-002: a tracked in-progress record (41.258382ms)
+✔ PKG-002: ignoring evidence alone is a finding (51.125115ms)
+✔ each unmatched input and each duplicate owner is refused before execution (LOOP-044, LOOP-056) (218.60901ms)
+✔ an indexed input deleted on disk asks for a commit (LOOP-045) (81.661023ms)
+✔ wake and check require a Git working tree (LOOP-046) (82.210374ms)
+✔ recovery removes only dead kernel run records and identifies a live owner (LOOP-054, LOOP-055) (179.79889ms)
+✔ an agent action based behind a clean HEAD appears committed (LOOP-027) (136.726443ms)
+✔ realization needs a real commit and a subject (DEC-006) (175.148457ms)
+✖ 1500 binary inputs digest identically at the review commit in under a second (LOOP-024, LOOP-032) (155.012268ms)
+✖ merged work is excluded but a later own commit is a breach (LOOP-047) (0.214024ms)
+✖ exact Current tenure ignores prefix matches and earlier visits to the same slug (LOOP-035) (0.178076ms)
+✖ a kernel run records its supervising PID (LOOP-054) (0.244348ms)
+✖ a merged declared input still stales evidence (LOOP-047) (0.161742ms)
+✖ wildcard and magic pathspecs select the same historical inputs (LOOP-024, LOOP-032) (0.176079ms)
+✖ historical selection retains deleted files and excludes new ones (LOOP-024, LOOP-035) (0.147553ms)
+✔ explicit reporting with no lines and exit 0 establishes no requirement verdicts (188.80719ms)
+✔ explicit reporting with no lines and exit 1 establishes no requirement verdicts (171.430795ms)
+✔ a reporter that cannot start keeps execution diagnostics without blaming requirements (110.268775ms)
+✔ large output cannot kill a reporter or invent a requirement verdict (136.371413ms)
+✔ explicit mode ignores cairn: R-999: pass (121.487847ms)
+✔ explicit mode ignores cairn: R-001: unverified (132.371714ms)
+✔ explicit mode ignores cairn: R-001: passed (128.552469ms)
+✖ explicit results survive nonzero exit and contradictory duplicates still fail (54.820845ms)
+✖ unverified results across changed inputs never become failed attempts (0.278674ms)
+✖ legacy exit 0 retains its interpretation (0.211273ms)
+✖ legacy exit 1 retains its interpretation (0.055951ms)
+✖ a misspelled reporting mode is refused before execution (0.074201ms)
+✔ changed requirement blocks unchecked reruns and makes the completion review stale (LOOP-058, LOOP-059) (754.940155ms)
+✖ falsifier changes need review; separate rationale and other requirements do not change a receipt (446.526811ms)
+✖ legacy receipts recover requirement identity from their commit; unavailable history requires review (0.156477ms)
+✖ check refuses uncommitted requirement text and mechanism review markers (0.08542ms)
+✖ tightened response limit cannot reuse the old passing check (0.098859ms)
+✖ a declared input over 1 MiB agrees at a commit and in the tree (LOOP-060) (0.067244ms)
+✖ a failed Git blob read cannot be hashed as an empty blob (0.059595ms)
+✖ Git listings over 1 MiB include the last declared input (0.070702ms)
+✖ requirement identity excludes fenced examples and status dates (0.065922ms)
+✔ backlog writes the item; a second with the same title is refused, never overwritten (LOOP-016) (84.091571ms)
+✔ a commit inside the footprint: check runs; outside it: check names the path and does not run (LOOP-035) (254.48279ms)
+✔ a file under .cairn/ or docs/ is never a breach (224.931686ms)
+✔ declaring the path as an input clears the breach (148.985327ms)
+✔ a revert preserves the record of an out-of-scope commit (LOOP-047) (190.298257ms)
+✔ a commitment naming a requirement the spec set does not hold as Agreed is repaired (LOOP-029) (48.286671ms)
+✔ a requirement in a Draft spec file is not Agreed (44.900409ms)
+✖ working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036) (51.38277ms)
+✔ the over-asking rule is gone from both skills (SPEC-005, SPEC-006) (1.377628ms)
+✔ a decision during the phase is recorded (DEC-003) (0.143975ms)
+✔ understanding is restated before writing (SPEC-003) (0.107788ms)
+✔ falsifiers are proposed as one set and confirmed by exception (SPEC-004) (0.313124ms)
+✔ depth is inferred and domains derived, never asked or imposed (SPEC-008, SPEC-009) (0.162326ms)
+✔ a term enters the glossary at first occurrence (SPEC-010) (0.111375ms)
+✔ the phase ends at the first commitment, and later ones are specified during the loop (SPEC-011, SPEC-012) (0.121668ms)
+✔ a requirement goes Agreed only with a nameable mechanism (SPEC-013) (0.121205ms)
+✔ review before agreement, recording what it attacked (SPEC-014, SPEC-015) (0.184854ms)
+✔ no spec file without requirements; nothing Agreed without a falsifier (SPEC-001, SPEC-002) (0.244079ms)
+✔ Observed is marked, and is not contract (SPEC-016, SPEC-017) (0.13222ms)
+✔ the skills exclude artifacts outside Cairn's workflow (0.158282ms)
+✔ the working agreement names the agent's move for each verdict and the write-ahead record (LOOP-036) (0.229126ms)
+✔ the working agreement names the developer's moves (LOOP-036, DEC-014) (0.091692ms)
+✔ this repository runs by the file it ships (0.416969ms)
+✔ both skills write the working agreement without naming a vendor's file (LOOP-036, PKG-006) (0.110589ms)
+✔ the working agreement says what an attempt is (LOOP-036, DEC-017, DEC-018) (0.084059ms)
+✔ the working agreement says a failure no footprint change can address is an escalation, and where an inherited requirement is repaired (DEC-019, LOOP-057) (0.091507ms)
+✔ a two-obligation sentence is named (PKG-007) (38.155038ms)
+✔ an obligation with no actor is named (PKG-010) (31.997802ms)
+✔ a leading condition clause is not the actor, and the actor after it counts (23.107125ms)
+✔ an Agreed requirement with no falsifier is named (SPEC-002); a Draft one is not (67.456406ms)
+✔ prose after a Draft requirement with no falsifier is not scanned as requirement text (32.2799ms)
+✔ a spec declaring a prefix with no requirement is named (SPEC-001) (34.144828ms)
+✔ a keyword in backticks or quotes is a mention, not an obligation (29.117678ms)
+✔ this repository's own specification passes the lint (34.248717ms)
+✔ duplicate identifiers are rejected within a file and across files (SPEC-020) (56.8541ms)
+✔ references resolve across files; missing references name their source (SPEC-021) (54.845849ms)
+✔ code examples and quoted mentions are neither definitions nor references (28.75545ms)
+✔ machine-local paths are findings in prose, links, quotes, and examples (SPEC-019) (297.925425ms)
+✔ relative paths, URLs, slash commands, and character mentions are not absolute path findings (27.935081ms)
+✔ supersede writes both lines, and the old record keeps every word it had (DEC-008, DEC-010) (56.72185ms)
+✔ supersede without a cause, or with one outside the four, is refused (DEC-009) (95.478683ms)
+✔ supersede of a record that does not exist is refused (43.473164ms)
+✔ a predecessor with no title line cannot be stamped, so nothing is written (43.160945ms)
+✔ reversals reports counts by decider, cause, and domain (DEC-011) (107.219045ms)
+✔ decide in a domain with a reversal is refused without --history, naming the reversal; with it, the record carries History (DEC-012) (113.425617ms)
+✔ decide in a domain with no reversals needs no --history (78.298304ms)
+✔ a record resting on prose alone is in the domain unspecified, and so is the next one (85.626522ms)
+✔ step 1: an in-progress record is reconciled before anything else (70.722227ms)
+✔ step 2: an open escalation is presented and nothing else happens (53.531575ms)
+✔ an answered escalation is not open (215.012159ms)
+✔ step 3: a decision with no realized-by is built, first by name (50.940243ms)
+✔ a superseded decision with no realized-by is not work (78.421701ms)
+✔ step 6: a mechanism that has never run is run, not implemented (73.904571ms)
+✔ step 6: a requirement whose mechanism fails is implemented (215.176801ms)
+✔ step 6 before step 7: failing evidence outranks a missing mechanism (187.535324ms)
+✔ step 7: a requirement with no mechanism is declared (62.323336ms)
+✖ step 10: every requirement current and passing, review clean, is Done (0.318832ms)
+✖ malformed roadmap is Resolvable, not fatal (0.106683ms)
+✖ a commitment naming no requirements is Resolvable (0.074435ms)
+✖ the primary test: two wakes on the same checkout give the same action (0.067982ms)
+✖ outside a cairn repository wake cannot run (0.048421ms)
+✖ the loop never waits on the review queue (DEC-015) (0.053088ms)
+✔ the linked walkthrough runs from agreement through the next commitment (PKG-016) (640.350945ms)
+ℹ tests 169
+ℹ suites 0
+ℹ pass 123
+ℹ fail 46
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1270.483438
+
+✖ failing tests:
+
+test at tests/agreement.test.mjs:43:1
+✖ inheritance needs a file Scope and includes only Agreed blocks, regardless of prefix (PKG-015) (273.936474ms)
+  Error: ENOSPC: no space left on device, open '/tmp/cairn-J9SQd7/.cairn/reviews/first.md'
+      at writeFileSync (node:fs:2408:20)
+      at review (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:38:48)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/agreement.test.mjs:49:29)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'open',
+    path: '/tmp/cairn-J9SQd7/.cairn/reviews/first.md'
+  }
+
+test at tests/agreement.test.mjs:58:1
+✖ Scope inside a requirement or fenced example does not declare inheritance (PKG-015) (0.283091ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/agreement.test.mjs:60:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:61:1
+✖ a regression is named before a requirement that never passed (0.19983ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:62:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:75:1
+✖ three attempts with no escalation since: wake says escalate, not a fourth (DEC-016, DEC-017, DEC-018) (0.087099ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:76:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:93:1
+✖ the review gate: no review, stale review, open finding, then Done (0.079043ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:94:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:115:1
+✖ Done is refused while any requirement lacks current passing evidence (0.072145ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:116:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:121:1
+✖ check names a requested requirement that no mechanism claims (0.096041ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:122:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:127:1
+✖ check writes and clears an in-progress record around the run (0.059374ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:128:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:133:1
+✖ a linked declared input digests the same at a commit and in the tree (LOOP-023, LOOP-024) (0.108633ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:134:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:144:1
+✖ a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052) (0.195622ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:145:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:156:1
+✖ a mechanism that says nothing is read by its exit code for every requirement (LOOP-039) (0.151551ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:157:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:162:1
+✖ unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018) (0.144101ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:163:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:176:1
+✖ a result line for a requirement the mechanism does not speak for is named and writes nothing (LOOP-038) (0.113203ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:177:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:184:1
+✖ a result line inside ordinary output, or without the marker, does not count (0.106821ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:185:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:190:1
+✖ a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040) (0.126707ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:191:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:200:1
+✖ two result lines for one requirement: a fail on any line wins (0.106891ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:201:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/check.test.mjs:206:1
+✖ three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053) (0.126143ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at repo (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:9:26)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/check.test.mjs:207:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/escalate.test.mjs:104:1
+✖ ask, agent explanation, another ask, and ok stay ordered in one file (LOOP-049, LOOP-050, LOOP-014) (0.294084ms)
+  Error: ENOSPC: no space left on device, open '/tmp/cairn-WI2PiY/docs/spec/roadmap.md'
+      at writeFileSync (node:fs:2408:20)
+      at w (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:24:85)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:25:3)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/escalate.test.mjs:105:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'open',
+    path: '/tmp/cairn-WI2PiY/docs/spec/roadmap.md'
+  }
+
+test at tests/escalate.test.mjs:121:1
+✖ fresh closed answers accompany only concerned requirements until new evidence (LOOP-051) (0.106865ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/escalate.test.mjs:122:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:71:1
+✖ 1500 binary inputs digest identically at the review commit in under a second (LOOP-024, LOOP-032) (155.012268ms)
+  Error: ENOSPC: no space left on device, open '/tmp/cairn-Cj2vIM/.cairn/reviews/first.md'
+      at writeFileSync (node:fs:2408:20)
+      at review (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:38:48)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:75:39)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'open',
+    path: '/tmp/cairn-Cj2vIM/.cairn/reviews/first.md'
+  }
+
+test at tests/recovery.test.mjs:80:1
+✖ merged work is excluded but a later own commit is a breach (LOOP-047) (0.214024ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:81:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:89:1
+✖ exact Current tenure ignores prefix matches and earlier visits to the same slug (LOOP-035) (0.178076ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:90:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:99:1
+✖ a kernel run records its supervising PID (LOOP-054) (0.244348ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:101:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:105:1
+✖ a merged declared input still stales evidence (LOOP-047) (0.161742ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:106:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:112:1
+✖ wildcard and magic pathspecs select the same historical inputs (LOOP-024, LOOP-032) (0.176079ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:114:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/recovery.test.mjs:122:1
+✖ historical selection retains deleted files and excludes new ones (LOOP-024, LOOP-035) (0.147553ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:7:27)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/recovery.test.mjs:124:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/reporting-mode.test.mjs:45:1
+✖ explicit results survive nonzero exit and contradictory duplicates still fail (54.820845ms)
+  TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined
+      at join (node:path:1261:7)
+      at record (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:8:44)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:48:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    code: 'ERR_INVALID_ARG_TYPE'
+  }
+
+test at tests/reporting-mode.test.mjs:55:1
+✖ unverified results across changed inputs never become failed attempts (0.278674ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:56:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/reporting-mode.test.mjs:66:28
+✖ legacy exit 0 retains its interpretation (0.211273ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:67:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/reporting-mode.test.mjs:66:28
+✖ legacy exit 1 retains its interpretation (0.055951ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:67:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/reporting-mode.test.mjs:72:1
+✖ a misspelled reporting mode is refused before execution (0.074201ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/reporting-mode.test.mjs:73:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:40:1
+✖ falsifier changes need review; separate rationale and other requirements do not change a receipt (446.526811ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /recorded .*R-002/. Input:
+  
+  'Resolvable: commit docs/spec/test.md\n' +
+    '  n needs committed inputs, specification, and declaration; uncommitted changes: docs/spec/test.md (LOOP-030)\n'
+  
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:46:10)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:332:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Resolvable: commit docs/spec/test.md\n  n needs committed inputs, specification, and declaration; uncommitted changes: docs/spec/test.md (LOOP-030)\n',
+    expected: /recorded .*R-002/,
+    operator: 'match'
+  }
+
+test at tests/requirement-freshness.test.mjs:50:1
+✖ legacy receipts recover requirement identity from their commit; unavailable history requires review (0.156477ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:11:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:51:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:60:1
+✖ check refuses uncommitted requirement text and mechanism review markers (0.08542ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:11:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:61:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:70:1
+✖ tightened response limit cannot reuse the old passing check (0.098859ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:73:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:85:1
+✖ a declared input over 1 MiB agrees at a commit and in the tree (LOOP-060) (0.067244ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:86:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:96:1
+✖ a failed Git blob read cannot be hashed as an empty blob (0.059595ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:97:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:105:1
+✖ Git listings over 1 MiB include the last declared input (0.070702ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:106:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/requirement-freshness.test.mjs:120:1
+✖ requirement identity excludes fenced examples and status dates (0.065922ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at setup (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:11:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/requirement-freshness.test.mjs:121:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/scope.test.mjs:74:2
+✖ working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036) (51.38277ms)
+  Error: ENOSPC: no space left on device, open '/tmp/cairn-G0mO6o/.cairn/reviews/first.md'
+      at writeFileSync (node:fs:2408:20)
+      at review (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:38:48)
+      at green (file:///home/shawn/workspace2/cairn/tests/scope.test.mjs:10:49)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/scope.test.mjs:75:24)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'open',
+    path: '/tmp/cairn-G0mO6o/.cairn/reviews/first.md'
+  }
+
+test at tests/wake.test.mjs:74:1
+✖ step 10: every requirement current and passing, review clean, is Done (0.318832ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:75:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/wake.test.mjs:82:1
+✖ malformed roadmap is Resolvable, not fatal (0.106683ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:83:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/wake.test.mjs:88:1
+✖ a commitment naming no requirements is Resolvable (0.074435ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:89:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/wake.test.mjs:94:1
+✖ the primary test: two wakes on the same checkout give the same action (0.067982ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:95:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }
+
+test at tests/wake.test.mjs:101:1
+✖ outside a cairn repository wake cannot run (0.048421ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-none-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:102:18)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-none-XXXXXX'
+  }
+
+test at tests/wake.test.mjs:106:1
+✖ the loop never waits on the review queue (DEC-015) (0.053088ms)
+  Error: ENOSPC: no space left on device, mkdtemp '/tmp/cairn-XXXXXX'
+      at mkdtempSync (node:fs:3032:18)
+      at repo (file:///home/shawn/workspace2/cairn/tests/helpers.mjs:23:16)
+      at TestContext.<anonymous> (file:///home/shawn/workspace2/cairn/tests/wake.test.mjs:107:16)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1062:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:752:18)
+      at Test.postRun (node:internal/test_runner/test:1191:19)
+      at Test.run (node:internal/test_runner/test:1119:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:752:7) {
+    errno: -28,
+    code: 'ENOSPC',
+    syscall: 'mkdtemp',
+    path: '/tmp/cairn-XXXXXX'
+  }

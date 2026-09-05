@@ -100,6 +100,30 @@ You can say:
 The agent can write the agreement for you. Confirming one requirement does
 not confirm everything else in its file.
 
+### When the software requires a host path
+
+References to project files should use repository-relative paths, such as
+`src/server.rs`. Some products also require a particular host binary or
+configuration location. Those paths belong in the agreement too.
+
+Ask the agent to declare them in the affected spec file's header, before
+its first requirement:
+
+```text
+Host paths: /usr/bin/bwrap, ~/.suprnova/config.toml
+```
+
+The list applies only to that file. Each entry permits the exact path and
+paths beneath it; `/run` covers `/run/app/socket`, but not `/run-other`.
+Choose the narrowest path the product needs. A declaration inside a code
+example or requirement body does not count. Templates such as
+`<runtime-directory>/app.sock` do not need a declaration.
+
+If the linter reports an absolute path, check what it means: a citation to
+someone's checkout should become relative; a path required by the product
+should be declared. The linter checks the declaration, while you and the
+agent check whether the exception describes real product behavior.
+
 ## Let the agent work, and know when it needs you
 
 The agent's working agreement tells it to run `cairn wake`, do the action

@@ -93,3 +93,47 @@ test("relative paths, URLs, slash commands, and character mentions are not absol
   const r = lint(fixture(AGREED + '[X-001] The agent MUST act.\nFalsifier: It waits.\n\n' + text));
   assert.equal(r.status, 0, r.stdout);
 });
+
+test("a slash after a placeholder continues the template (SPEC-019)", () => {
+  const text = "The socket is `<runtime-directory>/suprnova.sock`; tags are `suprnova/<run>/v<version>`.\nUse <system-temp>/suprnova-<UID> and <repository>/.suprnova/config.toml.\n";
+  const r = lint(fixture(AGREED + "[X-001] The agent MUST act.\nFalsifier: It waits.\n\n" + text));
+  assert.equal(r.status, 0, r.stdout);
+  assert.match(lint(fixture(AGREED + "Read </tmp/input>.\n")).stdout, /absolute path \/tmp\/input/);
+});
+
+test("a host path is a finding until the file declares it (SPEC-019, SPEC-024)", () => {
+  const body = "[X-001] The agent MUST act.\nFalsifier: It waits.\n\nTask Bash requires `/usr/bin/bwrap` and reads `~/.suprnova/config.toml`.\n";
+  let r = lint(fixture(AGREED + body));
+  assert.equal(r.status, 1); assert.match(r.stdout, /absolute path \/usr\/bin\/bwrap/);
+  r = lint(fixture(AGREED + "Host paths: /usr/bin/bwrap, ~/.suprnova/config.toml\n" + body));
+  assert.equal(r.status, 0, r.stdout);
+});
+
+test("declared host paths cover children with a slash boundary and stay file-local", () => {
+  const body = "[X-001] The agent MUST act.\nFalsifier: It waits.\n\n";
+  const header = AGREED + "Host paths: /run/, ~/.config/app\n";
+  let r = lint(fixture(header + body + 'Read /run, `/run/app/socket`, "~/.config/app/config.toml", and </run/app>.\n```sh\ncat /run/app/socket\n```\n'));
+  assert.equal(r.status, 0, r.stdout);
+  r = lint(fixture(header + body + "Read /run-other/socket, ~/.config/application/config.toml, and /tmp/input.\n"));
+  assert.equal(r.status, 1); assert.match(r.stdout, /absolute path \/run-other\/socket/);
+  assert.match(r.stdout, /absolute path ~\/\.config\/application\/config.toml/);
+  assert.match(r.stdout, /absolute path \/tmp\/input/);
+  const dir = fixture(header + body);
+  writeFileSync(join(dir, "y.md"), "Read /run/app/socket.\n");
+  assert.match(lint(dir).stdout, /y.md:1: absolute path \/run\/app\/socket/);
+});
+
+test("a host-path declaration inside a requirement or example grants no exception", () => {
+  const body = "[X-001] The agent MUST act.\nFalsifier: It waits.\n";
+  for (const text of [body + "Host paths: /tmp\n", "```md\nHost paths: /tmp\n```\n" + body, "~~~~md\nHost paths: /tmp\n~~~~\n" + body]) {
+    const r = lint(fixture(AGREED + text + "\nRead /tmp/input.\n"));
+    assert.equal(r.status, 1); assert.match(r.stdout, /absolute path \/tmp\/input/);
+  }
+});
+
+test("host-path declarations require absolute or home-relative entries", () => {
+  for (const value of ["", "relative/path", "/tmp,", "https://example.test/tmp", "/tmp extra"]) {
+    const r = lint(fixture(AGREED + `Host paths: ${value}\n[X-001] The agent MUST act.\nFalsifier: It waits.\n`));
+    assert.equal(r.status, 1, value); assert.match(r.stdout, /Host paths:.*SPEC-024/);
+  }
+});

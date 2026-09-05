@@ -142,6 +142,13 @@ A file's Status is the default for blocks without their own status. Keep
 unconfirmed blocks Observed or Draft, even inside an Agreed file. A
 partial confirmation does not change neighboring requirements.
 Cite paths relative to the repository root, including paths in examples.
+When a host path is part of the software's behavior, declare it in that
+spec file's header: `Host paths: /usr/bin/bwrap, ~/.app/config.toml`.
+Put the comma-separated list before the first requirement, outside code
+fences. Each entry covers itself and child paths; use the narrowest path
+the behavior needs. Check that it describes the product, not a checkout.
+Placeholder templates such as `<runtime-directory>/app.sock` need no
+declaration. Undeclared absolute and home-relative paths remain findings.
 Declare inherited rules with `Scope: every commitment` in their spec
 file's header; the prefix alone does not make a rule global.
 Corrected reading: you misread the code; fix, cite again,

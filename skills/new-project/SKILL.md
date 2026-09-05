@@ -137,6 +137,13 @@ domain spec through the confirm-back loop:
   neighbors. Do not promote a whole file on a partial confirmation.
 - Cite paths relative to the repository root, including paths in examples.
   Use `src/service.mjs`, not a path tied to one developer's machine.
+  When a host path is part of the software's behavior, declare it in that
+  spec file's header: `Host paths: /usr/bin/bwrap, ~/.app/config.toml`.
+  Put the comma-separated list before the first requirement, outside code
+  fences. Each entry covers itself and child paths; use the narrowest path
+  the behavior needs. Check that it describes the product, not a checkout.
+  Placeholder templates such as `<runtime-directory>/app.sock` need no
+  declaration. Undeclared absolute and home-relative paths remain findings.
 - Put `Scope: every commitment` in a spec file's header only for rules
   every commitment must satisfy. Its Agreed blocks are inherited; a
   requirement prefix alone does not make a rule global.

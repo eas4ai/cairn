@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // The spec lint: a mechanism, not kernel. Reads a spec directory and
-// fails on what PKG-007, PKG-010, SPEC-001, and SPEC-002 forbid.
+// checks requirement form, references, and declared host paths.
 //
 //   node scripts/spec-lint.mjs docs/spec
 //
@@ -22,6 +22,19 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
   const ids = [...text.matchAll(/^\[([A-Z]+-\d+)\]/gm)].map((m) => m[1]);
   if (prefix && ids.length === 0) findings.push(`${name}: declares Prefix: ${prefix} and holds no requirement (SPEC-001)`);
   if (prefix) prefixes.add(prefix);
+  const hostPaths = [], hostLines = new Set();
+  // Use the shared parser's header boundary and blanked fenced examples.
+  const headerEnd = spec.blocks.length ? spec.blocks[0].line - 1 : lines.length;
+  for (const [i, line] of lines.slice(0, headerEnd).entries()) {
+    const declaration = /^Host paths:[ \t]*(.*)$/.exec(line);
+    if (!declaration) continue;
+    hostLines.add(i);
+    for (const entry of declaration[1].split(",").map((p) => p.trim())) {
+      if (!/^(?:\/|~(?:[a-zA-Z_][a-zA-Z0-9_-]*)?(?:\/|$))[^\s`"'<>),;]*$/.test(entry)) {
+        findings.push(`${name}:${i + 1}: Host paths: requires comma-separated absolute or home-relative paths (SPEC-024)`);
+      } else hostPaths.push(entry.replace(/\/+$/, "") || "/");
+    }
+  }
   for (const [i, line] of lines.entries()) {
     const clean = strip(line), def = /^\[([A-Z]+-\d+)\]/.exec(clean);
     if (def) {
@@ -32,11 +45,13 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
   }
 
   for (const [i, line] of raw.split(/\r?\n/).entries()) {
+    if (hostLines.has(i)) continue;
     const local = line.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s<>"'`]+/gi, " ");
-    for (const m of local.matchAll(/(?:^|[\s`"'(=<>\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/)[^\s`"'<>),;]*)/g)) {
+    for (const m of local.matchAll(/(?:^|[\s`"'(=<\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/)[^\s`"'<>),;]*)/g)) {
       const path = m[1].replace(/[.!?:]+$/, "");
       if (path === "/" || ["/new-project", "/existing-project"].includes(path)) continue;
-      findings.push(`${name}:${i + 1}: absolute path ${path}; cite a path relative to the repository root (SPEC-019)`);
+      if (hostPaths.some((host) => path === host || path.startsWith(host === "/" ? "/" : host + "/"))) continue;
+      findings.push(`${name}:${i + 1}: absolute path ${path}; cite a repository-relative path or declare software behavior in Host paths: (SPEC-019)`);
     }
   }
 

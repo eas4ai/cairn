@@ -303,3 +303,214 @@ review. It is whether a finding can block.
 Agreed requirement in it has current evidence that it is met.
 Falsifier: a commitment reports complete while one of its requirements
 has no evidence, or has evidence that predates a later change.
+
+## Drafted from the first adoptions
+
+The requirements below were drafted on 2026-09-05 from two live
+projects running the loop. Each carries its own Status: line, which
+SPEC-018 makes the kernel read ahead of this file's. The developer
+confirmed the set by exception on 2026-09-05, with corrections to
+LOOP-039 and DEC-017 recorded in place. Until SPEC-018 is built, the
+kernel reads one Status: per file, so a requirement drafted after
+this date goes in docs/spec/draft.md under `Status: Draft` and moves
+to its domain file when the developer confirms it.
+
+### Evidence per requirement
+
+[LOOP-037] The loop MUST read a line `cairn: <REQ-ID>: pass` or
+`cairn: <REQ-ID>: fail` on a mechanism's standard output as that
+requirement's result.
+Falsifier: a mechanism prints `cairn: R-002: pass` and exits nonzero,
+and R-002's record says fail.
+Status: Agreed 2026-09-05
+
+The marker is what keeps a test suite's own output from being read as
+a verdict: a line has to be written to be one. Both adopters asked
+for it.
+
+[LOOP-038] The loop MUST ignore a result line for a requirement the
+mechanism does not speak for.
+Falsifier: a mechanism that speaks for R-001 prints
+`cairn: R-002: pass`, and R-002 gains a record.
+Status: Agreed 2026-09-05
+
+[LOOP-039] When a mechanism's output reports no result for any
+requirement it speaks for, the agent MUST record every requirement's
+evidence from the command's exit code.
+Falsifier: a mechanism that prints no result line writes a record
+whose result disagrees with its exit code.
+Status: Agreed 2026-09-05
+
+[LOOP-052] When a mechanism's output reports a result for one
+requirement it speaks for and none for another, the agent MUST record
+the other as unverified.
+Falsifier: a mechanism prints `cairn: R-001: pass` and exits nonzero,
+and R-002's record says pass or fail.
+Status: Agreed 2026-09-05
+
+A mechanism that says nothing is read by its exit code, as every
+mechanism was before result lines existed; that is the transition,
+and an existing mechanism's output earns nothing new by it. A
+mechanism that speaks is taken at its word for what it said and at
+nothing for what it did not: a run that aborted after the host checks
+leaves the native assertions unverified, not failed. Unverified is a
+result, so the record exists and the wake names the requirement; it
+is not a fail, so it is not an attempt. Two lines for one requirement
+are one statement, and a fail on either is a fail.
+
+[LOOP-040] A check that names requirements MUST record evidence for
+every requirement each mechanism it runs speaks for.
+Falsifier: `cairn check R-001` runs a mechanism that speaks for R-001
+and R-002, and R-002 gains no record.
+Status: Agreed 2026-09-05
+
+One mechanism claiming thirteen requirements wrote thirteen identical
+records; a targeted check ran the same mechanism and kept one. The
+aggregate was the adopter's only option because the kernel gave a
+mechanism one result, and the falsifiers the specification phase had
+sharpened one by one collapsed into a single bit at the point they
+were meant to discriminate.
+
+### The output is evidence
+
+[LOOP-041] Evidence MUST keep the complete output of the command that
+produced it beside the record.
+Falsifier: an evidence record exists and the output its digest was
+computed over is not on disk.
+Status: Agreed 2026-09-05
+
+[LOOP-042] The loop MUST capture a mechanism's output without a bound
+on its size.
+Falsifier: a mechanism that writes more output than some limit is
+recorded as a failure it did not produce.
+Status: Agreed 2026-09-05
+
+A record that carries a digest and discards the bytes is a receipt for
+a document nobody kept. Both adopting agents reported that a failure
+had to be reproduced by hand to be read. The same defect killed a
+mechanism at one megabyte of output and recorded the kill as a fail.
+
+[LOOP-043] Evidence MUST be tracked in the repository.
+Falsifier: a fresh clone lacks an evidence record the origin holds.
+Status: Agreed 2026-09-05
+
+The three-fails count, the regression order, and the rule that a
+failing result is never deleted all read the evidence directory. Kept
+per checkout, a second worktree turns every regression into a
+never-passed requirement and every history into nothing. PKG-002
+permits ignoring what a mechanism can rebuild; a pass can be rebuilt,
+a history cannot.
+
+### The wake names an action or refuses
+
+[LOOP-044] The loop MUST NOT run a mechanism whose declared input
+matches no tracked file.
+Falsifier: check records evidence for a mechanism one of whose
+declared inputs matches nothing `git ls-files` returns.
+Status: Agreed 2026-09-05
+
+[LOOP-045] When a declared input is absent from the working tree, the
+wake MUST name it as uncommitted change.
+Falsifier: wake exits with an error rather than a verdict when a
+declared input is in the index and not in the tree.
+Status: Agreed 2026-09-05
+
+[LOOP-046] The loop MUST refuse to run in a directory git does not
+manage.
+Falsifier: wake or check produces a verdict or a record where
+`git rev-parse` fails.
+Status: Agreed 2026-09-05
+
+[LOOP-047] The loop MUST compute the footprint over the commits on the
+first-parent line since the commitment began, excluding merge commits.
+Falsifier: a file changed only by a branch merged into the loop's
+branch is reported as a breach.
+Status: Agreed 2026-09-05
+
+A merge brings another party's commits, which LOOP-035 does not
+govern; the loop's own commits are the non-merge commits on the line
+it works on. A fast-forward puts a stranger's commits on that line as
+if the loop made them, so the working agreement says merge with a
+merge commit. A change a merge brings to a declared input still stales
+evidence, which is the check that governs it.
+
+[LOOP-053] An escalation's Concerns line MUST name every requirement
+the escalation concerns, by identifier.
+Falsifier: an escalation is answered and the wake asks for a new
+escalation about a requirement it concerned.
+Status: Agreed 2026-09-05
+
+The kernel compared the line to one identifier. The second adoption's
+escalation concerned two requirements and named them by a title, so
+it matched neither, and the wake asked for an escalation that
+existed.
+
+[LOOP-054] The write-ahead record the kernel writes for a mechanism
+run MUST carry the process id of the run.
+Falsifier: a run-mechanism record exists with no process id.
+Status: Agreed 2026-09-05
+
+[LOOP-055] When the process a run-mechanism record names is not
+running, the wake MUST remove the record and continue.
+Falsifier: wake says reconcile a run-mechanism record whose process
+is dead.
+Status: Agreed 2026-09-05
+
+A mechanism that repeats a binary twenty times takes minutes and is
+killed in practice. The record it leaves is the kernel's own, and no
+evidence was written, so removing it loses nothing; a record with no
+process id left an agent unable to tell a run still going elsewhere
+from a dead one.
+
+[LOOP-056] The loop MUST refuse a requirement that two mechanisms
+speak for, naming both.
+Falsifier: two declarations claim one requirement and the kernel runs
+either.
+Status: Agreed 2026-09-05
+
+Last-wins was silent, and the older evidence then read as "the
+mechanism changed", which misdescribes what happened. A requirement
+two commands prove is one mechanism that runs both.
+
+[LOOP-057] The agent MUST repair a failing requirement that every
+commitment inherits under the current commitment.
+Falsifier: an escalation asks the developer under which commitment an
+inherited requirement is repaired.
+Status: Agreed 2026-09-05
+
+An inherited requirement's mechanism declares inputs, and those
+inputs are in every commitment's footprint by construction, so its
+repair is inside scope wherever the loop stands. A fix outside them
+means the declaration was incomplete, and LOOP-006 says declare. A
+failure no repository change can address is DEC-019's, not this
+one's.
+
+### The answer reaches the agent
+
+[LOOP-048] The loop MUST refuse a reply to an escalation that is not
+`ok`, `instead` followed by text, or `ask` followed by text.
+Falsifier: `cairn answer` records a reply outside those three forms.
+Status: Agreed 2026-09-05
+
+[LOOP-049] When the developer replies `ask`, the wake MUST name
+replying to that escalation as the agent's next action.
+Falsifier: after an `ask` reply, wake names any action other than
+replying to the escalation.
+Status: Agreed 2026-09-05
+
+[LOOP-050] When the agent replies to an `ask`, the escalation MUST be
+open for the developer again.
+Falsifier: after the agent's reply, wake does not present the
+escalation.
+Status: Agreed 2026-09-05
+
+[LOOP-051] When the wake names a requirement whose escalation was
+answered after its latest evidence, the verdict MUST carry the answer.
+Falsifier: wake names the requirement and its output does not contain
+the developer's reply.
+Status: Agreed 2026-09-05
+
+An `instead` reply changes what gets built, and nothing in the wake
+pointed the agent that resumed at it; an `ask` reply closed the
+escalation on the developer's question. Both left the resume point
+LOOP-014 promises with no way to reach the answer.

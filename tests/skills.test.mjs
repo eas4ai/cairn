@@ -46,3 +46,11 @@ test("both skills write the working agreement without naming a vendor's file (LO
   has(TEMPLATE, "the roadmap, the current commitment, and the decision records", "LOOP-002: what wake reads");
   lacks(BOTH, "CLAUDE.md", "PKG-006");
 });
+test("the working agreement says what an attempt is (LOOP-036, DEC-017, DEC-018)", () => {
+  has(TEMPLATE, "An attempt is one distinct digest of the mechanism's declared inputs among the failing checks since the last pass", "DEC-017");
+  has(TEMPLATE, "the first check of a requirement is its baseline, never an attempt", "DEC-018");
+});
+test("the working agreement says a failure no footprint change can address is an escalation, and where an inherited requirement is repaired (DEC-019, LOOP-057)", () => {
+  has(TEMPLATE, "A failure no change inside the footprint can address is not an attempt at all: it is an escalation", "DEC-019");
+  has(TEMPLATE, "A failing requirement every commitment inherits is repaired under the current commitment", "LOOP-057");
+});

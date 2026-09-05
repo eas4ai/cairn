@@ -38,7 +38,17 @@ while editing are how you work; they are not evidence.
 Decide by level. Routine: decide, no record. Judged and above: record
 it with `cairn decide` before you build it. Blocking: `cairn escalate`,
 then stop. Three attempts at a requirement without new passing evidence
-make the next decision about it Blocking.
+make the next decision about it Blocking. An attempt is one distinct
+digest of the mechanism's declared inputs among the failing checks
+since the last pass; reruns, documentation changes, and a return to a
+digest already tried add nothing, and the first check of a
+requirement is its baseline, never an attempt. A failure no change
+inside the footprint can address is not an attempt at all: it is an
+escalation, and the wake names DEC-019 when it sees three runs at one
+digest. A failing requirement every commitment inherits is repaired
+under the current commitment; its mechanism's inputs are already in
+the footprint, and a fix outside them means the declaration was
+incomplete: declare, then fix.
 
 Out of scope is captured, never built. An idea outside the current
 commitment goes to `cairn backlog --title ... --body ... --from <REQ>`.

@@ -139,3 +139,26 @@ The agent MUST NOT require the whole roadmap to be specified before
 work starts.
 Falsifier: a documented step tells the developer that every commitment
 must be specified before implementation begins.
+
+## Drafted from the first adoptions
+
+Drafted 2026-09-05. Each carries its own Status: line; see loop.md.
+
+[SPEC-018] The loop MUST read a requirement's own Status: line ahead of
+its file's Status: line.
+Falsifier: a requirement marked Draft inside an Agreed file is treated
+as Agreed.
+Status: Agreed 2026-09-05
+
+The adoption skill marks a section Agreed; the keystone says a later
+requirement is Draft until confirmed; the kernel read one status per
+file. The grain the skills promise is the grain the kernel reads.
+
+[SPEC-019] The agent MUST cite a path in specification text relative to
+the repository root.
+Falsifier: a file under docs/spec contains a path beginning with `/` or
+`~`.
+Status: Agreed 2026-09-05
+
+A cairn is for someone with no memory. An absolute path on one machine
+is dead for them; the first adoption wrote five.

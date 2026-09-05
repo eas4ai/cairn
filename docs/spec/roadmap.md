@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: cairn-installs-by-one-script
+Current: the-verdict-is-per-requirement
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -107,3 +107,79 @@ Delivers: scripts/link.sh, which links the kernel onto the path and the
 skills into any agent's skill directories; the README's install
 section; and a test that runs the script into a temporary home and
 runs the linked cairn. Covers PKG-014, PKG-005, and PKG-006.
+
+## Drafted from the first adoptions, 2026-09-05
+
+Two live projects ran the loop under existing-project on 2026-09-04
+and 2026-09-05. Their agents' reports, and a review of the kernel
+against what they needed, are in docs/issues-from-the-poc.md and in
+twenty backlog items. The five commitments below carry the fixes.
+Each names requirements drafted the same day, which the developer
+confirms by exception before the commitment is named Current.
+
+## 10. The verdict is per requirement
+
+Delivers: a mechanism reports a result per requirement on its standard
+output and check records each from its own line; a targeted check
+records every requirement the mechanisms it ran speak for; an attempt
+is a failing record at inputs the previous failing record did not
+see, and the first record is the baseline; a failure no change in
+the footprint can address is an escalation, and the wake says so; an
+escalation concerns every identifier it names. Covers LOOP-037
+through LOOP-040, LOOP-052, LOOP-053, DEC-017 through DEC-019, and
+revisits LOOP-034 and DEC-016.
+[Commitment](../commitments/the-verdict-is-per-requirement.md).
+
+First because both live projects are running against it today: one
+collapsed thirteen falsifiers into one bit to fit the kernel, and the
+other reached the developer with a Judged decision marked Blocking
+after two real attempts.
+
+## 11. The output is evidence
+
+Delivers: the command's complete output kept beside every record,
+captured without a size bound; evidence tracked in the repository;
+the working agreement and the ignore file counted as Cairn's own
+records by the footprint; the skills asking repeated runs to make
+each repetition's result findable.
+Covers LOOP-041, LOOP-042, LOOP-043, and revisits LOOP-025, LOOP-031,
+and PKG-002.
+[Commitment](../commitments/the-output-is-evidence.md).
+
+## 12. The wake names an action or refuses
+
+Delivers: a declared input that matches nothing is refused; a declared
+input missing from the tree is uncommitted change, not a crash;
+outside git the kernel refuses; the footprint begins at the commit
+that wrote the exact Current: line and covers the loop's own commits
+on the first-parent line; review freshness digests a commit in one
+git process; a realized-by line carries its subject; a stale
+in-progress record whose base is behind a clean HEAD is named as
+committed; two declarations for one requirement are refused by name;
+the kernel's run record carries a process id and a dead one is
+removed by the wake. Covers LOOP-044 through LOOP-047, LOOP-054
+through LOOP-056, and revisits LOOP-024, LOOP-027, LOOP-032,
+LOOP-035, and DEC-006.
+[Commitment](../commitments/the-wake-names-an-action-or-refuses.md).
+
+## 13. The answer reaches the agent
+
+Delivers: a reply is one of three forms; an `ask` reply hands the
+escalation to the agent and the agent's reply hands it back; a wake
+that names a requirement with a fresh answer carries the answer.
+Covers LOOP-048 through LOOP-051, and revisits LOOP-014.
+[Commitment](../commitments/the-answer-reaches-the-agent.md).
+
+## 14. Agreed per requirement, inherited by declaration
+
+Delivers: a requirement's own Status: line read ahead of its file's,
+by the kernel, the spec lint, and both skills; inheritance into every
+commitment declared by the spec file and not by prefix; paths in
+specification text relative to the repository, checked by the spec
+lint; the route for a failing inherited requirement stated once in
+the working agreement. Covers SPEC-018, SPEC-019, PKG-015, LOOP-057,
+and revisits SPEC-002, SPEC-016, PKG-011.
+[Commitment](../commitments/agreed-per-requirement-inherited-by-declaration.md).
+
+Last because it changes contract, and the developer's ruling on the
+grain should stand before the kernel reads it.

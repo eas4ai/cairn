@@ -127,3 +127,49 @@ produce records, which is the cost this level exists to avoid.
 
 The threshold between deciding and escalating is then empirical, per
 project and per domain, rather than fixed by this specification.
+
+## Drafted from the first adoptions
+
+Drafted 2026-09-05. Each carries its own Status: line; see loop.md.
+
+[DEC-017] The loop MUST count failing records within one failing
+streak that share one inputs digest as one attempt.
+Falsifier: two failing records with the same inputs digest, and no
+passing record between them, are counted as two attempts.
+Status: Agreed 2026-09-05
+
+[DEC-018] The loop MUST NOT count a requirement's first record as an
+attempt.
+Falsifier: a requirement with one baseline record and two failing
+attempts is escalated.
+Status: Agreed 2026-09-05
+
+Precisely: the inputs are the digest of the mechanism's declared
+inputs, as the record carries it, so a change outside them, to
+documentation or to another mechanism's files, is not an attempt. A
+failing streak is the run of failing records back from the latest to
+the last pass, or to the first record. A pass ends the streak and
+resets the count. Rerunning at a digest already in the streak,
+including a return to an earlier failed digest, counts once. The
+first record of a requirement is its baseline; neither it nor a later
+return to its digest is an attempt.
+
+[DEC-019] The agent MUST escalate a failure that no change inside the
+footprint can address.
+Falsifier: a requirement fails three times at one inputs digest, no
+declared input changes after, and no escalation names it.
+Status: Agreed 2026-09-05
+
+Counting an attempt by inputs means a failure whose cause is outside
+the repository, host cache state on the second adoption, is zero
+attempts however often it is rerun, and a counter alone would say
+implement forever. The counter measures repair; a failure the agent
+cannot repair by a change it is allowed to make is a fact only the
+developer holds, which is the Blocking row. The wake says so when it
+sees three runs at one digest with no attempt since.
+
+DEC-016 says attempts and the kernel counted check runs. Three checks
+at one commit escalated a requirement nobody had touched twice; on a
+live project the baseline the adoption skill instructs counted as the
+first of three, and a Judged decision reached the developer as
+Blocking after two real attempts.

@@ -72,12 +72,16 @@ test("a regression is named before a requirement that never passed", () => {
   assert.match(r.stdout, /regression/);
 });
 
-test("three consecutive fails with no escalation since: wake says escalate, not a fourth attempt", () => {
+test("three attempts with no escalation since: wake says escalate, not a fourth (DEC-016, DEC-017, DEC-018)", () => {
   const root = repo();
   writeFileSync(join(root, "src/exit"), "1\n"); commit(root);
-  cairn(root, "check"); cairn(root, "check");
-  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/);
-  cairn(root, "check");
+  cairn(root, "check");                                                   // the baseline: not an attempt
+  cairn(root, "check"); cairn(root, "check"); cairn(root, "check");        // runs at the baseline's inputs: still the baseline
+  writeFileSync(join(root, "src/exit"), "2\n"); commit(root); cairn(root, "check"); cairn(root, "check");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/, "one attempt, twice run");
+  writeFileSync(join(root, "src/exit"), "3\n"); commit(root); cairn(root, "check");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/, "two attempts");
+  writeFileSync(join(root, "src/exit"), "4\n"); commit(root); cairn(root, "check");
   const r = cairn(root, "wake");
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: escalate R-001/);
@@ -135,4 +139,83 @@ test("a linked declared input digests the same at a commit and in the tree (LOOP
   assert.match(r.stdout, /^Done: first/, "the review examined a commit whose link digests as the tree's does");
   rmSync(join(root, "src/link")); symlinkSync("other", join(root, "src/link")); commit(root, "relink");
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/, "re-pointing the link changes the declared input");
+});
+
+test("a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052)", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('cairn: R-002: pass'); process.exit(1)"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
+  const r = cairn(root, "check");
+  const rec = (req) => readFileSync(join(root, ".cairn/evidence", req, records(root, req)[0]), "utf8");
+  assert.ok(rec("R-001").includes("result: unverified") && rec("R-001").includes("source: none"), rec("R-001"));
+  assert.ok(rec("R-002").includes("result: pass") && rec("R-002").includes("source: line"), rec("R-002"));
+  assert.match(r.stdout, /R-002\/.*: pass \(by line\)/);
+  assert.match(r.stdout, /R-001\/.*: unverified \(not reported\)/);
+  assert.match(r.stdout, /^Resolvable: implement R-001/m);
+  assert.match(r.stdout, /latest evidence is unverified \(m, exit 1\)/);
+});
+
+test("a mechanism that says nothing is read by its exit code for every requirement (LOOP-039)", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('ok 1 - cairn: LOOP-001: pass is a test name, not a line'); process.exit(0)"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
+  cairn(root, "check");
+  for (const req of ["R-001", "R-002"]) assert.ok(readFileSync(join(root, ".cairn/evidence", req, records(root, req)[0]), "utf8").includes("result: pass\nsource: exit"));
+});
+
+test("unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018)", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "const e=require('fs').readFileSync('src/exit','utf8').trim(); console.log('cairn: R-002: pass'); if (e!=='u') console.log('cairn: R-001: fail'); process.exit(1)"\ninputs:\n  - src/exit\nrequirements:\n  - R-001\n  - R-002\n` });
+  writeFileSync(join(root, "src/exit"), "1\n"); commit(root); cairn(root, "check");   // baseline at d1
+  writeFileSync(join(root, "src/exit"), "2\n"); commit(root); cairn(root, "check");   // attempt 1 at d2
+  writeFileSync(join(root, "src/exit"), "u\n"); commit(root); cairn(root, "check");   // R-001 unverified: not an attempt
+  writeFileSync(join(root, "src/exit"), "2\n"); commit(root); cairn(root, "check");   // back to d2: counts once
+  writeFileSync(join(root, "src/exit"), "1\n"); commit(root); cairn(root, "check");   // back to the baseline's digest: never
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/, "one attempt so far");
+  writeFileSync(join(root, "src/exit"), "3\n"); commit(root); cairn(root, "check");   // attempt 2
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: implement R-001/);
+  writeFileSync(join(root, "src/exit"), "4\n"); commit(root); cairn(root, "check");   // attempt 3
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: escalate R-001/);
+});
+
+test("a result line for a requirement the mechanism does not speak for is named and writes nothing (LOOP-038)", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('cairn: R-002: pass')"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n` });
+  const r = cairn(root, "check");
+  assert.match(r.stdout, /ignored R-002: pass; m does not speak for it/);
+  assert.equal(records(root, "R-002").length, 0);
+  assert.equal(records(root, "R-001").length, 1);
+});
+
+test("a result line inside ordinary output, or without the marker, does not count", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('note cairn: R-002: pass here'); console.log('R-002: pass'); console.log('cairn: R-002: passed')"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
+  cairn(root, "check");
+  assert.ok(readFileSync(join(root, ".cairn/evidence/R-002", records(root, "R-002")[0]), "utf8").includes("source: exit"));
+});
+
+test("a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040)", () => {
+  const root = repo();
+  writeFileSync(join(root, ".cairn/mechanisms/n"), failing("R-002").replace("R-002", "R-003")); // a mechanism for a requirement outside the commitment
+  const r = cairn(root, "check", "R-001");
+  assert.equal(records(root, "R-001").length, 1);
+  assert.equal(records(root, "R-002").length, 1, "the run spoke for R-002 too");
+  assert.equal(records(root, "R-003").length, 0, "n was not selected");
+  assert.doesNotMatch(r.stdout, /skipped/);
+});
+
+test("two result lines for one requirement: a fail on any line wins", () => {
+  const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('cairn: R-001: fail'); console.log('cairn: R-001: pass')"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
+  cairn(root, "check");
+  assert.ok(readFileSync(join(root, ".cairn/evidence/R-001", records(root, "R-001")[0]), "utf8").includes("result: fail"));
+});
+
+test("three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053)", () => {
+  const root = repo();
+  writeFileSync(join(root, "src/exit"), "1\n"); commit(root);
+  cairn(root, "check"); cairn(root, "check");
+  assert.doesNotMatch(cairn(root, "wake").stdout, /DEC-019/);
+  cairn(root, "check");
+  let r = cairn(root, "wake");
+  assert.match(r.stdout, /^Resolvable: implement R-001/);
+  assert.match(r.stdout, /DEC-019/);
+  writeFileSync(join(root, ".cairn/escalations/gate.md"), "DECISION\n\nQuestion:   host cache\n\nConcerns: R-009, R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\n");
+  assert.match(cairn(root, "wake").stdout, /^Escalate: present gate/);
+  writeFileSync(join(root, ".cairn/escalations/gate.md"), "DECISION\n\nQuestion:   host cache\n\nConcerns: R-009, R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\nAnswer: ok\n");
+  r = cairn(root, "wake");
+  assert.match(r.stdout, /^Resolvable: implement R-001/);
+  assert.doesNotMatch(r.stdout, /DEC-019/, "an answered escalation that names R-001 in a list counts");
 });

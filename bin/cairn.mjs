@@ -183,9 +183,19 @@ function assess(root, req, mechs, ctx) {
   const h = history(root, req);
   const latest = h[h.length - 1] ?? null;
   const everPassed = h.some((e) => e.result === "pass");
-  const lastThree = h.slice(-3);
-  const threeFails = lastThree.length === 3 && lastThree.every((e) => e.result === "fail");
-  const escalatedSince = threeFails && ctx.escalations.some((e) => e.Concerns === req && (!e.Raised || e.Raised >= lastThree[0].recorded));
+  // Attempts: the failing streak back from the latest, one attempt per
+  // distinct inputs digest (DEC-017); the first record ever is the
+  // baseline, and its digest is never an attempt (DEC-018).
+  let s = h.length; while (s > 0 && h[s - 1].result !== "pass") s--;         // a pass ends the streak; unverified is transparent
+  const baseline = s === 0 ? h[0]?.inputs_digest : undefined, seen = new Set(), attempts = [];
+  for (const e of h.slice(s)) if (e.result === "fail" && e.inputs_digest !== baseline && !seen.has(e.inputs_digest)) { seen.add(e.inputs_digest); attempts.push(e); }
+  const threeFails = attempts.length >= 3;
+  const concerns = (e) => (e.Concerns ?? "").split(/[\s,]+/).includes(req);
+  const escalatedSince = threeFails && ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= attempts[attempts.length - 3].recorded));
+  // Three runs at one digest with no attempt since: the counter cannot
+  // see a cause outside the repository; the agent can (DEC-019).
+  const tail = h.slice(s).filter((e) => e.result === "fail").slice(-3);
+  const stuck = tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= tail[0].recorded));
   let stale = null;
   if (m && latest) {
     const reasons = [];
@@ -193,7 +203,7 @@ function assess(root, req, mechs, ctx) {
     if (latest.inputs_digest !== ctx.digests.get(name)) reasons.push("a declared input changed");
     stale = reasons.length ? reasons.join(" and ") : null;
   }
-  return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stale };
+  return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stuck, stale };
 }
 
 function wake(root) {
@@ -227,7 +237,7 @@ function wake(root) {
     if (!x.mech) continue;
     if (!x.latest) return { verdict: "Resolvable", action: `run ${x.req}`, why: `mechanism ${x.mech} has produced no evidence for it` };
     if (x.stale) return { verdict: "Resolvable", action: `run ${x.req}`, why: `evidence is stale: ${x.stale} (${x.mech})` };
-    if (x.latest.result !== "pass") return { verdict: "Resolvable", action: `implement ${x.req}`, why: `latest evidence is ${x.latest.result} (${x.mech})` };
+    if (x.latest.result !== "pass") return { verdict: "Resolvable", action: `implement ${x.req}`, why: `latest evidence is ${x.latest.result} (${x.mech}, exit ${x.latest.exit})${x.stuck ? "; three runs at one inputs digest and no attempt since: a failure no change inside the footprint can address is an escalation (DEC-019)" : ""}` };
   }
   if ((s = first((x) => !x.mech))) return { verdict: "Resolvable", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
   const head = headSha(root), rv = reviewOf(root, c.slug);
@@ -254,12 +264,14 @@ function check(root, only) {
   const mechs = mechanisms(root);
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
   if (breach) { process.stdout.write(`Resolvable: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
-  const runs = new Map();
-  for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.set(n, (runs.get(n) ?? []).concat(r)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
+  // Named requirements select which mechanisms run; a run is evidence for
+  // every requirement its mechanism speaks for (LOOP-040).
+  const runs = new Set();
+  for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.add(n); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   const head = headSha(root);
   const ip = join(root, ".cairn", "in-progress");
-  for (const [name, reqs] of runs) {
-    const m = mechs.byName.get(name), inputs = asList(m.def.inputs);
+  for (const name of runs) {
+    const m = mechs.byName.get(name), inputs = asList(m.def.inputs), reqs = asList(m.def.requirements);
     const dirty = dirtyInputs(root, inputs);
     if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} declares it as an input and it has uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
     // The write-ahead record, unless the agent's own already covers this run.
@@ -267,19 +279,30 @@ function check(root, only) {
     if (mine) writeFileSync(ip, `action: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);
     const cwd = m.def.cwd && m.def.cwd !== "." ? join(root, m.def.cwd) : root;
     const r = spawnSync(m.def.command, { shell: true, cwd, encoding: "utf8" });
-    const exit = r.status ?? -1;
+    const exit = r.status ?? -1, out = (r.stdout ?? "") + (r.stderr ?? "");
+    // A line "REQ-ID: pass|fail" is the mechanism's own statement about
+    // one requirement it speaks for (LOOP-037); a fail on any line is a
+    // fail. A mechanism that says nothing is read by its exit code
+    // (LOOP-039); one that speaks leaves what it did not mention
+    // unverified (LOOP-052). A line for a stranger is named and ignored (LOOP-038).
+    const lines = new Map();
+    for (const l of (r.stdout ?? "").matchAll(/^cairn: ([A-Z]+-\d+): (pass|fail)$/gm)) {
+      if (!reqs.includes(l[1])) process.stdout.write(`ignored ${l[1]}: ${l[2]}; ${name} does not speak for it\n`);
+      else if (lines.get(l[1]) !== "fail") lines.set(l[1], l[2]);      // a fail on any line is a fail
+    }
     const rec = [
       `mechanism: ${name}`, `commit: ${head}`, `inputs_digest: ${inputsDigest(root, inputs)}`, `mechanism_digest: ${m.digest}`,
-      `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${sha((r.stdout ?? "") + (r.stderr ?? ""))}`,
-      `result: ${exit === 0 ? "pass" : "fail"}`, `recorded: ${new Date().toISOString()}`,
+      `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${sha(out)}`,
     ];
+    const recorded = new Date().toISOString();
     for (const req of reqs) {
+      const result = lines.get(req) ?? (lines.size ? "unverified" : exit === 0 ? "pass" : "fail"), source = lines.has(req) ? "line" : lines.size ? "none" : "exit";
       const dir = join(root, ".cairn", "evidence", req);
       mkdirSync(dir, { recursive: true });
       let p = join(dir, stamp()), i = 0;
       while (existsSync(p)) p = join(dir, `${stamp()}-${++i}`);       // never overwrite (LOOP-025)
-      writeFileSync(p, `requirement: ${req}\n${rec.join("\n")}\n`);
-      process.stdout.write(`recorded ${rel(root, p)}: ${exit === 0 ? "pass" : "fail"} (exit ${exit})\n`);
+      writeFileSync(p, `requirement: ${req}\n${rec.join("\n")}\nresult: ${result}\nsource: ${source}\nrecorded: ${recorded}\n`);
+      process.stdout.write(`recorded ${rel(root, p)}: ${result} (${source === "line" ? "by line" : source === "none" ? "not reported" : `exit ${exit}`})\n`);
     }
     if (mine) unlinkSync(ip);
   }

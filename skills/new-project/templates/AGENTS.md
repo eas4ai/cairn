@@ -76,6 +76,9 @@ and progress reports.
   recommendation, why it helps, and what the alternative changes.
   Explain costs or risks in terms of what could happen. For an
   escalation, put this information in the existing fields.
+- With a decision or agreement prompt, say: "If this isn't clear, ask
+  me to explain it another way before you decide." For an escalation,
+  put the invitation after the options on the existing Reply line.
 - Distinguish what you observed from what you assume or do not know.
   Keep important limits visible when shortening an explanation.
 - Before sending, ask whether the developer can tell what their answer

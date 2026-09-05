@@ -29,6 +29,8 @@ Read "Writing for the developer" in the
 presenting findings or asking for agreement. Translate code identifiers
 into the behavior they cause when that helps explain a decision; keep
 the identifiers and source paths where they support the finding.
+Include the template's invitation to ask for another explanation with
+decision and agreement prompts.
 
 Three more:
 

@@ -33,7 +33,8 @@ with no memory of this conversation.
    read "Writing for the developer" in the
    [working-agreement template](templates/AGENTS.md). Apply it to the
    explanations and questions that lead to agreement, as well as to
-   the artifacts you write.
+   the artifacts you write. Include its invitation to ask for another
+   explanation when presenting a decision or asking for agreement.
 3. Vocabulary at first occurrence. When a term carries different meanings
    for you and the developer, add it to glossary.md at that moment
    (SPEC-010).

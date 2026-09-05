@@ -106,10 +106,10 @@ requirements:
   - LOOP-054
   - LOOP-055
   - LOOP-056
-  - LOOP-48
-  - LOOP-49
-  - LOOP-50
-  - LOOP-51
+  - LOOP-048
+  - LOOP-049
+  - LOOP-050
+  - LOOP-051
 reviewed:
   - LOOP-024 sha256:9b58dfe3d8e9d9a02876c3e61db0eec461c3ef8808921c5e095ea0c72da8a00d
   - LOOP-039 sha256:0ed30dc122a3693128e6233b5d9e34731939bc6d0ab30dbad8dd7a03ee63e2a7

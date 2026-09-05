@@ -12,4 +12,4 @@ Stream stdout and stderr into one .out output file in .cairn/evidence under the 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 9815f69 Stream and retain command output and commit evidence history

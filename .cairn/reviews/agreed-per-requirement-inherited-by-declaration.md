@@ -1,4 +1,4 @@
-commit: c9ad8ce
-examined: Shared status grammar, file header boundaries, explicit Scope inheritance, migration instructions, path lint, and the combined 11-14 runtime changes. All 167 tests and 120 receipts pass, but an isolated review with declared src/* reports stale at its own commit. git ls-tree treats that wildcard differently from git ls-files.
+commit: babc056
+examined: Shared contiguous-block grammar and fenced examples; block Status overrides and file defaults; explicit Scope inheritance independent of prefix; Draft blocks excluded from commitments; unchanged requirement identity; local path lint and migration instructions; combined 11-14 changes. Historical selection now intersects Git pathspec matches with actual historical objects, and footprint matching includes deleted paths. Batch framing, binary inputs, links, and the 1500-file timing test remain covered. All 169 tests and 120 latest receipts pass. Reviewed against the production coding rules; no further correction identified.
 findings:
-  - open: Historical input selection must use the same Git pathspec matching as the index before hashing blobs (LOOP-024, LOOP-032).
+  - resolved: Historical input selection used different wildcard matching from the index (LOOP-024, LOOP-032). Fixed by 73b29be Match wildcard inputs consistently across commits and the working tree; regressions cover glob and literal pathspecs, additions, deletions, and review freshness.

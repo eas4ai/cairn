@@ -1,0 +1,17 @@
+requirement: PKG-007
+requirement_digest: sha256:0237bbb551cb12637ee758da97560416e8f0d6f0987467eaf29196e04686184d
+mechanism: spec-lint
+commit: babc056
+inputs_digest: sha256:4a0a1e95a6395eddc1ffb22abd7e47f1fff49d80b54b3e22b996b63ec526de38
+mechanism_digest: sha256:e66e5c51bc9b12970876257f70388fecb5c4d2ce085a97adb2ff121fcf2f93cb
+command: node scripts/spec-lint.mjs docs/spec
+cwd: .
+exit: 0
+output_digest: sha256:01329d0d0d6ff0abecaca74caa406b5fdc021de3e868416f7d8eccaaabfdfff0
+output: .cairn/evidence/SPEC-001/20260905T140919432Z-2467144.out
+stderr_output: .cairn/evidence/SPEC-001/20260905T140919432Z-2467144.err
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-05T14:09:19.468Z

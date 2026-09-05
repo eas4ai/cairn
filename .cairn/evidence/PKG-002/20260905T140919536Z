@@ -1,0 +1,17 @@
+requirement: PKG-002
+requirement_digest: sha256:6fb7ec84439ba7735495ec5d8a32c950e2d5e960f8650202a6066c7688527315
+mechanism: pkg-lint
+commit: babc056
+inputs_digest: sha256:fb1a976131cc72533ffdcae08fa59fe7ca4dc074c4c0faed987185d1cd43c9e6
+mechanism_digest: sha256:a9b18cb029c78f26032163aed3c2f7ae892c2d052e9a4fd0ce6b0cd88b723c9d
+command: node scripts/pkg-lint.mjs
+cwd: .
+exit: 0
+output_digest: sha256:37f345dc36f045d7359bee62dcf9ef34b8c81cafcd35aa2f676b3bfcb8ea10ae
+output: .cairn/evidence/PKG-001/20260905T140919474Z-2467144.out
+stderr_output: .cairn/evidence/PKG-001/20260905T140919474Z-2467144.err
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-05T14:09:19.536Z

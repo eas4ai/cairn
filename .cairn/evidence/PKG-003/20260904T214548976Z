@@ -1,0 +1,11 @@
+requirement: PKG-003
+mechanism: pkg-lint
+commit: 79d26ac
+inputs_digest: sha256:46866c94df5452162f31cd96d20de4e9d22286ccd4693614a2faec6c9af8db01
+mechanism_digest: sha256:1b60b0cdbd6db897ce5b31d4960a44d26cb9711f87043884eff52e91a78bcc0f
+command: node scripts/pkg-lint.mjs
+cwd: .
+exit: 0
+output_digest: sha256:09fa02061dc394731adc4e1a6565ded687e2151564787f20b9794d5c2a56f3e0
+result: pass
+recorded: 2026-09-04T21:45:48.974Z

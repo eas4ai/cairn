@@ -179,3 +179,8 @@ next action from the repository alone, and AGENTS.md says what to do
 with it. An idea outside the current commitment goes to `cairn backlog`,
 and enters a commitment only when the developer writes it into the
 specification and names it there.
+
+A mechanism that repeats a command labels each repetition and its result
+in its output, so a failure in one run can be found without repeating
+the experiment. Track .cairn/evidence/ and commit new receipts and logs
+after check; do not add that directory to .gitignore.

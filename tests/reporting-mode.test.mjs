@@ -22,15 +22,16 @@ test("a reporter that cannot start keeps execution diagnostics without blaming r
   cairn(root, "check");
   assert.match(record(root, "R-001"), /result: unverified/);
   assert.match(record(root, "R-001"), /exit: 127/);
-  assert.match(record(root, "R-001"), /stderr: .*missing-reporter/);
+  const path = /^stderr_output: (.*)$/m.exec(record(root, "R-001"))[1];
+  assert.match(readFileSync(join(root, path), "utf8"), /missing-reporter/);
 });
 
-test("a spawn output error stays separate from unverified requirements", () => {
+test("large output cannot kill a reporter or invent a requirement verdict", () => {
   const root = repo({ ".cairn/mechanisms/m": declaration('node -e "process.stdout.write(\'x\'.repeat(3000000))"') });
   cairn(root, "check");
   assert.match(record(root, "R-001"), /result: unverified/);
-  assert.match(record(root, "R-001"), /execution_error: .*ENOBUFS/);
-  assert.match(record(root, "R-001"), /exit: -1/);
+  assert.match(record(root, "R-001"), /execution_error: null/);
+  assert.match(record(root, "R-001"), /exit: 0/);
 });
 
 for (const output of ["cairn: R-999: pass", "cairn: R-001: unverified", "cairn: R-001: passed"]) test(`explicit mode ignores ${output}`, () => {

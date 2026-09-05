@@ -12,7 +12,7 @@ export const git = (root, ...a) => spawnSync("git", [...GIT, ...a], { cwd: root,
 export const cairn = (root, ...a) => spawnSync("node", [CLI, ...a], { cwd: root, encoding: "utf8" });
 export const commit = (root, msg = "c") => { git(root, "add", "-A"); git(root, "commit", "-q", "-m", msg); };
 export const head = (root) => git(root, "rev-parse", "--short", "HEAD").stdout.trim();
-export const records = (root, req) => { const d = join(root, ".cairn", "evidence", req); return existsSync(d) ? readdirSync(d).sort() : []; };
+export const records = (root, req) => { const d = join(root, ".cairn", "evidence", req); return existsSync(d) ? readdirSync(d).filter((n) => !/\.(out|err)$/.test(n)).sort() : []; };
 
 // Mechanism declarations. exitFile lets a test flip pass/fail by editing one declared input.
 export const passing = (...reqs) => `command: node -e 0\ninputs:\n  - src/other\nrequirements:\n${reqs.map((r) => `  - ${r}\n`).join("")}`;
@@ -28,7 +28,7 @@ export function repo(overrides = {}) {
   w("src/exit", "0\n");
   w("src/other", "x\n");
   w("unrelated.txt", "y\n");
-  w(".gitignore", ".cairn/evidence/\n");
+  w(".gitignore", ".cairn/in-progress\n");
   for (const d of ["docs/decisions", ".cairn/escalations", ".cairn/mechanisms", ".cairn/queue", ".cairn/reviews", ".cairn/backlog"]) mkdirSync(join(root, d), { recursive: true });
   for (const [rel, text] of Object.entries(overrides)) text === null ? rmSync(join(root, rel), { force: true }) : w(rel, text);
   git(root, "init", "-q", "-b", "main"); commit(root, "init");

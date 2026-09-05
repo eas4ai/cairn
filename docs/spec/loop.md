@@ -575,8 +575,9 @@ requirement results in each receipt.
 Falsifier: a command fails to start or is killed, and its unverified
 receipt loses the available exit status, signal, spawn error, or stderr.
 
-The existing exit field keeps a numeric status, or -1 when no exit status
-exists. The receipt also carries signal, execution_error, and stderr;
-error details and stderr use JSON values to preserve line breaks.
+The exit field keeps a numeric status, `signal <name>` on a signal, or
+-1 when execution could not start. The receipt carries signal and a JSON
+execution_error. stderr_output names a separate stderr log; older
+receipts retain their inline JSON stderr.
 Historical receipts stay unchanged. Unverified results neither satisfy
 Done nor add failed requirement attempts, including across changed inputs.

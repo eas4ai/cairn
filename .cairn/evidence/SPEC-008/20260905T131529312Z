@@ -1,0 +1,16 @@
+requirement: SPEC-008
+requirement_digest: sha256:5737a20ce29d8932fa132656c2a6494d9ebd43fb0283a994201e5a4403220bf7
+mechanism: node-test
+commit: 9d87cca
+inputs_digest: sha256:d7a52c301a8b364f18c9140ed320e88326c3f5273ce2cabdb9b5617434148ff6
+mechanism_digest: sha256:98ec304bae848e53f69de5ad7bb886a05bd2aa383d33fe5334564561f774559d
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:65d0eb36c9c191546b8bbee5278c3975f7431439c98362a72527a20ca86017df
+signal: none
+execution_error: null
+stderr: ""
+result: pass
+source: exit
+recorded: 2026-09-05T13:15:29.311Z

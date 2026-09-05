@@ -24,11 +24,13 @@ const pkg = existsSync(join(root, "package.json")) ? JSON.parse(read("package.js
 if (Object.keys(pkg.dependencies ?? {}).length) f.push(`PKG-001: package.json declares dependencies: ${Object.keys(pkg.dependencies).join(", ")}`);
 for (const p of present) if (/(^|\/)(Dockerfile|docker-compose\.ya?ml|compose\.ya?ml|Procfile)$/.test(p)) f.push(`PKG-001: ${p} is a service manifest`);
 
-// PKG-002: nothing under .cairn/ ignored except evidence/
+// PKG-002: only the working-tree action record may be ignored
 if (existsSync(join(root, ".gitignore"))) for (const line of read(".gitignore").split("\n")) {
   const l = line.trim();
-  if (l.startsWith(".cairn/") && !/^\.cairn\/(evidence\/?|in-progress)$/.test(l)) f.push(`PKG-002: .gitignore excludes ${l}; only evidence and the in-progress record are outside the record`);
+  if (l.startsWith(".cairn/") && !/^\.cairn\/in-progress$/.test(l)) f.push(`PKG-002: .gitignore excludes ${l}; only the in-progress record may be ignored`);
 }
+
+if (spawnSync("git", ["check-ignore", "--no-index", ".cairn/evidence/probe"], { cwd: root }).status === 0) f.push("PKG-002: evidence is ignored; its history must survive a clone");
 
 // PKG-002: the write-ahead record is a claim about one working tree; a
 // fresh clone that inherits one is blocked by a stranger's interruption.

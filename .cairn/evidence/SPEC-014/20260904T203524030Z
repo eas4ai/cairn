@@ -1,0 +1,11 @@
+requirement: SPEC-014
+mechanism: node-test
+commit: ff0df65
+inputs_digest: sha256:71767a0a5623ddf60156271812fc59fa86d130115dcfd77282de70e8ce3b64e7
+mechanism_digest: sha256:a75341932e5ccf1ebf0b86494e76a9886b56291680fe9154dfaab1e31dcba803
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:95b92e42721b3f818e2b5e6c05419caa98b77917673cfe9de48385ffbe748915
+result: pass
+recorded: 2026-09-04T20:35:24.029Z

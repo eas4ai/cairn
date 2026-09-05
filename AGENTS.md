@@ -33,7 +33,9 @@ reconciled before any new work: finish or abandon the action it names.
 
 Commit before you check. `cairn check` records evidence only against a
 committed tree and refuses a dirty declared input. Your own test runs
-while editing are how you work; they are not evidence.
+while editing are how you work; they are not evidence. Commit the new
+evidence receipts and their output files after each check. Evidence
+history is tracked; only .cairn/in-progress stays ignored.
 
 When wake says `review mechanism <REQ>`, compare the check with the
 revised requirement and falsifier without changing code. Record what you

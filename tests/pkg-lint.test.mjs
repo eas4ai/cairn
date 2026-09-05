@@ -16,7 +16,7 @@ const lint = (root) => spawnSync("node", [LINT, root], { encoding: "utf8" });
 // A clean minimal package: one kernel file whose one command a decision names.
 function repo(files = {}) {
   const root = mkdtempSync(join(tmpdir(), "pkg-"));
-  const all = { "package.json": '{"name":"x"}\n', ".gitignore": ".cairn/evidence/\n", "bin/x.mjs": "// cairn wake\nconsole.log(1);\n",
+  const all = { "package.json": '{"name":"x"}\n', ".gitignore": ".cairn/in-progress\n", "bin/x.mjs": "// cairn wake\nconsole.log(1);\n",
                 "docs/decisions/a.md": "# A\n\nLevel: Judged\n\n## Decision\n\n`cairn wake` and .cairn/queue exist.\n", ".cairn/queue/.keep": "", ...files };
   for (const [p, t] of Object.entries(all)) { mkdirSync(join(root, p, ".."), { recursive: true }); writeFileSync(join(root, p), t); }
   git(root, "init", "-q"); git(root, "add", "-A"); git(root, "commit", "-q", "-m", "x");
@@ -26,7 +26,7 @@ const finds = (files, req) => { const r = lint(repo(files)); assert.equal(r.stat
 
 test("a clean package passes", () => { const r = lint(repo()); assert.equal(r.status, 0, r.stdout); });
 test("PKG-001: a dependency, or a service manifest", () => { finds({ "package.json": '{"dependencies":{"left-pad":"1"}}' }, "PKG-001"); finds({ "Dockerfile": "FROM x\n" }, "PKG-001"); });
-test("PKG-002: ignoring anything under .cairn/ but evidence", () => finds({ ".gitignore": ".cairn/evidence/\n.cairn/queue/\n" }, "PKG-002"));
+test("PKG-002: ignoring evidence or other durable state", () => finds({ ".gitignore": ".cairn/evidence/\n.cairn/queue/\n" }, "PKG-002"));
 test("PKG-003: a command, a directory, or a record kind no decision names", () => {
   finds({ "bin/x.mjs": "// cairn wake\n// cairn frobnicate\n" }, "PKG-003");
   finds({ ".cairn/mystery/.keep": "" }, "PKG-003");
@@ -61,4 +61,6 @@ test("a record kind named by its path alone is checked", () => {
   finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nAn escalation, .cairn/escalations/<slug>.md:\n\n    x\n" }, "PKG-003");
 });
 
-test("PKG-002: a tracked in-progress record", () => finds({ ".cairn/in-progress": "action: implement\n" }, "PKG-002"));
+test("PKG-002: a tracked in-progress record", () => finds({ ".gitignore": "", ".cairn/in-progress": "action: implement\n" }, "PKG-002"));
+
+test("PKG-002: ignoring evidence alone is a finding", () => finds({ ".gitignore": ".cairn/evidence/\n" }, "PKG-002"));

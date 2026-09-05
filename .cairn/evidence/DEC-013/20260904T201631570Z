@@ -1,0 +1,11 @@
+requirement: DEC-013
+mechanism: node-test
+commit: e334d55
+inputs_digest: sha256:be295712c4a5d7c514f24d3d92c244e587d75b71e989ba5b163300c8040642d0
+mechanism_digest: sha256:6118b5462a1361a9c4488cbead7b1c599ef28bbcdb92758fd81b6f9ff43c0815
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:9427c800ef34f2b2640c6d0646f5243dd7894d41b45a83b01f6a3f9ff76eaf89
+result: pass
+recorded: 2026-09-04T20:16:31.483Z

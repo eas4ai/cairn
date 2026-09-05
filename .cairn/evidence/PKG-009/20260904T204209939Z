@@ -1,0 +1,11 @@
+requirement: PKG-009
+mechanism: pkg-lint
+commit: eb9ab00
+inputs_digest: sha256:45fd4c799818f35a6d226802c3db60b5582a033ded95e6560becfa4316dfd131
+mechanism_digest: sha256:1b60b0cdbd6db897ce5b31d4960a44d26cb9711f87043884eff52e91a78bcc0f
+command: node scripts/pkg-lint.mjs
+cwd: .
+exit: 0
+output_digest: sha256:b6d77ac7ad7cdbd14411dfe72eaa38382f6c7726db9b193286019dee1c63276d
+result: pass
+recorded: 2026-09-04T20:42:09.938Z

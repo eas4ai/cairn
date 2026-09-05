@@ -24,7 +24,7 @@ normal example." Start with this deliberately incomplete implementation:
 ```sh
 git init -q
 mkdir -p docs/spec docs/commitments .cairn/mechanisms .cairn/reviews src tests
-printf '.cairn/in-progress\n.cairn/evidence/\n' > .gitignore
+printf '.cairn/in-progress\n' > .gitignore
 cat > docs/spec/names.md <<'EOF'
 # Names
 
@@ -66,6 +66,7 @@ can take the named action. Its exit code is 1; that is normal here.
 cairn check
 ```
 
+Commit the receipts and logs under `.cairn/evidence/` after each check.
 Cairn records a failure and says `Resolvable: implement APP-001`. Running
 `node tests/names.mjs` directly shows the assertion: the empty string was
 accepted. This demonstrates that the check catches the intended violation.
@@ -187,6 +188,6 @@ omitted requirement stays `unverified`, including when no results arrive.
 That cannot satisfy Done and does not count as a failed requirement attempt.
 
 The receipt keeps the command's exit code, signal, execution error, and
-stderr separately. A host check failing before a UI check runs is not
+a path to the stderr log separately. A host check failing before a UI check runs is not
 evidence that the UI requirement failed. Existing declarations without
 the field retain the exit-code fallback when no valid results arrive.

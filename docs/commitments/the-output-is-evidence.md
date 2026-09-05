@@ -38,7 +38,9 @@ history and the rules that read history read nothing. Items 3, 6, and
   as they arrive, with no maxBuffer, and digests the file after the
   command exits. The record's output_digest is the digest of that
   file. A command that exits by signal records `exit: signal <name>`
-  and result fail.
+  and result fail in legacy mode; explicit per-requirement reporting
+  retains LOOP-061 for omitted results. A companion .err log preserves
+  stderr without buffering it; receipts name it in stderr_output.
 - Every record carries `output: <path relative to root>`.
 - .gitignore drops `.cairn/evidence/`; the package lint reports an
   ignored evidence directory as a PKG-002 finding rather than

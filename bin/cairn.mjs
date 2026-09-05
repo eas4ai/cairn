@@ -18,8 +18,8 @@
 
 import { parseArgs } from "node:util";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { createReadStream, openSync, closeSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
 
 // ------------------------------------------------------------ reading
@@ -118,7 +118,7 @@ function breaches(root, slug, mechs, requirements) {
   const changed = git(root, "diff", "--name-only", "-z", began, "HEAD").stdout.split("\0").filter(Boolean);
   const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
   const covered = inputs.length ? inputFiles(root, inputs) : [];
-  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
+  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
 }
 
 // Every decision record with its header fields. A record's domain is the
@@ -198,7 +198,7 @@ const dirtyInputs = (root, inputs) => git(root, "status", "--porcelain", "-z", "
 // Evidence history for a requirement, oldest first.
 function history(root, req) {
   const dir = join(root, ".cairn", "evidence", req);
-  return list(dir).map((n) => fields(read(join(dir, n))));
+  return list(dir).filter((n) => !/\.(out|err)$/.test(n)).map((n) => fields(read(join(dir, n))));
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
@@ -307,7 +307,52 @@ function wake(root) {
 
 function stamp() { return new Date().toISOString().replace(/[-:]/g, "").replace(/\.(\d{3})Z$/, "$1Z"); }
 
-function check(root, only) {
+// Stream all bytes to disk. Only a possible result line is held in memory.
+async function capture(command, cwd, output, stderrOutput, reqs, name) {
+  const out = openSync(output, "wx");
+  let err;
+  try {
+    err = openSync(stderrOutput, "wx");
+    return await new Promise((resolve, reject) => {
+      const child = spawn(command, { shell: true, cwd }), lines = new Map();
+      let pending = "", error = null, storageError = null;
+      const maxLine = Math.max(...reqs.map((r) => r.length)) + 20;
+      const accept = (line) => {
+        const m = /^cairn: ([A-Z]+-\d+): (pass|fail)$/.exec(line ?? "");
+        if (!m) return;
+        if (!reqs.includes(m[1])) process.stdout.write(`ignored ${m[1]}: ${m[2]}; ${name} does not speak for it\n`);
+        else if (lines.get(m[1]) !== "fail") lines.set(m[1], m[2]);
+      };
+      const write = (fd, bytes) => { for (let i = 0; i < bytes.length;) i += writeSync(fd, bytes, i, bytes.length - i); };
+      const receive = (bytes, stderr) => {
+        if (storageError) return;
+        try {
+          write(out, bytes);
+          if (stderr) { write(err, bytes); return; }
+          const parts = bytes.toString("utf8").split("\n");
+          for (let i = 0; i < parts.length; i++) {
+            if (pending !== null) pending = pending.length + parts[i].length > maxLine ? null : pending + parts[i];
+            if (i < parts.length - 1) { accept(pending); pending = ""; }
+          }
+        } catch (e) { storageError = e; child.kill(); }
+      };
+      child.stdout.on("data", (b) => receive(b, false));
+      child.stderr.on("data", (b) => receive(b, true));
+      child.on("error", (e) => { error = e; });
+      child.on("close", (status, signal) => {
+        accept(pending);
+        if (storageError) reject(storageError); else resolve({ status, signal, error, lines });
+      });
+    });
+  } finally { closeSync(out); if (err !== undefined) closeSync(err); }
+}
+async function fileDigest(path) {
+  const h = createHash("sha256");
+  for await (const bytes of createReadStream(path)) h.update(bytes);
+  return "sha256:" + h.digest("hex");
+}
+
+async function check(root, only) {
   const c = currentCommitment(root);
   if (c.repair) { process.stdout.write(`Resolvable: repair ${c.repair}\n  ${c.why}\n`); return 1; }
   fold(c, agreedRequirements(root));
@@ -335,22 +380,15 @@ function check(root, only) {
     const mine = !existsSync(ip);
     if (mine) writeFileSync(ip, `action: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);
     const cwd = m.def.cwd && m.def.cwd !== "." ? join(root, m.def.cwd) : root;
-    const r = spawnSync(m.def.command, { shell: true, cwd, encoding: "utf8" });
-    const exit = r.status ?? -1, out = (r.stdout ?? "") + (r.stderr ?? "");
-    // A line "cairn: REQ-ID: pass|fail" is the mechanism's own statement about
-    // one requirement it speaks for (LOOP-037); a fail on any line is a
-    // fail. Explicit reporting never infers a result from the exit code
-    // (LOOP-061); legacy reporting uses LOOP-039 and leaves unmentioned results
-    // unverified (LOOP-052). A line for a stranger is named and ignored (LOOP-038).
-    const lines = new Map();
-    for (const l of (r.stdout ?? "").matchAll(/^cairn: ([A-Z]+-\d+): (pass|fail)$/gm)) {
-      if (!reqs.includes(l[1])) process.stdout.write(`ignored ${l[1]}: ${l[2]}; ${name} does not speak for it\n`);
-      else if (lines.get(l[1]) !== "fail") lines.set(l[1], l[2]);      // a fail on any line is a fail
-    }
+    const logDir = join(root, ".cairn", "evidence", reqs[0]);
+    mkdirSync(logDir, { recursive: true });
+    const stem = join(logDir, `${stamp()}-${process.pid}`), output = stem + ".out", stderrOutput = stem + ".err";
+    const r = await capture(m.def.command, cwd, output, stderrOutput, reqs, name);
+    const exit = r.signal ? `signal ${r.signal}` : r.status ?? -1, lines = r.lines;
     const rec = [
       `mechanism: ${name}`, `commit: ${head}`, `inputs_digest: ${inputsDigest(root, inputs)}`, `mechanism_digest: ${m.digest}`,
-      `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${sha(out)}`,
-      `signal: ${r.signal ?? "none"}`, `execution_error: ${JSON.stringify(r.error ? { code: r.error.code ?? null, message: r.error.message } : null)}`, `stderr: ${JSON.stringify(r.stderr ?? "")}`,
+      `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${await fileDigest(output)}`, `output: ${rel(root, output)}`, `stderr_output: ${rel(root, stderrOutput)}`,
+      `signal: ${r.signal ?? "none"}`, `execution_error: ${JSON.stringify(r.error ? { code: r.error.code ?? null, message: r.error.message } : null)}`,
     ];
     const recorded = new Date().toISOString();
     const perRequirement = m.def.results === "per-requirement" || lines.size > 0;
@@ -472,7 +510,7 @@ function reversals(root) {
 
 function usage(msg) { process.stderr.write(`cairn: ${msg}\n`); return 3; }
 
-function main() {
+async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
@@ -496,4 +534,4 @@ function main() {
   return VERDICT[w.verdict];
 }
 
-process.exit(main());
+process.exit(await main().catch((e) => usage(e.message)));

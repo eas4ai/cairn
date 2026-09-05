@@ -1,0 +1,11 @@
+requirement: PKG-011
+mechanism: node-test
+commit: 885086f
+inputs_digest: sha256:ce23ff5b2413bd3aa5513dbd72b18d14c27b7290b54ca2e4a447399f0f32e2e5
+mechanism_digest: sha256:41d6082f68a81d3637d17c41a9a65f3044732aeaaf911119baede197e6a9d941
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:09f4a83036e82fd4e5cac545967c203fbabf024ccba67da7076167b1e0b2bc39
+result: pass
+recorded: 2026-09-04T23:07:08.769Z

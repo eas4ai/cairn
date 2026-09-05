@@ -1,0 +1,11 @@
+requirement: SPEC-002
+mechanism: spec-lint
+commit: ff0df65
+inputs_digest: sha256:88a852d83b48a22628b4beb9bbc5134784eb7c2cac781552fa96f6b8aafb7cd7
+mechanism_digest: sha256:5985363b041a5b92db3bcb8bbc1657b4600ea6b6809435bdca2e9678fc0df86b
+command: node scripts/spec-lint.mjs docs/spec
+cwd: .
+exit: 0
+output_digest: sha256:01329d0d0d6ff0abecaca74caa406b5fdc021de3e868416f7d8eccaaabfdfff0
+result: pass
+recorded: 2026-09-04T20:35:22.114Z

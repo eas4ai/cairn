@@ -1,0 +1,12 @@
+requirement: LOOP-021
+mechanism: node-test
+commit: 116d2fa
+inputs_digest: sha256:860ccfc015236dbd53a828bc9de4b7b61230f9465e91ae0738a0ef51dbf31506
+mechanism_digest: sha256:3bfbd70faabc91b41ec4741bba7394fbb35c03b8803c297da7cc43cc8a715961
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:7de40c9889899458e441d493e5099be45fdd62ba5b59dcd3863c8b22bb22741c
+result: pass
+source: exit
+recorded: 2026-09-05T11:14:18.241Z

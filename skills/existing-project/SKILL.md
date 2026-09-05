@@ -184,3 +184,8 @@ Run the spec lint. Summarize: recon.md, the glossary, the Observed and
 Agreed specs, the roadmap and commitment, and what `cairn wake` says.
 The loop takes over under the working agreement. Remind the developer that Observed sections are not
 contract, and that the loop will refuse a commitment that names one.
+
+A mechanism that repeats a command labels each repetition and its result
+in its output, so a failure in one run can be found without repeating
+the experiment. Track .cairn/evidence/ and commit new receipts and logs
+after check; do not add that directory to .gitignore.

@@ -1,0 +1,12 @@
+requirement: SPEC-011
+mechanism: node-test
+commit: 036bf59
+inputs_digest: sha256:58937689ed9dd8cad4b3368932a029807c24bf64652928b4eb39dde8e06ee38d
+mechanism_digest: sha256:3bfbd70faabc91b41ec4741bba7394fbb35c03b8803c297da7cc43cc8a715961
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:55fee7f006d910d94382e4b0c9829045144b403dcece9b67a247a3ec87fd67f8
+result: pass
+source: exit
+recorded: 2026-09-05T11:54:18.515Z

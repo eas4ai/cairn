@@ -1,0 +1,12 @@
+requirement: PKG-007
+mechanism: spec-lint
+commit: 036bf59
+inputs_digest: sha256:38b19e0281c80c0c9b8a1201e11e007ebe6a87e1c9b7a29de5bc5e867936a1c7
+mechanism_digest: sha256:5985363b041a5b92db3bcb8bbc1657b4600ea6b6809435bdca2e9678fc0df86b
+command: node scripts/spec-lint.mjs docs/spec
+cwd: .
+exit: 0
+output_digest: sha256:01329d0d0d6ff0abecaca74caa406b5fdc021de3e868416f7d8eccaaabfdfff0
+result: pass
+source: exit
+recorded: 2026-09-05T11:54:18.585Z

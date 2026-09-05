@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { repo, cairn, review, passing, failing } from "./helpers.mjs";
+import { repo, cairn, review, passing, failing, head } from "./helpers.mjs";
 
 const wake = (root) => cairn(root, "wake");
 
@@ -30,9 +30,11 @@ test("an answered escalation is not open", () => {
 });
 
 test("step 3: a decision with no realized-by is built, first by name", () => {
-  const r = wake(repo({ "docs/decisions/b.md": "# B\n\nLevel: Judged\n\n## Realized by\n\n(none yet)\n",
+  const root = repo({ "docs/decisions/b.md": "# B\n\nLevel: Judged\n\n## Realized by\n\n(none yet)\n",
                         "docs/decisions/a.md": "# A\n\nLevel: Judged\n\n## Realized by\n\n- abc1234  did it\n",
-                        "docs/decisions/c.md": "# C\n\nLevel: Judged\n\n## Realized by\n" }));
+                        "docs/decisions/c.md": "# C\n\nLevel: Judged\n\n## Realized by\n" });
+  writeFileSync(join(root, "docs/decisions/a.md"), `# A\n\n## Realized by\n\n- ${head(root)} init\n`);
+  const r = wake(root);
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: build docs\/decisions\/b\.md/);
 });

@@ -47,13 +47,13 @@ test("declaring the path as an input clears the breach", () => {
   assert.doesNotMatch(cairn(root, "wake").stdout, /scope unrelated/);
 });
 
-test("reverting the change and writing a backlog item clears the breach", () => {
+test("a revert preserves the record of an out-of-scope commit (LOOP-047)", () => {
   const root = repo();
   writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root);
   assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/);
   writeFileSync(join(root, "unrelated.txt"), "y\n");
   cairn(root, "backlog", "--title", "Change unrelated", "--body", "Later commitment."); commit(root);
-  assert.doesNotMatch(cairn(root, "wake").stdout, /scope unrelated/);
+  assert.match(cairn(root, "wake").stdout, /scope unrelated/);
   assert.ok(existsSync(join(root, ".cairn/backlog/change-unrelated.md")));
 });
 
@@ -69,4 +69,11 @@ test("a requirement in a Draft spec file is not Agreed", () => {
   const root = repo({ "docs/spec/draft.md": "# D\n\nStatus: Draft\nPrefix: R\n\n[R-003] Maybe MUST.\nFalsifier: no.\n",
                       "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-003\n" });
   assert.match(cairn(root, "wake").stdout, /R-003 is not an Agreed requirement/);
+});
+
+ test("working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036)", () => {
+  const root = repo(); green(root);
+  for (const path of ["AGENTS.md", "CLAUDE.md"]) writeFileSync(join(root, path), "# agreement\n");
+  writeFileSync(join(root, ".gitignore"), ".cairn/in-progress\ntarget/\n"); commit(root); review(root);
+  assert.match(cairn(root, "wake").stdout, /^Done: first/);
 });

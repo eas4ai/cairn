@@ -113,9 +113,20 @@ const revisionVerdict = (req, m, digest) => ({ verdict: "Resolvable", action: `r
 // that wrote its Current: line. The footprint is the union of its
 // mechanisms' declared inputs plus Cairn's own records.
 function breaches(root, slug, mechs, requirements) {
-  const began = git(root, "log", "--reverse", "--format=%H", `-SCurrent: ${slug}`, "--", "docs/spec/roadmap.md").stdout.split("\n").filter(Boolean)[0];
+  const roadmap = "docs/spec/roadmap.md";
+  const commits = git(root, "log", "--first-parent", "--format=%H", "--", roadmap).stdout.trim().split("\n").filter(Boolean);
+  let began = null;
+  for (const commit of commits) {
+    const show = git(root, "show", `${commit}:${roadmap}`);
+    if (show.status !== 0 || fields(show.stdout).Current !== slug) break;
+    began = commit;
+  }
   if (!began) return [];
-  const changed = git(root, "diff", "--name-only", "-z", began, "HEAD").stdout.split("\0").filter(Boolean);
+  const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${began}..HEAD`);
+  const changes = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z"],
+    { cwd: root, input: ownCommits.stdout, encoding: "utf8", maxBuffer: Infinity });
+  if (ownCommits.error || ownCommits.status !== 0 || changes.error || changes.status !== 0) throw new Error("cannot read the commitment's Git history");
+  const changed = [...new Set(changes.stdout.split("\0").filter(Boolean))];
   const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
   const covered = inputs.length ? inputFiles(root, inputs) : [];
   return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.includes(f) && !inputs.some((i) => f === i || f.startsWith(i.replace(/\/?$/, "/"))));
@@ -147,7 +158,8 @@ function unrealizedDecisions(root) {
     const t = read(join(dir, n));
     if ("Superseded by" in fields(t)) return false;
     const i = t.indexOf("## Realized by");
-    return i < 0 || !/^- [0-9a-f]{7,}\b/m.test(t.slice(i));
+    const section = i < 0 ? "" : t.slice(i + "## Realized by".length).split(/\n## /)[0];
+    return ![...section.matchAll(/^- ([0-9a-f]{7,40})[ \t]+(\S[^\n]*)$/gm)].some((m) => git(root, "rev-parse", "--verify", `${m[1]}^{commit}`).status === 0);
   }).map((n) => rel(root, join(dir, n)));
 }
 function escalations(root) {
@@ -160,13 +172,17 @@ const openEscalations = (root) => escalations(root).filter((e) => !("Answer" in 
 function mechanisms(root) {
   const dir = join(root, ".cairn", "mechanisms");
   const byName = new Map(), byReq = new Map();
+  let invalid = null;
   for (const n of list(dir)) {
     const text = read(join(dir, n));
     const m = { name: n, def: fields(text), digest: sha(text) };
     byName.set(n, m);
-    for (const r of asList(m.def.requirements)) byReq.set(r, n);
+    for (const r of asList(m.def.requirements)) {
+      if (byReq.has(r) && byReq.get(r) !== n) invalid ??= { verdict: "Resolvable", action: `repair .cairn/mechanisms/${n}`, why: `${r} is declared by both ${byReq.get(r)} and ${n}; put the commands in one mechanism (LOOP-056)` };
+      byReq.set(r, n);
+    }
   }
-  return { byName, byReq };
+  return { byName, byReq, invalid };
 }
 const modeError = (m) => "results" in m.def && m.def.results !== "per-requirement" ? `results: ${m.def.results}; expected per-requirement, or omit results for legacy reporting (LOOP-061)` : null;
 // The tracked files a mechanism declares, and a digest over their content.
@@ -183,16 +199,66 @@ function inputsDigest(root, inputs) {
 // The same digest over the tree as it was at a commit, for records that
 // name the commit they examined rather than carrying a digest.
 function inputsDigestAt(root, inputs, commit) {
-  const ls = git(root, "ls-tree", "-r", "--name-only", "-z", commit, "--", ...inputs);
-  if (ls.status !== 0) return null;
-  const h = createHash("sha256");
-  for (const f of ls.stdout.split("\0").filter(Boolean).sort()) {
-    const show = spawnSync("git", ["show", `${commit}:${f}`], { cwd: root, maxBuffer: Infinity });
-    if (show.error || show.status !== 0) return null;
-    h.update(f); h.update("\0"); h.update(show.stdout); h.update("\0");
+  const ls = git(root, "ls-tree", "-r", "-z", commit, "--", ...inputs);
+  if (ls.error || ls.status !== 0) return null;
+  const entries = ls.stdout.split("\0").filter(Boolean).map((line) => {
+    const m = /^\d+ blob ([0-9a-f]+)\t([\s\S]+)$/.exec(line);
+    return m && { oid: m[1], path: m[2] };
+  });
+  if (entries.some((e) => !e)) return null;
+  entries.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+  const batch = spawnSync("git", ["cat-file", "--batch"], { cwd: root, input: entries.map((e) => e.oid + "\n").join(""), maxBuffer: Infinity });
+  if (batch.error || batch.status !== 0) return null;
+  const h = createHash("sha256"), bytes = batch.stdout;
+  let offset = 0;
+  for (const e of entries) {
+    const end = bytes.indexOf(10, offset);
+    if (end < 0) return null;
+    const header = /^([0-9a-f]+) blob (\d+)$/.exec(bytes.subarray(offset, end).toString("ascii"));
+    if (!header || header[1] !== e.oid) return null;
+    const size = Number(header[2]), start = end + 1;
+    if (!Number.isSafeInteger(size) || start + size >= bytes.length || bytes[start + size] !== 10) return null;
+    h.update(e.path); h.update("\0"); h.update(bytes.subarray(start, start + size)); h.update("\0");
+    offset = start + size + 1;
   }
-  return "sha256:" + h.digest("hex");
+  return offset === bytes.length ? "sha256:" + h.digest("hex") : null;
 }
+// Validate before hashing or running, including a missing file still in the index.
+function declarationError(root, mechs) {
+  if (mechs.invalid) return mechs.invalid;
+  for (const [name, m] of mechs.byName) {
+    for (const input of asList(m.def.inputs)) {
+      const files = inputFiles(root, [input]);
+      if (!files.length) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${name}`, why: `input ${input} matches no tracked file (LOOP-044)` };
+      for (const path of files) {
+        try { lstatSync(join(root, path)); }
+        catch (e) {
+          if (e.code !== "ENOENT" && e.code !== "ENOTDIR") throw e;
+          return { verdict: "Resolvable", action: `commit ${path}`, why: `declared input of ${name} is missing from the working tree but remains indexed (LOOP-045)` };
+        }
+      }
+    }
+  }
+  return null;
+}
+function reconcile(root, ip) {
+  if (!existsSync(ip)) return null;
+  const f = fields(read(ip)), pid = Number(f.pid);
+  let alive = false;
+  if (Number.isSafeInteger(pid) && pid > 0) {
+    try { process.kill(pid, 0); alive = true; }
+    catch (e) { if (e.code !== "ESRCH") alive = true; }
+    if (f.owner === "kernel" && f.action === "run-mechanism" && !alive) { unlinkSync(ip); return null; }
+  }
+  const head = headSha(root);
+  const committed = f.base && head && git(root, "rev-parse", f.base).stdout.trim() !== git(root, "rev-parse", "HEAD").stdout.trim()
+    && git(root, "merge-base", "--is-ancestor", f.base, "HEAD").status === 0 && !git(root, "status", "--porcelain").stdout.trim();
+  return { verdict: "Resolvable", action: `reconcile ${f.action ?? "?"} ${f.target ?? "?"} at ${f.base ?? "?"}`,
+    why: alive ? `.cairn/in-progress names live process ${pid}; wait for it to finish before reconciling`
+      : committed ? "the action appears committed and the tree is clean; verify it, then remove .cairn/in-progress"
+      : ".cairn/in-progress names an unfinished action; finish or abandon it, then remove the record" };
+}
+
 const dirtyInputs = (root, inputs) => git(root, "status", "--porcelain", "-z", "--", ...inputs).stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
 
 // Evidence history for a requirement, oldest first.
@@ -251,17 +317,17 @@ function assess(root, req, mechs, ctx) {
 
 function wake(root) {
   const ip = join(root, ".cairn", "in-progress");
-  if (existsSync(ip)) {
-    const f = fields(read(ip));
-    return { verdict: "Resolvable", action: `reconcile ${f.action ?? "?"} ${f.target ?? "?"} at ${f.base ?? "?"}`, why: ".cairn/in-progress names an unfinished action; finish or abandon it, then remove the record" };
-  }
+  const pending = reconcile(root, ip);
+  if (pending) return pending;
   const [esc] = openEscalations(root);
   if (esc) return { verdict: "Escalate", action: `present ${esc.name}`, why: `.cairn/escalations/${esc.name}.md has no Answer` };
   const [dec] = unrealizedDecisions(root);
-  if (dec) return { verdict: "Resolvable", action: `build ${dec}`, why: "the record names no commit that realized it" };
+  if (dec) return { verdict: "Resolvable", action: `build ${dec}`, why: "the record needs a resolving commit identifier followed by its subject in Realized by; the commit or subject is missing" };
   const c = currentCommitment(root);
   if (c.repair) return { verdict: "Resolvable", action: `repair ${c.repair}`, why: c.why };
   const mechs = mechanisms(root);
+  const problem = declarationError(root, mechs);
+  if (problem) return problem;
   const agreed = agreedRequirements(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
@@ -269,7 +335,7 @@ function wake(root) {
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare it as an input, or write it to the backlog and revert it (LOOP-035)` };
+  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare the path if it belongs to this commitment; otherwise capture the work in the backlog and ask the developer to resolve the scope (LOOP-035)` };
   const ctx = context(root, mechs);
   const ambiguous = c.requirements.find((r) => !ctx.requirements.get(r)?.digest);
   if (ambiguous) return { verdict: "Resolvable", action: "repair docs/spec/", why: `${ambiguous} needs exactly one requirement definition` };
@@ -358,6 +424,8 @@ async function check(root, only) {
   fold(c, agreedRequirements(root));
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
+  const problem = declarationError(root, mechs);
+  if (problem) { process.stdout.write(`${problem.verdict}: ${problem.action}\n  ${problem.why}\n`); return 1; }
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
   if (breach) { process.stdout.write(`Resolvable: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
   // Named requirements select which mechanisms run; a run is evidence for
@@ -378,7 +446,7 @@ async function check(root, only) {
     }
     // The write-ahead record, unless the agent's own already covers this run.
     const mine = !existsSync(ip);
-    if (mine) writeFileSync(ip, `action: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);
+    if (mine) writeFileSync(ip, `owner: kernel\npid: ${process.pid}\naction: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);
     const cwd = m.def.cwd && m.def.cwd !== "." ? join(root, m.def.cwd) : root;
     const logDir = join(root, ".cairn", "evidence", reqs[0]);
     mkdirSync(logDir, { recursive: true });
@@ -528,6 +596,7 @@ async function main() {
   if (cmd === "reversals") return reversals(root);
   if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md)`);
+  if (git(root, "rev-parse", "--show-toplevel").status !== 0) return usage(`${root} is not a Git working tree; wake and check require Git (LOOP-046)`);
   if (cmd === "check") return check(root, rest);
   const w = wake(root);
   process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`);

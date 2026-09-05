@@ -1,4 +1,4 @@
-commit: b102b82
+commit: f1515de
 examined: README, human manual, executable walkthrough, and diagram sources and SVGs. Checked the behavioral descriptions against wakeVerdict, check, answer, escalationTurn, reconcile, assess, requirementSet, the shared spec parser, link.sh, project skills, and the working agreement. The source map links readers to implementations and tests. No runtime behavior changed.
 verification:
   - All 169 tests pass through the committed-tree check; specification and package lint pass; 120 new receipts recorded.
@@ -9,3 +9,9 @@ verification:
   - Reviewed plain language, human choice and authority, Done versus deployment, unverified versus failed evidence, inherited requirements, and the distinction between CLI enforcement and agent obligations. Reviewed against the production coding rules; no further revision identified.
 findings:
   - none
+
+production cleanup review:
+  - Reviewed the cleanup at f1515de against the developer request. Only the two standalone development notes were removed; runtime files, skills, tests, agreements, decisions, and evidence remain intact.
+  - Historical PoC citations point to the exact pre-cleanup Git revision. Removed the README link to the design conversation; 55 local document links resolve. Both notes have byte-identical copies in development under ignored reference/development-notes/.
+  - The committed-tree check passed all 169 tests and both lints. Its exit 1 requested this refreshed review because documentation inputs changed; no mechanism failed.
+  - The earlier source and browser review at b102b82 still applies to the unchanged human manual and diagrams. Reviewed the cleanup against the production coding rules; no open finding.

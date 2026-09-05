@@ -12,4 +12,4 @@ An optional results: per-requirement field prevents exit-code inference even whe
 
 ## Realized by
 
-(none yet: recorded, not built)
+- bd4d0db Keep evidence tied to requirements and declare individual reporting

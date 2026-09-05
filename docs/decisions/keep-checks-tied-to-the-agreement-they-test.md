@@ -12,4 +12,4 @@ Bind each receipt to the requirement and falsifier paragraphs. Recover the same 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- bd4d0db Keep evidence tied to requirements and declare individual reporting

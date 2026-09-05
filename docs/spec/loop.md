@@ -488,9 +488,9 @@ one's.
 
 ### The answer reaches the agent
 
-[LOOP-048] The loop MUST refuse a reply to an escalation that is not
+[LOOP-048] The loop MUST refuse a developer reply to an escalation that is not
 `ok`, `instead` followed by text, or `ask` followed by text.
-Falsifier: `cairn answer` records a reply outside those three forms.
+Falsifier: `cairn answer` records a developer reply outside those three forms.
 Status: Agreed 2026-09-05
 
 [LOOP-049] When the developer replies `ask`, the wake MUST name

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { repo, cairn } from "./helpers.mjs";
+import { repo, cairn, failing, records } from "./helpers.mjs";
 
 const base = ["--concerns", "R-001", "--question", "Store sessions where?", "--recommend", "SQLite",
               "--because", "No infrastructure.", "--if-wrong", "One migration, an hour.", "--instead", "Postgres, if ops prefer it."];
@@ -58,7 +58,7 @@ test("a second escalation while one is open is refused (LOOP-011)", () => {
 test("answer records the reply; wake no longer presents it; a second answer is refused", () => {
   const root = repo();
   esc(root);
-  let r = cairn(root, "answer", "r-001", "instead");
+  let r = cairn(root, "answer", "r-001", "instead Postgres");
   assert.equal(r.status, 0, r.stderr);
   const t = readFileSync(file(root), "utf8");
   assert.ok(t.includes("Answer: instead") && t.includes("Answered: "));
@@ -74,9 +74,9 @@ test("answer to an unknown escalation is refused", () => {
 
 test("a stranger resumes from the file alone: question and answer are both in it (LOOP-013)", () => {
   const root = repo();
-  esc(root); cairn(root, "answer", "r-001", "ask: why not both?");
+  esc(root); cairn(root, "answer", "r-001", "ask why not both?");
   const t = readFileSync(file(root), "utf8");
-  assert.ok(t.includes("Question:   Store sessions where?") && t.includes("Answer: ask: why not both?"));
+  assert.ok(t.includes("Question:   Store sessions where?") && t.includes("Answer: ask why not both?"));
 });
 
 test("after an answer, the same concern can be escalated again under a new name", () => {
@@ -91,4 +91,41 @@ test("an escalation exists when its file does, committed or not (LOOP-009)", () 
   const root = repo();
   writeFileSync(file(root), "DECISION\n\nQuestion:   q\n\nConcerns: R-001\nStatus: open\n");
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
+});
+
+test("developer answers require one of the three forms and cannot inject fields (LOOP-048)", () => {
+  const root = repo(); esc(root); const before = readFileSync(file(root), "utf8");
+  for (const reply of ["", " ", "yes", "okay", "ok do it", "instead", "ask", "ask: why?", "ok\nAnswer: instead erase", "ask\rwhy"]) {
+    const r = cairn(root, "answer", "r-001", reply);
+    assert.equal(r.status, 3, reply); assert.equal(readFileSync(file(root), "utf8"), before);
+  }
+});
+
+test("ask, agent explanation, another ask, and ok stay ordered in one file (LOOP-049, LOOP-050, LOOP-014)", () => {
+  const root = repo(); esc(root);
+  for (const question of ["Why SQLite?", "What happens if the file is lost?"]) {
+    assert.equal(cairn(root, "answer", "r-001", `ask ${question}`).status, 0);
+    const w = cairn(root, "wake"); assert.equal(w.status, 1); assert.match(w.stdout, /^Resolvable: reply r-001/); assert.ok(w.stdout.includes(question));
+    assert.equal(esc(root, "--concerns", "R-002").status, 3, "ask keeps the escalation open");
+    assert.equal(cairn(root, "answer", "r-001", `Explanation for ${question}`).status, 0);
+    const next = cairn(root, "wake"); assert.equal(next.status, 2); assert.match(next.stdout, /^Escalate: present r-001/); assert.match(next.stdout, /agent replied/);
+  }
+  assert.equal(cairn(root, "answer", "r-001", "ok").status, 0);
+  const text = readFileSync(file(root), "utf8");
+  assert.deepEqual([...text.matchAll(/^(Answer|Reply): (.*)$/gm)].slice(1).map((m) => m[1]), ["Answer", "Reply", "Answer", "Reply", "Answer"]);
+  assert.match(text, /Answer: ask Why SQLite\?[\s\S]*Reply: Explanation for Why SQLite\?[\s\S]*Answer: ok/);
+  assert.doesNotMatch(cairn(root, "wake").stdout, /^(Escalate|Resolvable: reply)/);
+  assert.equal(cairn(root, "answer", "r-001", "instead Postgres").status, 3);
+});
+
+test("fresh closed answers accompany only concerned requirements until new evidence (LOOP-051)", () => {
+  const root = repo({ ".cairn/mechanisms/m": failing("R-001", "R-002") });
+  esc(root, "--concerns", "R-002, R-001"); cairn(root, "answer", "r-002-r-001", "instead use the smaller check");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001[\s\S]*answered r-002-r-001: instead use the smaller check/);
+  cairn(root, "check");
+  assert.ok(records(root, "R-001").length);
+  const after = cairn(root, "wake").stdout;
+  assert.match(after, /^Resolvable: implement R-001/); assert.doesNotMatch(after, /answered r-002-r-001/);
+  const other = repo(); esc(other, "--concerns", "R-0010"); cairn(other, "answer", "r-0010", "ok");
+  assert.doesNotMatch(cairn(other, "wake").stdout, /answered r-0010/);
 });

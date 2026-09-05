@@ -5,6 +5,12 @@ the contract, the roadmap names the current commitment, and the
 referee, `cairn`, reads the repository and names the next action. This
 file says what each party does when it is their turn.
 
+Cairn is a discipline tool, not a security boundary. It checks recorded
+results and freshness; it cannot judge whether a review is thorough or a
+mechanism proves its requirements. A command that always succeeds can
+produce passes without testing anything. The developer must challenge
+unsound mechanisms, and the agent must demonstrate what makes them fail.
+
 ## The agent
 
 Wake. Before anything else, run `cairn wake`. Read the glossary, the
@@ -21,6 +27,11 @@ Act on the verdict, and only on it.
 - Done: the commitment is complete. Report it, and stop. The next
   commitment is the developer's to name.
 
+When wake says `reply <slug>`, read the developer's question and append
+your explanation with `cairn answer <slug> "<explanation>"`. Run wake again
+to return the decision to the developer. An `ask` answer authorizes only
+an explanation; it does not authorize implementation.
+
 Before you change code, write `.cairn/in-progress`:
 
     action: implement | build-decision | run-mechanism | review
@@ -36,6 +47,12 @@ committed tree and refuses a dirty declared input. Your own test runs
 while editing are how you work; they are not evidence. Commit the new
 evidence receipts and their output files after each check. Evidence
 history is tracked; only .cairn/in-progress stays ignored.
+
+When wake says `run <REQ>`, use `cairn check <REQ>`; Cairn selects its
+mechanism for you. Declare every file that can affect the result, including
+shared dependencies. Broad directories are easier to maintain but rerun
+checks for unrelated edits. Narrow paths reduce reruns but need updating
+when dependencies change. Do not omit a dependency just to shorten a run.
 
 When wake says `review mechanism <REQ>`, compare the check with the
 revised requirement and falsifier without changing code. Record what you
@@ -107,6 +124,10 @@ them later?" names the behavior the developer is deciding about.
 An escalation awaits you in `.cairn/escalations/<slug>.md`. Answer it:
 
     cairn answer <slug> ok | instead <what> | ask <question>
+
+Use `ask <question>` whenever the explanation is unclear. The agent will
+reply in the same file, then the decision returns to you. Answer `ok`,
+`instead <what>`, or ask another question. Only `ok` or `instead` closes it.
 
 A queued decision awaits you in `.cairn/queue/<slug>`; its record is in
 docs/decisions/. The agent did not wait for you. Reading it and

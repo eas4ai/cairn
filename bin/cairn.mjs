@@ -164,9 +164,18 @@ function unrealizedDecisions(root) {
 }
 function escalations(root) {
   const dir = join(root, ".cairn", "escalations");
-  return list(dir).map((n) => ({ name: n.replace(/\.md$/, ""), ...fields(read(join(dir, n))) }));
+  return list(dir).map((n) => { const text = read(join(dir, n)); return { name: n.replace(/\.md$/, ""), ...fields(text), ...escalationTurn(text) }; });
 }
-const openEscalations = (root) => escalations(root).filter((e) => !("Answer" in e));
+// The initial Reply line lists options; only replies after an Answer are turns.
+function escalationTurn(text) {
+  let last = null;
+  for (const m of text.matchAll(/^(Answer|Reply):[ \t]*(.*)$/gm)) {
+    if (m[1] === "Answer" || last) last = { kind: m[1], text: m[2] };
+  }
+  const turn = !last || last.kind === "Reply" ? "developer" : /^ask\s+\S/.test(last.text) ? "agent" : "closed";
+  return { turn, last };
+}
+const openEscalations = (root) => escalations(root).filter((e) => e.turn !== "closed");
 
 // Mechanisms: name -> { name, def, digest }, and requirement -> name.
 function mechanisms(root) {
@@ -316,11 +325,23 @@ function assess(root, req, mechs, ctx) {
 }
 
 function wake(root) {
+  const w = wakeVerdict(root);
+  const req = /^(?:run|implement|declare|escalate|review mechanism) ([A-Z]+-\d+)$/.exec(w.action)?.[1];
+  if (!req) return w;
+  const latest = history(root, req).at(-1);
+  const answered = escalations(root).filter((e) => e.turn === "closed" && (e.Concerns ?? "").split(/[\s,]+/).includes(req)
+    && Number.isFinite(Date.parse(e.Answered)) && (!latest || Date.parse(e.Answered) > Date.parse(latest.recorded)))
+    .sort((a, b) => Date.parse(b.Answered) - Date.parse(a.Answered))[0];
+  if (answered) w.why += `; answered ${answered.name}: ${answered.Answer}`;
+  return w;
+}
+function wakeVerdict(root) {
   const ip = join(root, ".cairn", "in-progress");
   const pending = reconcile(root, ip);
   if (pending) return pending;
   const [esc] = openEscalations(root);
-  if (esc) return { verdict: "Escalate", action: `present ${esc.name}`, why: `.cairn/escalations/${esc.name}.md has no Answer` };
+  if (esc?.turn === "agent") return { verdict: "Resolvable", action: `reply ${esc.name}`, why: `the developer asks: ${esc.last.text.slice(4)}; explain with cairn answer ${esc.name} "<explanation>"; this question authorizes no implementation` };
+  if (esc) return { verdict: "Escalate", action: `present ${esc.name}`, why: `.cairn/escalations/${esc.name}.md awaits the developer${esc.last?.kind === "Reply" ? `; agent replied: ${esc.last.text}` : ""}` };
   const [dec] = unrealizedDecisions(root);
   if (dec) return { verdict: "Resolvable", action: `build ${dec}`, why: "the record needs a resolving commit identifier followed by its subject in Realized by; the commit or subject is missing" };
   const c = currentCommitment(root);
@@ -335,7 +356,7 @@ function wake(root) {
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare the path if it belongs to this commitment; otherwise capture the work in the backlog and ask the developer to resolve the scope (LOOP-035)` };
+  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare the path if it belongs to this commitment; otherwise capture the work in the backlog and use cairn escalate to ask the developer to resolve the scope (LOOP-035)` };
   const ctx = context(root, mechs);
   const ambiguous = c.requirements.find((r) => !ctx.requirements.get(r)?.digest);
   if (ambiguous) return { verdict: "Resolvable", action: "repair docs/spec/", why: `${ambiguous} needs exactly one requirement definition` };
@@ -541,12 +562,17 @@ function escalate(root, o) {
 }
 
 function answer(root, slug, reply) {
-  if (!slug || !reply) return usage("usage: cairn answer <slug> <reply...>");
+  if (!slug || !reply.trim() || /[\r\n]/.test(reply)) return usage("answer: provide one line: ok | instead <what> | ask <question>, or the explanation when replying to an ask");
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return usage("answer: invalid escalation slug");
   const path = join(root, ".cairn", "escalations", `${slug}.md`);
   if (!existsSync(path)) return usage(`answer: no escalation named ${slug}`);
-  if ("Answer" in fields(read(path))) return usage(`answer: ${slug} is already answered`);
-  writeFileSync(path, read(path).replace(/\n?$/, "\n") + `Answer: ${reply}\nAnswered: ${new Date().toISOString()}\n`);
-  process.stdout.write(`answered ${rel(root, path)}\n`);
+  const text = read(path), { turn } = escalationTurn(text);
+  if (turn === "closed") return usage(`answer: ${slug} is already answered`);
+  reply = reply.trim();
+  if (turn === "developer" && !/^(?:ok|(?:instead|ask) +\S.*)$/.test(reply)) return usage("answer: use ok | instead <what> | ask <question>");
+  const field = turn === "agent" ? "Reply" : "Answer", date = turn === "agent" ? "Replied" : "Answered";
+  writeFileSync(path, text.replace(/\n?$/, "\n") + `${field}: ${reply}\n${date}: ${new Date().toISOString()}\n`);
+  process.stdout.write(`${turn === "agent" ? "replied to" : "answered"} ${rel(root, path)}\n`);
   return 0;
 }
 

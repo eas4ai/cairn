@@ -29,15 +29,20 @@ with no memory of this conversation.
    (DEC-003), so the next agent inherits why and not only what.
 2. Restate before you write. State your understanding in your own words
    before writing any artifact (SPEC-003). Parroting hides
-   misunderstanding; restating exposes it.
+   misunderstanding; restating exposes it. Before the conversation,
+   read "Writing for the developer" in the
+   [working-agreement template](templates/AGENTS.md). Apply it to the
+   explanations and questions that lead to agreement, as well as to
+   the artifacts you write.
 3. Vocabulary at first occurrence. When a term carries different meanings
    for you and the developer, add it to glossary.md at that moment
    (SPEC-010).
 4. Nothing Agreed without a falsifier. A requirement is Draft until the
    developer confirms its text and its falsifier (SPEC-002). Propose the
    falsifiers for a whole domain as one set and ask the developer to
-   correct only the wrong ones (SPEC-004). Silence on the rest means
-   right.
+   correct only the wrong ones (SPEC-004). Record the set as Agreed
+   only after the developer confirms it, keeping the proposed wording
+   for items they do not change. Silence alone is not confirmation.
 5. A falsifier names a mechanism. Before a requirement goes Agreed, name
    a mechanism that could observe its falsifier: a test, a check, a
    script (SPEC-013). A falsifier nothing can observe is not finished
@@ -51,6 +56,9 @@ with no memory of this conversation.
    would not catch their requirement's violation, and for requirements
    no mechanism can check (SPEC-014). Record what the review attacked,
    not only what it found (SPEC-015).
+   Check that the explanation names the behavior and consequences in
+   language the developer can understand. Passing the spec lint checks
+   structure; it does not establish that the prose is clear.
 8. Depth and domains come from the project. Infer documentation depth;
    never ask the developer to choose it before any domain is specified
    (SPEC-008). Derive the domains from the project; never impose a fixed

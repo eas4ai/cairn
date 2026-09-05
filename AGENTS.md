@@ -60,6 +60,33 @@ what the mechanisms would miss, record what you attacked and what you
 found in `.cairn/reviews/<slug>.md`, and change no code while you look.
 A finding is resolved as its own work, after the review is recorded.
 
+## Writing for the developer
+
+Write so the developer can understand the choice and its consequences
+after one reading. Apply this to questions, specifications, records,
+and progress reports.
+
+- Name who does what and what changes for the user or system. Use
+  familiar words, concrete examples, and short sentences.
+- Match the explanation to the developer's knowledge. Explain an
+  unfamiliar technical term when it matters to the decision. Keep
+  technical detail that changes the answer; remove jargon that only
+  makes the sentence sound authoritative.
+- When asking for a decision, state the actual choice, your
+  recommendation, why it helps, and what the alternative changes.
+  Explain costs or risks in terms of what could happen. For an
+  escalation, put this information in the existing fields.
+- Distinguish what you observed from what you assume or do not know.
+  Keep important limits visible when shortening an explanation.
+- Before sending, ask whether the developer can tell what their answer
+  would authorize without decoding internal names or abstract labels.
+  Rewrite any sentence that hides that choice.
+- If a reply shows a misunderstanding, explain the choice again before
+  treating the reply as agreement. Silence alone is not confirmation.
+
+For example: "Should the app save unfinished drafts so users can reopen
+them later?" names the behavior the developer is deciding about.
+
 ## The developer
 
 An escalation awaits you in `.cairn/escalations/<slug>.md`. Answer it:

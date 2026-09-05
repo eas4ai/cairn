@@ -22,7 +22,15 @@ Two paths, decided in Stage 0:
 
 ## Standing rules
 
-Rules 1 through 8 of /new-project apply. Three more:
+Rules 1 through 8 of /new-project apply.
+
+Read "Writing for the developer" in the
+[working-agreement template](../new-project/templates/AGENTS.md) before
+presenting findings or asking for agreement. Translate code identifiers
+into the behavior they cause when that helps explain a decision; keep
+the identifiers and source paths where they support the finding.
+
+Three more:
 
 9. Evidence or question. Every statement about the codebase carries a
    path, and a line where it matters. A statement you cannot point at is

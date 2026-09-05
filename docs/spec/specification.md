@@ -153,13 +153,30 @@ requirement is Draft until confirmed; the kernel read one status per
 file. The grain the skills promise is the grain the kernel reads.
 
 [SPEC-019] The agent MUST cite a path in specification text relative to
-the repository root.
+the repository root unless the file declares it as software behavior on
+a Host paths: header line.
 Falsifier: a file under docs/spec contains a path beginning with `/` or
-`~`.
+`~` that its Host paths: header does not declare.
 Status: Agreed 2026-09-05
 
 A cairn is for someone with no memory. An absolute path on one machine
-is dead for them; the first adoption wrote five.
+is dead for them; the first adoption wrote five. A host path required by
+the software is part of its contract, not a citation to a checkout.
+A slash after a placeholder continues that template.
+
+[SPEC-024] A spec file MUST declare on a Host paths: header line every
+absolute or home-relative path its text states as the software's own behavior.
+Falsifier: a spec names a required host binary at an absolute path that
+its Host paths: header does not declare.
+Status: Agreed 2026-09-05
+
+Host paths: is a comma-separated list in the file header, before the
+first requirement and outside fenced examples. A declaration covers
+the exact path and paths beneath it, using a slash boundary. It applies
+only to that file. Use the narrowest path that describes the behavior.
+The linter checks declarations; a reviewer checks whether each declared
+path belongs to the software contract. Confirmed from the developer's
+reported false positives and proposed declaration rule on 2026-09-05.
 
 ## Checks and findings that survive a session
 

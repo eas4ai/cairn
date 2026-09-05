@@ -1,6 +1,11 @@
 commitment: the-verdict-is-per-requirement
-commit: 116d2fa
+commit: 036bf59
 examined:
+  - the documentation cleanup at 036bf59 against its parent: every normative requirement block is identical; the changes make explanations self-contained
+  - the skills test: only its label and checks for obsolete external command names were removed; its checks for unsupported artifacts and all requirement-specific tests remain
+  - the kernel, scripts, skills, and working agreement against the prior tree: unchanged, so the implementation examined at 116d2fa below is preserved
+  - the full working-file scan, including hidden files and the untracked roadmap copy, for remaining external workflow name references: no matches
+  - verification after the cleanup commit: node-test, spec-lint, and pkg-lint all recorded passing evidence; the direct test run passed all 114 tests
   - the result-line form against ordinary output: anchored to a whole line of standard output, identifier and word only; a test prints the form inside a sentence and a near-miss word and neither counts
   - standard error excluded from result lines, as LOOP-037 says standard output; a mechanism that reports on stderr is recorded by its exit code, which LOOP-039 covers
   - a mechanism printing two lines for one identifier: the last line wrote the record; nothing in the specification says which, and the conservative reading is that a fail anywhere is a fail

@@ -168,9 +168,10 @@ in `.cairn/backlog/`; the agent does not start them automatically.
 
 Changing a requirement or its falsifier makes its previous evidence stale.
 `wake` requests `review mechanism <REQ>` before another check. The agent
-compares the check with your revised agreement, corrects it if needed,
-tries a safe violating example, and records its findings in the existing
-commitment review. It then adds the exact `REQ sha256:...` entry printed
+compares the check with your revised agreement and records its findings
+in the existing commitment review without changing code. Any correction
+is a separate implementation action, verified with a safe violating
+example and the corrected case. It then adds the exact `REQ sha256:...` entry printed
 by `wake` under `reviewed:` in that mechanism's declaration and commits.
 
 The digest identifies the text reviewed. It does not prove the review was

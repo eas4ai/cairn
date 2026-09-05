@@ -537,8 +537,9 @@ loop MUST require a recorded review of the mechanism against that text.
 Falsifier: rerunning the old 500 ms check records new passing evidence
 for the 100 ms requirement without a mechanism review.
 
-The agent examines the check, corrects it where needed, and records what
-it examined in the commitment's existing review file. It then adds
+The agent examines the check without changing code and records its
+findings in the commitment's existing review file. It fixes a mismatch
+as a separate implementation action, then verifies the correction. It adds
 `ID sha256:...` to the mechanism declaration's reviewed list, using the
 digest wake prints. This records the agent's judgment, not proof of its
 understanding. The declaration and specification are committed before

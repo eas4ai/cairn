@@ -107,7 +107,7 @@ function requirementChange(root, req, m, latest, ctx) {
   const needsReview = changed && !asList(m?.def.reviewed).includes(`${req} ${now}`);
   return { changed, needsReview, digest: now };
 }
-const revisionVerdict = (req, m, digest) => ({ verdict: "Resolvable", action: `review mechanism ${req}`, why: `the requirement or falsifier changed, or its old text is unavailable; inspect ${m}, correct its check if needed, record the review, then add reviewed: list entry "${req} ${digest}" to .cairn/mechanisms/${m} and commit before check (LOOP-059)` });
+const revisionVerdict = (req, m, digest) => ({ verdict: "Resolvable", action: `review mechanism ${req}`, why: `the requirement or falsifier changed, or its old text is unavailable; inspect ${m} and record findings without changing code; fix any mismatch as a separate action, then add reviewed: list entry "${req} ${digest}" to .cairn/mechanisms/${m} and commit before check (LOOP-059)` });
 
 // Files changed by commits since the commitment began: since the commit
 // that wrote its Current: line. The footprint is the union of its

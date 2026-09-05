@@ -1,3 +1,5 @@
+![Cairn - Keep agent work tied to what you agreed to build.](assets/cover.jpg)
+
 # Cairn
 
 **A way to keep AI-assisted development tied to what you actually agreed to build.**

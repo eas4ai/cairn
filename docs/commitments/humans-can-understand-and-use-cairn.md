@@ -43,3 +43,5 @@ issue report and early design conversation from the release. Keep the
 human guides and Cairn records, and point historical report references
 to the original Git revision. Verify the remaining links and package
 checks before publishing.
+The developer also requested assets/cover.jpg at the top of the README
+and human manual. Ship only that image from assets/.

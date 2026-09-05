@@ -1,3 +1,5 @@
+![Cairn - Keep agent work tied to what you agreed to build.](../assets/cover.jpg)
+
 # Using Cairn: a human manual
 
 You do not need to learn Cairn's file formats before you can use it. Your

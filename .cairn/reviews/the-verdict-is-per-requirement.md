@@ -1,9 +1,15 @@
 commitment: the-verdict-is-per-requirement
-commit: 036bf59
+commit: 61b0bba
 examined:
+  - the skill guidance at 61b0bba against the accepted scope: architecture boundaries and rationale, interaction journeys and recovery, implementation conventions and commands, and glossary relationships or rejected synonyms when ambiguity warrants them
+  - manual reading for a small library and a project with cross-domain interactions: the prompts remain conditional, domain files require requirements to own, and feature flows remain with their domain
+  - existing-project on a codebase whose technology rationale is undocumented: the new text leaves that reason unverified and applies the existing Observed and drift rules, rather than inventing rationale or changing an agreed contract
+  - requirement and command ownership: the keystone links to owning domain requirements, and verification commands reference scripts or mechanism declarations; no duplicate evidence or completion state is introduced
+  - verification at 61b0bba: node-test, spec-lint, and pkg-lint recorded passing evidence; the generic skill validator rejected the unchanged disable-model-invocation field in both updated files and both HEAD baselines, so invocation settings were preserved
+  - executable code, tests, normative specifications, and the working agreement against the previous tree: unchanged; this is an incremental review of the two skill bodies, not a live-agent behavioral trial
   - the documentation cleanup at 036bf59 against its parent: every normative requirement block is identical; the changes make explanations self-contained
   - the skills test: only its label and checks for obsolete external command names were removed; its checks for unsupported artifacts and all requirement-specific tests remain
-  - the kernel, scripts, skills, and working agreement against the prior tree: unchanged, so the implementation examined at 116d2fa below is preserved
+  - at 036bf59, the kernel, scripts, skills, and working agreement against the prior tree: unchanged, so the implementation examined at 116d2fa below is preserved
   - the full working-file scan, including hidden files and the untracked roadmap copy, for remaining external workflow name references: no matches
   - verification after the cleanup commit: node-test, spec-lint, and pkg-lint all recorded passing evidence; the direct test run passed all 114 tests
   - the result-line form against ordinary output: anchored to a whole line of standard output, identifier and word only; a test prints the form inside a sentence and a near-miss word and neither counts

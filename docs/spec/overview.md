@@ -59,6 +59,14 @@ stopping to re-establish it.
 
 ## Status of this specification
 
+Agreement belongs to each requirement. Its own `Status: Agreed <date>`
+line overrides the file header; the header is only a default for blocks
+without their own status. Put a block's Status line in the same paragraph
+as its requirement and falsifier. An unconfirmed block in an Agreed file
+carries `Status: Draft` or `Status: Observed` explicitly. A file with
+`Scope: every commitment` in its header contributes its Agreed blocks to
+every commitment, regardless of its requirement prefix.
+
 Agreed 2026-09-04. The developer reviewed every requirement and its
 falsifier by exception, after one self-review and two independent
 reviews, and corrected none. Seven requirements drawn from two papers

@@ -80,3 +80,16 @@ test("code examples and quoted mentions are neither definitions nor references",
   const r = lint(dir);
   assert.equal(r.status, 0, r.stdout);
 });
+
+test("machine-local paths are findings in prose, links, quotes, and examples (SPEC-019)", () => {
+  for (const path of ["/home/alex/project/src/main.rs", "~/project/src/main.rs", "~alex/project", "~alex", "[/tmp/input]", '"/tmp/input"', '`/tmp/input`', "[input](/tmp/input)", "```sh\ncat /tmp/input\n```", "/tmp"]) {
+    const r = lint(fixture(AGREED + `[X-001] The agent MUST read input.\nFalsifier: It reads nothing.\n\nRead ${path}.\n`));
+    assert.equal(r.status, 1, path); assert.match(r.stdout, /absolute path.*SPEC-019/);
+  }
+});
+
+test("relative paths, URLs, slash commands, and character mentions are not absolute path findings", () => {
+  const text = 'Read src/main.rs and ../shared/config.json. See [manual](https://example.test/docs/guide). Use /new-project or /existing-project. The slash `/` and tilde `~` are characters.\n';
+  const r = lint(fixture(AGREED + '[X-001] The agent MUST act.\nFalsifier: It waits.\n\n' + text));
+  assert.equal(r.status, 0, r.stdout);
+});

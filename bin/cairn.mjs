@@ -8,7 +8,7 @@
 //                --wrong-if W --body B [--supersedes S --cause C]
 //   cairn escalate --concerns X --question Q --recommend R --because B
 //                  --if-wrong W --instead I [--level Blocking]
-//   cairn answer <slug> <reply...>  record the developer's reply
+//   cairn answer <slug> <reply...>  record the next escalation turn
 //   cairn backlog --title T --body B [--from X]   capture out-of-scope work
 //   cairn supersede <old> --cause C ...decide fields...
 //   cairn reversals                 report reversals by decider, cause, domain
@@ -17,6 +17,7 @@
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
 
 import { parseArgs } from "node:util";
+import { parseSpec } from "./spec.mjs";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { createReadStream, openSync, closeSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
@@ -59,43 +60,29 @@ function currentCommitment(root) {
   return { slug, requirements: reqs };
 }
 
-// The requirement ids the spec set declares as Agreed: a file whose
-// Status: line begins Agreed, and every [ID] at a line start in it.
-function agreedRequirements(root) {
-  const dir = join(root, "docs", "spec"), out = new Set();
-  for (const n of list(dir).filter((n) => n.endsWith(".md"))) {
-    const t = read(join(dir, n));
-    if (!/^Status: Agreed/m.test(t)) continue;
-    for (const m of t.matchAll(/^\[([A-Z]+-\d+)\]/gm)) out.add(m[1]);
-  }
-  return out;
-}
-// Identity belongs to one requirement paragraph, including its falsifier,
-// not to the entire spec file. Separate rationale and status are excluded.
-function requirementTexts(root, commit = null) {
-  const dir = "docs/spec", out = new Map();
+// The kernel and lint read the same blocks and status defaults.
+function requirementSet(root, commit = null) {
+  const dir = "docs/spec", texts = new Map(), agreed = new Set(), inherited = new Set();
+  const out = { texts, agreed, inherited };
   const ls = commit ? git(root, "ls-tree", "--name-only", `${commit}:${dir}`) : null;
   if (ls && (ls.error || ls.status !== 0)) return out;
   const names = ls ? ls.stdout.trim().split("\n") : list(join(root, dir));
   for (const n of names.filter((n) => n.endsWith(".md"))) {
     const path = `${dir}/${n}`, show = commit ? git(root, "show", `${commit}:${path}`) : null;
     if (show && (show.error || show.status !== 0)) continue;
-    const lines = (show ? show.stdout : read(join(root, path))).split(/\r?\n/);
-    let fence = null;
-    for (let i = 0; i < lines.length; i++) {
-      const f = /^ {0,3}(`{3,}|~{3,})/.exec(lines[i]);
-      if (fence) { if (new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(lines[i])) fence = null; continue; }
-      if (f) { fence = f[1]; continue; }
-      const m = /^\[([A-Z]+-\d+)\]\s*(.*)/.exec(lines[i]);
-      if (!m) continue;
-      const block = [m[2]];
-      while (i + 1 < lines.length && lines[i + 1].trim() && !/^(?:\[[A-Z]+-\d+\]|#|```|~~~)/.test(lines[i + 1])) block.push(lines[++i]);
-      const body = block.filter((l) => !/^Status:/.test(l)).join("\n");
-      out.set(m[1], { path, digest: out.has(m[1]) ? null : sha(body) });
+    const spec = parseSpec(show ? show.stdout : read(join(root, path)));
+    for (const block of spec.blocks) {
+      const body = block.body.filter((line) => !/^Status:/.test(line)).join("\n");
+      texts.set(block.id, { path, digest: texts.has(block.id) ? null : sha(body) });
+      if (block.status === "Agreed") {
+        agreed.add(block.id);
+        if (spec.scope === "every commitment") inherited.add(block.id);
+      }
     }
   }
   return out;
 }
+const requirementTexts = (root, commit = null) => requirementSet(root, commit).texts;
 const pastRequirements = (root, commit, ctx) => {
   if (!ctx.past.has(commit)) ctx.past.set(commit, commit ? requirementTexts(root, commit) : new Map());
   return ctx.past.get(commit);
@@ -145,9 +132,9 @@ function decisions(root) {
 }
 const reversed = (root) => decisions(root).filter((d) => "Superseded by" in d);
 
-// Every Agreed PKG requirement is part of every commitment (PKG-011).
-function fold(c, agreed) {
-  for (const r of [...agreed].sort()) if (r.startsWith("PKG-") && !c.requirements.includes(r)) c.requirements.push(r);
+// Inheritance is declared by Scope in the specification, never by prefix.
+function fold(c, inherited) {
+  for (const r of [...inherited].sort()) if (!c.requirements.includes(r)) c.requirements.push(r);
 }
 
 // A decision is unrealized when its Realized by section lists no commit.
@@ -349,10 +336,10 @@ function wakeVerdict(root) {
   const mechs = mechanisms(root);
   const problem = declarationError(root, mechs);
   if (problem) return problem;
-  const agreed = agreedRequirements(root);
+  const { agreed, inherited } = requirementSet(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
-  fold(c, agreed);
+  fold(c, inherited);
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   const [breach] = breaches(root, c.slug, mechs, c.requirements);
@@ -442,7 +429,10 @@ async function fileDigest(path) {
 async function check(root, only) {
   const c = currentCommitment(root);
   if (c.repair) { process.stdout.write(`Resolvable: repair ${c.repair}\n  ${c.why}\n`); return 1; }
-  fold(c, agreedRequirements(root));
+  const { agreed, inherited } = requirementSet(root);
+  const unknown = c.requirements.find((r) => !agreed.has(r));
+  if (unknown) { process.stdout.write(`Resolvable: repair docs/commitments/${c.slug}.md\n  ${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)\n`); return 1; }
+  fold(c, inherited);
   const targets = only.length ? only : c.requirements;
   const mechs = mechanisms(root);
   const problem = declarationError(root, mechs);

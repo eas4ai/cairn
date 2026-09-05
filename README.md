@@ -20,7 +20,8 @@ before, for someone who arrives with no memory of them.
 
 ## Status
 
-The kernel is `bin/cairn.mjs`: one file, run by node, no dependencies
+The kernel starts at `bin/cairn.mjs` and shares its specification parser
+in `bin/spec.mjs` with the lint. It runs on Node with no dependencies
 and no build step. `cairn wake` reads the repository and names the next
 action. `cairn check` runs the current commitment's mechanisms against
 a committed tree and records evidence with receipts. `cairn decide`,
@@ -54,6 +55,26 @@ Agent Skills layout Cairn already has:
 
 That puts the skills in front of the agent. The kernel still comes from
 the clone and the script.
+
+## Updating an existing project
+
+Keep each requirement's `Status: Agreed <date>` beside its text and
+falsifier, before the next blank line. That status overrides the file's
+header. Mark unconfirmed blocks Draft or Observed; confirming one
+requirement does not confirm the others.
+
+For rules that every commitment must satisfy, add `Scope: every commitment`
+to their spec file's header, before the first requirement. Only Agreed
+blocks are inherited. The `PKG` prefix alone no longer enables inheritance;
+existing projects that relied on it must add the Scope line.
+
+Track `.cairn/evidence/`, including receipts and output files. Remove any
+ignore rule for that directory and commit the existing history. Keep
+`.cairn/in-progress` ignored because it describes one working tree.
+
+An escalation answer `ask <question>` now keeps the decision open. The
+agent uses `cairn answer <slug> "<explanation>"` to reply, then the developer
+answers again. Only `ok` or `instead <what>` closes the decision.
 
 ## Background
 

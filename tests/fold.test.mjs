@@ -1,11 +1,11 @@
-// PKG-011: every Agreed PKG requirement is part of every commitment.
+// PKG-011: the package spec declares its Agreed requirements inherited.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { repo, cairn, review, passing, failing, commit } from "./helpers.mjs";
 
-const PKG = "# P\n\nStatus: Agreed 2026-09-04\nPrefix: PKG\n\n[PKG-001] Cairn MUST hold.\nFalsifier: it does not.\n";
+const PKG = "# P\n\nStatus: Agreed 2026-09-04\nPrefix: PKG\nScope: every commitment\n\n[PKG-001] Cairn MUST hold.\nFalsifier: it does not.\n";
 
 test("a PKG requirement the commitment does not name is declared, run, and gates Done (PKG-011)", () => {
   const root = repo({ "docs/spec/pkg.md": PKG, ".cairn/mechanisms/t": passing("R-001", "R-002") });

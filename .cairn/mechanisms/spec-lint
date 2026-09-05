@@ -2,6 +2,7 @@ command: node scripts/spec-lint.mjs docs/spec
 inputs:
   - docs/spec/
   - scripts/spec-lint.mjs
+  - bin/spec.mjs
 requirements:
   - SPEC-001
   - SPEC-002

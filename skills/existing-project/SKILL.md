@@ -136,8 +136,15 @@ write it as Observed exactly as Path A would).
 
 Both -- the confirm loop, by exception. Present each Observed section.
 Confirmed: propose the section's falsifiers as one set, name a mechanism
-for each, review the draft and record it, and mark the section Agreed
-with the date. Corrected reading: you misread the code; fix, cite again,
+for each, review the draft and record it, and add `Status: Agreed <date>`
+inside each confirmed requirement's block, before its closing blank line.
+A file's Status is the default for blocks without their own status. Keep
+unconfirmed blocks Observed or Draft, even inside an Agreed file. A
+partial confirmation does not change neighboring requirements.
+Cite paths relative to the repository root, including paths in examples.
+Declare inherited rules with `Scope: every commitment` in their spec
+file's header; the prefix alone does not make a rule global.
+Corrected reading: you misread the code; fix, cite again,
 re-present. The code is wrong: keep the Observed text as the record of
 what is, and capture the intended behavior as a requirement whose
 falsifier the current code satisfies. That is a defect, and its

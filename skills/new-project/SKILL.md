@@ -129,8 +129,17 @@ domain spec through the confirm-back loop:
 - Propose the domain's falsifiers as one set, and for each name the
   mechanism that could observe it. Review the draft (rule 7) and record
   the review. Present for agreement by exception.
-- When the developer confirms, the file's Status becomes Agreed with the
-  date.
+- When the developer confirms a requirement and its falsifier, add
+  `Status: Agreed <date>` inside that requirement's block, before its
+  closing blank line. A file's Status is the default for blocks without
+  their own status. Mark unconfirmed blocks Draft explicitly when the
+  file default is Agreed; confirming one block does not confirm its
+  neighbors. Do not promote a whole file on a partial confirmation.
+- Cite paths relative to the repository root, including paths in examples.
+  Use `src/service.mjs`, not a path tied to one developer's machine.
+- Put `Scope: every commitment` in a spec file's header only for rules
+  every commitment must satisfy. Its Agreed blocks are inherited; a
+  requirement prefix alone does not make a rule global.
 
 Filenames carry meaning, never sequence: loop.md, not 02-loop.md. The
 order of reading lives in the keystone's spec map.

@@ -2,6 +2,7 @@
 
 Status: Agreed 2026-09-04
 Prefix: PKG
+Scope: every commitment
 
 Normative.
 
@@ -124,3 +125,17 @@ Falsifier: the README provides no walkthrough showing those steps with
 commands and an explanation of the human's choices.
 
 Confirmed 2026-09-05 from the developer's accepted recommendations.
+
+## Inheritance by declaration
+
+[PKG-015] The loop MUST fold into every commitment only the
+requirements of a spec file that carries the line
+`Scope: every commitment`.
+Falsifier: a requirement is folded into a commitment from a file
+without that line.
+Status: Agreed 2026-09-05
+
+The kernel folded every requirement whose identifier began with PKG,
+which is this repository's prefix and a natural one for a consumer's
+packaging domain. The file says it is inherited; the kernel reads the
+file.

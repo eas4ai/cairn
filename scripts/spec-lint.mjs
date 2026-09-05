@@ -9,29 +9,16 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseSpec } from "../bin/spec.mjs";
 
 const dir = process.argv[2] ?? "docs/spec";
 const findings = [];
 const KEYWORD = /\bMUST NOT\b|\bMUST\b|\bMAY\b/g;
 const strip = (s) => s.replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ");
 const definitions = new Map(), prefixes = new Set(), references = [];
-const withoutFences = (text) => {
-  let fence = null;
-  return text.split(/\r?\n/).map((line) => {
-    if (fence) {
-      if (new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(line)) fence = null;
-      return "";
-    }
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (m) { fence = m[1]; return ""; }
-    return line;
-  });
-};
 
 for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
-  const path = join(dir, name), lines = withoutFences(readFileSync(path, "utf8")), text = lines.join("\n");
-  const status = /^Status:\s*(\w+)/m.exec(text)?.[1] ?? null;
-  const prefix = /^Prefix:\s*([A-Z]+)/m.exec(text)?.[1] ?? null;
+  const path = join(dir, name), raw = readFileSync(path, "utf8"), spec = parseSpec(raw), { lines, prefix } = spec, text = lines.join("\n");
   const ids = [...text.matchAll(/^\[([A-Z]+-\d+)\]/gm)].map((m) => m[1]);
   if (prefix && ids.length === 0) findings.push(`${name}: declares Prefix: ${prefix} and holds no requirement (SPEC-001)`);
   if (prefix) prefixes.add(prefix);
@@ -44,16 +31,20 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
     for (const m of clean.slice(def ? def[0].length : 0).matchAll(/\b([A-Z]+)-\d+\b/g)) references.push({ id: m[0], prefix: m[1], location: `${name}:${i + 1}` });
   }
 
-  // Requirement blocks: from [ID] to the next [ID], heading, or blank line after the falsifier.
-  for (let i = 0; i < lines.length; i++) {
-    const m = /^\[([A-Z]+-\d+)\]\s*(.*)$/.exec(lines[i]);
-    if (!m) continue;
-    const id = m[1]; let body = m[2], j = i + 1, falsifier = false;
-    while (j < lines.length && lines[j].trim() !== "" && !/^\[[A-Z]+-\d+\]/.test(lines[j]) && !/^## /.test(lines[j])) {
-      if (/^Falsifier:/.test(lines[j])) falsifier = true;
-      else if (!falsifier) body += " " + lines[j].trim();
-      j++;
+  for (const [i, line] of raw.split(/\r?\n/).entries()) {
+    const local = line.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s<>"'`]+/gi, " ");
+    for (const m of local.matchAll(/(?:^|[\s`"'(=<>\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/)[^\s`"'<>),;]*)/g)) {
+      const path = m[1].replace(/[.!?:]+$/, "");
+      if (path === "/" || ["/new-project", "/existing-project"].includes(path)) continue;
+      findings.push(`${name}:${i + 1}: absolute path ${path}; cite a path relative to the repository root (SPEC-019)`);
     }
+  }
+
+  // Status and block boundaries match the kernel exactly.
+  for (const block of spec.blocks) {
+    const { id, status, falsifier } = block;
+    const end = block.body.findIndex((line) => /^Falsifier:/.test(line));
+    const body = block.body.slice(0, end < 0 ? undefined : end).filter((line) => !/^Status:/.test(line)).join(" ");
     if (status === "Agreed" && !falsifier) findings.push(`${name}: ${id} is Agreed and carries no Falsifier: line (SPEC-002)`);
     for (const sentence of strip(body).split(/(?<=[.!?])\s+/)) {
       const hits = [...sentence.matchAll(KEYWORD)];

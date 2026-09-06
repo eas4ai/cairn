@@ -581,3 +581,78 @@ execution_error. stderr_output names a separate stderr log; older
 receipts retain their inline JSON stderr.
 Historical receipts stay unchanged. Unverified results neither satisfy
 Done nor add failed requirement attempts, including across changed inputs.
+
+## Evidence survives ordinary repository changes
+
+Requested by the developer on 2026-09-06 after the end-to-end review
+reproduced six defects and measured repeated Git reads.
+
+[LOOP-063] The check MUST reject a run whose committed candidate changes
+between its starting and ending validation.
+Falsifier: a command changes a declared input, its declaration, its
+requirement text, or HEAD while running and check records a passing receipt.
+
+The candidate includes declared inputs, the mechanism declaration, the
+specification files defining its requirements, and HEAD. Validate committed
+state before execution and again before recording evidence. Retain the
+rejected run's output and explain why no receipt was written. This detects
+changes present at either boundary; it does not isolate a command from an
+editor that changes and restores a file between those boundaries. Checks
+run in the existing working tree and retain its environment.
+
+[LOOP-064] The loop MUST include Git entry kind and executable mode in
+the identity of declared inputs and reviewed inputs.
+Falsifier: committing removal of a declared script's executable bit leaves
+its passing evidence or a review of its former mode current.
+
+Current and historical digests use the same versioned identity. Old
+content-only evidence becomes stale without rewriting historical receipts.
+Symbolic links retain their target-path identity.
+
+[LOOP-065] The wake MUST refuse current evidence whose captured output
+is missing or does not match its recorded digest.
+Falsifier: deleting or changing a latest receipt's output leaves the
+commitment Done, or a missing output field is silently accepted.
+
+Validate the combined log and, for new receipts, the separately digested
+stderr log. Older receipts without verifiable output need a new check;
+history stays unchanged. Hash each shared log once per wake with bounded
+memory. Name the damaged receipt and the rerun needed to replace it.
+
+[LOOP-066] The check MUST hold exclusive execution ownership in its
+working tree until it finishes writing evidence or reports an error.
+Falsifier: two checks in one working tree execute mechanisms concurrently,
+or one run removes the other's live ownership record.
+
+An execution lock in the Git working-tree administration directory is
+separate from the agent's in-progress record. A live owner blocks another
+check and is visible to wake. A dead or unreadable owner produces a named
+reconciliation action; recovery never guesses that an unknown owner is
+safe to overwrite. Separate Git worktrees have separate execution locks.
+
+[LOOP-067] The loop MUST refuse a mechanism declaration without a
+nonempty command, input list, and valid requirement identifiers.
+Falsifier: a declaration missing inputs records evidence, or a malformed
+required field reaches command execution instead of a named repair action.
+
+An empty input list never means the entire repository. Existing scalar
+input and requirement fields remain valid as one-item lists. Validation
+also retains the existing reporting-mode and duplicate-owner checks.
+
+[LOOP-068] The loop MUST name an unsupported Git submodule input as a
+declaration repair before attempting to hash or execute it.
+Falsifier: a populated or unpopulated submodule selected by a broad input
+causes an EISDIR crash or silently contributes no identity.
+
+Submodule execution is unsupported; declaring parent directories does not
+turn a gitlink into a regular file. Narrow the declaration only when the
+mechanism does not depend on the submodule. Otherwise choose a mechanism
+whose dependencies Cairn can represent.
+
+[LOOP-069] The wake MUST share identical input selections and file
+digests across mechanisms within one read of the repository.
+Falsifier: 100 mechanisms with the same input list cause more than 20
+Git subprocesses in a wake with no evidence or decision history.
+
+The cache lasts for one read only. A check uses fresh input state at each
+candidate boundary, so caching cannot conceal changes made by its command.

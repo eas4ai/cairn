@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: skills-can-be-installed-with-the-skills-cli
+Current: evidence-remains-tied-to-the-checked-state
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -222,3 +222,11 @@ without a project checkout and without running a command. Covers PKG-017.
 Requested by the developer on 2026-09-06. Document installation through
 the Vercel skills CLI in the README and human manual. Covers PKG-014.
 [Commitment](../commitments/skills-can-be-installed-with-the-skills-cli.md).
+
+## Evidence remains tied to the checked state
+
+Requested by the developer on 2026-09-06 after an end-to-end review.
+Repair changing candidates, mode-blind freshness, missing output acceptance,
+overlapping checks, malformed declarations, and submodule crashes. Share
+repeated input reads within a wake. Covers LOOP-063 through LOOP-069.
+[Commitment](../commitments/evidence-remains-tied-to-the-checked-state.md).

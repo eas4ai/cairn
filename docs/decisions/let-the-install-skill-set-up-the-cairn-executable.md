@@ -12,4 +12,4 @@ Add a self-contained install-cairn skill alongside the two project skills. It ch
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 342393e Add install-cairn and document installation through the skills CLI

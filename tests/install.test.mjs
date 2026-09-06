@@ -18,7 +18,7 @@ test("the script links cairn and the skills, and the linked cairn runs (PKG-014,
   const r = run(h);
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.equal(readlinkSync(join(h, "bin/cairn")), join(REPO, "bin/cairn.mjs"));
-  for (const s of ["new-project", "existing-project"]) assert.ok(existsSync(join(h, "skills", s, "SKILL.md")), s);
+  for (const s of ["install-cairn", "new-project", "existing-project"]) assert.ok(existsSync(join(h, "skills", s, "SKILL.md")), s);
   const w = spawnSync(join(h, "bin/cairn"), ["wake"], { cwd: repo(), encoding: "utf8" });
   assert.equal(w.status, 1, w.stdout + w.stderr);
   assert.match(w.stdout, /^Resolvable: /);

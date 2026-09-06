@@ -73,6 +73,33 @@ correct. It means the selected commitment meets Cairn's recorded conditions.
 
 ## Install
 
+### Start with your agent
+
+Install Cairn's skills with the
+[Vercel skills CLI](https://github.com/vercel-labs/skills), using npm/npx:
+
+```sh
+npx skills add eas4ai/cairn --skill install-cairn new-project existing-project --agent codex --global
+```
+
+Use `--agent claude-code` for Claude Code. Omit `--global` to install only
+in the project where you run the command. Preview the available skills with
+`npx skills add eas4ai/cairn --list`.
+
+Then tell your agent:
+
+> Use install-cairn to install the Cairn command and verify that it works.
+
+The skills install provides instructions and templates. The `install-cairn`
+skill guides the agent through setting up the executable. Once it works,
+use `new-project` or `existing-project` to begin. See the manual for
+[skill installation and updates](docs/manual.md#using-the-skills-cli).
+
+### Install from a checkout
+
+If you prefer to install the command and skills yourself, use this method
+instead of the skills CLI for the same skill locations.
+
 Have Node, Git, and Bash available. Run these commands in the directory
 where you want to keep the Cairn checkout:
 
@@ -82,7 +109,8 @@ cairn/scripts/link.sh
 ```
 
 The installer links the `cairn` command into `$HOME/.local/bin` and the
-`new-project` and `existing-project` skills into `$HOME/.agents/skills`.
+`install-cairn`, `new-project`, and `existing-project` skills into
+`$HOME/.agents/skills`.
 It leaves existing files in place and reports conflicting links.
 
 Make sure `$HOME/.local/bin` is on your `PATH`. If it is not, add this to

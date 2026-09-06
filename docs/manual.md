@@ -415,12 +415,13 @@ memorize. Cairn normally prints the relevant label in its next action.
 
 ## Installation details
 
-The [README install commands](../README.md#install) use the Bash script
+The [checkout installation](../README.md#install-from-a-checkout) uses the Bash script
 `scripts/link.sh` in the Cairn checkout. The defaults are:
 
 | Link | Target |
 |---|---|
 | `$HOME/.local/bin/cairn` | This checkout's `bin/cairn.mjs`. |
+| `$HOME/.agents/skills/install-cairn` | The executable setup skill. |
 | `$HOME/.agents/skills/new-project` | This checkout's new-project skill. |
 | `$HOME/.agents/skills/existing-project` | This checkout's existing-project skill. |
 
@@ -449,6 +450,54 @@ mechanism.
 for a usage or execution error. A `check` can return 1 after its tests pass
 because a review is still due. Record-writing commands such as `answer`
 return 0 on success; that does not mean the commitment is Done.
+
+### Using the skills CLI
+
+The [Vercel skills CLI](https://github.com/vercel-labs/skills) installs
+Cairn's three skills and their supporting files. It requires npm/npx and
+access to GitHub. From your project's root, install them for Codex:
+
+```sh
+npx skills add eas4ai/cairn --skill install-cairn new-project existing-project --agent codex
+```
+
+Add `--global` to make them available across your projects. Change the
+agent to `claude-code` for Claude Code, or use `--agent codex claude-code`
+to select both. Add `--yes` for a non-interactive installation.
+
+| Skill | What to ask it to do |
+|---|---|
+| `install-cairn` | Install and verify the Cairn executable, or repair a missing command. |
+| `new-project` | Agree on requirements for software you have not built yet. |
+| `existing-project` | Understand an existing codebase and prepare a piece of work. |
+
+After installing the skills, tell your agent:
+
+> Use install-cairn to install the Cairn command and verify that it works.
+
+The agent checks for an existing installation, prepares a persistent
+checkout if needed, links the executable, and checks `cairn --help`.
+It also checks PATH and tells you if a new terminal or agent session is
+needed. Installing the skills alone does not install the executable.
+
+Inspect the available skills or check the global Codex installation:
+
+```sh
+npx skills add eas4ai/cairn --list
+npx skills list --global --agent codex
+```
+
+Use one installer for each skill location. `scripts/link.sh` links skills
+directly to your checkout; the skills CLI manages its own installed copies.
+The install skill links only the executable, leaving those skill copies
+in place. Keep its checkout because the executable link points into it.
+
+A `git pull --ff-only` in a clean Cairn checkout updates the executable.
+Refresh skills managed by the skills CLI separately:
+
+```sh
+npx skills update install-cairn new-project existing-project
+```
 
 ## Upgrading an existing Cairn project
 

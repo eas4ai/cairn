@@ -598,16 +598,75 @@ function reversals(root) {
 
 // ------------------------------------------------------------ main
 
+function help() {
+  process.stdout.write(`Cairn - Keep agent work tied to the agreed requirements.
+
+Usage: cairn <command> [options]
+       cairn --help | -h
+
+Global options:
+  --help, -h   Print this help without running a command. No repository needed.
+  --root DIR   Use DIR as the project root (default: current directory).
+  --           Treat the remaining arguments as literal text, not options.
+
+Commands:
+  wake
+    Read the project records and name the next action.
+  check [REQ ...]
+    Run checks and record evidence against committed inputs. With requirement
+    IDs, run their mechanisms; otherwise run the current commitment's checks.
+  decide --title TEXT --level LEVEL --decided-by NAME --rests-on REFS
+         --wrong-if TEXT --body TEXT [--history TEXT]
+    Record a decision. Levels: ${LEVELS.join(", ")}.
+    --history is required when the decision's domain has recorded reversals.
+    To replace an earlier decision, add --supersedes SLUG --cause CAUSE.
+  escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
+           --if-wrong TEXT --instead TEXT [--level Blocking]
+    Ask the developer for a decision. Fields must each fit on one line.
+    --level Blocking preserves the escalation even if a field is incomplete.
+  answer SLUG ok | instead TEXT | ask TEXT
+    Answer an escalation. An ask keeps it open for an explanation.
+    After an ask, the agent uses answer SLUG "EXPLANATION" to reply.
+  backlog --title TEXT --body TEXT [--from REQ]
+    Capture work outside the current commitment.
+  supersede OLD-SLUG --cause CAUSE <decide options>
+    Replace an earlier decision and record why it was reversed.
+    CAUSE must be one of these exact phrases (quote it in the shell):
+${CAUSES.map((cause) => "      " + cause).join("\n")}
+  reversals
+    Report decision reversals by decider, cause, and domain.
+
+Examples:
+  cairn wake
+  cairn check R-001
+  cairn --root ./my-project wake
+  cairn answer storage-choice ask "What would this change for users?"
+
+Quote values containing spaces. Help also works after a command:
+  cairn check --help
+
+Exit codes:
+  wake/check: 0 Done, 1 Resolvable, 2 Escalate, 3 usage or execution error.
+  Other commands and help: 0 on success, 3 on error.
+  A check can return 1 after tests pass because a review is still needed.
+
+Human manual: docs/manual.md in the Cairn installation.
+`);
+  return 0;
+}
+
 function usage(msg) { process.stderr.write(`cairn: ${msg}\n`); return 3; }
 
 async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
+      help: { type: "boolean", short: "h" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
       from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
+  if (a.values.help) return help();
   const root = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   if (cmd === "decide") return decide(root, a.values);

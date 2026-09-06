@@ -96,7 +96,11 @@ Check that the command can be found:
 
 ```sh
 command -v cairn
+cairn --help
 ```
+
+`cairn --help` (or `cairn -h`) lists commands, options, and examples.
+It works outside a project and does not run any checks or change records.
 
 If your agent reads skills from another directory, use the installer's
 `--skills DIR` option. It can be repeated for more than one directory.

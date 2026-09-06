@@ -12,6 +12,10 @@ are included for when you want to act directly. Examples using `APP-001` or
 `storage-choice` are illustrative: substitute the identifier Cairn actually
 prints. Run project commands from your project's repository root.
 
+Run `cairn --help` or `cairn -h` for commands, options, examples, and exit
+codes. You can also use `cairn check --help`. Help works outside a project
+and does not run the named command or change any records.
+
 Start with the [README](../README.md) for installation and an overview.
 For a complete exercise you can run yourself, use the
 [worked example](walkthrough.md).

@@ -12,4 +12,4 @@ Validate HEAD, declared inputs, declaration, and defining specification before a
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 68bd2bd Keep evidence tied to committed candidates and serialize checks

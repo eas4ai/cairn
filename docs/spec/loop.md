@@ -589,12 +589,13 @@ reproduced six defects and measured repeated Git reads.
 
 [LOOP-063] The check MUST reject a run whose committed candidate changes
 between its starting and ending validation.
-Falsifier: a command changes a declared input, its declaration, its
-requirement text, or HEAD while running and check records a passing receipt.
+Falsifier: starting and ending validation see a different input,
+declaration, requirement file, or HEAD, but check records a passing receipt.
 
 The candidate includes declared inputs, the mechanism declaration, the
 specification files defining its requirements, and HEAD. Validate committed
-state before execution and again before recording evidence. Retain the
+state before execution and again before recording evidence. Compare the
+starting inputs with the commit even when Git status hides changes. Retain the
 rejected run's output and explain why no receipt was written. This detects
 changes present at either boundary; it does not isolate a command from an
 editor that changes and restores a file between those boundaries. Checks

@@ -288,8 +288,20 @@ which reporting rule a shared check uses before interpreting a blanket result.
 ### Why passing checks sometimes need to run again
 
 Cairn marks evidence stale when the requirement or falsifier changes, the
-mechanism declaration changes, or a declared input's contents change. An
+mechanism declaration changes, or a declared input's contents, executable
+mode, or file kind changes. An
 unrelated commit alone does not make that evidence stale.
+
+A check verifies its candidate before execution and again before writing
+receipts. If the command edits an input, changes its declaration or defining
+specification, or moves HEAD, Cairn retains the output and refuses evidence
+for that run. Inspect the change, commit or restore the intended candidate,
+then check again. A formatter or generator should finish before the check.
+Git flags that hide edits do not make those edits committed.
+
+Checks use the existing working tree and environment. Boundary validation
+does not isolate them from an editor that changes and restores a file while
+they run. Keep declared inputs stable for the whole run.
 
 If you revise a requirement, the agent first reviews whether the check
 still tests the new agreement. It records that examination, fixes any
@@ -301,6 +313,12 @@ changes easy to catch, but can rerun expensive checks after small edits.
 Narrower paths reduce that work, but shared dependencies still need to be
 included. Ask the agent to explain what can affect each result rather than
 removing an input simply to avoid a slow run.
+
+A declaration needs a nonempty command, declared input paths, and valid
+requirement identifiers. An empty input list is an error. Git submodules
+are unsupported inputs and produce a named repair message. Narrow an input
+around a submodule only if the check does not read it; otherwise its
+dependencies need a mechanism Cairn can represent.
 
 External state needs judgment. A device, service, or host configuration can
 change without any declared repository file changing. Cairn does not
@@ -314,6 +332,12 @@ Receipts live under `.cairn/evidence/<requirement>/`. Read the receipt's
 stderr log. Several receipts from one mechanism run can point to the same
 files. The terminal shows the recorded results; the full logs are kept on
 disk.
+
+Wake verifies that the latest receipts' output files exist and match their
+digests. A missing or changed log names the receipt that needs a new check.
+Both combined output and separate stderr are digested. Shared logs are read
+once per wake with bounded memory. Keep secrets out of command output:
+Cairn retains the complete bytes that checks print.
 
 Keep old receipts and their logs in Git. A fresh clone needs the failure
 history as well as the latest pass. Very old receipts may lack output that
@@ -351,12 +375,14 @@ silently changing what you agreed to build.
 |---|---|
 | `cairn` is not found. | Check the install link and your `PATH`; see installation details below. |
 | The directory is not a Cairn repository or Git working tree. | Open your project root. A plain directory needs Git and the project files prepared through a project skill. |
-| `repair` names a mechanism. | Ask which input matched no tracked file, whether the reporting mode is valid, or whether two mechanisms claim the same requirement. Repair the declaration before rerunning. |
+| `repair` names a mechanism. | Inspect missing fields, unmatched inputs, unsupported submodules, reporting mode, or duplicate requirement ownership. Repair the declaration before rerunning. |
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
 | `scope` names a file. | Ask why it changed and whether it belongs to this commitment. Correct an incomplete declaration when justified; otherwise capture the work and escalate the scope decision. |
 | `reconcile` appears after an interruption. | Ask the agent to inspect `.cairn/in-progress` and the working tree, then finish or abandon that recorded action. Do not delete the record merely to get past the message. |
+| `reconcile` names `cairn-check.lock`. | Wait for a live check owner. If the owner is dead or unreadable, inspect its command and any surviving child processes before removing the named lock. |
+| `run` names a missing or corrupt output receipt. | Inspect the damaged evidence, retain its history, and run the check again to produce a new verifiable receipt. |
 | A decision needs a realizing commit. | Ask the agent whether the decision was actually built. Its record needs a resolving commit identifier and subject, not just a promise. |
 | Checks pass but Done is still absent. | Read the next action: a missing or stale review, open finding, unfinished record, or other outstanding condition can still need work. |
 
@@ -369,15 +395,24 @@ branches' commits remain separate. A merged change to a declared input still
 makes evidence stale. `AGENTS.md`, `CLAUDE.md`, `.gitignore`, and files under
 `.cairn/` and `docs/` are treated as Cairn's own records for scope purposes.
 
-For an interrupted check, wake removes a run record marked as created by
-Cairn only when its recorded process is gone. A live process is named in the reason; an
+Only one check can execute in a working tree at a time. Its execution lock
+lives in that worktree's Git administration directory, so separate worktrees
+can run independently. `git rev-parse --git-path cairn-check.lock` shows the
+lock's location. A finished check releases its own lock even on a reported
+execution error. After a killed process, wake names the lock for inspection;
+it never automatically replaces dead or incomplete ownership. Do not remove
+a lock while its command or surviving children are still running.
+
+After reconciling an interrupted check's lock, wake removes a run record
+marked as created by Cairn only when its recorded process is gone. A live
+process is named in the reason; an
 agent-owned action record still needs reconciliation. If the base commit is
 behind a clean checkout, wake says the action appears committed and asks for
 verification before removing the record.
 
 ### Repeated failures
 
-Cairn tracks failed attempts by distinct contents of a mechanism's declared
+Cairn tracks failed attempts by distinct identities of a mechanism's declared
 inputs. Before the first pass, the first recorded input state is a baseline,
 not an attempt. Repeating the same state, returning to one already tried,
 or changing only unrelated documentation does not add an attempt. A pass
@@ -500,6 +535,12 @@ npx skills update install-cairn new-project existing-project
 ```
 
 ## Upgrading an existing Cairn project
+
+Let any running checks finish before changing the installed kernel. New
+input digests include file mode and kind; evidence written with the old
+content-only format becomes stale once. Receipts without independently
+verifiable combined and stderr logs also need a new run. Preserve those
+older receipts and follow the rerun that wake names.
 
 After updating the tool, ask the agent to inspect these items in your project:
 

@@ -42,11 +42,23 @@ Before you change code, write `.cairn/in-progress`:
 Remove it when the change is committed. On wake, an existing record is
 reconciled before any new work: finish or abandon the action it names.
 
+Check execution has a separate working-tree lock. When wake names
+`cairn-check.lock`, wait for a live owner. If the owner is dead or the
+record is incomplete, inspect the command and any surviving children;
+remove the named lock only after execution has stopped. Keep the agent's
+in-progress record until its own action is finished or abandoned.
+
 Commit before you check. `cairn check` records evidence only against a
 committed tree and refuses a dirty declared input. Your own test runs
 while editing are how you work; they are not evidence. Commit the new
 evidence receipts and their output files after each check. Evidence
 history is tracked; only .cairn/in-progress stays ignored.
+
+Keep the candidate stable throughout a check. Cairn compares it with the
+commit before execution and validates it again before recording evidence.
+A changed candidate keeps its diagnostic output but gets no receipt.
+Missing or damaged captured output needs a new check, never an edited
+historical receipt.
 
 When wake says `run <REQ>`, use `cairn check <REQ>`; Cairn selects its
 mechanism for you. Declare every file that can affect the result, including

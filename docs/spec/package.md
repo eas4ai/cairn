@@ -139,3 +139,16 @@ The kernel folded every requirement whose identifier began with PKG,
 which is this repository's prefix and a natural one for a consumer's
 packaging domain. The file says it is inherited; the kernel reads the
 file.
+
+## Command help
+
+[PKG-017] Cairn MUST print command help and exit successfully without
+reading or changing repository records when invoked with --help or -h.
+Falsifier: cairn --help outside a repository exits nonzero, omits command
+usage, or changes files.
+Status: Agreed 2026-09-06
+
+Help includes command purposes, required options, global options, exit
+codes, and examples. The flag also works after a command. Unknown options
+still produce usage errors; a literal --help after the argument separator
+is ordinary positional text. Requested by the developer on 2026-09-06.

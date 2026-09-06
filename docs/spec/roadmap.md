@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: host-paths-are-part-of-the-contract
+Current: command-help-is-always-available
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -210,3 +210,9 @@ Requested by the developer on 2026-09-05. Correct placeholder path
 findings and allow explicitly declared host paths in specification files.
 Covers SPEC-019 and SPEC-024.
 [Commitment](../commitments/host-paths-are-part-of-the-contract.md).
+
+## Command help is always available
+
+Requested by the developer on 2026-09-06. Add --help and -h, available
+without a project checkout and without running a command. Covers PKG-017.
+[Commitment](../commitments/command-help-is-always-available.md).

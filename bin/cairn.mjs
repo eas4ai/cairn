@@ -154,22 +154,23 @@ function scopeSnapshot(raw) {
       || typeof s.began !== "string" || typeof s.through !== "string"
       || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(s.began) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(s.through)
       || !Array.isArray(s.paths) || !s.paths.length) return null;
+  if (s.mode !== undefined && s.mode !== "keep") return null;
   if (s.paths.some((p, i) => typeof p !== "string" || !p || p.includes("\0") || p.startsWith("/")
       || p.split("/").some((part) => !part || part === "." || part === "..") || (i > 0 && s.paths[i - 1] >= p))) return null;
   return s;
 }
-function unrestoredScope(root, s) {
-  const r = git(root, "diff", "--name-only", "--no-renames", "-z", s.began, "HEAD", "--");
+function changedScope(root, s) {
+  const r = git(root, "diff", "--name-only", "--no-renames", "-z", s.mode === "keep" ? s.through : s.began, "HEAD", "--");
   if (r.error || r.status !== 0) return new Set(s.paths);
   const changed = new Set(r.stdout.split("\0").filter(Boolean));
   return new Set(s.paths.filter((p) => changed.has(p)));
 }
-function acknowledgedScope(root, slug, history) {
-  const acknowledged = new Set();
+function scopeApprovals(root, slug, history) {
+  const approvals = [];
   // Only committed answers affect the guard. HEAD is also part of each check's
   // candidate, so editing an answer during execution cannot change its scope.
   const names = git(root, "ls-tree", "--name-only", "-z", "HEAD:.cairn/escalations");
-  if (names.error || names.status !== 0) return acknowledged;
+  if (names.error || names.status !== 0) return approvals;
   for (const name of names.stdout.split("\0").filter((n) => /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(n))) {
     const r = git(root, "show", `HEAD:.cairn/escalations/${name}`);
     if (r.error || r.status !== 0) continue;
@@ -180,10 +181,30 @@ function acknowledgedScope(root, slug, history) {
         || typeof e.Answered !== "string" || !Number.isFinite(Date.parse(e.Answered)) || e["Scope approved"] !== sha(e.Scope)) continue;
     const newer = new Set(history.line.slice(0, history.line.indexOf(s.through)));
     const later = new Set(changedPaths(root, history.commits.split("\n").filter((c) => newer.has(c)).join("\n") + "\n"));
-    const unrestored = unrestoredScope(root, s);
-    for (const p of s.paths) if (!later.has(p) && !unrestored.has(p)) acknowledged.add(p);
+    const changed = changedScope(root, s);
+    const paths = s.paths.filter((p) => !later.has(p) && !changed.has(p));
+    if (paths.length) approvals.push({ path: `.cairn/escalations/${name}`, text: r.stdout, snapshot: s, paths });
   }
-  return acknowledged;
+  return approvals;
+}
+function acknowledgedScope(root, slug, history) {
+  return new Set(scopeApprovals(root, slug, history).flatMap((a) => a.paths));
+}
+function retentionApprovals(root) {
+  const slug = currentCommitment(root).slug;
+  return scopeApprovals(root, slug, scopeHistory(root, slug)).filter((a) => a.snapshot.mode === "keep");
+}
+function retentionChanged(root, commit, ctx) {
+  if (!ctx.retention.length) return false;
+  if (!ctx.retentionPast.has(commit)) ctx.retentionPast.set(commit, ctx.retention.some((a) => {
+    const r = git(root, "show", `${commit}:${a.path}`);
+    return r.error || r.status !== 0 || r.stdout !== a.text;
+  }));
+  return ctx.retentionPast.get(commit);
+}
+function retentionReasons(root, commit, ctx) {
+  return [retentionChanged(root, commit, ctx) ? "the check predates the committed retention approval (LOOP-085)" : null,
+    ctx.retentionDirty ? "a retained path has uncommitted changes (LOOP-085)" : null].filter(Boolean);
 }
 function scopeVerdict(root, c, mechs) {
   // There is no footprint until a mechanism belongs to this commitment.
@@ -192,7 +213,7 @@ function scopeVerdict(root, c, mechs) {
   const paths = breaches(root, c.slug, mechs, c.requirements);
   if (!paths.length) return null;
   const first = /[\s\x00-\x1f\x7f-\x9f]/.test(paths[0]) ? displayPath(paths[0]) : paths[0];
-  return { verdict: "Resolvable", action: `scope ${first}`, why: `${paths.length} unresolved scope paths changed since the commitment began and no mechanism declares them (LOOP-035):\n${paths.map((p) => `  - ${displayPath(p)}`).join("\n")}\n  Declare paths that belong to the agreement. Otherwise capture the work in the backlog, restore the paths to the commitment's activation tree, commit, and use cairn escalate --scope --concerns LOOP-035 with the decision fields. Commit the developer's ok before checking; it acknowledges only the recorded restored history, never future changes. An instead answer supplies direction, not an automatic exception.` };
+  return { verdict: "Resolvable", action: `scope ${first}`, why: `${paths.length} unresolved scope paths changed since the commitment began and no mechanism declares them (LOOP-035):\n${paths.map((p) => `  - ${displayPath(p)}`).join("\n")}\n  Declare missing inputs that belong to the agreement. To keep correct committed work outside it, use cairn escalate --scope --keep --concerns LOOP-035 with the decision fields for explicit approval of that exact history. For accidental work, capture it in the backlog, restore the paths to the commitment's activation tree, commit, and use cairn escalate --scope --concerns LOOP-035. Commit the developer's ok before checking. Retention needs fresh checks and review; neither approval grants future changes. An instead answer supplies direction, not an automatic exception.` };
 }
 function changedPaths(root, commits, inputs = []) {
   const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z", "--", ...inputs],
@@ -611,7 +632,9 @@ const VERDICT = { Done: 0, Resolvable: 1, Escalate: 2 };
 function context(root, mechs) {
   const digests = new Map();
   for (const [n, m] of mechs.byName) digests.set(n, inputsDigest(root, asList(m.def.inputs), mechs.inputs));
-  return { digests, escalations: escalations(root), requirements: requirementTexts(root), past: new Map(), outputs: new Map(), details: new Map() };
+  const retention = retentionApprovals(root), retainedPaths = retention.flatMap((a) => a.paths.map((p) => `:(literal)${p}`));
+  const retentionDirty = retainedPaths.length && (dirtyInputs(root, retainedPaths).length || committedInputsDigest(root, retainedPaths) !== inputsDigestAt(root, retainedPaths, "HEAD"));
+  return { digests, escalations: escalations(root), requirements: requirementTexts(root), past: new Map(), outputs: new Map(), details: new Map(), retention, retentionDirty, retentionPast: new Map() };
 }
 // One requirement's standing, from facts on disk.
 function assess(root, req, mechs, ctx) {
@@ -645,6 +668,7 @@ function assess(root, req, mechs, ctx) {
     if (revision.changed) reasons.push(revision.reason);
     if (latest.mechanism_digest !== m.digest) reasons.push("the mechanism changed");
     if (inputsChanged) reasons.push("a declared input changed");
+    reasons.push(...retentionReasons(root, latest.commit, ctx));
     const damaged = evidenceError(root, latest, ctx.outputs);
     if (damaged) reasons.push(`receipt ${latest.path}: ${damaged}; rerun the check to replace this evidence (LOOP-065)`);
     stale = reasons.length ? reasons.join(" and ") : null;
@@ -714,6 +738,7 @@ function wakeVerdict(root) {
   if ((s = first((x) => !x.mech))) return { verdict: "Resolvable", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
   const head = headSha(root), rv = reviewOf(root, c.slug);
   if (!rv) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `every requirement passes; no review record exists at .cairn/reviews/${c.slug}.md (LOOP-020)` };
+  if (retentionChanged(root, rv.commit, ctx)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: "the review predates the committed retention approval; examine the retained work and fresh evidence (LOOP-085)" };
   const reviewed = pastRequirements(root, rv.commit, ctx);
   if (state.some((x) => !reviewed.get(x.req)?.digest || reviewed.get(x.req).digest !== ctx.requirements.get(x.req)?.digest))
     return { verdict: "Resolvable", action: `review ${c.slug}`, why: "a requirement or falsifier changed since the review, or its reviewed text is unavailable (LOOP-058)" };
@@ -781,7 +806,8 @@ function fileDigest(path) {
 
 function candidate(root, m, requirements, expectedHead) {
   const inputs = asList(m.def.inputs);
-  const paths = [...inputs, `.cairn/mechanisms/${m.name}`, ...asList(m.def.requirements).map((r) => requirements.get(r)?.path).filter(Boolean)];
+  const retainedPaths = retentionApprovals(root).flatMap((a) => a.paths.map((p) => `:(literal)${p}`));
+  const paths = [...inputs, ...retainedPaths, `.cairn/mechanisms/${m.name}`, ...asList(m.def.requirements).map((r) => requirements.get(r)?.path).filter(Boolean)];
   const head = headSha(root), dirty = dirtyInputs(root, paths);
   if (dirty.length || head !== expectedHead) return { head, dirty };
   const cache = inputCache();
@@ -976,14 +1002,23 @@ function scopeEscalation(root, o) {
   if (!paths.length) return { error: "no unresolved scope paths to acknowledge" };
   const history = scopeHistory(root, c.slug);
   const s = { commitment: c.slug, began: history.began, through: history.line[0], paths };
-  const unrestored = unrestoredScope(root, s);
+  if (o.keep) {
+    s.mode = "keep";
+    const inputs = paths.map((p) => `:(literal)${p}`);
+    if (dirtyInputs(root, inputs).length || committedInputsDigest(root, inputs) !== inputsDigestAt(root, inputs, s.through)
+        || git(root, "rev-parse", "HEAD").stdout.trim() !== s.through) return { error: "commit the retained paths and keep HEAD stable before --scope --keep" };
+  }
+  const unrestored = changedScope(root, s);
   if (unrestored.size) return { error: `restore these paths to activation commit ${s.began} and commit before --scope: ${[...unrestored].map(displayPath).join(", ")}` };
   return { snapshot: s };
 }
 function scopeEscalationLines(scope) {
   if (scope.error) return [`Scope error: ${scope.error}`];
   if (!scope.snapshot) return [];
-  return ["", "Scope acknowledgment: ok acknowledges only the recorded restored history, never future changes. Commit the answer before checking. An instead answer supplies direction without granting this acknowledgment.",
+  const meaning = scope.snapshot.mode === "keep"
+    ? "ok approves keeping these exact committed changes as a correction of this incident's scope, never future changes. Commit the answer, rerun checks, and review the retained work. Declare any missing dependencies within the agreement."
+    : "ok acknowledges only the recorded restored history, never future changes. Commit the answer before checking.";
+  return ["", `Scope acknowledgment: ${meaning} An instead answer supplies direction without granting this acknowledgment.`,
     `Scope: ${JSON.stringify(scope.snapshot).replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029")}`,
     "Recorded scope paths:", ...scope.snapshot.paths.map((p) => `  - ${displayPath(p)}`)];
 }
@@ -996,6 +1031,7 @@ function escalationRequest(root, o) {
   return { malformed: bad || (scope.error ? "scope" : null), lines: scopeEscalationLines(scope) };
 }
 function escalate(root, o) {
+  if (o.keep && !o.scope) return usage("escalate: --keep requires --scope");
   if (!o.concerns && o.level !== "Blocking") return usage("escalate: missing --concerns");
   if (o.level !== undefined && o.level !== "Blocking") return usage(`escalate: --level must be Blocking or absent, not ${o.level}`);
   const [open] = openEscalations(root);
@@ -1091,11 +1127,13 @@ Commands:
     --history is required when the decision's domain has recorded reversals.
     To replace an earlier decision, add --supersedes SLUG --cause CAUSE.
   escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
-           --if-wrong TEXT --instead TEXT [--level Blocking] [--scope]
+           --if-wrong TEXT --instead TEXT [--level Blocking] [--scope [--keep]]
     Ask the developer for a decision. Fields must each fit on one line.
     --level Blocking preserves the escalation even if a field is incomplete.
     --scope records restored scope history for a specific acknowledgment;
     include LOOP-035 in --concerns and commit restoration before raising it.
+    Add --keep to request retaining exact committed work instead; approval
+    requires fresh checks and review and never permits future changes.
   answer SLUG ok | instead TEXT | ask TEXT
     Answer an escalation. An ask keeps it open for an explanation.
     After an ask, the agent uses answer SLUG "EXPLANATION" to reply.
@@ -1133,7 +1171,7 @@ async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
-      help: { type: "boolean", short: "h" }, scope: { type: "boolean" },
+        help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
       from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });

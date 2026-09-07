@@ -440,7 +440,7 @@ silently changing what you agreed to build.
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
-| `scope` names a file. | Read the complete path list below it. Correct an incomplete declaration when justified; otherwise capture the work, restore it, commit, and raise a scope-specific acknowledgment as described below. |
+| `scope` names a file. | Read the complete path list below it. Correct an incomplete declaration when justified, request explicit approval to keep exact correct work, or restore accidental work and request acknowledgment as described below. |
 | `reconcile` appears after an interruption. | Ask the agent to inspect `.cairn/in-progress` and the working tree, then finish or abandon that recorded action. Do not delete the record merely to get past the message. |
 | `reconcile` names `cairn-check.lock`. | Wait for a live check owner. If the owner is dead or unreadable, inspect its command and any surviving child processes before removing the named lock. |
 | `run` names a missing or corrupt output receipt. | Inspect the damaged evidence, retain its history, and run the check again to produce a new verifiable receipt. |
@@ -463,6 +463,30 @@ to enforce. Wake asks for a declaration. An explicitly requested check for
 another requirement with an existing mechanism can still run. Once a mechanism
 belongs to the current commitment, the guard checks its entire history,
 including changes made before that declaration.
+
+If correct work belongs to the current agreement but its declaration omitted
+an input, add that input and commit the declaration. The guard applies the
+corrected footprint to earlier commits too; no revert is needed.
+
+If correct work landed outside this commitment, propose keeping it explicitly:
+
+```sh
+cairn escalate --scope --keep --concerns LOOP-035 \
+  --question 'Keep these exact changes despite their wrong commitment window?' \
+  --recommend 'Keep the committed work listed in this incident.' \
+  --because 'The work is correct; its scope was recorded incorrectly.' \
+  --if-wrong 'Missing dependencies may require broader declarations and more checks.' \
+  --instead 'Restore the changes and capture the work in the backlog.'
+```
+
+Explain the actual work and checks in those fields. The record names its
+commitment activation, approved commit, and exact paths. The developer's
+`ok`, committed through the existing answer command, corrects scope for
+only those changes. It does not change the mechanism footprint or permit
+later edits. The files must still match the approved commit in contents,
+kinds, and modes. Rerun checks and review the retained work: evidence and
+review from before the committed approval cannot complete this commitment.
+Cairn still cannot judge the work or discover omitted dependencies for you.
 
 For accidental work outside the agreement, first capture it in the backlog.
 Restore each breaching path to its content, kind, and executable mode at the
@@ -489,7 +513,8 @@ passed by the acknowledgment.
 An ordinary escalation answer does not clear scope history. Both wake and check
 show relevant answers concerning LOOP-035. An `instead` answer supplies a
 direction, not an automatic exemption: correct the declaration within the
-agreement, or restore and raise a new scope-specific question. An `ask` keeps
+agreement, propose explicit retention, or restore and raise a new scope-specific
+question. An `ask` keeps
 the conversation open. If this isn't clear, ask me to explain it another way
 before you decide.
 

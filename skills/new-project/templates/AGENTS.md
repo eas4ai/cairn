@@ -154,7 +154,13 @@ move the roadmap's Current: line.
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own
 commits; reverting a change does not erase a footprint breach. Declare a
-missing input when it belongs to the commitment. Otherwise capture the
+missing input when it belongs to the commitment; this can cover earlier
+correct changes without reverting them. To retain correct committed work
+outside that agreement, use `cairn escalate --scope --keep --concerns
+LOOP-035` with decision fields explaining why to keep the exact recorded
+changes. Stop for the developer. A committed `ok` corrects scope only for
+that incident and requires fresh checks and review; it does not extend the
+mechanism footprint or authorize later edits. For accidental work, capture the
 work in the backlog, restore the breaching paths to the commitment activation
 tree, and commit the restoration. Use `cairn escalate --scope --concerns
 LOOP-035` with the decision fields to request acknowledgment of that exact

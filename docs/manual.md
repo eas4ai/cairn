@@ -293,10 +293,17 @@ which reporting rule a shared check uses before interpreting a blanket result.
 
 ### Why passing checks sometimes need to run again
 
-Cairn marks evidence stale when the requirement or falsifier changes, the
-mechanism declaration changes, or a declared input's contents, executable
-mode, or file kind changes. An
-unrelated commit alone does not make that evidence stale.
+Cairn checks the requirement and falsifier, mechanism declaration, declared
+inputs, receipt history, and captured output when deciding whether evidence
+is still current. Input identity includes contents, executable mode, and
+file kind. An unrelated commit alone does not make evidence stale.
+
+An applicable approval to keep out-of-scope work adds a freshness condition:
+the check and commitment review must come from commits containing that
+approval. Uncommitted changes to retained paths also make the existing
+evidence insufficient and prevent new evidence until the candidate is
+committed. See [scope recovery](#get-unstuck). This does not add retained
+paths to the mechanism's declared footprint or permit future edits.
 
 A stale-evidence explanation identifies its requirement, mechanism, and
 receipt, then states the next permitted action. For example:
@@ -329,8 +336,9 @@ Cairn says so instead of claiming it proved that text changed. When mechanism
 review is required, its instructions take precedence over rerunning the check.
 
 A check verifies its candidate before execution and again before writing
-receipts. If the command edits an input, changes its declaration or defining
-specification, or moves HEAD, Cairn retains the output and refuses evidence
+receipts. If the command edits a declared input or an approved retained path,
+changes its declaration or defining specification, or moves HEAD, Cairn
+retains the output and refuses evidence
 for that run. Inspect the change, commit or restore the intended candidate,
 then check again. A formatter or generator should finish before the check.
 Git flags that hide edits do not make those edits committed.
@@ -344,7 +352,8 @@ produce evidence.
 
 Checks use the existing working tree and environment. Boundary validation
 does not isolate them from an editor that changes and restores a file while
-they run. Keep declared inputs stable for the whole run.
+they run. Keep declared inputs and approved retained paths stable for the
+whole run.
 
 If you revise a requirement, the agent first reviews whether the check
 still tests the new agreement. It records that examination, fixes any
@@ -716,7 +725,8 @@ answer, or act as a permission system for the coding agent.
 | Check selection, reporting, and saved output | `check()` and `capture()` in [the CLI](../bin/cairn.mjs) | [Reporting tests](../tests/reporting-mode.test.mjs), [output tests](../tests/output.test.mjs) |
 | Changing requirements and stale evidence | `requirementChange()`, `assess()`, and `inputsDigestAt()` in [the CLI](../bin/cairn.mjs) | [Freshness tests](../tests/requirement-freshness.test.mjs) |
 | Status overrides and inherited rules | [Shared spec parser](../bin/spec.mjs), `requirementSet()` in [the CLI](../bin/cairn.mjs) | [Agreement tests](../tests/agreement.test.mjs), [inheritance tests](../tests/fold.test.mjs) |
-| Scope and interruption recovery | `breaches()` and `reconcile()` in [the CLI](../bin/cairn.mjs) | [Scope tests](../tests/scope.test.mjs), [recovery tests](../tests/recovery.test.mjs) |
+| Scope declarations, restoration, and retention | `breaches()`, `scopeApprovals()`, and `retentionChanged()` in [the CLI](../bin/cairn.mjs) | [Scope tests](../tests/scope.test.mjs), [restoration tests](../tests/scope-recovery.test.mjs), [retention tests](../tests/scope-retention.test.mjs) |
+| Interrupted work and execution ownership | `reconcile()` and `checkOwner()` in [the CLI](../bin/cairn.mjs) | [Recovery tests](../tests/recovery.test.mjs), [ownership tests](../tests/check-lock.test.mjs) |
 | Decision levels and the review queue | [Decision rules](spec/decisions.md), `decide()` in [the CLI](../bin/cairn.mjs) | [Decision tests](../tests/decide.test.mjs) |
 | Installation and link handling | [Link script](../scripts/link.sh) | [Installation tests](../tests/install.test.mjs) |
 

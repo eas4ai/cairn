@@ -118,11 +118,15 @@ inputs and of the mechanism itself.
 Falsifier: evidence exists with no digest, or with a digest that omits
 the mechanism.
 
-[LOOP-024] When its requirement and falsifier are unchanged, the agent
-MUST NOT treat a change outside a mechanism's declared inputs as making
-its evidence stale.
-Falsifier: an unrelated file change makes evidence stale while its
-requirement, falsifier, mechanism, and declared inputs are unchanged.
+[LOOP-024] The agent MUST NOT treat an unrelated file change or movement
+of HEAD alone as making evidence stale. This rule MUST NOT suppress the
+freshness requirements for changed agreement, mechanism declarations,
+receipt history, captured output, or applicable retention approval and
+retained candidates under LOOP-085.
+Falsifier: a file change makes evidence stale while the requirement,
+falsifier, mechanism, declared inputs, receipt history, captured output,
+and applicable retention approval and retained candidate are unchanged.
+Status: Agreed 2026-09-07
 
 [LOOP-034] Evidence MUST carry the command that ran, its arguments, its
 working directory, its exit code, and a digest of its output.
@@ -135,11 +139,12 @@ compare the digest. It is also the cheapest defense against an agent
 that writes a passing record by hand, because a hand-written record has
 no receipt to check.
 
-Cairn's own state files are never a mechanism's input. Freshness by
-global commit makes every record stale after every commit, including
-commits that touched nothing the requirement governs. Declared inputs
-restrict invalidation to the paths the mechanism reads, without adding
-dependency analysis to the kernel.
+Declared inputs identify the files a mechanism reads; HEAD movement alone
+does not invalidate evidence. Cairn also checks the agreement, declaration,
+receipt history, captured output, and applicable retention approval.
+These record checks do not add files to the mechanism's declared footprint.
+Retained paths join candidate validation under LOOP-085 without granting
+permission for future edits. Cairn does not infer missing dependencies.
 
 [LOOP-007] The agent MUST NOT report a requirement as met using evidence
 produced before a change to the code that requirement governs.
@@ -257,15 +262,18 @@ in the commitment's own history without a valid restoration acknowledgment
 or exact retention approval.
 Status: Agreed 2026-09-07
 
-This makes LOOP-015 observable. The commitment's footprint is already
-on disk as the union of its mechanisms' declared inputs, so no new
-declaration is needed: a change outside it is either scope creep or a
-missing declaration, and the agent resolves which by declaring or by
-writing to the backlog.
+This makes LOOP-015 observable. The footprint is the union of the
+commitment's mechanisms' declared inputs. If correct work belongs to the
+agreement but a declaration omitted a dependency, correct that declaration;
+it can cover earlier changes without reverting them.
 
-Backlog capture and a revert alone do not resolve the recorded incident.
-The developer can acknowledge the restored history through the scope-specific
-escalation described in LOOP-083. This grants no permission for later work.
+For correct work outside that agreement, propose explicit developer
+approval to keep the exact committed changes under LOOP-084. That approval
+corrects scope for the recorded incident only and requires fresh checks
+and review under LOOP-085. For accidental work, capture it in the backlog,
+commit restoration, and request acknowledgment under LOOP-083. Backlog
+capture and a revert alone do not resolve the historical breach. Neither
+approval widens the footprint or authorizes future changes.
 
 ## Commitments
 

@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: correct-work-can-be-kept-after-a-scope-breach
+Current: freshness-and-scope-guidance-agree
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -264,3 +264,11 @@ Requested by the developer on 2026-09-07 to complete the recovery path for
 correct work committed in the wrong scope window. Delivers LOOP-084 and
 LOOP-085 and revisits LOOP-035 while preserving LOOP-083 restoration.
 [Commitment](../commitments/correct-work-can-be-kept-after-a-scope-breach.md).
+
+
+## Freshness and scope guidance agree
+
+Requested by the developer on 2026-09-07 after the documentation audit.
+Reconciles LOOP-024, the LOOP-035 rationale, and the manual with the existing
+retention behavior under LOOP-084 and LOOP-085. No runtime behavior changes.
+[Commitment](../commitments/freshness-and-scope-guidance-agree.md).

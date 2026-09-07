@@ -26,3 +26,15 @@ reports a change-frequency warning and one additional minor wake guard;
 test-gate does not model subprocess CLI tests and flags documentation
 sections. Neither is claimed clean. Committed full checks and final review
 remain required.
+
+## LOOP-086 mechanism review after wording correction
+
+Reviewed the revised requirement, falsifier, node-test declaration, and all
+twelve review-finding regressions. Splitting two obligations into sentences
+does not change their meaning. The mechanism exercises every stated outcome,
+including the exact REM-002 and Status reproduction through wake and check.
+The original violating implementation failed seven malformed cases; the
+corrected implementation passes all twelve. The added explicit empty-list
+case failed before normalization and passes after it. All 31 focused tests,
+including spec lint and the executable walkthrough, pass. No mismatch found.
+No code changed during this mechanism review.

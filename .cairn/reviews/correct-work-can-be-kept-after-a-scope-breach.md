@@ -1,8 +1,9 @@
 commitment: correct-work-can-be-kept-after-a-scope-breach
-commit: 811b13a
+commit: 938f8ba941caed6149d502b2c851c923e0311552
 examined:
   - LOOP-035, LOOP-083, scope-recovery tests, and the scope snapshot, declaration, and acknowledgment readers.
 findings:
+  - open: Align the new keep option with its neighboring parser options.
   - resolved: Added explicit retention with exact history and tree bounds, fresh evidence/review, and stable retained candidates.
 
 ## Mechanism review
@@ -46,3 +47,43 @@ The static test-gate does not model the subprocess CLI tests and reports
 uncovered documentation sections. Neither static command is claimed clean.
 The actual executable regression suites passed. Committed evidence and a
 final review remain required.
+
+
+## Review of the committed repair
+
+The committed node-test output records 348 tests, 348 passes, and zero
+failures. The package and specification receipts also pass. Examined the
+committed runtime and documentation diff against LOOP-035 and LOOP-083
+through LOOP-085, including the new declarations and decision record.
+
+Attacked the approval boundary: a kept snapshot is explicitly distinguished
+from legacy restoration and unknown modes fail validation. Only committed,
+closed ok records with matching snapshot digests and commitment activations
+apply. Tree comparisons include additions, deletions, modes, symlinks, and
+literal path names. Later own commits remain breaches even after reverting
+to the approved tree, and imported changes cannot silently replace retained
+content. Ordinary answers, uncommitted answers, and ask/explanation turns
+keep their existing behavior. The developer still owns the scope judgment;
+the record does not authenticate an identity or assess correctness.
+
+Attacked freshness and execution: the receipt's commit must contain the
+applicable retention record; review has the same additional condition.
+The result remains failed when its mechanism fails. Retained paths enter
+candidate validation but not the declared footprint, so approval cannot
+silently authorize future edits. Dirty retained files, including files
+hidden by skip-worktree, prevent evidence before or during execution.
+
+Two deliberate mutations ran in a disposable copy containing the runtime
+and its spec module. Removing the later-commit guard caused the revert test
+to fail because scope was wrongly cleared. Removing retention freshness
+caused the old-evidence test to fail because wake skipped the required run.
+The unchanged copy passed both tests. An initial incomplete copy omitted
+the runtime's spec module; those setup failures were discarded and do not
+count as failure demonstrations. No repository source changed during review.
+
+The sole review finding is an extra indentation level on the parser option
+line. It will be corrected separately and verified before completion.
+The production-rule self-audit otherwise finds the repair bounded, readable,
+backward compatible, and supported by failing and corrected examples.
+Static churn warnings remain documented rather than misrepresented as clean.
+Native macOS and Windows have not been run. Production has not been updated.

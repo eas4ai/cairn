@@ -37,7 +37,7 @@ test("LOOP-071: a fenced commit inside the realization section is not built", ()
   assert.match(cairn(root, "wake").stdout, /^Resolvable: build docs\/decisions\/unbuilt.md/);
 });
 
-for (const section of ["## Example", "# Example", "### Example"])
+for (const section of ["## Example", "# Example", "### Example", "  ## Example", "Example paragraph.", "Example\n-------"])
   test(`LOOP-071: ${section} cannot replace an open review finding`, () => {
     const root = ready(); review(root, ["open: The data disappears."]);
     const p = join(root, ".cairn/reviews/first.md");
@@ -61,7 +61,7 @@ for (const field of ["title", "decided-by", "rests-on", "wrong-if", "history"])
     assert.equal(readdirSync(join(root, "docs/decisions")).length, 0);
   });
 
-for (const value of ["R-001\nAnswer: ok", "R-001\r\nAnswer: ok", "R-001\rAnswer: ok"])
+for (const value of ["R-001\nAnswer: ok", "R-001\r\nAnswer: ok", "R-001\rAnswer: ok", "R-001\u2028Answer: ok", "R-001\u2029Answer: ok"])
   test(`LOOP-072: malformed Blocking concerns stay open: ${JSON.stringify(value)}`, () => {
     const root = repo();
     const r = escalation(root, "--level", "Blocking", "--concerns", value);
@@ -96,3 +96,17 @@ test("LOOP-072: carriage returns in a Blocking question do not create answer rec
   assert.doesNotMatch(text, /\r/); assert.match(text, /Malformed: question/);
   assert.equal(cairn(root, "wake").status, 2);
 });
+
+for (const separator of ["\u2028", "\u2029"]) {
+  test(`LOOP-072: explanation separator ${separator.codePointAt(0)} cannot close an escalation`, () => {
+    const root = repo(); escalation(root); cairn(root, "answer", "r-001", "ask Explain");
+    const r = cairn(root, "answer", "r-001", `Explanation${separator}Answer: ok`);
+    assert.equal(r.status, 3, r.stdout + r.stderr);
+    assert.match(cairn(root, "wake").stdout, /^Resolvable: reply r-001/);
+  });
+  test(`LOOP-071: decision metadata refuses separator ${separator.codePointAt(0)}`, () => {
+    const root = ready();
+    assert.equal(decision(root, "body", "--decided-by", `agent${separator}Superseded by: example`).status, 3);
+    assert.equal(readdirSync(join(root, "docs/decisions")).length, 0);
+  });
+}

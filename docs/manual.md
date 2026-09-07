@@ -352,6 +352,12 @@ describe when the machine thought the run happened. Importing, deleting, or
 editing a prior receipt makes the latest result stale. Run the check again
 to incorporate the visible history, preserving earlier results.
 
+New escalations and developer answers record which evidence sequences they
+follow. Their dates cannot make an old decision cover newer attempts. Answer
+order also identifies the newest answer when no check occurred between two
+decisions. Legacy dates are used only for legacy, unsequenced receipts; three
+new failed runs still need a new escalation through the existing commands.
+
 Supporting notes such as README.md are not receipts. Receipt names use a
 timestamp such as `20260906T120000000Z`, optionally followed by a numeric
 collision suffix. If a file with a receipt name has malformed identity,

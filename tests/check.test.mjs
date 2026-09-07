@@ -212,9 +212,13 @@ test("three runs at one digest with no attempt since: the verdict stays implemen
   let r = cairn(root, "wake");
   assert.match(r.stdout, /^Resolvable: implement R-001/);
   assert.match(r.stdout, /DEC-019/);
-  writeFileSync(join(root, ".cairn/escalations/gate.md"), "DECISION\n\nQuestion:   host cache\n\nConcerns: R-009, R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\n");
-  assert.match(cairn(root, "wake").stdout, /^Escalate: present gate/);
-  writeFileSync(join(root, ".cairn/escalations/gate.md"), "DECISION\n\nQuestion:   host cache\n\nConcerns: R-009, R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\nAnswer: ok\n");
+  // The command records which evidence this escalation follows; a fabricated
+  // future timestamp cannot establish ordering against sequenced receipts.
+  const raised = cairn(root, "escalate", "--concerns", "R-009, R-001", "--question", "Inspect the host cache?",
+    "--recommend", "Inspect it", "--because", "The input did not change", "--if-wrong", "Another failed run", "--instead", "Stop");
+  assert.equal(raised.status, 0, raised.stderr);
+  assert.match(cairn(root, "wake").stdout, /^Escalate: present r-009-r-001/);
+  assert.equal(cairn(root, "answer", "r-009-r-001", "ok").status, 0);
   r = cairn(root, "wake");
   assert.match(r.stdout, /^Resolvable: implement R-001/);
   assert.doesNotMatch(r.stdout, /DEC-019/, "an answered escalation that names R-001 in a list counts");

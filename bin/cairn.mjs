@@ -27,7 +27,9 @@ import { join, relative, resolve } from "node:path";
 
 // Flat "Key: value" text. A "- item" line joins a list under the last
 // key; an unindented non-key line before the first blank line continues
-// the last value. Markdown headings end the header block.
+// the last value. Headings and blank lines end value continuation.
+const FIELD_LINE = /^([A-Za-z][A-Za-z0-9 _-]*):(?:\s+(.*))?$/;
+const LINE_BREAK = /[\r\n\u2028\u2029]/;
 function fields(text) {
   const out = {};
   let key = null;
@@ -35,7 +37,7 @@ function fields(text) {
     const line = raw.trimEnd();
     if (line === "" || line.startsWith("#")) { key = null; continue; }
     let m;
-    if ((m = /^([A-Za-z][A-Za-z0-9 _-]*):(?:\s+(.*))?$/.exec(line))) { key = m[1]; out[key] = m[2] ?? ""; }
+    if ((m = FIELD_LINE.exec(line))) { key = m[1]; out[key] = m[2] ?? ""; }
     else if (key && (m = /^\s*-\s+(.*)$/.exec(line))) { out[key] = (Array.isArray(out[key]) ? out[key] : []).concat(m[1]); }
     else if (key && typeof out[key] === "string") out[key] += " " + line.trim();
   }
@@ -45,14 +47,18 @@ function fields(text) {
 // and escalation conversations retain their existing field format.
 function recordFields(text) {
   const lines = withoutFences(text), header = [];
-  let titleAllowed = true;
+  let titleAllowed = true, continuation = false;
   for (const line of lines) {
-    if (/^#{1,6}(?:[ \t]|$)/.test(line)) {
-      if (!titleAllowed || !/^# /.test(line)) break;
+    if (/^ {0,3}#{1,6}(?:[ \t]|$)/.test(line)) {
+      if (!titleAllowed || !/^ {0,3}# /.test(line)) break;
       titleAllowed = false;
       continue;
     }
-    if (line.trim()) titleAllowed = false;
+    if (line.trim()) {
+      if (!continuation && !FIELD_LINE.test(line)) break;
+      titleAllowed = false;
+      continuation = true;
+    } else continuation = false;
     header.push(line);
   }
   return fields(header.join("\n"));
@@ -164,8 +170,8 @@ function unrealizedDecisions(root) {
   return list(dir).filter((n) => {
     const t = withoutFences(read(join(dir, n))).join("\n");
     if ("Superseded by" in recordFields(t)) return false;
-    const headings = [...t.matchAll(/^## Realized by[ \t]*$/gm)];
-    const section = headings.length !== 1 ? "" : t.slice(headings[0].index + headings[0][0].length).split(/^#{1,6}[ \t]/m)[0];
+    const headings = [...t.matchAll(/^ {0,3}## Realized by[ \t]*$/gm)];
+    const section = headings.length !== 1 ? "" : t.slice(headings[0].index + headings[0][0].length).split(/^ {0,3}#{1,6}[ \t]/m)[0];
     return ![...section.matchAll(/^- ([0-9a-f]{7,64})[ \t]+(\S[^\n]*)$/gm)].some((m) => git(root, "rev-parse", "--verify", `${m[1]}^{commit}`).status === 0);
   }).map((n) => rel(root, join(dir, n)));
 }
@@ -176,7 +182,9 @@ function escalations(root) {
 // The initial Reply line lists options; only replies after an Answer are turns.
 function escalationTurn(text) {
   let last = null;
-  for (const m of text.matchAll(/^(Answer|Reply):[ \t]*(.*)$/gm)) {
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^(Answer|Reply):[ \t]*([^\r\n]*)$/.exec(line);
+    if (!m) continue;
     if (m[1] === "Answer" || last) last = { kind: m[1], text: m[2] };
   }
   const turn = !last || last.kind === "Reply" ? "developer" : /^ask\s+\S/.test(last.text) ? "agent" : "closed";
@@ -383,7 +391,11 @@ function checkOwner(root, path = checkLockPath(root)) {
       : "the check owner is dead or incomplete; inspect its command and .cairn/in-progress, then remove this lock when execution has stopped" };
 }
 
-const dirtyInputs = (root, inputs) => git(root, "status", "--porcelain", "-z", "--", ...inputs).stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
+function dirtyInputs(root, inputs) {
+  const r = git(root, "status", "--porcelain", "-z", "--", ...inputs);
+  if (r.error || r.status !== 0) throw new Error(`cannot inspect committed inputs: ${r.stderr || r.error?.message}`);
+  return r.stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
+}
 
 const RECEIPT_NAME = /^\d{8}T\d{9}Z(?:-\d+)?$/;
 const validDigest = (s) => typeof s === "string" && /^sha256:[0-9a-f]{64}$/.test(s);
@@ -391,7 +403,7 @@ function receiptError(f, req) {
   if (f.requirement !== req) return `requirement must be ${req}`;
   if (!["pass", "fail", "unverified"].includes(f.result)) return "result must be pass, fail, or unverified";
   if (f.sequence === undefined && f.history_digest === undefined) return null; // legacy receipt
-  if (!/^[1-9]\d*$/.test(f.sequence ?? "") || !Number.isSafeInteger(Number(f.sequence))) return "sequence must be a positive safe integer";
+  if (typeof f.sequence !== "string" || !/^[1-9]\d*$/.test(f.sequence) || !Number.isSafeInteger(Number(f.sequence))) return "sequence must be a positive safe integer";
   if (!validDigest(f.history_digest)) return "history_digest is missing or invalid";
   return null;
 }
@@ -422,6 +434,23 @@ function historyOrderError(h) {
     return "receipt history changed or its execution order is ambiguous; rerun to incorporate the visible history (LOOP-070)";
   return null;
 }
+// Escalation milestones describe which evidence was already present. Dates
+// remain a fallback for old receipts whose execution sequence is unknown.
+function evidenceMilestones(root, concerns) {
+  const reqs = (concerns ?? "").split(/[\s,]+/).filter((r) => /^[A-Z]+-\d+$/.test(r));
+  return [...new Set(reqs)].map((req) => {
+    const h = history(root, req);
+    return `${req}=${historyRepair(h) || historyOrderError(h) ? "unknown" : h.at(-1)?.sequence ?? 0}`;
+  }).join(" ");
+}
+function followsEvidence(e, kind, req, receipt) {
+  if (!receipt) return true;
+  if (receipt.sequence === undefined) return !e[kind] || e[kind] >= receipt.recorded;
+  const value = e[`${kind} after`];
+  const m = typeof value === "string" && new RegExp(`(?:^| )${req}=(\\d+)(?: |$)`).exec(value);
+  return !!m && Number.isSafeInteger(Number(m[1])) && Number(m[1]) >= Number(receipt.sequence);
+}
+const answerOrder = (e) => typeof e["Answered order"] === "string" && /^[1-9]\d*$/.test(e["Answered order"]) && Number.isSafeInteger(Number(e["Answered order"])) ? Number(e["Answered order"]) : 0;
 
 function evidenceError(root, receipt, outputs) {
   for (const [key, digestKey] of [["output", "output_digest"], ["stderr_output", "stderr_digest"]]) {
@@ -475,11 +504,11 @@ function assess(root, req, mechs, ctx) {
   for (const e of h.slice(s)) if (e.result === "fail" && e.inputs_digest !== baseline && !seen.has(e.inputs_digest)) { seen.add(e.inputs_digest); attempts.push(e); }
   const threeFails = !orderError && attempts.length >= 3;
   const concerns = (e) => (e.Concerns ?? "").split(/[\s,]+/).includes(req);
-  const escalatedSince = threeFails && ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= attempts[attempts.length - 3].recorded));
+  const escalatedSince = threeFails && ctx.escalations.some((e) => concerns(e) && followsEvidence(e, "Raised", req, attempts[attempts.length - 3]));
   // Three runs at one digest with no attempt since: the counter cannot
   // see a cause outside the repository; the agent can (DEC-019).
   const tail = h.slice(s).filter((e) => e.result === "fail").slice(-3);
-  const stuck = !orderError && tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= tail[0].recorded));
+  const stuck = !orderError && tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && followsEvidence(e, "Raised", req, tail[0]));
   const revision = requirementChange(root, req, m, latest, ctx);
   let stale = null;
   if (m && latest) {
@@ -501,8 +530,8 @@ function wake(root) {
   if (!req) return w;
   const latest = history(root, req).at(-1);
   const answered = escalations(root).filter((e) => e.turn === "closed" && (e.Concerns ?? "").split(/[\s,]+/).includes(req)
-    && Number.isFinite(Date.parse(e.Answered)) && (!latest || Date.parse(e.Answered) > Date.parse(latest.recorded)))
-    .sort((a, b) => Date.parse(b.Answered) - Date.parse(a.Answered))[0];
+    && Number.isFinite(Date.parse(e.Answered)) && followsEvidence(e, "Answered", req, latest))
+    .sort((a, b) => answerOrder(b) - answerOrder(a) || Date.parse(b.Answered) - Date.parse(a.Answered))[0];
   if (answered) w.why += `; answered ${answered.name}: ${answered.Answer}`;
   return w;
 }
@@ -622,7 +651,13 @@ function candidate(root, m, requirements, expectedHead) {
   const head = headSha(root), dirty = dirtyInputs(root, paths);
   if (dirty.length || head !== expectedHead) return { head, dirty };
   const cache = inputCache();
-  return { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache) };
+  const snapshot = { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache) };
+  // Git status and clean filters can themselves run local commands. Finish
+  // those operations before validating the final HEAD and raw file state.
+  const finalDirty = dirtyInputs(root, paths), finalHead = headSha(root);
+  if (finalDirty.length || finalHead !== expectedHead) return { head: finalHead, dirty: finalDirty };
+  if (inputsDigest(root, paths) !== snapshot.digest) return { head: finalHead, dirty: [] };
+  return snapshot;
 }
 
 async function check(root, only) {
@@ -756,7 +791,7 @@ const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-
 function decide(root, o) {
   const need = ["title", "level", "decided-by", "rests-on", "wrong-if", "body"].filter((k) => !o[k]);
   if (need.length) return usage(`decide: missing --${need.join(", --")}`);
-  const multiline = Object.keys(o).find((k) => k !== "body" && typeof o[k] === "string" && /[\r\n]/.test(o[k]));
+  const multiline = Object.keys(o).find((k) => k !== "body" && typeof o[k] === "string" && LINE_BREAK.test(o[k]));
   if (multiline) return usage(`decide: --${multiline} must be one line; put multiline text in --body`);
   if (o.level === "Routine") return usage("decide: a Routine decision produces no record (DEC-001, DEC-003)");
   if (!LEVELS.includes(o.level)) return usage(`decide: --level must be one of ${LEVELS.join(", ")}`);
@@ -800,15 +835,15 @@ function escalate(root, o) {
   // Every field present, each on one line (LOOP-026). A Blocking decision
   // is written even when malformed, with the field named (LOOP-014).
   const validConcerns = /^[A-Z]+-\d+(?:[ \t,]+[A-Z]+-\d+)*$/.test(o.concerns ?? "");
-  const bad = !validConcerns ? "concerns" : ESC_FIELDS.map(([k]) => k).find((k) => !o[k]?.trim() || /[\r\n]/.test(o[k]));
+  const bad = !validConcerns ? "concerns" : ESC_FIELDS.map(([k]) => k).find((k) => !o[k]?.trim() || LINE_BREAK.test(o[k]));
   if (bad && o.level !== "Blocking") return usage(`escalate: --${bad} must be present and one line; a Blocking decision may pass --level Blocking to be written anyway`);
   const dir = join(root, ".cairn", "escalations");
   mkdirSync(dir, { recursive: true });
   let slug = slugify(o.concerns || "blocking"), path = join(dir, `${slug}.md`), i = 1;
   while (existsSync(path)) path = join(dir, `${slug}-${++i}.md`);
-  const oneLine = (value) => (value ?? "").replace(/[\r\n]+/g, " ");
+  const oneLine = (value) => (value ?? "").replace(/[\r\n\u2028\u2029]+/g, " ");
   const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${oneLine(o[k])}`), "", "Reply: ok | instead | ask", "",
-                `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`];
+                `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`, `Raised after: ${evidenceMilestones(root, o.concerns)}`];
   if (bad) body.push(`Malformed: ${bad}`);
   writeFileSync(path, body.join("\n") + "\n");
   process.stdout.write(`raised ${rel(root, path)}${bad ? ` (malformed: ${bad}; written because Blocking)` : ""}\n`);
@@ -816,7 +851,7 @@ function escalate(root, o) {
 }
 
 function answer(root, slug, reply) {
-  if (!slug || !reply.trim() || /[\r\n]/.test(reply)) return usage("answer: provide one line: ok | instead <what> | ask <question>, or the explanation when replying to an ask");
+  if (!slug || !reply.trim() || LINE_BREAK.test(reply)) return usage("answer: provide one line: ok | instead <what> | ask <question>, or the explanation when replying to an ask");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return usage("answer: invalid escalation slug");
   const path = join(root, ".cairn", "escalations", `${slug}.md`);
   if (!existsSync(path)) return usage(`answer: no escalation named ${slug}`);
@@ -825,7 +860,13 @@ function answer(root, slug, reply) {
   reply = reply.trim();
   if (turn === "developer" && !/^(?:ok|(?:instead|ask) +\S.*)$/.test(reply)) return usage("answer: use ok | instead <what> | ask <question>");
   const field = turn === "agent" ? "Reply" : "Answer", date = turn === "agent" ? "Replied" : "Answered";
-  writeFileSync(path, text.replace(/\n?$/, "\n") + `${field}: ${reply}\n${date}: ${new Date().toISOString()}\n`);
+  let milestone = "";
+  if (turn === "developer") {
+    const order = escalations(root).reduce((max, e) => Math.max(max, answerOrder(e)), 0) + 1;
+    if (!Number.isSafeInteger(order)) return usage("answer: Answered order has no safe successor; repair the escalation order");
+    milestone = `Answered after: ${evidenceMilestones(root, fields(text).Concerns)}\nAnswered order: ${order}\n`;
+  }
+  writeFileSync(path, text.replace(/\n?$/, "\n") + `${field}: ${reply}\n${date}: ${new Date().toISOString()}\n${milestone}`);
   process.stdout.write(`${turn === "agent" ? "replied to" : "answered"} ${rel(root, path)}\n`);
   return 0;
 }

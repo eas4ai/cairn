@@ -56,6 +56,17 @@ test("LOOP-073: failure of a required Git filter cannot record evidence", () => 
   assert.equal(records(root, "R-001").length, 0);
 });
 
+test("LOOP-073: a clean filter moving HEAD during ending validation prevents evidence", () => {
+  const filter = "import fs from 'node:fs';import {spawnSync} from 'node:child_process';process.stdout.write(fs.readFileSync(0));if(fs.existsSync('.git/mechanism-ran'))spawnSync('git',['-c','user.name=t','-c','user.email=t@t','commit','--allow-empty','-qm','filter moved HEAD']);\n";
+  const root = repo({ ".cairn/mechanisms/m": mechanism.replace("node -e 0", "node src/check.mjs"), ".gitattributes": "src/other filter=probe\n",
+    "src/filter.mjs": filter, "src/check.mjs": "import fs from 'node:fs';fs.writeFileSync('.git/mechanism-ran','yes');\n" });
+  git(root, "config", "filter.probe.clean", "node src/filter.mjs");
+  const before = git(root, "rev-parse", "HEAD").stdout, r = cairn(root, "check");
+  assert.notEqual(git(root, "rev-parse", "HEAD").stdout, before, "the filter really moved HEAD");
+  assert.equal(records(root, "R-001").length, 0, r.stdout);
+  assert.match(r.stdout, /candidate changed/);
+});
+
 test("LOOP-073: canonical Git identities handle links without reading their targets", () => {
   const root = repo({ ".cairn/mechanisms/m": mechanism, ".gitattributes": "src/other text\n" });
   symlinkSync("missing target", join(root, "src/dangling")); commit(root);

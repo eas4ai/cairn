@@ -8,7 +8,7 @@ History: The record-integrity review reproduced a timestamp comparison left behi
 
 ## Decision
 
-Record the current sequence of each concerned requirement when raising an escalation and when recording a developer answer. Compare these milestones with sequenced evidence when deciding whether an escalation covers attempts or an answer is still fresh. Retain timestamp fallback only for comparisons with legacy unsequenced receipts; a missing milestone cannot establish ordering against newer sequenced evidence. No old record is rewritten. A fresh escalation or answer establishes its milestone through the existing commands.
+Record the current sequence of each concerned requirement when raising an escalation and when recording a developer answer. Compare these milestones with sequenced evidence when deciding whether an escalation covers attempts or an answer is still fresh. Retain timestamp fallback only for comparisons with legacy unsequenced receipts; a missing milestone cannot establish ordering against newer sequenced evidence. Developer answers also receive an increasing local order, so the newest answer between checks does not depend on its timestamp. No old record is rewritten. A fresh escalation or answer establishes its milestone through the existing commands.
 
 ## Realized by
 

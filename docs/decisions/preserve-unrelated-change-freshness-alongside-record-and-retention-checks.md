@@ -14,6 +14,4 @@ Keep declared-input identity as the boundary for ordinary file-change invalidati
 
 ## Realized by
 
-(none yet: recorded, not built)
-
 - 5e1a7f280b14589d081891f42e54c7aa0b912c2d Record freshness clarification and mechanism review

@@ -155,4 +155,9 @@ Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own
 commits; reverting a change does not erase a footprint breach. Declare a
 missing input when it belongs to the commitment. Otherwise capture the
-work in the backlog and ask the developer to resolve its scope.
+work in the backlog, restore the breaching paths to the commitment activation
+tree, and commit the restoration. Use `cairn escalate --scope --concerns
+LOOP-035` with the decision fields to request acknowledgment of that exact
+restored history. Commit the developer's `ok` answer before checking. An
+ordinary answer or `instead` supplies direction but grants no acknowledgment;
+new changes remain breaches. Read every path in the scope explanation.

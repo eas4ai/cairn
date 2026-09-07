@@ -818,12 +818,14 @@ priorities. Explanations neither run mechanisms nor rewrite receipt history.
 ## Scope recovery
 
 [LOOP-081] When none of a commitment's requirements, including inherited
-requirements, has a declared mechanism, wake and check MUST name declaration
-of its first requirement before reporting historical scope breaches. Checks
-MUST record no evidence until an applicable mechanism exists, and declaring
-one MUST restore normal scope validation over the entire commitment history.
+requirements, has a declared mechanism, wake and an untargeted check MUST name
+declaration of its first requirement before reporting historical scope breaches.
+The empty footprint MUST NOT block explicitly requested checks whose mechanisms
+already exist. Evidence still requires an actual mechanism, and declaring one
+for this commitment MUST restore scope validation over its entire history.
 Falsifier: an empty footprint traps the loop at a scope action instead of
-declaration, or declaring its first mechanism hides an unrelated earlier change.
+declaration, blocks a requested existing mechanism solely on that empty footprint,
+or declaring its first mechanism hides an unrelated earlier change.
 Status: Agreed 2026-09-07
 
 [LOOP-082] A scope verdict from wake or check MUST name every unresolved

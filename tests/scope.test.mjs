@@ -29,7 +29,7 @@ test("a commit inside the footprint: check runs; outside it: check names the pat
   r = cairn(root, "check");
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: scope unrelated\.txt/);
-  assert.doesNotMatch(r.stdout, /recorded/);
+  assert.doesNotMatch(r.stdout, /^recorded \.cairn\/evidence\//m);
   assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/, "wake reports the same, ahead of mechanisms");
 });
 

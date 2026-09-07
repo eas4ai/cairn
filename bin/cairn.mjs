@@ -122,7 +122,7 @@ const revisionVerdict = (req, m, digest, reason) => ({ verdict: "Resolvable", ac
 // Files changed by commits since the commitment began: since the commit
 // that wrote its Current: line. The footprint is the union of its
 // mechanisms' declared inputs plus Cairn's own records.
-function breaches(root, slug, mechs, requirements) {
+function scopeHistory(root, slug) {
   const roadmap = "docs/spec/roadmap.md";
   const commits = git(root, "log", "--first-parent", "--format=%H", "--", roadmap).stdout.trim().split("\n").filter(Boolean);
   let began = null;
@@ -131,13 +131,68 @@ function breaches(root, slug, mechs, requirements) {
     if (show.status !== 0 || fields(show.stdout).Current !== slug) break;
     began = commit;
   }
-  if (!began) return [];
+  if (!began) return { began, commits: "", line: [] };
   const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${began}..HEAD`);
-  if (ownCommits.error || ownCommits.status !== 0) throw new Error("cannot read the commitment's Git history");
-  const changed = changedPaths(root, ownCommits.stdout);
+  const line = git(root, "rev-list", "--first-parent", `${began}..HEAD`);
+  if (ownCommits.error || ownCommits.status !== 0 || line.error || line.status !== 0) throw new Error("cannot read the commitment's Git history");
+  return { began, commits: ownCommits.stdout, line: line.stdout.trim().split("\n").filter(Boolean) };
+}
+function breaches(root, slug, mechs, requirements) {
+  const history = scopeHistory(root, slug);
+  const changed = changedPaths(root, history.commits);
   const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
-  const covered = new Set(inputs.length ? changedPaths(root, ownCommits.stdout, inputs) : []);
-  return changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.has(f));
+  const covered = new Set(inputs.length ? changedPaths(root, history.commits, inputs) : []);
+  const paths = changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.has(f));
+  const acknowledged = paths.length ? acknowledgedScope(root, slug, history) : new Set();
+  return paths.filter((f) => !acknowledged.has(f)).sort();
+}
+function scopeSnapshot(raw) {
+  if (typeof raw !== "string") return null;
+  let s;
+  try { s = JSON.parse(raw); } catch { return null; }
+  if (!s || Array.isArray(s) || typeof s.commitment !== "string" || !s.commitment
+      || typeof s.began !== "string" || typeof s.through !== "string"
+      || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(s.began) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(s.through)
+      || !Array.isArray(s.paths) || !s.paths.length) return null;
+  if (s.paths.some((p, i) => typeof p !== "string" || !p || p.includes("\0") || p.startsWith("/")
+      || p.split("/").some((part) => !part || part === "." || part === "..") || (i > 0 && s.paths[i - 1] >= p))) return null;
+  return s;
+}
+function unrestoredScope(root, s) {
+  const r = git(root, "diff", "--name-only", "--no-renames", "-z", s.began, "HEAD", "--");
+  if (r.error || r.status !== 0) return new Set(s.paths);
+  const changed = new Set(r.stdout.split("\0").filter(Boolean));
+  return new Set(s.paths.filter((p) => changed.has(p)));
+}
+function acknowledgedScope(root, slug, history) {
+  const acknowledged = new Set();
+  // Only committed answers affect the guard. HEAD is also part of each check's
+  // candidate, so editing an answer during execution cannot change its scope.
+  const names = git(root, "ls-tree", "--name-only", "-z", "HEAD:.cairn/escalations");
+  if (names.error || names.status !== 0) return acknowledged;
+  for (const name of names.stdout.split("\0").filter((n) => /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/.test(n))) {
+    const r = git(root, "show", `HEAD:.cairn/escalations/${name}`);
+    if (r.error || r.status !== 0) continue;
+    const e = fields(r.stdout), s = scopeSnapshot(e.Scope);
+    if (!s || s.commitment !== slug || s.began !== history.began || !history.line.includes(s.through)
+        || escalationTurn(r.stdout).turn !== "closed" || e.Answer !== "ok" || "Malformed" in e
+        || typeof e.Concerns !== "string" || !e.Concerns.split(/[\s,]+/).includes("LOOP-035")
+        || typeof e.Answered !== "string" || !Number.isFinite(Date.parse(e.Answered)) || e["Scope approved"] !== sha(e.Scope)) continue;
+    const newer = new Set(history.line.slice(0, history.line.indexOf(s.through)));
+    const later = new Set(changedPaths(root, history.commits.split("\n").filter((c) => newer.has(c)).join("\n") + "\n"));
+    const unrestored = unrestoredScope(root, s);
+    for (const p of s.paths) if (!later.has(p) && !unrestored.has(p)) acknowledged.add(p);
+  }
+  return acknowledged;
+}
+function scopeVerdict(root, c, mechs) {
+  // There is no footprint until a mechanism belongs to this commitment.
+  // Wake will name declaration; a targeted check of another mechanism can run.
+  if (!c.requirements.some((r) => mechs.byReq.has(r))) return null;
+  const paths = breaches(root, c.slug, mechs, c.requirements);
+  if (!paths.length) return null;
+  const first = /[\s\x00-\x1f\x7f-\x9f]/.test(paths[0]) ? displayPath(paths[0]) : paths[0];
+  return { verdict: "Resolvable", action: `scope ${first}`, why: `${paths.length} unresolved scope paths changed since the commitment began and no mechanism declares them (LOOP-035):\n${paths.map((p) => `  - ${displayPath(p)}`).join("\n")}\n  Declare paths that belong to the agreement. Otherwise capture the work in the backlog, restore the paths to the commitment's activation tree, commit, and use cairn escalate --scope --concerns LOOP-035 with the decision fields. Commit the developer's ok before checking; it acknowledges only the recorded restored history, never future changes. An instead answer supplies direction, not an automatic exception.` };
 }
 function changedPaths(root, commits, inputs = []) {
   const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z", "--", ...inputs],
@@ -598,8 +653,10 @@ function assess(root, req, mechs, ctx) {
 }
 
 function wake(root) {
-  const w = wakeVerdict(root);
-  const req = /^(?:run|implement|declare|escalate|review mechanism) ([A-Z]+-\d+)$/.exec(w.action)?.[1];
+  return withAnswer(root, wakeVerdict(root));
+}
+function withAnswer(root, w) {
+  const req = w.action.startsWith("scope ") ? "LOOP-035" : /^(?:run|implement|declare|escalate|review mechanism) ([A-Z]+-\d+)$/.exec(w.action)?.[1];
   if (!req) return w;
   const latest = history(root, req).at(-1);
   const answered = escalations(root).filter((e) => e.turn === "closed" && (e.Concerns ?? "").split(/[\s,]+/).includes(req)
@@ -630,8 +687,8 @@ function wakeVerdict(root) {
   fold(c, inherited);
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
-  const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) return { verdict: "Resolvable", action: `scope ${breach}`, why: `changed since the commitment began and no mechanism of it declares that path; declare the path if it belongs to this commitment; otherwise capture the work in the backlog and use cairn escalate to ask the developer to resolve the scope (LOOP-035)` };
+  const scope = scopeVerdict(root, c, mechs);
+  if (scope) return scope;
   const ctx = context(root, mechs);
   const ambiguous = c.requirements.find((r) => !ctx.requirements.get(r)?.digest);
   if (ambiguous) return { verdict: "Resolvable", action: "repair docs/spec/", why: `${ambiguous} needs exactly one requirement definition` };
@@ -780,8 +837,8 @@ async function runChecks(root, only) {
   const mechs = mechanisms(root);
   const problem = declarationError(root, mechs);
   if (problem) { process.stdout.write(`${problem.verdict}: ${problem.action}\n  ${problem.why}\n`); return 1; }
-  const [breach] = breaches(root, c.slug, mechs, c.requirements);
-  if (breach) { process.stdout.write(`Resolvable: scope ${breach}\n  changed since the commitment began and no mechanism of it declares that path (LOOP-035)\n`); return 1; }
+  const scope = scopeVerdict(root, c, mechs);
+  if (scope) { const w = withAnswer(root, scope); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
   // Named requirements select which mechanisms run; a run is evidence for
   // every requirement its mechanism speaks for (LOOP-040).
   const runs = new Set();
@@ -907,6 +964,37 @@ function decide(root, o) {
 
 const ESC_FIELDS = [["question", "Question:  "], ["recommend", "Recommend: "], ["because", "Because:   "], ["if-wrong", "If wrong:  "], ["instead", "Instead:   "]];
 
+function scopeEscalation(root, o) {
+  if (!(o.concerns ?? "").split(/[\s,]+/).includes("LOOP-035")) return { error: "--scope requires --concerns LOOP-035" };
+  const c = currentCommitment(root);
+  if (c.repair) return { error: `repair ${c.repair} before raising a scope incident` };
+  fold(c, requirementSet(root).inherited);
+  const mechs = mechanisms(root), problem = declarationError(root, mechs);
+  if (problem) return { error: `${problem.action}: ${problem.why}` };
+  if (!c.requirements.some((r) => mechs.byReq.has(r))) return { error: "declare a mechanism before raising a scope incident" };
+  const paths = breaches(root, c.slug, mechs, c.requirements);
+  if (!paths.length) return { error: "no unresolved scope paths to acknowledge" };
+  const history = scopeHistory(root, c.slug);
+  const s = { commitment: c.slug, began: history.began, through: history.line[0], paths };
+  const unrestored = unrestoredScope(root, s);
+  if (unrestored.size) return { error: `restore these paths to activation commit ${s.began} and commit before --scope: ${[...unrestored].map(displayPath).join(", ")}` };
+  return { snapshot: s };
+}
+function scopeEscalationLines(scope) {
+  if (scope.error) return [`Scope error: ${scope.error}`];
+  if (!scope.snapshot) return [];
+  return ["", "Scope acknowledgment: ok acknowledges only the recorded restored history, never future changes. Commit the answer before checking. An instead answer supplies direction without granting this acknowledgment.",
+    `Scope: ${JSON.stringify(scope.snapshot).replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029")}`,
+    "Recorded scope paths:", ...scope.snapshot.paths.map((p) => `  - ${displayPath(p)}`)];
+}
+function escalationRequest(root, o) {
+  const validConcerns = /^[A-Z]+-\d+(?:[ \t,]+[A-Z]+-\d+)*$/.test(o.concerns ?? "");
+  const bad = !validConcerns ? "concerns" : ESC_FIELDS.map(([k]) => k).find((k) => !o[k]?.trim() || LINE_BREAK.test(o[k]));
+  if (bad && o.level !== "Blocking") return { error: `--${bad} must be present and one line; a Blocking decision may pass --level Blocking to be written anyway` };
+  const scope = o.scope && !bad ? scopeEscalation(root, o) : {};
+  if (scope.error && o.level !== "Blocking") return scope;
+  return { malformed: bad || (scope.error ? "scope" : null), lines: scopeEscalationLines(scope) };
+}
 function escalate(root, o) {
   if (!o.concerns && o.level !== "Blocking") return usage("escalate: missing --concerns");
   if (o.level !== undefined && o.level !== "Blocking") return usage(`escalate: --level must be Blocking or absent, not ${o.level}`);
@@ -914,22 +1002,25 @@ function escalate(root, o) {
   if (open) return usage(`escalate: ${open.name} is open; one escalation at a time (LOOP-011)`);
   // Every field present, each on one line (LOOP-026). A Blocking decision
   // is written even when malformed, with the field named (LOOP-014).
-  const validConcerns = /^[A-Z]+-\d+(?:[ \t,]+[A-Z]+-\d+)*$/.test(o.concerns ?? "");
-  const bad = !validConcerns ? "concerns" : ESC_FIELDS.map(([k]) => k).find((k) => !o[k]?.trim() || LINE_BREAK.test(o[k]));
-  if (bad && o.level !== "Blocking") return usage(`escalate: --${bad} must be present and one line; a Blocking decision may pass --level Blocking to be written anyway`);
+  const request = escalationRequest(root, o);
+  if (request.error) return usage(`escalate: ${request.error}`);
   const dir = join(root, ".cairn", "escalations");
   mkdirSync(dir, { recursive: true });
   let slug = slugify(o.concerns || "blocking"), path = join(dir, `${slug}.md`), i = 1;
   while (existsSync(path)) path = join(dir, `${slug}-${++i}.md`);
   const oneLine = (value) => (value ?? "").replace(/[\r\n\u2028\u2029]+/g, " ");
-  const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${oneLine(o[k])}`), "", "Reply: ok | instead | ask", "",
-                `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`, `Raised after: ${evidenceMilestones(root, o.concerns)}`];
-  if (bad) body.push(`Malformed: ${bad}`);
+  const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${oneLine(o[k])}`), "", "Reply: ok | instead | ask. If this isn't clear, ask me to explain it another way before you decide.", "",
+                  `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`, `Raised after: ${evidenceMilestones(root, o.concerns)}`, ...request.lines];
+  if (request.malformed) body.push(`Malformed: ${request.malformed}`);
   writeFileSync(path, body.join("\n") + "\n");
-  process.stdout.write(`raised ${rel(root, path)}${bad ? ` (malformed: ${bad}; written because Blocking)` : ""}\n`);
+  process.stdout.write(`raised ${rel(root, path)}${request.malformed ? ` (malformed: ${request.malformed}; written because Blocking)` : ""}\n`);
   return 0;
 }
 
+function scopeApprovalLine(text, reply) {
+  const scope = fields(text).Scope;
+  return reply === "ok" && scopeSnapshot(scope) ? `Scope approved: ${sha(scope)}\n` : "";
+}
 function answer(root, slug, reply) {
   if (!slug || !reply.trim() || LINE_BREAK.test(reply)) return usage("answer: provide one line: ok | instead <what> | ask <question>, or the explanation when replying to an ask");
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return usage("answer: invalid escalation slug");
@@ -944,7 +1035,7 @@ function answer(root, slug, reply) {
   if (turn === "developer") {
     const order = escalations(root).reduce((max, e) => Math.max(max, answerOrder(e)), 0) + 1;
     if (!Number.isSafeInteger(order)) return usage("answer: Answered order has no safe successor; repair the escalation order");
-    milestone = `Answered after: ${evidenceMilestones(root, fields(text).Concerns)}\nAnswered order: ${order}\n`;
+      milestone = `Answered after: ${evidenceMilestones(root, fields(text).Concerns)}\nAnswered order: ${order}\n` + scopeApprovalLine(text, reply);
   }
   writeFileSync(path, text.replace(/\n?$/, "\n") + `${field}: ${reply}\n${date}: ${new Date().toISOString()}\n${milestone}`);
   process.stdout.write(`${turn === "agent" ? "replied to" : "answered"} ${rel(root, path)}\n`);
@@ -999,10 +1090,12 @@ Commands:
     Record a decision. Levels: ${LEVELS.join(", ")}.
     --history is required when the decision's domain has recorded reversals.
     To replace an earlier decision, add --supersedes SLUG --cause CAUSE.
-  escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
-           --if-wrong TEXT --instead TEXT [--level Blocking]
-    Ask the developer for a decision. Fields must each fit on one line.
-    --level Blocking preserves the escalation even if a field is incomplete.
+    escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
+             --if-wrong TEXT --instead TEXT [--level Blocking] [--scope]
+      Ask the developer for a decision. Fields must each fit on one line.
+      --level Blocking preserves the escalation even if a field is incomplete.
+      --scope records restored scope history for a specific acknowledgment;
+      include LOOP-035 in --concerns and commit restoration before raising it.
   answer SLUG ok | instead TEXT | ask TEXT
     Answer an escalation. An ask keeps it open for an explanation.
     After an ask, the agent uses answer SLUG "EXPLANATION" to reply.
@@ -1040,7 +1133,7 @@ async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
-      help: { type: "boolean", short: "h" },
+      help: { type: "boolean", short: "h" }, scope: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
       from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });

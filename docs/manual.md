@@ -440,7 +440,7 @@ silently changing what you agreed to build.
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
-| `scope` names a file. | Ask why it changed and whether it belongs to this commitment. Correct an incomplete declaration when justified; otherwise capture the work and escalate the scope decision. |
+| `scope` names a file. | Read the complete path list below it. Correct an incomplete declaration when justified; otherwise capture the work, restore it, commit, and raise a scope-specific acknowledgment as described below. |
 | `reconcile` appears after an interruption. | Ask the agent to inspect `.cairn/in-progress` and the working tree, then finish or abandon that recorded action. Do not delete the record merely to get past the message. |
 | `reconcile` names `cairn-check.lock`. | Wait for a live check owner. If the owner is dead or unreadable, inspect its command and any surviving child processes before removing the named lock. |
 | `run` names a missing or corrupt output receipt. | Inspect the damaged evidence, retain its history, and run the check again to produce a new verifiable receipt. |
@@ -457,6 +457,41 @@ merge other branches with a merge commit (`git merge --no-ff`) so those
 branches' commits remain separate. A merged change to a declared input still
 makes evidence stale. `AGENTS.md`, `CLAUDE.md`, `.gitignore`, and files under
 `.cairn/` and `docs/` are treated as Cairn's own records for scope purposes.
+
+Before any mechanism belongs to the current commitment, there is no footprint
+to enforce. Wake asks for a declaration. An explicitly requested check for
+another requirement with an existing mechanism can still run. Once a mechanism
+belongs to the current commitment, the guard checks its entire history,
+including changes made before that declaration.
+
+For accidental work outside the agreement, first capture it in the backlog.
+Restore each breaching path to its content, kind, and executable mode at the
+commitment's activation commit, then commit the restoration. A revert alone
+retains the unresolved incident. Ask the developer to acknowledge that exact
+restored history:
+
+```sh
+cairn escalate --scope --concerns LOOP-035 \
+  --question 'May the loop resume after this restored scope incident?' \
+  --recommend 'Acknowledge only the restored history listed below.' \
+  --because 'The accidental work is captured in the backlog and removed from this commitment.' \
+  --if-wrong 'An incomplete incident description could obscure why the work was reverted.' \
+  --instead 'Correct the declaration if the work belongs to the agreement.'
+```
+
+The escalation records the commitment, activation commit, current commit, and
+exact paths. `cairn answer <slug> ok`, followed by committing the answer,
+acknowledges only those paths through that commit. They must still match the
+activation tree. Future edits remain breaches, even if later reverted. The
+record and Git history remain available for review; no requirement is marked
+passed by the acknowledgment.
+
+An ordinary escalation answer does not clear scope history. Both wake and check
+show relevant answers concerning LOOP-035. An `instead` answer supplies a
+direction, not an automatic exemption: correct the declaration within the
+agreement, or restore and raise a new scope-specific question. An `ask` keeps
+the conversation open. If this isn't clear, ask me to explain it another way
+before you decide.
 
 Only one check can execute in a working tree at a time. Its execution lock
 lives in that worktree's Git administration directory, so separate worktrees

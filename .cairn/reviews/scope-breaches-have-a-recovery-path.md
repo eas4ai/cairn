@@ -1,10 +1,10 @@
 commitment: scope-breaches-have-a-recovery-path
-commit: 81906e4ada7c94bfea2b867e3762c987719a54a1
+commit: 13b22d59b8b65db467a94054963af23d1a6d0d8a
 examined:
   - LOOP-035 against scope.test.mjs, breaches, wakeVerdict, wake, and runChecks.
 findings:
   - resolved: Added and verified scope-specific restoration, bootstrap declaration, and complete diagnostic coverage.
-  - open: The new escalate help entry is indented under the preceding command; align it with the other commands.
+  - resolved: Aligned the scope escalation help and verified its rendered output and both help tests.
 
 ## Mechanism review before implementation
 
@@ -95,3 +95,19 @@ The production-rule self-audit covered scope, readability, boundary validation,
 error handling, durable answer commitment, history retention, compatibility,
 execution stability, test soundness, and documentation. No source code changed
 while this review was performed. Production has not been updated by this repair.
+
+## Final review after the help correction
+
+The only subsequent source change aligns the help entry and its adjacent
+assignment indentation. The rendered help was inspected, both help tests pass,
+and fresh committed node-test evidence again records 335 tests, 335 passes,
+and zero failures. Fresh package evidence passes; specification evidence
+remains current. Reviewed the formatting diff without changing code and found
+no remaining issue. The earlier runtime review and failure demonstration apply
+to this unchanged behavior. All review findings are resolved.
+
+The self-audit is satisfied for this development repair. Static quality-delta
+still reports the previously documented change-frequency warnings; it is not
+represented as a clean static gate. The three Muse reports are now tracked in
+development with their original capture times and corrected origins. Their
+untracked production originals are preserved; no production release was made.

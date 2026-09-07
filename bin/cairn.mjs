@@ -1171,7 +1171,7 @@ async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
-        help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
+      help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
       from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });

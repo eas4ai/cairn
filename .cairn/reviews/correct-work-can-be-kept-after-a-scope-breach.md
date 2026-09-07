@@ -1,9 +1,9 @@
 commitment: correct-work-can-be-kept-after-a-scope-breach
-commit: 938f8ba941caed6149d502b2c851c923e0311552
+commit: aa89f224282ba1110c6ce61b4326c63ec8e24343
 examined:
   - LOOP-035, LOOP-083, scope-recovery tests, and the scope snapshot, declaration, and acknowledgment readers.
 findings:
-  - open: Align the new keep option with its neighboring parser options.
+  - resolved: Aligned the keep option; help tests and fresh full-suite/package evidence pass.
   - resolved: Added explicit retention with exact history and tree bounds, fresh evidence/review, and stable retained candidates.
 
 ## Mechanism review
@@ -87,3 +87,18 @@ The production-rule self-audit otherwise finds the repair bounded, readable,
 backward compatible, and supported by failing and corrected examples.
 Static churn warnings remain documented rather than misrepresented as clean.
 Native macOS and Windows have not been run. Production has not been updated.
+
+
+## Final review after the formatting correction
+
+Reviewed the final source diff: only the parser option indentation changed.
+Both help tests passed. Fresh committed node-test output again records
+348 tests, 348 passes, and zero failures; fresh package evidence passes.
+Specification evidence remains current. The earlier runtime review and
+mutation demonstrations still apply to the unchanged behavior.
+
+All findings are resolved. The final self-audit is satisfied for this
+Cairn development repair: scoped implementation, durable decisions and
+evidence, exact approval bounds, preserved failure behavior, meaningful
+verification, updated user instructions, and honest static-tool limits.
+No source changed during this review. Production remains unchanged.

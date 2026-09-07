@@ -12,4 +12,4 @@ Record the current sequence of each concerned requirement when raising an escala
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 70e0cce Close review gaps in record boundaries and causal ordering

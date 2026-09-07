@@ -1,0 +1,20 @@
+requirement: SPEC-002
+requirement_digest: sha256:c91c4df8306a44e5eb68f532f79b365af87b4bbb517d687cbaad12957aee2202
+sequence: 2
+history_digest: sha256:772b44e5bc0a499a3022e56c285d14499640bc3580ce739122d63de14b212f97
+mechanism: spec-lint
+commit: 51612bc
+inputs_digest: sha256:8bb769590df79085a04559d28453ff9e4290ddd392c65fc283d900ab6f081442
+mechanism_digest: sha256:56382183efd058e8b5ac5325458eeab54af1811a2abf4f46d95645c9a27733b6
+command: node scripts/spec-lint.mjs docs/spec
+cwd: .
+exit: 0
+output_digest: sha256:01329d0d0d6ff0abecaca74caa406b5fdc021de3e868416f7d8eccaaabfdfff0
+output: .cairn/evidence/SPEC-001/20260907T022421613Z-607759.out
+stderr_output: .cairn/evidence/SPEC-001/20260907T022421613Z-607759.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-07T02:24:21.666Z

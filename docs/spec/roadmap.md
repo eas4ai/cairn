@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: freshness-and-scope-guidance-agree
+Current: malformed-review-findings-cannot-complete-work
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -272,3 +272,10 @@ Requested by the developer on 2026-09-07 after the documentation audit.
 Reconciles LOOP-024, the LOOP-035 rationale, and the manual with the existing
 retention behavior under LOOP-084 and LOOP-085. No runtime behavior changes.
 [Commitment](../commitments/freshness-and-scope-guidance-agree.md).
+
+
+## Malformed review findings cannot complete work
+
+Developer-requested repair for silently discarded review findings.
+Delivers LOOP-086 while preserving LOOP-020 and LOOP-033.
+[Commitment](../commitments/malformed-review-findings-cannot-complete-work.md).

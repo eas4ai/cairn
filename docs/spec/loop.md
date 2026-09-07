@@ -904,3 +904,21 @@ decision fields to propose keeping the recorded work. The developer's ok
 corrects scope for that incident only. Explain why it belongs, what was
 checked, and any missing dependencies that need declaration. It neither
 promotes a future feature nor silently extends a mechanism's coverage.
+
+
+## Review finding validation
+
+[LOOP-086] Before reporting Done, the loop MUST validate every review
+finding entry. Supported entries are open: followed by a nonempty description
+and resolved: followed by a nonempty description. An empty findings list
+MUST remain valid. An unrecognized prefix, empty description, or non-list
+findings value MUST produce an actionable non-Done verdict naming the
+review file and supported format, rather than disappearing from the gate.
+Valid open findings MUST still require resolution; resolved findings MUST
+NOT block completion. A free-form Status field MUST NOT excuse invalid
+findings or substitute for their validation.
+Falsifier: a committed review containing REM-002: Historical agent checks
+remain inside role-input JSON rather than readable sections. and Status:
+in progress reports Done with current passing evidence, or valid open,
+resolved, or empty findings lose their established behavior.
+Status: Agreed 2026-09-07

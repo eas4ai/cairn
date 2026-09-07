@@ -13,3 +13,5 @@ Extend cairn escalate --scope with --keep. Store an explicit keep mode in the ex
 ## Realized by
 
 (none yet: recorded, not built)
+
+- c1729d19a12919ee4803dcfd7a2ca800d87dd12f Allow explicit approval to retain exact out-of-scope work

@@ -676,6 +676,9 @@ receipts stay unchanged; a latest receipt without execution-order evidence
 needs one new check. An imported, removed, or edited prior receipt makes the
 latest result stale; rerunning incorporates the visible history. Uncertain
 history must not trigger a three-attempt escalation before that rerun.
+New escalation and answer records snapshot the concerned evidence sequences;
+comparisons to sequenced receipts use those milestones, not wall-clock dates.
+Legacy dates remain usable only when comparing legacy unsequenced receipts.
 
 [LOOP-071] The loop MUST read decision and review metadata only from the
 record header, excluding body sections and fenced examples.

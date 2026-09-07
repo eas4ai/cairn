@@ -12,4 +12,4 @@ Validate the parsed findings collection in reviewOf. Permit an empty list and no
 
 ## Realized by
 
-(none yet: recorded, not built)
+- dd9a1b0c12ed673aeca60c9c3347f776b61809e3 Reject malformed review findings instead of reporting Done

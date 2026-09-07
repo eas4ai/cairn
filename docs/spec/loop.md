@@ -247,15 +247,22 @@ Blocking by the scale, so it is the developer's.
 
 [LOOP-035] A commit made during a commitment MUST NOT change a file
 outside the declared inputs of that commitment's mechanisms, other than
-Cairn's own records.
-Falsifier: a commit changes a file that no mechanism of the current
-commitment declares and that is not under .cairn/ or docs/.
+Cairn's own records. The loop MUST block evidence recording for an
+unresolved breach. A declaration can cover the path; otherwise restoration
+and a developer acknowledgment under LOOP-083 resolve the incident.
+Falsifier: evidence is recorded despite an undeclared, non-record change
+in the commitment's own history without a valid restoration acknowledgment.
+Status: Agreed 2026-09-07
 
 This makes LOOP-015 observable. The commitment's footprint is already
 on disk as the union of its mechanisms' declared inputs, so no new
 declaration is needed: a change outside it is either scope creep or a
 missing declaration, and the agent resolves which by declaring or by
 writing to the backlog.
+
+Backlog capture and a revert alone do not resolve the recorded incident.
+The developer can acknowledge the restored history through the scope-specific
+escalation described in LOOP-083. This grants no permission for later work.
 
 ## Commitments
 
@@ -807,3 +814,43 @@ names its seed or case and the event prefix. Model the expected state from
 the fixture's actions independently of Cairn's assessment helpers. Keep the
 existing regression, mechanism-review, three-attempt, and completion-review
 priorities. Explanations neither run mechanisms nor rewrite receipt history.
+
+## Scope recovery
+
+[LOOP-081] When none of a commitment's requirements, including inherited
+requirements, has a declared mechanism, wake and check MUST name declaration
+of its first requirement before reporting historical scope breaches. Checks
+MUST record no evidence until an applicable mechanism exists, and declaring
+one MUST restore normal scope validation over the entire commitment history.
+Falsifier: an empty footprint traps the loop at a scope action instead of
+declaration, or declaring its first mechanism hides an unrelated earlier change.
+Status: Agreed 2026-09-07
+
+[LOOP-082] A scope verdict from wake or check MUST name every unresolved
+breaching path in deterministic order, escape control characters in paths,
+and give the same recovery instructions. The action may name the first path,
+but the explanation MUST show the total and the complete path list.
+Falsifier: a multi-file breach conceals a path, a filename fabricates an output
+line, or wake and check offer different scope remedies for the same state.
+Status: Agreed 2026-09-07
+
+[LOOP-083] The loop MUST support a scope-specific escalation that records
+the current commitment, its activation commit, the current commit, and exact
+breaching paths. A committed developer ok on that unchanged record MUST
+resolve only the recorded paths' history through the recorded commit, and
+only while their committed contents, modes, and kinds match the activation
+tree. New changes after that commit, another commitment activation, malformed
+or edited records, ordinary escalation answers, and ask or instead answers
+MUST NOT grant this acknowledgment. Scope verdicts MUST show relevant
+answered scope escalations and explain the remaining remedy.
+Falsifier: a restored and specifically acknowledged incident still blocks
+checks, or an acknowledgment hides later work, unrestored changes, another
+commitment's incident, or changes outside its recorded paths.
+Status: Agreed 2026-09-07
+
+Use cairn escalate --scope after capturing the work in the backlog and
+committing restoration. The record explains that ok acknowledges only that
+restored history. An instead answer closes the question and supplies direction;
+the agent follows it by correcting declarations within the agreement or by
+restoring and raising a new scope-specific question. No free-text answer is
+interpreted as permission to ignore arbitrary changes. Git history is retained.

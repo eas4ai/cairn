@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: evidence-explains-its-freshness
+Current: scope-breaches-have-a-recovery-path
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -249,3 +249,10 @@ changed declared paths where recorded facts support it, show honest limits
 for older records, and state the next action. Deterministic event-sequence
 tests preserve the existing freshness and action-priority rules.
 [Commitment](../commitments/evidence-explains-its-freshness.md).
+
+## Scope breaches have a recovery path
+
+Requested by the developer on 2026-09-07 after reporting the empty-footprint
+declaration gap, incomplete breach reports, and ineffective scope escalations.
+Delivers LOOP-081 through LOOP-083 and revisits LOOP-035.
+[Commitment](../commitments/scope-breaches-have-a-recovery-path.md).

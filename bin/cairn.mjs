@@ -621,9 +621,9 @@ function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
   const f = recordFields(read(p));
-  const findings = asList(f.findings);
+  const findings = f.findings === "[]" ? [] : asList(f.findings);
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
-  const malformed = f.findings && !Array.isArray(f.findings)
+  const malformed = f.findings && f.findings !== "[]" && !Array.isArray(f.findings)
     ? "findings must be a list"
     : invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
   const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,

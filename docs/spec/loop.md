@@ -914,7 +914,7 @@ and resolved: followed by a nonempty description. An empty findings list
 MUST remain valid. An unrecognized prefix, empty description, or non-list
 findings value MUST produce an actionable non-Done verdict naming the
 review file and supported format, rather than disappearing from the gate.
-Valid open findings MUST still require resolution; resolved findings MUST
+Valid open findings MUST still require resolution. Resolved findings MUST
 NOT block completion. A free-form Status field MUST NOT excuse invalid
 findings or substitute for their validation.
 Falsifier: a committed review containing REM-002: Historical agent checks

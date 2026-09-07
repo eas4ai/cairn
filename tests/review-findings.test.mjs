@@ -46,6 +46,12 @@ for (const entry of ["open:", "resolved:   ", "Open: incorrect case", "unknown: 
   });
 }
 
+test("the established explicit empty findings list remains valid", () => {
+  const root = ready([]), path = join(root, ".cairn/reviews/first.md");
+  writeFileSync(path, readFileSync(path, "utf8").replace("findings:\n", "findings: []\n")); commit(root);
+  assert.match(cairn(root, "wake").stdout, /^Done:/);
+});
+
 test("a scalar findings value requires the supported list format", () => {
   const root = ready([]), path = join(root, ".cairn/reviews/first.md");
   writeFileSync(path, readFileSync(path, "utf8").replace("findings:\n", "findings: REM-002: unresolved\n")); commit(root);

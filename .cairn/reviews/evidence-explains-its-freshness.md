@@ -1,5 +1,5 @@
 commitment: evidence-explains-its-freshness
-commit: 7708f90fffecfe145e6f2203fb00f14904644843
+commit: 821c4dac3589f3e78ae2df350149bb232ce0edd2
 examined:
   - Draft LOOP-076 through LOOP-080 against existing freshness and action-priority requirements.
   - Whether changed-path explanations can be reconstructed from Git-normalized historical blobs.

@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: evidence-remains-tied-to-the-checked-state
+Current: records-preserve-order-and-meaning
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -230,3 +230,11 @@ Repair changing candidates, mode-blind freshness, missing output acceptance,
 overlapping checks, malformed declarations, and submodule crashes. Share
 repeated input reads within a wake. Covers LOOP-063 through LOOP-069.
 [Commitment](../commitments/evidence-remains-tied-to-the-checked-state.md).
+
+## Records preserve order and meaning
+
+Requested by the developer after five audit passes. Repair evidence ordering,
+record parsing, escalation serialization, Git conversion, historical path
+reading, and supporting files in evidence directories. Audit the repairs again.
+Covers LOOP-070 through LOOP-075.
+[Commitment](../commitments/records-preserve-order-and-meaning.md).

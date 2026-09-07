@@ -657,3 +657,70 @@ Git subprocesses in a wake with no evidence or decision history.
 
 The cache lasts for one read only. A check uses fresh input state at each
 candidate boundary, so caching cannot conceal changes made by its command.
+
+## Records preserve execution order and meaning
+
+Requested by the developer on 2026-09-06 after the repeated audit:
+remediate its six finding groups and examine the finished repairs again.
+
+[LOOP-070] The loop MUST order new evidence by persisted execution order,
+independent of the wall clock, and refuse a latest result whose recorded
+prior history differs from the history now present.
+Falsifier: a later failed check reports Done after the clock moves backward,
+or importing additional receipts leaves a pass current without a new check.
+
+Each new receipt carries a per-requirement sequence greater than the
+sequences already present and a digest of the prior receipts. The working-tree
+execution lock protects allocation. Timestamps remain descriptive. Legacy
+receipts stay unchanged; a latest receipt without execution-order evidence
+needs one new check. An imported, removed, or edited prior receipt makes the
+latest result stale; rerunning incorporates the visible history. Uncertain
+history must not trigger a three-attempt escalation before that rerun.
+
+[LOOP-071] The loop MUST read decision and review metadata only from the
+record header, excluding body sections and fenced examples.
+Falsifier: an example Superseded by or findings field makes an unbuilt
+decision or open review finding disappear from the wake.
+
+A realization is a commit entry in the actual Realized by section, not a
+quoted example. Decision command metadata must stay on one line; its body
+may contain ordinary multiline Markdown. Existing flat declarations and
+escalation answer histories retain their formats.
+
+[LOOP-072] Raising an escalation MUST NOT create an Answer or Reply record
+from any supplied question or concerns value.
+Falsifier: a multiline concerns value creates Answer: ok and the next wake
+continues without presenting the Blocking escalation to the developer.
+
+Validate the concerns identifier list and all single-line fields. A malformed
+Blocking escalation is still written and presented, with line breaks flattened
+and the malformed field named. Its content never counts as a developer answer.
+
+[LOOP-073] The check MUST accept Git-clean text conversion while preserving
+the identity of the bytes actually executed at both candidate boundaries.
+Falsifier: a CRLF working-tree input with an LF Git blob is refused as
+uncommitted despite Git accepting it, or conversion hides an input mutation
+during execution.
+
+Use Git's clean conversion for committed identity and review comparison;
+keep raw working-tree content, kind, and mode in execution evidence and in
+the starting/ending candidate comparison. Hidden content changes and mode
+changes remain rejected. Conversion errors must not produce passing evidence.
+Git configuration and filters retain their existing trusted local environment.
+
+[LOOP-074] The loop MUST read historical specification paths without Git's
+display quoting changing their identity.
+Falsifier: a current review of a specification named café.md remains stale
+with default core.quotePath but becomes current when that option is disabled.
+
+Use raw NUL-delimited paths for historical listings, as for declared inputs.
+
+[LOOP-075] The loop MUST distinguish receipts from supporting files in an
+evidence directory and name a malformed receipt as a repair.
+Falsifier: adding README.md beside valid receipts triggers mechanism review
+or a rerun loop, or a receipt-shaped malformed file is silently accepted.
+
+Recognize the receipt filename format explicitly. Supporting notes and output
+logs never participate in ordering, prior-history digests, or attempt counts.
+Malformed receipt identity, result, or execution-order fields name the receipt
+to repair before a check runs. Preserve historical receipts and their results.

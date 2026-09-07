@@ -1,5 +1,5 @@
 commitment: records-preserve-order-and-meaning
-commit: a9528249c8154e988d96f19909785b65b825c019
+commit: 6b080659909629ce795c679cb24af21f7c2aa58d
 examined:
   - Initial six repairs, their 50 regression/control tests, and committed 269-test evidence.
   - Receipt ordering under backward/equal clocks, legacy histories, branch imports, and malformed fields.
@@ -68,3 +68,22 @@ The production-rule self-audit covered scope, contracts, error handling,
 persistence and legacy records, bounded work, test evidence, and documentation.
 No further finding remains open. Verification ran on this Linux host with Git
 conversion fixtures; it does not establish behavior on every host or filesystem.
+
+## Documentation preparation for the next iteration
+
+The 2026-09-07 review examined the cited recon, five Draft freshness
+requirements, proposed commitment, draft review, and two backlog records.
+All changes since a97d238 are under docs/ or .cairn/. No runtime, test, or
+working-agreement code changed. The roadmap still selects this completed
+commitment, and each proposed requirement is explicitly Draft. The package
+and specification mechanisms have new committed passing evidence. Their
+passes check structure and package rules, not acceptance of the proposal.
+
+Checked that the draft preserves raw execution identity, old receipts,
+action priority, and honest unavailable comparisons. The existing-project
+recon records the observed gap and its preservation controls. The next
+commitment remains inactive until its falsifiers are confirmed; its tests
+are planned, not claimed as implemented. No unresolved finding was added
+to the completed record-integrity work. Ripwire's final checks use the
+already committed HEAD and find no outstanding code edits; the earlier
+implementation evidence remains the source of test coverage.

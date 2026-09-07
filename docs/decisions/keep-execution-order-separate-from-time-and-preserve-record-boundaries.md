@@ -12,4 +12,4 @@ Give each new receipt a per-requirement sequence and a digest of all prior recog
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 54bcbee Preserve execution order and record metadata boundaries

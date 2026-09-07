@@ -1,9 +1,10 @@
 commitment: scope-breaches-have-a-recovery-path
-commit: a13efa9515596bcf4ca1043244f3e75cedd77bcf
+commit: 81906e4ada7c94bfea2b867e3762c987719a54a1
 examined:
   - LOOP-035 against scope.test.mjs, breaches, wakeVerdict, wake, and runChecks.
 findings:
-  - open: Existing tests do not cover scope-specific restoration acknowledgment, bootstrap declaration priority, or complete path diagnostics.
+  - resolved: Added and verified scope-specific restoration, bootstrap declaration, and complete diagnostic coverage.
+  - open: The new escalate help entry is indented under the preceding command; align it with the other commands.
 
 ## Mechanism review before implementation
 
@@ -54,3 +55,43 @@ arguments, and the test helper has its own default argument. This is a graph
 name collision, not a broken runtime call.
 
 Committed evidence and the final review remain outstanding.
+
+## Review of the committed repair
+
+Examined the committed runtime diff, requirement definitions, manual and working
+agreement changes, test receipts, and captured output. The committed node-test
+run has 335 passes and zero failures; package and specification receipts pass.
+The runtime remains within its limit at 1195 lines.
+
+Attacked bootstrap scope loss: an inherited mechanism still supplies a
+footprint, and first declaration checks earlier changes. The explicit unrelated
+check case establishes the adoption report's missing behavior. Attacked output
+completeness and path injection: wake/check share one verdict, use sorted paths,
+and escape control characters, including Unicode separators.
+
+Attacked acknowledgment scope: only committed closed ok records with matching
+snapshot digests can apply. Commitment activation and first-parent membership
+bind the window; later own commits still count, and tree differences include
+content, mode, kind, additions, and deletions. An imported change that leaves an
+acknowledged path unrestored reopens the incident. Ordinary ok, instead, ask,
+uncommitted answers, damaged fields, malformed snapshots, and another activation
+cannot grant the exception. Reading committed answers also keeps their meaning
+stable while the check validates HEAD before and after execution.
+
+A disposable copy was changed to ignore later commits when applying an
+acknowledgment. The later-edit-and-revert test failed because it expected a
+scope refusal. Restoring that copy made the same test pass. No development code
+changed during the demonstration. This proves the guard test rejects an
+incorrectly broad acknowledgment rather than merely accepting the good case.
+
+No runtime defect was established in this review. One help-layout finding above
+must be resolved as a separate action. The adjacent milestone assignment also
+has an extra indentation level; align it in that formatting correction.
+Native macOS and Windows were not run. This review does not make Cairn an
+identity or security boundary: developer authorship remains the existing
+working agreement, and a committed record is not cryptographic authentication.
+
+The production-rule self-audit covered scope, readability, boundary validation,
+error handling, durable answer commitment, history retention, compatibility,
+execution stability, test soundness, and documentation. No source code changed
+while this review was performed. Production has not been updated by this repair.

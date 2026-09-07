@@ -250,8 +250,11 @@ outside the declared inputs of that commitment's mechanisms, other than
 Cairn's own records. The loop MUST block evidence recording for an
 unresolved breach. A declaration can cover the path; otherwise restoration
 and a developer acknowledgment under LOOP-083 resolve the incident.
+An explicit retention approval under LOOP-084 can instead keep exact
+committed work without restoring it.
 Falsifier: evidence is recorded despite an undeclared, non-record change
-in the commitment's own history without a valid restoration acknowledgment.
+in the commitment's own history without a valid restoration acknowledgment
+or exact retention approval.
 Status: Agreed 2026-09-07
 
 This makes LOOP-015 observable. The commitment's footprint is already
@@ -856,3 +859,40 @@ restored history. An instead answer closes the question and supplies direction;
 the agent follows it by correcting declarations within the agreement or by
 restoring and raising a new scope-specific question. No free-text answer is
 interpreted as permission to ignore arbitrary changes. Git history is retained.
+
+
+## Keeping correct work after a scope breach
+
+[LOOP-084] The developer MUST be able to approve keeping exact committed
+work outside the current commitment through an explicit scope retention
+escalation. The record MUST distinguish retention from restoration, name
+the commitment activation, commit, and exact paths, and bind the committed
+ok to that unchanged snapshot. It MUST resolve only that recorded history
+while those paths match the approved commit in contents, modes, and kinds.
+Later own commits, even when reverted, other paths, other activations,
+ordinary answers, malformed records, and edits to approved snapshots MUST
+NOT gain permission from it. Existing restoration approvals MUST retain
+their restoration requirement. Missing declarations within the agreement
+MUST remain a separate remedy that does not require reverting correct work.
+Falsifier: correct committed work cannot be kept after its explicit committed
+retention approval, or that approval hides unapproved changes or turns an
+ordinary or restoration answer into permission to retain unrestored work.
+Status: Agreed 2026-09-07
+
+[LOOP-085] An applicable retention approval MUST require fresh evidence and
+a fresh commitment review from commits containing that approval. It MUST
+NOT widen the mechanisms' declared inputs or bypass agreement, declaration,
+check failures, candidate stability, or evidence integrity. Diagnostics and
+the working agreement MUST distinguish declaring missing inputs, approving
+retention of exact work, and restoring accidental work.
+Falsifier: evidence or review from before retention approval completes the
+commitment, later undeclared edits inherit permission, a failed check is
+accepted, or the user is told restoration is the only remedy.
+Status: Agreed 2026-09-07
+
+The developer requested this repair on 2026-09-07 after identifying the
+missing retention branch. Use cairn escalate --scope --keep with the usual
+decision fields to propose keeping the recorded work. The developer's ok
+corrects scope for that incident only. Explain why it belongs, what was
+checked, and any missing dependencies that need declaration. It neither
+promotes a future feature nor silently extends a mechanism's coverage.

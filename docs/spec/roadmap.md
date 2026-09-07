@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: scope-breaches-have-a-recovery-path
+Current: correct-work-can-be-kept-after-a-scope-breach
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -256,3 +256,11 @@ Requested by the developer on 2026-09-07 after reporting the empty-footprint
 declaration gap, incomplete breach reports, and ineffective scope escalations.
 Delivers LOOP-081 through LOOP-083 and revisits LOOP-035.
 [Commitment](../commitments/scope-breaches-have-a-recovery-path.md).
+
+
+## Correct work can be kept after a scope breach
+
+Requested by the developer on 2026-09-07 to complete the recovery path for
+correct work committed in the wrong scope window. Delivers LOOP-084 and
+LOOP-085 and revisits LOOP-035 while preserving LOOP-083 restoration.
+[Commitment](../commitments/correct-work-can-be-kept-after-a-scope-breach.md).

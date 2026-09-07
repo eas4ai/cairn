@@ -17,7 +17,7 @@
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
 
 import { parseArgs } from "node:util";
-import { parseSpec } from "./spec.mjs";
+import { parseSpec, withoutFences } from "./spec.mjs";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { openSync, closeSync, readSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
@@ -40,6 +40,22 @@ function fields(text) {
     else if (key && typeof out[key] === "string") out[key] += " " + line.trim();
   }
   return out;
+}
+// Markdown records have one header, followed by prose. Flat declarations
+// and escalation conversations retain their existing field format.
+function recordFields(text) {
+  const lines = withoutFences(text), header = [];
+  let titleAllowed = true;
+  for (const line of lines) {
+    if (/^#{1,6}(?:[ \t]|$)/.test(line)) {
+      if (!titleAllowed || !/^# /.test(line)) break;
+      titleAllowed = false;
+      continue;
+    }
+    if (line.trim()) titleAllowed = false;
+    header.push(line);
+  }
+  return fields(header.join("\n"));
 }
 const read = (p) => readFileSync(p, "utf8");
 const list = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => !n.startsWith(".")).sort() : []);
@@ -64,9 +80,9 @@ function currentCommitment(root) {
 function requirementSet(root, commit = null) {
   const dir = "docs/spec", texts = new Map(), agreed = new Set(), inherited = new Set();
   const out = { texts, agreed, inherited };
-  const ls = commit ? git(root, "ls-tree", "--name-only", `${commit}:${dir}`) : null;
+  const ls = commit ? git(root, "ls-tree", "--name-only", "-z", `${commit}:${dir}`) : null;
   if (ls && (ls.error || ls.status !== 0)) return out;
-  const names = ls ? ls.stdout.trim().split("\n") : list(join(root, dir));
+  const names = ls ? ls.stdout.split("\0").filter(Boolean) : list(join(root, dir));
   for (const n of names.filter((n) => n.endsWith(".md"))) {
     const path = `${dir}/${n}`, show = commit ? git(root, "show", `${commit}:${path}`) : null;
     if (show && (show.error || show.status !== 0)) continue;
@@ -129,7 +145,7 @@ function changedPaths(root, commits, inputs = []) {
 function decisions(root) {
   const dir = join(root, "docs", "decisions");
   return list(dir).map((n) => {
-    const f = fields(read(join(dir, n)));
+    const f = recordFields(read(join(dir, n)));
     const ids = [...(f["Rests on"] ?? "").matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
     return { slug: n.replace(/\.md$/, ""), ...f, domain: ids.length ? [...new Set(ids)] : ["unspecified"] };
   });
@@ -146,11 +162,11 @@ function fold(c, inherited) {
 function unrealizedDecisions(root) {
   const dir = join(root, "docs", "decisions");
   return list(dir).filter((n) => {
-    const t = read(join(dir, n));
-    if ("Superseded by" in fields(t)) return false;
-    const i = t.indexOf("## Realized by");
-    const section = i < 0 ? "" : t.slice(i + "## Realized by".length).split(/\n## /)[0];
-    return ![...section.matchAll(/^- ([0-9a-f]{7,40})[ \t]+(\S[^\n]*)$/gm)].some((m) => git(root, "rev-parse", "--verify", `${m[1]}^{commit}`).status === 0);
+    const t = withoutFences(read(join(dir, n))).join("\n");
+    if ("Superseded by" in recordFields(t)) return false;
+    const headings = [...t.matchAll(/^## Realized by[ \t]*$/gm)];
+    const section = headings.length !== 1 ? "" : t.slice(headings[0].index + headings[0][0].length).split(/^#{1,6}[ \t]/m)[0];
+    return ![...section.matchAll(/^- ([0-9a-f]{7,64})[ \t]+(\S[^\n]*)$/gm)].some((m) => git(root, "rev-parse", "--verify", `${m[1]}^{commit}`).status === 0);
   }).map((n) => rel(root, join(dir, n)));
 }
 function escalations(root) {
@@ -187,7 +203,7 @@ function mechanisms(root) {
 const modeError = (m) => "results" in m.def && m.def.results !== "per-requirement" ? `results: ${m.def.results}; expected per-requirement, or omit results for legacy reporting (LOOP-061)` : null;
 // The tracked entries a mechanism declares, including their kind and mode.
 // A cache belongs to one read of the tree, never across a command execution.
-const inputCache = () => ({ selections: new Map(), files: new Map(), digests: new Map() });
+const inputCache = () => ({ selections: new Map(), files: new Map(), digests: new Map(), objects: new Map() });
 function inputEntries(root, inputs, cache = inputCache()) {
   const key = JSON.stringify(inputs);
   if (!cache.selections.has(key)) {
@@ -197,7 +213,7 @@ function inputEntries(root, inputs, cache = inputCache()) {
     const entries = r.stdout.split("\0").filter(Boolean).map((line) => {
       const m = /^(\d+) ([0-9a-f]+) ([0-3])\t([\s\S]+)$/.exec(line);
       if (!m) throw new Error("cannot parse a declared Git input");
-      return { mode: m[1], stage: m[3], path: m[4] };
+      return { mode: m[1], oid: m[2], stage: m[3], path: m[4] };
     });
     entries.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
     cache.selections.set(key, entries);
@@ -214,7 +230,8 @@ function fileIdentity(root, path, cache) {
   const p = join(root, path), stat = lstatSync(p);
   if (!stat.isFile() && !stat.isSymbolicLink()) throw new Error(`unsupported declared input ${path}`);
   const link = stat.isSymbolicLink(), mode = link ? "120000" : stat.mode & 0o100 ? "100755" : "100644";
-  const identity = { mode, digest: link ? sha(readlinkSync(p)) : fileDigest(p) };
+  const target = link ? readlinkSync(p) : null;
+  const identity = { mode, digest: link ? sha(target) : fileDigest(p), target };
   cache.files.set(path, identity);
   return identity;
 }
@@ -230,8 +247,47 @@ function inputsDigest(root, inputs, cache = inputCache()) {
   cache.digests.set(key, digest);
   return digest;
 }
-// The same digest over the tree as it was at a commit, for records that
-// name the commit they examined rather than carrying a digest.
+// Git owns clean conversion; execution evidence still hashes raw bytes.
+// Quote paths using Git's byte-oriented C syntax, including newlines.
+const gitPath = (path) => '"' + [...Buffer.from(path)].map((b) => b < 32 || b >= 127 || b === 34 || b === 92 ? "\\" + b.toString(8).padStart(3, "0") : String.fromCharCode(b)).join("") + '"';
+const committedHash = () => createHash("sha256").update("cairn-git-inputs-v1\0");
+function workingObjects(root, entries, cache) {
+  const missing = entries.filter((e) => !cache.objects.has(e.path));
+  const files = missing.filter((e) => fileIdentity(root, e.path, cache).mode !== "120000");
+  if (files.length) {
+    const r = spawnSync("git", ["hash-object", "--stdin-paths"], { cwd: root, encoding: "utf8", maxBuffer: Infinity,
+      input: files.map((e) => gitPath(e.path) + "\n").join("") });
+    if (r.error || r.status !== 0) throw new Error(`cannot apply Git input conversion: ${r.stderr || r.error?.message}`);
+    const oids = r.stdout.trim().split("\n");
+    if (oids.length !== files.length || oids.some((oid) => !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(oid))) throw new Error("invalid Git input conversion result");
+    files.forEach((e, i) => cache.objects.set(e.path, oids[i]));
+  }
+  for (const e of missing) {
+    const file = fileIdentity(root, e.path, cache);
+    if (file.mode !== "120000") continue;
+    const oid = createHash(e.oid.length === 40 ? "sha1" : "sha256").update(`blob ${Buffer.byteLength(file.target)}\0`).update(file.target).digest("hex");
+    cache.objects.set(e.path, oid);
+  }
+}
+function committedInputsDigest(root, inputs, cache = inputCache()) {
+  const entries = inputEntries(root, inputs, cache), h = committedHash();
+  workingObjects(root, entries, cache);
+  for (const e of entries) hashEntry(h, e.path, fileIdentity(root, e.path, cache).mode, cache.objects.get(e.path));
+  return "sha256:" + h.digest("hex");
+}
+function gitObjectsAvailable(root, entries) {
+  if (!entries.length) return true;
+  const r = spawnSync("git", ["cat-file", "--batch-check"], { cwd: root, encoding: "utf8", maxBuffer: Infinity,
+    input: entries.map((e) => e.oid + "\n").join("") });
+  if (r.error || r.status !== 0) return false;
+  const lines = r.stdout.trimEnd().split("\n");
+  return lines.length === entries.length && lines.every((line, i) => {
+    const m = /^([0-9a-f]+) blob (\d+)$/.exec(line);
+    return m && m[1] === entries[i].oid && Number.isSafeInteger(Number(m[2]));
+  });
+}
+// A review names committed code. Git blobs already carry its clean identity,
+// so historical comparison needs object IDs rather than materializing blobs.
 function inputsDigestAt(root, inputs, commit) {
   const ls = git(root, "ls-tree", "-r", "-z", commit);
   const matches = git(root, "ls-files", `--with-tree=${commit}`, "-z", "--", ...inputs);
@@ -242,22 +298,11 @@ function inputsDigestAt(root, inputs, commit) {
     return m && { mode: m[1], oid: m[2], path: m[3] };
   });
   if (entries.some((e) => !e)) return null;
+  if (!gitObjectsAvailable(root, entries)) return null;
   entries.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
-  const batch = spawnSync("git", ["cat-file", "--batch"], { cwd: root, input: entries.map((e) => e.oid + "\n").join(""), maxBuffer: Infinity });
-  if (batch.error || batch.status !== 0) return null;
-  const h = inputHash(), bytes = batch.stdout;
-  let offset = 0;
-  for (const e of entries) {
-    const end = bytes.indexOf(10, offset);
-    if (end < 0) return null;
-    const header = /^([0-9a-f]+) blob (\d+)$/.exec(bytes.subarray(offset, end).toString("ascii"));
-    if (!header || header[1] !== e.oid) return null;
-    const size = Number(header[2]), start = end + 1;
-    if (!Number.isSafeInteger(size) || start + size >= bytes.length || bytes[start + size] !== 10) return null;
-    hashEntry(h, e.path, e.mode, sha(bytes.subarray(start, start + size)));
-    offset = start + size + 1;
-  }
-  return offset === bytes.length ? "sha256:" + h.digest("hex") : null;
+  const h = committedHash();
+  for (const e of entries) hashEntry(h, e.path, e.mode, e.oid);
+  return "sha256:" + h.digest("hex");
 }
 // Validate before hashing or running, including a missing file still in the index.
 const mechanismRepair = (name, why) => ({ verdict: "Resolvable", action: `repair .cairn/mechanisms/${name}`, why });
@@ -340,17 +385,49 @@ function checkOwner(root, path = checkLockPath(root)) {
 
 const dirtyInputs = (root, inputs) => git(root, "status", "--porcelain", "-z", "--", ...inputs).stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
 
-// Evidence history for a requirement, oldest first.
+const RECEIPT_NAME = /^\d{8}T\d{9}Z(?:-\d+)?$/;
+const validDigest = (s) => typeof s === "string" && /^sha256:[0-9a-f]{64}$/.test(s);
+function receiptError(f, req) {
+  if (f.requirement !== req) return `requirement must be ${req}`;
+  if (!["pass", "fail", "unverified"].includes(f.result)) return "result must be pass, fail, or unverified";
+  if (f.sequence === undefined && f.history_digest === undefined) return null; // legacy receipt
+  if (!/^[1-9]\d*$/.test(f.sequence ?? "") || !Number.isSafeInteger(Number(f.sequence))) return "sequence must be a positive safe integer";
+  if (!validDigest(f.history_digest)) return "history_digest is missing or invalid";
+  return null;
+}
+// Timestamp filenames identify receipts, but do not order new executions.
+// Legacy history is retained before sequenced records and needs one fresh run.
 function history(root, req) {
   const dir = join(root, ".cairn", "evidence", req);
-  return list(dir).filter((n) => !/\.(out|err)$/.test(n)).map((n) => ({ ...fields(read(join(dir, n))), path: rel(root, join(dir, n)) }));
+  return list(dir).filter((n) => RECEIPT_NAME.test(n)).map((n) => {
+    const p = join(dir, n), path = rel(root, p);
+    try {
+      if (!lstatSync(p).isFile()) return { path, error: "receipt is not a regular file" };
+      const text = read(p), f = fields(text);
+      return { ...f, path, receipt_digest: sha(text), error: receiptError(f, req) };
+    } catch (e) { return { path, error: `cannot read receipt: ${e.code ?? e.message}` }; }
+  }).sort((a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+}
+const historyDigest = (h) => sha(h.map((e) => `${e.path}\0${e.receipt_digest}\0`).sort().join(""));
+function historyRepair(h) {
+  const broken = h.find((e) => e.error);
+  return broken ? { verdict: "Resolvable", action: `repair ${broken.path}`, why: `${broken.error}; preserve the receipt and restore its recorded facts before checking (LOOP-075)` } : null;
+}
+function historyOrderError(h) {
+  const latest = h.at(-1);
+  if (!latest) return null;
+  if (latest.sequence === undefined) return "receipt has no execution sequence; rerun once to establish execution order (LOOP-070)";
+  const prior = h.slice(0, -1);
+  if (prior.some((e) => Number(e.sequence) >= Number(latest.sequence)) || latest.history_digest !== historyDigest(prior))
+    return "receipt history changed or its execution order is ambiguous; rerun to incorporate the visible history (LOOP-070)";
+  return null;
 }
 
 function evidenceError(root, receipt, outputs) {
   for (const [key, digestKey] of [["output", "output_digest"], ["stderr_output", "stderr_digest"]]) {
     const path = receipt[key], digest = receipt[digestKey];
     if (typeof path !== "string" || !path.startsWith(".cairn/evidence/") || path.split(/[\\/]/).includes("..")) return `${key} is missing or outside the evidence directory`;
-    if (typeof digest !== "string" || !/^sha256:[0-9a-f]{64}$/.test(digest)) return `${digestKey} is missing or invalid`;
+    if (!validDigest(digest)) return `${digestKey} is missing or invalid`;
     if (!outputs.has(path)) {
       try {
         const p = join(root, path);
@@ -366,7 +443,7 @@ function evidenceError(root, receipt, outputs) {
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
-  const f = fields(read(p));
+  const f = recordFields(read(p));
   return { commit: f.commit ?? null, open: asList(f.findings).filter((x) => /^open:/.test(x)) };
 }
 
@@ -385,6 +462,9 @@ function assess(root, req, mechs, ctx) {
   const name = mechs.byReq.get(req);
   const m = name ? mechs.byName.get(name) : null;
   const h = history(root, req);
+  const repair = historyRepair(h);
+  if (repair) return { req, mech: name, repair };
+  const orderError = historyOrderError(h);
   const latest = h[h.length - 1] ?? null;
   const everPassed = h.some((e) => e.result === "pass");
   // Attempts: the failing streak back from the latest, one attempt per
@@ -393,17 +473,18 @@ function assess(root, req, mechs, ctx) {
   let s = h.length; while (s > 0 && h[s - 1].result !== "pass") s--;         // a pass ends the streak; unverified is transparent
   const baseline = s === 0 ? h[0]?.inputs_digest : undefined, seen = new Set(), attempts = [];
   for (const e of h.slice(s)) if (e.result === "fail" && e.inputs_digest !== baseline && !seen.has(e.inputs_digest)) { seen.add(e.inputs_digest); attempts.push(e); }
-  const threeFails = attempts.length >= 3;
+  const threeFails = !orderError && attempts.length >= 3;
   const concerns = (e) => (e.Concerns ?? "").split(/[\s,]+/).includes(req);
   const escalatedSince = threeFails && ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= attempts[attempts.length - 3].recorded));
   // Three runs at one digest with no attempt since: the counter cannot
   // see a cause outside the repository; the agent can (DEC-019).
   const tail = h.slice(s).filter((e) => e.result === "fail").slice(-3);
-  const stuck = tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= tail[0].recorded));
+  const stuck = !orderError && tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && (!e.Raised || e.Raised >= tail[0].recorded));
   const revision = requirementChange(root, req, m, latest, ctx);
   let stale = null;
   if (m && latest) {
     const reasons = [];
+    if (orderError) reasons.push(orderError);
     if (revision.changed) reasons.push("the requirement or falsifier changed, or its old text is unavailable");
     if (latest.mechanism_digest !== m.digest) reasons.push("the mechanism changed");
     if (latest.inputs_digest !== ctx.digests.get(name)) reasons.push("a declared input changed");
@@ -455,6 +536,7 @@ function wakeVerdict(root) {
   const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
   let s;
+  if ((s = first((x) => x.repair))) return s.repair;
   if ((s = first((x) => x.mech && x.revision.needsReview))) return revisionVerdict(s.req, s.mech, s.revision.digest);
   if ((s = first((x) => x.threeFails && !x.escalatedSince)))
     return { verdict: "Resolvable", action: `escalate ${s.req}`, why: `three consecutive failing records and no escalation since; a fourth attempt is not the next action (DEC-016)` };
@@ -477,7 +559,7 @@ function wakeVerdict(root) {
   // moving on its own, as it does when the review is committed, is not.
   const inputs = [...new Set(state.filter((x) => x.mech).flatMap((x) => asList(mechs.byName.get(x.mech).def.inputs)))];
   const then = rv.commit ? inputsDigestAt(root, inputs, rv.commit) : null;
-  if (then === null || then !== inputsDigest(root, inputs, mechs.inputs)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
+  if (then === null || then !== committedInputsDigest(root, inputs, mechs.inputs)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
   if (rv.open.length) return { verdict: "Resolvable", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
   return { verdict: "Done", action: c.slug, why: `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean` };
 }
@@ -540,7 +622,7 @@ function candidate(root, m, requirements, expectedHead) {
   const head = headSha(root), dirty = dirtyInputs(root, paths);
   if (dirty.length || head !== expectedHead) return { head, dirty };
   const cache = inputCache();
-  return { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache) };
+  return { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache) };
 }
 
 async function check(root, only) {
@@ -605,13 +687,15 @@ async function runMechanism(root, m, ctx, head) {
   const before = candidate(root, m, ctx.requirements, head), dirty = before.dirty;
   if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
   if (!before.digest) { process.stdout.write(`Resolvable: run ${reqs[0]}\n  candidate changed before ${name}; no evidence recorded\n`); return 1; }
-  if (before.digest !== inputsDigestAt(root, before.paths, head)) {
+  if (before.committed !== inputsDigestAt(root, before.paths, head)) {
     process.stdout.write(`Resolvable: commit candidate for ${name}\n  inputs do not match the committed candidate at ${head}; inspect Git flags, file modes, and declared paths before rerunning (LOOP-030)\n`);
     return 1;
   }
   for (const req of reqs) {
     if (!ctx.requirements.get(req)?.digest) { process.stdout.write(`Resolvable: repair docs/spec/\n  ${req} needs exactly one requirement definition\n`); return 1; }
-    const revision = requirementChange(root, req, m, history(root, req).at(-1), ctx);
+    const h = history(root, req), repair = historyRepair(h);
+    if (repair) { process.stdout.write(`${repair.verdict}: ${repair.action}\n  ${repair.why}\n`); return 1; }
+    const revision = requirementChange(root, req, m, h.at(-1), ctx);
     if (revision.needsReview) { const w = revisionVerdict(req, name, revision.digest); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
   }
   // The write-ahead record, unless the agent's own already covers this run.
@@ -624,16 +708,24 @@ async function runMechanism(root, m, ctx, head) {
     const stem = join(logDir, `${stamp()}-${process.pid}`), output = stem + ".out", stderrOutput = stem + ".err";
     const r = await capture(m.def.command, cwd, output, stderrOutput, reqs, name);
     const after = candidate(root, m, ctx.requirements, head);
-    if (after.digest !== before.digest) {
+    if (after.digest !== before.digest || after.committed !== before.committed) {
       process.stdout.write(`Resolvable: ${after.dirty.length ? `commit ${after.dirty[0]}` : `run ${reqs[0]}`}\n  candidate changed during ${name}; no evidence recorded; retained output: ${rel(root, output)} and ${rel(root, stderrOutput)} (LOOP-063)\n`);
       return 1;
     }
-    recordEvidence(root, m, ctx.requirements, { before, output, stderrOutput, r });
+    const repair = recordEvidence(root, m, ctx.requirements, { before, output, stderrOutput, r });
+    if (repair) { process.stdout.write(`${repair.verdict}: ${repair.action}\n  ${repair.why}\n`); return 1; }
   } finally { if (mine) unlinkSync(ip); }
   return null;
 }
 
 function recordEvidence(root, m, requirements, { before, output, stderrOutput, r }) {
+  const histories = asList(m.def.requirements).map((req) => ({ req, records: history(root, req) }));
+  for (const { records } of histories) {
+    const repair = historyRepair(records);
+    if (repair) return repair;
+    if (Number(records.at(-1)?.sequence) === Number.MAX_SAFE_INTEGER)
+      return { verdict: "Resolvable", action: `repair ${records.at(-1).path}`, why: "sequence has no safe successor; reconcile execution order before checking" };
+  }
   const exit = r.signal ? `signal ${r.signal}` : r.status ?? -1, lines = r.lines;
   const rec = [
     `mechanism: ${m.name}`, `commit: ${before.head}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`,
@@ -642,15 +734,17 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
   ];
   const recorded = new Date().toISOString();
   const perRequirement = m.def.results === "per-requirement" || lines.size > 0;
-  for (const req of asList(m.def.requirements)) {
+  for (const { req, records } of histories) {
     const result = lines.get(req) ?? (perRequirement ? "unverified" : exit === 0 ? "pass" : "fail"), source = lines.has(req) ? "line" : perRequirement ? "none" : "exit";
     const dir = join(root, ".cairn", "evidence", req);
     mkdirSync(dir, { recursive: true });
     let p = join(dir, stamp()), i = 0;
     while (existsSync(p)) p = join(dir, `${stamp()}-${++i}`);       // never overwrite (LOOP-025)
-    writeFileSync(p, `requirement: ${req}\nrequirement_digest: ${requirements.get(req).digest}\n${rec.join("\n")}\nresult: ${result}\nsource: ${source}\nrecorded: ${recorded}\n`, { flag: "wx" });
+    const sequence = Number(records.at(-1)?.sequence ?? 0) + 1;
+    writeFileSync(p, `requirement: ${req}\nrequirement_digest: ${requirements.get(req).digest}\nsequence: ${sequence}\nhistory_digest: ${historyDigest(records)}\n${rec.join("\n")}\nresult: ${result}\nsource: ${source}\nrecorded: ${recorded}\n`, { flag: "wx" });
     process.stdout.write(`recorded ${rel(root, p)}: ${result} (${source === "line" ? "by line" : source === "none" ? "not reported" : `exit ${exit}`})\n`);
   }
+  return null;
 }
 
 // ------------------------------------------------------------ decide
@@ -662,6 +756,8 @@ const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-
 function decide(root, o) {
   const need = ["title", "level", "decided-by", "rests-on", "wrong-if", "body"].filter((k) => !o[k]);
   if (need.length) return usage(`decide: missing --${need.join(", --")}`);
+  const multiline = Object.keys(o).find((k) => k !== "body" && typeof o[k] === "string" && /[\r\n]/.test(o[k]));
+  if (multiline) return usage(`decide: --${multiline} must be one line; put multiline text in --body`);
   if (o.level === "Routine") return usage("decide: a Routine decision produces no record (DEC-001, DEC-003)");
   if (!LEVELS.includes(o.level)) return usage(`decide: --level must be one of ${LEVELS.join(", ")}`);
   if (o.supersedes && !CAUSES.includes(o.cause ?? "")) return usage(`decide: --supersedes needs --cause, one of: ${CAUSES.join("; ")}`);
@@ -697,20 +793,22 @@ function decide(root, o) {
 const ESC_FIELDS = [["question", "Question:  "], ["recommend", "Recommend: "], ["because", "Because:   "], ["if-wrong", "If wrong:  "], ["instead", "Instead:   "]];
 
 function escalate(root, o) {
-  if (!o.concerns) return usage("escalate: missing --concerns");
+  if (!o.concerns && o.level !== "Blocking") return usage("escalate: missing --concerns");
   if (o.level !== undefined && o.level !== "Blocking") return usage(`escalate: --level must be Blocking or absent, not ${o.level}`);
   const [open] = openEscalations(root);
   if (open) return usage(`escalate: ${open.name} is open; one escalation at a time (LOOP-011)`);
   // Every field present, each on one line (LOOP-026). A Blocking decision
   // is written even when malformed, with the field named (LOOP-014).
-  const bad = ESC_FIELDS.map(([k]) => k).find((k) => !o[k] || /\n/.test(o[k]));
+  const validConcerns = /^[A-Z]+-\d+(?:[ \t,]+[A-Z]+-\d+)*$/.test(o.concerns ?? "");
+  const bad = !validConcerns ? "concerns" : ESC_FIELDS.map(([k]) => k).find((k) => !o[k]?.trim() || /[\r\n]/.test(o[k]));
   if (bad && o.level !== "Blocking") return usage(`escalate: --${bad} must be present and one line; a Blocking decision may pass --level Blocking to be written anyway`);
   const dir = join(root, ".cairn", "escalations");
   mkdirSync(dir, { recursive: true });
-  let slug = slugify(o.concerns), path = join(dir, `${slug}.md`), i = 1;
+  let slug = slugify(o.concerns || "blocking"), path = join(dir, `${slug}.md`), i = 1;
   while (existsSync(path)) path = join(dir, `${slug}-${++i}.md`);
-  const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${(o[k] ?? "").replace(/\n/g, " ")}`), "", "Reply: ok | instead | ask", "",
-                `Concerns: ${o.concerns}`, "Status: open", `Raised: ${new Date().toISOString()}`];
+  const oneLine = (value) => (value ?? "").replace(/[\r\n]+/g, " ");
+  const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${oneLine(o[k])}`), "", "Reply: ok | instead | ask", "",
+                `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`];
   if (bad) body.push(`Malformed: ${bad}`);
   writeFileSync(path, body.join("\n") + "\n");
   process.stdout.write(`raised ${rel(root, path)}${bad ? ` (malformed: ${bad}; written because Blocking)` : ""}\n`);

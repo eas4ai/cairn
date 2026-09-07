@@ -710,7 +710,7 @@ Git configuration and filters retain their existing trusted local environment.
 
 [LOOP-074] The loop MUST read historical specification paths without Git's
 display quoting changing their identity.
-Falsifier: a current review of a specification named café.md remains stale
+Falsifier: a current review of a specification with a non-ASCII filename remains stale
 with default core.quotePath but becomes current when that option is disabled.
 
 Use raw NUL-delimited paths for historical listings, as for declared inputs.

@@ -248,6 +248,12 @@ your instruction that you have reviewed those decisions.
 An empty queue is not required for Done. A queued decision deserves your
 attention, but it is not a request for permission that has stopped the work.
 
+Decision and review metadata belongs in the record's header. Put prose and
+examples in the body; their quoted fields do not change whether a decision
+is built or a finding is open. A realizing commit belongs in the actual
+`Realized by` section, outside a code example. CLI metadata values stay on
+one line; use `--body` for multiline decision text.
+
 ## Understand checks and their results
 
 A check result is evidence from a particular command against particular
@@ -299,6 +305,13 @@ for that run. Inspect the change, commit or restore the intended candidate,
 then check again. A formatter or generator should finish before the check.
 Git flags that hide edits do not make those edits committed.
 
+Git can store LF text while checking it out as CRLF. Cairn uses Git's clean
+conversion to compare the committed code, including for reviews. Evidence
+still identifies the actual bytes, kinds, and executable modes used by the
+check. Changing those bytes requires another run even when Git considers
+the normalized content unchanged. A failing required Git filter cannot
+produce evidence.
+
 Checks use the existing working tree and environment. Boundary validation
 does not isolate them from an editor that changes and restores a file while
 they run. Keep declared inputs stable for the whole run.
@@ -332,6 +345,18 @@ Receipts live under `.cairn/evidence/<requirement>/`. Read the receipt's
 stderr log. Several receipts from one mechanism run can point to the same
 files. The terminal shows the recorded results; the full logs are kept on
 disk.
+
+New receipts carry a per-requirement `sequence` and a `history_digest` of
+the prior receipts. Execution order survives a clock adjustment; timestamps
+describe when the machine thought the run happened. Importing, deleting, or
+editing a prior receipt makes the latest result stale. Run the check again
+to incorporate the visible history, preserving earlier results.
+
+Supporting notes such as README.md are not receipts. Receipt names use a
+timestamp such as `20260906T120000000Z`, optionally followed by a numeric
+collision suffix. If a file with a receipt name has malformed identity,
+result, or order fields, Cairn names that file for repair. Restore its facts
+from the saved evidence or Git history; do not delete failures to advance.
 
 Wake verifies that the latest receipts' output files exist and match their
 digests. A missing or changed log names the receipt that needs a new check.
@@ -383,6 +408,8 @@ silently changing what you agreed to build.
 | `reconcile` appears after an interruption. | Ask the agent to inspect `.cairn/in-progress` and the working tree, then finish or abandon that recorded action. Do not delete the record merely to get past the message. |
 | `reconcile` names `cairn-check.lock`. | Wait for a live check owner. If the owner is dead or unreadable, inspect its command and any surviving child processes before removing the named lock. |
 | `run` names a missing or corrupt output receipt. | Inspect the damaged evidence, retain its history, and run the check again to produce a new verifiable receipt. |
+| `run` says receipt history changed or has no execution order. | Preserve the receipts and rerun the check so its new sequence includes the visible history. |
+| `repair` names an evidence receipt. | Restore the named malformed field from its original evidence or Git history before rerunning. Supporting notes do not need receipt fields. |
 | A decision needs a realizing commit. | Ask the agent whether the decision was actually built. Its record needs a resolving commit identifier and subject, not just a promise. |
 | Checks pass but Done is still absent. | Read the next action: a missing or stale review, open finding, unfinished record, or other outstanding condition can still need work. |
 
@@ -541,6 +568,11 @@ input digests include file mode and kind; evidence written with the old
 content-only format becomes stale once. Receipts without independently
 verifiable combined and stderr logs also need a new run. Preserve those
 older receipts and follow the rerun that wake names.
+
+Receipts written before execution sequences also need one new check, even
+if their logs and input digests remain valid. Historical receipts are never
+rewritten to invent an execution order. The new check establishes the current
+result and includes their preserved history.
 
 After updating the tool, ask the agent to inspect these items in your project:
 

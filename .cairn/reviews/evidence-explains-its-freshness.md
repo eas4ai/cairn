@@ -1,5 +1,5 @@
 commitment: evidence-explains-its-freshness
-commit: a97d238265cb8402655a6e08ba6cdf09c859d4e4
+commit: 7708f90fffecfe145e6f2203fb00f14904644843
 examined:
   - Draft LOOP-076 through LOOP-080 against existing freshness and action-priority requirements.
   - Whether changed-path explanations can be reconstructed from Git-normalized historical blobs.
@@ -90,3 +90,36 @@ cannot establish why the precondition was absent. The decision-writing code
 was unchanged. The test now asserts successful setup and verifies that the
 original bytes survive refusal; its eight-test file passes. No cause for the
 first command's unrecorded result is claimed.
+
+## Final review of the committed implementation
+
+All five requirements have current passing committed node-test evidence.
+The captured run reports 313 tests, 313 passes, and zero failures. Package
+and specification evidence is current and passing. The new requirement
+identifiers were corrected to their three-digit spelling in the declaration
+before the successful evidence run; no result was attributed to the earlier
+misspelled identifiers.
+
+No code changed during this review. Twelve additional adversarial probes ran
+in fresh disposable repositories. Nine corrupt attachment shapes (null,
+unknown version, non-array entries, null entry, list-valued digest or mode,
+traversing or list-valued path, and reversed ordering) preserved current
+evidence and produced an unavailable explanation after input changes. A run
+that originally checked CRLF bytes correctly identified a later LF change
+and returned to Done when the CRLF bytes were restored. A simultaneous
+content and executable-mode change reported both reasons. Three failed
+attempts retained escalation priority with malformed optional details and
+a subsequently changed input. All twelve probes passed.
+
+Inspected attachment serialization and validation, the captured candidate
+identities, lazy explanation of the selected requirement, path escaping and
+the 20-path limit, and mechanism-review instructions. Optional detail is
+checked against the existing input digest; it never replaces the facts used
+by assessment. The full suite covers the adjacent candidate, history, review,
+and output-integrity boundaries. No further finding was established.
+
+The production-rule self-audit covered scoped changes, format compatibility,
+error handling, persistence and interrupted writes, reuse of input caches,
+test soundness, documentation, and the runtime ceiling (1102 lines). Changes
+remain local to this development checkout. Verification was on Linux with
+Git conversion fixtures; native macOS and Windows runs were not performed.

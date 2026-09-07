@@ -1,5 +1,7 @@
 # Freshness by declared inputs, not computed closures
 
+Superseded by: preserve-unrelated-change-freshness-alongside-record-and-retention-checks
+
 Level: Consequential
 Decided by: agent
 Rests on: LOOP-006, LOOP-023, LOOP-024; a global commit identifier

@@ -1,5 +1,5 @@
 commitment: records-preserve-order-and-meaning
-commit: 37f29e87933747646cbbfa27210c99232a1c3859
+commit: a9528249c8154e988d96f19909785b65b825c019
 examined:
   - Initial six repairs, their 50 regression/control tests, and committed 269-test evidence.
   - Receipt ordering under backward/equal clocks, legacy histories, branch imports, and malformed fields.
@@ -7,11 +7,11 @@ examined:
   - Escalation serialization and explanation replies with all JavaScript line separators.
   - Git conversion identity, missing blobs, symbolic links, SHA-256 repositories, and filter side effects.
 findings:
-  - open: R1 - Unicode line/paragraph separators can still manufacture escalation answers, including through an agent explanation. Fix LOOP-072 serialization and reply validation.
-  - open: R2 - Indented headings and ordinary body paragraphs can still replace a review's header fields. Tighten LOOP-071 header boundaries.
-  - open: R3 - A list-valued sequence is coerced into a valid number. Require scalar execution-order fields under LOOP-075.
-  - open: R4 - A Git clean filter can move HEAD during ending validation and still produce passing evidence and Done. Validate the final state after conversion under LOOP-073 and LOOP-063.
-  - open: R5 - An old escalation timestamp can suppress the three-attempt stop after a backward clock step. Link escalation milestones and answer freshness to evidence sequences under LOOP-070.
+  - resolved: R1 - Unicode separators cannot manufacture answers. Serialization and reply-validation regressions pass. Fixed in 70e0cce.
+  - resolved: R2 - Indented headings, ordinary paragraphs, and setext body boundaries preserve open header findings. Boundary regressions pass. Fixed in 70e0cce.
+  - resolved: R3 - List-valued execution sequences require receipt repair. Scalar-validation regressions pass. Fixed in 70e0cce.
+  - resolved: R4 - HEAD and input mutations during Git conversion prevent evidence recording. Both filter regressions pass. Fixed in 70e0cce.
+  - resolved: R5 - Evidence milestones and answer order preserve escalation stops and answer freshness across backward clocks. Ordering regressions pass. Fixed in 70e0cce.
 
 ## Review of the first implementation
 
@@ -41,8 +41,30 @@ recordEvidence, plus revision-churn warnings. Those warnings are review
 priorities, not proof of defects. The probes above attack those transitions
 and their callers directly. The kernel remains below its 1500-line ceiling.
 
-## Next action
+## Final review after repairs
 
-Repair these findings as implementation work, with failing regressions first.
-Preserve this review and update each finding with its resolving change and
-verification. Then examine the finished repairs again before a clean review.
+No code changed during the final review. The five findings were repaired in
+70e0cce after failing regressions demonstrated each gap. All 284 tests passed,
+including 65 tests added for this commitment. Committed node-test, pkg-lint,
+and spec-lint evidence is current and passing.
+
+The same external probe reran in fresh disposable repositories, with explicit
+assertions for all 11 cases. Both Unicode concern cases still require developer
+presentation; both Unicode explanation cases leave the reply pending. All
+three review-body cases preserve the open finding. The list-valued sequence
+requires repair. Both Git-filter mutations record zero receipts. The old
+escalation cannot cover three newer failing attempts after a backward clock
+step. All 11 assertions passed.
+
+Focused source review examined recordFields, candidate, evidenceMilestones,
+and followsEvidence, including their callers and the final validation order.
+Ripwire edit-check found no incompatible callers for the inspected boundary
+functions. Its final quality-delta and test-gate compared against the already
+committed HEAD and reported no outstanding edits; these do not replace the
+earlier change review or the full test run. The earlier branch-complexity and
+revision-churn warnings remain documented above.
+
+The production-rule self-audit covered scope, contracts, error handling,
+persistence and legacy records, bounded work, test evidence, and documentation.
+No further finding remains open. Verification ran on this Linux host with Git
+conversion fixtures; it does not establish behavior on every host or filesystem.

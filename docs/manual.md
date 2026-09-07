@@ -291,6 +291,19 @@ pass; a nonzero exit or signal means fail. If valid result lines do arrive,
 Cairn uses them and leaves omitted requirements unverified. Ask the agent
 which reporting rule a shared check uses before interpreting a blanket result.
 
+### Review finding format
+
+In a review record, `findings:` introduces a list. Each item must be
+`open: <description>` for unresolved work or `resolved: <description>` for
+work already addressed. Descriptions must not be empty. Leave `findings:`
+empty when the review found no issues.
+
+An unknown prefix such as `REM-002:` produces a repair verdict naming the
+review file and offending entry; it cannot count as a clean review. Preserve
+that issue as `open: REM-002: <description>` until it is resolved. A free-form
+`Status: in progress` field does not replace finding validation. Valid open
+findings continue to require resolution before Done.
+
 ### Why passing checks sometimes need to run again
 
 Cairn checks the requirement and falsifier, mechanism declaration, declared

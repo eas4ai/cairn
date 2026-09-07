@@ -621,7 +621,14 @@ function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
   const f = recordFields(read(p));
-  return { commit: f.commit ?? null, open: asList(f.findings).filter((x) => /^open:/.test(x)) };
+  const findings = asList(f.findings);
+  const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
+  const malformed = f.findings && !Array.isArray(f.findings)
+    ? "findings must be a list"
+    : invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
+  const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,
+    why: `${malformed}; use list entries 'open: <description>' or 'resolved: <description>' with a nonempty description, or leave findings empty when there are no findings (LOOP-086). Preserve unresolved issues as open findings.` } : null;
+  return { commit: f.commit ?? null, open: findings.filter((x) => /^open:/.test(x)), repair };
 }
 
 // ------------------------------------------------------------ wake
@@ -738,6 +745,7 @@ function wakeVerdict(root) {
   if ((s = first((x) => !x.mech))) return { verdict: "Resolvable", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
   const head = headSha(root), rv = reviewOf(root, c.slug);
   if (!rv) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `every requirement passes; no review record exists at .cairn/reviews/${c.slug}.md (LOOP-020)` };
+  if (rv.repair) return rv.repair;
   if (retentionChanged(root, rv.commit, ctx)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: "the review predates the committed retention approval; examine the retained work and fresh evidence (LOOP-085)" };
   const reviewed = pastRequirements(root, rv.commit, ctx);
   if (state.some((x) => !reviewed.get(x.req)?.digest || reviewed.get(x.req).digest !== ctx.requirements.get(x.req)?.digest))

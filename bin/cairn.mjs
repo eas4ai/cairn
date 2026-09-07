@@ -1035,7 +1035,7 @@ function answer(root, slug, reply) {
   if (turn === "developer") {
     const order = escalations(root).reduce((max, e) => Math.max(max, answerOrder(e)), 0) + 1;
     if (!Number.isSafeInteger(order)) return usage("answer: Answered order has no safe successor; repair the escalation order");
-      milestone = `Answered after: ${evidenceMilestones(root, fields(text).Concerns)}\nAnswered order: ${order}\n` + scopeApprovalLine(text, reply);
+    milestone = `Answered after: ${evidenceMilestones(root, fields(text).Concerns)}\nAnswered order: ${order}\n` + scopeApprovalLine(text, reply);
   }
   writeFileSync(path, text.replace(/\n?$/, "\n") + `${field}: ${reply}\n${date}: ${new Date().toISOString()}\n${milestone}`);
   process.stdout.write(`${turn === "agent" ? "replied to" : "answered"} ${rel(root, path)}\n`);
@@ -1090,12 +1090,12 @@ Commands:
     Record a decision. Levels: ${LEVELS.join(", ")}.
     --history is required when the decision's domain has recorded reversals.
     To replace an earlier decision, add --supersedes SLUG --cause CAUSE.
-    escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
-             --if-wrong TEXT --instead TEXT [--level Blocking] [--scope]
-      Ask the developer for a decision. Fields must each fit on one line.
-      --level Blocking preserves the escalation even if a field is incomplete.
-      --scope records restored scope history for a specific acknowledgment;
-      include LOOP-035 in --concerns and commit restoration before raising it.
+  escalate --concerns REFS --question TEXT --recommend TEXT --because TEXT
+           --if-wrong TEXT --instead TEXT [--level Blocking] [--scope]
+    Ask the developer for a decision. Fields must each fit on one line.
+    --level Blocking preserves the escalation even if a field is incomplete.
+    --scope records restored scope history for a specific acknowledgment;
+    include LOOP-035 in --concerns and commit restoration before raising it.
   answer SLUG ok | instead TEXT | ask TEXT
     Answer an escalation. An ask keeps it open for an explanation.
     After an ask, the agent uses answer SLUG "EXPLANATION" to reply.

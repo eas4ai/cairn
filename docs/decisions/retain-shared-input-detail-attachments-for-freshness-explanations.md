@@ -12,4 +12,4 @@ Add one versioned JSON input-detail attachment beside each mechanism output, ref
 
 ## Realized by
 
-(none yet: recorded, not built)
+- e5bdbac Explain stale evidence with validated input identities and next actions

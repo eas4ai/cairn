@@ -1,0 +1,21 @@
+requirement: PKG-008
+requirement_digest: sha256:5fa33d77729e461ee6b881c4e7964c03f5da865af49fbbd1549d7bbdd662a2a2
+sequence: 7
+history_digest: sha256:86cc4c0bb96e3dc8c73dbafbabf9600b94cf86c68ac64440da5607a04d7dddd5
+mechanism: pkg-lint
+commit: 56650be
+inputs_digest: sha256:e72ca1d7c27d1593d0e09fb246fe9a5b00d542fb15ca178d5791be152bd8fe53
+mechanism_digest: sha256:6737dc067622b67cca324fbdcd60f8646f83d27dc1e906e3fe930d013b0b5aae
+inputs_detail: .cairn/evidence/PKG-001/20260907T162614202Z-3774155.inputs.json
+command: node scripts/pkg-lint.mjs
+cwd: .
+exit: 0
+output_digest: sha256:a7db84be8e488273b0b052755989bb65edbb8d7e8353ba7d22ca3a55dc879f36
+output: .cairn/evidence/PKG-001/20260907T162614202Z-3774155.out
+stderr_output: .cairn/evidence/PKG-001/20260907T162614202Z-3774155.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-07T16:26:14.303Z

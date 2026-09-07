@@ -2,15 +2,13 @@
 
 Slug: evidence-explains-its-freshness
 Requirements: LOOP-076, LOOP-077, LOOP-078, LOOP-079, LOOP-080
-Status: Draft
+Status: Agreed 2026-09-07
 
 ## Authorization and activation
 
-The developer confirmed explainable freshness as the next iteration on
-2026-09-07 and requested existing-project. The exact requirements and
-falsifiers in docs/spec/loop.md await confirmation under SPEC-002. After
-confirmation, mark only those blocks Agreed and move the roadmap Current
-line to this slug. This draft does not activate a second commitment.
+The developer confirmed explainable freshness as the next iteration and then
+confirmed the complete LOOP-076 through LOOP-080 requirement and falsifier
+set on 2026-09-07. The roadmap now selects this commitment.
 
 ## Goal
 
@@ -42,7 +40,7 @@ implementation; a new record kind requires the decision named by PKG-003.
 
 ## Mechanism and inputs
 
-Extend the existing node-test mechanism after agreement to speak for these
+Extend the existing node-test mechanism to speak for these
 five requirements. Its command remains node --test tests/*.test.mjs. Its
 current declared inputs cover bin/, tests/, skills/, scripts/, AGENTS.md,
 CLAUDE.md, README.md, and docs/walkthrough.md. The inherited pkg-lint mechanism

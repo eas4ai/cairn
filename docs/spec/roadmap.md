@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: records-preserve-order-and-meaning
+Current: evidence-explains-its-freshness
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -239,14 +239,13 @@ reading, and supporting files in evidence directories. Audit the repairs again.
 Covers LOOP-070 through LOOP-075.
 [Commitment](../commitments/records-preserve-order-and-meaning.md).
 
-## Proposed next commitment: evidence explains its freshness
+## Evidence explains its freshness
 
-The developer confirmed this direction on 2026-09-07. The exact requirement
-and falsifier set is Draft pending confirmation under SPEC-002. The current
-commitment stays in place until that agreement is recorded.
+The developer confirmed the direction and the exact requirement and falsifier
+set on 2026-09-07.
 
-Proposes LOOP-076 through LOOP-080: identify the affected receipt, explain
+Delivers LOOP-076 through LOOP-080: identify the affected receipt, explain
 changed declared paths where recorded facts support it, show honest limits
 for older records, and state the next action. Deterministic event-sequence
 tests preserve the existing freshness and action-priority rules.
-[Draft commitment](../commitments/evidence-explains-its-freshness.md).
+[Commitment](../commitments/evidence-explains-its-freshness.md).

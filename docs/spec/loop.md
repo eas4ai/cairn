@@ -730,7 +730,7 @@ to repair before a check runs. Preserve historical receipts and their results.
 
 ## Explainable freshness
 
-Drafted on 2026-09-07 for the developer-confirmed next iteration. The
+Confirmed with its falsifiers by the developer on 2026-09-07. The
 behavior below adds explanations to the existing next action. It does not
 change freshness rules, attempt accounting, or the order of actions.
 
@@ -739,7 +739,7 @@ stale, the wake MUST identify the affected requirement, mechanism, and
 latest receipt in its explanation.
 Falsifier: after a declared input changes, the stale-evidence verdict omits
 the affected requirement, mechanism, or repository-relative receipt path.
-Status: Draft
+Status: Agreed 2026-09-07
 
 This includes the mechanism-review action required by LOOP-059 when a
 requirement or falsifier changed. Missing evidence has no receipt to name;
@@ -751,7 +751,7 @@ the recorded run.
 Falsifier: a committed addition, deletion, content change, executable-mode
 change, or file-kind change within declared inputs is omitted or attributed
 to an unchanged path, when no higher-priority action prevents the comparison.
-Status: Draft
+Status: Agreed 2026-09-07
 
 Show added, removed, content-changed, mode-changed, and kind-changed paths.
 A path can carry several applicable reasons. Symbolic links use their target
@@ -769,7 +769,7 @@ unavailable evidence needed to explain that cause.
 Falsifier: an older receipt without input details produces an invented
 changed path, missing historical requirement text is reported as a proven
 text change, or a damaged log is described only as an input change.
-Status: Draft
+Status: Agreed 2026-09-07
 
 Retain the existing cause categories: requirement or falsifier identity,
 mechanism declaration, declared inputs, receipt history, and captured output.
@@ -785,7 +785,7 @@ the next permitted action.
 Falsifier: a stale-input verdict omits cairn check with its requirement
 identifier, or a revised requirement's explanation suggests checking before
 the required mechanism review is recorded.
-Status: Draft
+Status: Agreed 2026-09-07
 
 For an ordinary stale-input result, show cairn check followed by the
 requirement identifier. For a changed requirement needing review, explain
@@ -798,7 +798,7 @@ next action selected from the existing agreement and evidence facts.
 Falsifier: the same recorded history selects a different next action solely
 because optional input details are absent or damaged, explanatory output is
 truncated, or the wake restarts without remembered state.
-Status: Draft
+Status: Agreed 2026-09-07
 
 Verify this through deterministic event sequences covering checks, input
 edits and restoration, unrelated commits, declaration and requirement edits,

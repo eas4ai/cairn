@@ -1,5 +1,5 @@
 commitment: malformed-review-findings-cannot-complete-work
-commit: 5d7988794
+commit: 907bb77deb4f9b53c8f867c01207ba8364d35f30
 examined:
   - reviewOf, wakeVerdict, existing record header parsing, and the DemonCoder reproduction.
 findings:
@@ -38,3 +38,30 @@ corrected implementation passes all twelve. The added explicit empty-list
 case failed before normalization and passes after it. All 31 focused tests,
 including spec lint and the executable walkthrough, pass. No mismatch found.
 No code changed during this mechanism review.
+
+## Final commitment review
+
+Examined the complete runtime, regression, manual, requirement, decision,
+and declaration diff. Checked reviewOf against fields, recordFields,
+asList, displayPath, and its wakeVerdict caller. Validation precedes the
+completion freshness gates; open entries retain their existing resolution
+path. Unknown prefixes and empty descriptions cannot be silently filtered
+away. Diagnostics quote offending entries with the existing escape helper.
+The existing header boundary remains intact. This is validation of that
+record format, not a general YAML parser or a new Status protocol.
+
+Compatibility review found the explicit findings: [] issue during testing;
+it was repaired separately and its regression now passes. Bare empty lists,
+resolved entries, and mixed open/resolved lists retain their behavior.
+No further in-scope findings. No code changed during this final review.
+
+Committed node-test evidence records 360 tests passed, zero failed, skipped,
+or cancelled. Package lint and specification lint also record passes.
+The original malformed case failed before the repair and passes afterward.
+Ripwire post-commit checks exit zero but compare only against HEAD and
+therefore do not validate the committed diff; the earlier recorded warnings
+and coverage limits remain the applicable static-analysis assessment.
+
+Self-audit against the production rules found the change bounded, documented,
+compatible with valid records, and verified. No new dependencies or external
+state changes. The change is complete in this development repository.

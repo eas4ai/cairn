@@ -523,6 +523,10 @@ The [checkout installation](../README.md#install-from-a-checkout) uses the Bash 
 | `$HOME/.agents/skills/new-project` | This checkout's new-project skill. |
 | `$HOME/.agents/skills/existing-project` | This checkout's existing-project skill. |
 
+Muse reads `$HOME/.agents/skills`, so the default checkout install
+reaches it. Its project rules file is `AGENTS.md`, the working agreement
+the project skills write.
+
 Use `--bin DIR` or `--skills DIR` to change those locations. Repeat
 `--skills DIR` when installing into several agent applications. A conflicting
 link is kept unless you pass `--force`. A real file or directory is kept even
@@ -561,7 +565,10 @@ npx skills add eas4ai/cairn --skill install-cairn new-project existing-project -
 
 Add `--global` to make them available across your projects. Change the
 agent to `claude-code` for Claude Code, or use `--agent codex claude-code`
-to select both. Add `--yes` for a non-interactive installation.
+to select both. For Muse and other agents without a dedicated entry, use
+`--agent universal`, which installs into the cross-vendor
+`$HOME/.agents/skills` directory that Muse reads. Add `--yes` for a
+non-interactive installation.
 
 | Skill | What to ask it to do |
 |---|---|
@@ -584,6 +591,9 @@ Inspect the available skills or check the global Codex installation:
 npx skills add eas4ai/cairn --list
 npx skills list --global --agent codex
 ```
+
+In Muse, `muse skills list` shows the installed skills once they are in
+`$HOME/.agents/skills`.
 
 Use one installer for each skill location. `scripts/link.sh` links skills
 directly to your checkout; the skills CLI manages its own installed copies.

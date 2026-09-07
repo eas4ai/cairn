@@ -82,9 +82,11 @@ Install Cairn's skills with the
 npx skills add eas4ai/cairn --skill install-cairn new-project existing-project --agent codex --global
 ```
 
-Use `--agent claude-code` for Claude Code. Omit `--global` to install only
-in the project where you run the command. Preview the available skills with
-`npx skills add eas4ai/cairn --list`.
+Use `--agent claude-code` for Claude Code. For Muse and other agents
+without a dedicated entry, use `--agent universal`, which installs into
+`$HOME/.agents/skills`, the cross-vendor directory Muse reads. Omit
+`--global` to install only in the project where you run the command.
+Preview the available skills with `npx skills add eas4ai/cairn --list`.
 
 Then tell your agent:
 
@@ -110,7 +112,8 @@ cairn/scripts/link.sh
 
 The installer links the `cairn` command into `$HOME/.local/bin` and the
 `install-cairn`, `new-project`, and `existing-project` skills into
-`$HOME/.agents/skills`.
+`$HOME/.agents/skills`. Muse reads that directory, so the default
+install reaches it with no extra flag.
 It leaves existing files in place and reports conflicting links.
 
 Make sure `$HOME/.local/bin` is on your `PATH`. If it is not, add this to

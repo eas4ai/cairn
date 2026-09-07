@@ -12,7 +12,7 @@ export const git = (root, ...a) => spawnSync("git", [...GIT, ...a], { cwd: root,
 export const cairn = (root, ...a) => spawnSync("node", [CLI, ...a], { cwd: root, encoding: "utf8" });
 export const commit = (root, msg = "c") => { git(root, "add", "-A"); git(root, "commit", "-q", "-m", msg); };
 export const head = (root) => git(root, "rev-parse", "--short", "HEAD").stdout.trim();
-export const records = (root, req) => { const d = join(root, ".cairn", "evidence", req); return existsSync(d) ? readdirSync(d).filter((n) => !/\.(out|err)$/.test(n)).sort() : []; };
+export const records = (root, req) => { const d = join(root, ".cairn", "evidence", req); return existsSync(d) ? readdirSync(d).filter((n) => /^\d{8}T\d{9}Z(?:-\d+)?$/.test(n)).sort() : []; };
 
 // Mechanism declarations. exitFile lets a test flip pass/fail by editing one declared input.
 export const passing = (...reqs) => `command: node -e 0\ninputs:\n  - src/other\nrequirements:\n${reqs.map((r) => `  - ${r}\n`).join("")}`;

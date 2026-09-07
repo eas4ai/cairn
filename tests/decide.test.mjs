@@ -72,10 +72,13 @@ test("supersedes requires a classified cause, and the old record must exist", ()
 
 test("an existing record is not overwritten", () => {
   const root = repo();
-  decide(root, "--level", "Judged");
+  const first = decide(root, "--level", "Judged");
+  assert.equal(first.status, 0, first.stderr || first.error?.message || "initial decision was not written");
+  const path = join(root, "docs/decisions/sessions-live-in-sqlite.md"), original = readFileSync(path, "utf8");
   const r = decide(root, "--level", "Judged");
   assert.equal(r.status, 3);
   assert.match(r.stderr, /exists/);
+  assert.equal(readFileSync(path, "utf8"), original);
 });
 
 test("a queued decision stays queued; nothing but the developer removes it (DEC-014)", () => {

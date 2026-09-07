@@ -298,6 +298,36 @@ mechanism declaration changes, or a declared input's contents, executable
 mode, or file kind changes. An
 unrelated commit alone does not make that evidence stale.
 
+A stale-evidence explanation identifies its requirement, mechanism, and
+receipt, then states the next permitted action. For example:
+
+```text
+Resolvable: run APP-001
+  evidence is stale: a declared input changed (tests)
+  Evidence: APP-001; mechanism tests; receipt ".cairn/evidence/APP-001/20260907T120000000Z"
+    content-changed: "src/cache.mjs"
+    added: "src/cache-options.mjs"
+  Next: cairn check APP-001
+```
+
+New runs retain a shared input-detail attachment beside their output. It
+contains path identities, not source contents. Cairn checks those identities
+against the receipt's input digest before using them to explain additions,
+deletions, content changes, executable-mode changes, or file-kind changes.
+Paths are escaped and sorted; more than 20 changes show an omitted count.
+Changing a declaration can add or remove paths from the compared input set.
+
+Older receipts may lack this attachment. A missing or invalid optional
+attachment produces an "input details unavailable" explanation when its
+inputs are stale; it does not change the receipt's existing standing.
+Do not edit old receipts to add details. The next normal check supplies them.
+Keep new attachments in Git with the receipts that reference them.
+
+The same explanation distinguishes changes to the agreement, mechanism,
+receipt history, and captured output. If old agreement text is unavailable,
+Cairn says so instead of claiming it proved that text changed. When mechanism
+review is required, its instructions take precedence over rerunning the check.
+
 A check verifies its candidate before execution and again before writing
 receipts. If the command edits an input, changes its declaration or defining
 specification, or moves HEAD, Cairn retains the output and refuses evidence

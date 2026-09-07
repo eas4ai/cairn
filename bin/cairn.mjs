@@ -114,9 +114,10 @@ function requirementChange(root, req, m, latest, ctx) {
   const before = latest?.requirement_digest ?? (latest ? pastRequirements(root, latest.commit, ctx).get(req)?.digest : null);
   const changed = !!latest && (!now || before !== now);
   const needsReview = changed && !asList(m?.def.reviewed).includes(`${req} ${now}`);
-  return { changed, needsReview, digest: now };
+  const reason = !before ? "old requirement or falsifier text is unavailable" : !now ? "current requirement or falsifier text is unavailable" : "the requirement or falsifier changed";
+  return { changed, needsReview, digest: now, reason };
 }
-const revisionVerdict = (req, m, digest) => ({ verdict: "Resolvable", action: `review mechanism ${req}`, why: `the requirement or falsifier changed, or its old text is unavailable; inspect ${m} and record findings without changing code; fix any mismatch as a separate action, then add reviewed: list entry "${req} ${digest}" to .cairn/mechanisms/${m} and commit before check (LOOP-059)` });
+const revisionVerdict = (req, m, digest, reason) => ({ verdict: "Resolvable", action: `review mechanism ${req}`, why: `${reason}; inspect ${m} and record findings without changing code; fix any mismatch as a separate action, then add reviewed: list entry "${req} ${digest}" to .cairn/mechanisms/${m} and commit before check (LOOP-059)` });
 
 // Files changed by commits since the commitment began: since the commit
 // that wrote its Current: line. The footprint is the union of its
@@ -254,6 +255,77 @@ function inputsDigest(root, inputs, cache = inputCache()) {
   const digest = "sha256:" + h.digest("hex");
   cache.digests.set(key, digest);
   return digest;
+}
+function inputDetails(root, inputs, cache) {
+  return inputEntries(root, inputs, cache).map(({ path }) => {
+    const { mode, digest } = fileIdentity(root, path, cache);
+    return { path, mode, digest };
+  });
+}
+
+// Optional detail is explanatory only. Its entries must reproduce the existing
+// raw input digest before they can establish any changed path (LOOP-078).
+function validInputDetail(e) {
+  return e && typeof e.path === "string" && e.path.length > 0 && !e.path.startsWith("/") && !e.path.includes("\0")
+    && e.path.split("/").every((p) => p && p !== ".." && p !== ".")
+    && ["100644", "100755", "120000"].includes(e.mode) && validDigest(e.digest);
+}
+function validateInputDetails(detail, expectedDigest) {
+  if (detail?.version !== 1 || !Array.isArray(detail.entries)) throw new Error("the attachment format is invalid");
+  const h = inputHash();
+  let previous = null;
+  for (const e of detail.entries) {
+    if (!validInputDetail(e) || (previous !== null && e.path <= previous)) throw new Error("the attachment entries are invalid or unordered");
+    hashEntry(h, e.path, e.mode, e.digest);
+    previous = e.path;
+  }
+  if ("sha256:" + h.digest("hex") !== expectedDigest) throw new Error("the attachment does not match the receipt input digest");
+  return detail.entries;
+}
+function readInputDetails(root, receipt, cache) {
+  const path = receipt.inputs_detail;
+  if (path === undefined) return { error: "this receipt did not record input details" };
+  if (typeof path !== "string" || !path.startsWith(".cairn/evidence/") || path.split(/[\\/]/).some((p) => p === ".." || !p)) return { error: "the attachment path is invalid" };
+  const key = JSON.stringify([path, receipt.inputs_digest]);
+  if (cache.has(key)) return cache.get(key);
+  let result;
+  try {
+    const p = join(root, path);
+    if (!lstatSync(p).isFile()) throw new Error("the attachment is not a regular file");
+    result = { entries: validateInputDetails(JSON.parse(read(p)), receipt.inputs_digest) };
+  } catch (e) { result = { error: e instanceof SyntaxError ? "the attachment is not valid JSON" : e.code ?? e.message }; }
+  cache.set(key, result);
+  return result;
+}
+const displayPath = (path) => JSON.stringify(path).replace(/[\u007f-\u009f\u2028\u2029]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+function inputChangeReasons(before, after) {
+  if (!before) return ["added"];
+  if (!after) return ["removed"];
+  const reasons = [];
+  if (before.mode.slice(0, 3) !== after.mode.slice(0, 3)) reasons.push("kind-changed");
+  else if (before.mode !== after.mode) reasons.push("mode-changed");
+  if (before.digest !== after.digest) reasons.push("content-changed");
+  return reasons;
+}
+function changedInputDetails(before, after) {
+  const old = new Map(before.map((e) => [e.path, e])), now = new Map(after.map((e) => [e.path, e]));
+  const lines = [], paths = [...new Set([...old.keys(), ...now.keys()])].sort();
+  let count = 0;
+  for (const path of paths) {
+    const reasons = inputChangeReasons(old.get(path), now.get(path));
+    if (!reasons.length) continue;
+    if (++count <= 20) lines.push(`\n    ${reasons.join(", ")}: ${displayPath(path)}`);
+  }
+  if (count > 20) lines.push(`\n    ${count - 20} additional changed paths omitted`);
+  return lines.join("");
+}
+function explainEvidence(root, state, mechs, ctx) {
+  let text = `\n  Evidence: ${state.req}; mechanism ${state.mech}; receipt ${displayPath(state.latest.path)}`;
+  if (!state.inputsChanged) return text;
+  const old = readInputDetails(root, state.latest, ctx.details);
+  if (old.error) return text + `\n  input details unavailable: ${old.error}`;
+  const inputs = asList(mechs.byName.get(state.mech).def.inputs);
+  return text + changedInputDetails(old.entries, inputDetails(root, inputs, mechs.inputs));
 }
 // Git owns clean conversion; execution evidence still hashes raw bytes.
 // Quote paths using Git's byte-oriented C syntax, including newlines.
@@ -484,7 +556,7 @@ const VERDICT = { Done: 0, Resolvable: 1, Escalate: 2 };
 function context(root, mechs) {
   const digests = new Map();
   for (const [n, m] of mechs.byName) digests.set(n, inputsDigest(root, asList(m.def.inputs), mechs.inputs));
-  return { digests, escalations: escalations(root), requirements: requirementTexts(root), past: new Map(), outputs: new Map() };
+  return { digests, escalations: escalations(root), requirements: requirementTexts(root), past: new Map(), outputs: new Map(), details: new Map() };
 }
 // One requirement's standing, from facts on disk.
 function assess(root, req, mechs, ctx) {
@@ -510,18 +582,19 @@ function assess(root, req, mechs, ctx) {
   const tail = h.slice(s).filter((e) => e.result === "fail").slice(-3);
   const stuck = !orderError && tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && followsEvidence(e, "Raised", req, tail[0]));
   const revision = requirementChange(root, req, m, latest, ctx);
+  const inputsChanged = !!m && !!latest && latest.inputs_digest !== ctx.digests.get(name);
   let stale = null;
   if (m && latest) {
     const reasons = [];
     if (orderError) reasons.push(orderError);
-    if (revision.changed) reasons.push("the requirement or falsifier changed, or its old text is unavailable");
+    if (revision.changed) reasons.push(revision.reason);
     if (latest.mechanism_digest !== m.digest) reasons.push("the mechanism changed");
-    if (latest.inputs_digest !== ctx.digests.get(name)) reasons.push("a declared input changed");
+    if (inputsChanged) reasons.push("a declared input changed");
     const damaged = evidenceError(root, latest, ctx.outputs);
     if (damaged) reasons.push(`receipt ${latest.path}: ${damaged}; rerun the check to replace this evidence (LOOP-065)`);
     stale = reasons.length ? reasons.join(" and ") : null;
   }
-  return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stuck, stale, revision };
+  return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stuck, stale, revision, inputsChanged };
 }
 
 function wake(root) {
@@ -566,7 +639,11 @@ function wakeVerdict(root) {
   const first = (pred) => state.find(pred);
   let s;
   if ((s = first((x) => x.repair))) return s.repair;
-  if ((s = first((x) => x.mech && x.revision.needsReview))) return revisionVerdict(s.req, s.mech, s.revision.digest);
+  if ((s = first((x) => x.mech && x.revision.needsReview))) {
+    const verdict = revisionVerdict(s.req, s.mech, s.revision.digest, s.stale);
+    verdict.why += explainEvidence(root, s, mechs, ctx);
+    return verdict;
+  }
   if ((s = first((x) => x.threeFails && !x.escalatedSince)))
     return { verdict: "Resolvable", action: `escalate ${s.req}`, why: `three consecutive failing records and no escalation since; a fourth attempt is not the next action (DEC-016)` };
   if ((s = first((x) => x.latest?.result === "fail" && x.everPassed && !x.stale)))
@@ -574,7 +651,7 @@ function wakeVerdict(root) {
   for (const x of state) {
     if (!x.mech) continue;
     if (!x.latest) return { verdict: "Resolvable", action: `run ${x.req}`, why: `mechanism ${x.mech} has produced no evidence for it` };
-    if (x.stale) return { verdict: "Resolvable", action: `run ${x.req}`, why: `evidence is stale: ${x.stale} (${x.mech})` };
+    if (x.stale) return { verdict: "Resolvable", action: `run ${x.req}`, why: `evidence is stale: ${x.stale} (${x.mech})${explainEvidence(root, x, mechs, ctx)}\n  Next: cairn check ${x.req}` };
     if (x.latest.result !== "pass") return { verdict: "Resolvable", action: `implement ${x.req}`, why: `latest evidence is ${x.latest.result} (${x.mech}, exit ${x.latest.exit})${x.stuck ? "; three runs at one inputs digest and no attempt since: a failure no change inside the footprint can address is an escalation (DEC-019)" : ""}` };
   }
   if ((s = first((x) => !x.mech))) return { verdict: "Resolvable", action: `declare ${s.req}`, why: "no mechanism under .cairn/mechanisms names it" };
@@ -651,7 +728,7 @@ function candidate(root, m, requirements, expectedHead) {
   const head = headSha(root), dirty = dirtyInputs(root, paths);
   if (dirty.length || head !== expectedHead) return { head, dirty };
   const cache = inputCache();
-  const snapshot = { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache) };
+  const snapshot = { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache), details: inputDetails(root, inputs, cache) };
   // Git status and clean filters can themselves run local commands. Finish
   // those operations before validating the final HEAD and raw file state.
   const finalDirty = dirtyInputs(root, paths), finalHead = headSha(root);
@@ -731,7 +808,7 @@ async function runMechanism(root, m, ctx, head) {
     const h = history(root, req), repair = historyRepair(h);
     if (repair) { process.stdout.write(`${repair.verdict}: ${repair.action}\n  ${repair.why}\n`); return 1; }
     const revision = requirementChange(root, req, m, h.at(-1), ctx);
-    if (revision.needsReview) { const w = revisionVerdict(req, name, revision.digest); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
+    if (revision.needsReview) { const w = revisionVerdict(req, name, revision.digest, revision.reason); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
   }
   // The write-ahead record, unless the agent's own already covers this run.
   const ip = join(root, ".cairn", "in-progress"), mine = !existsSync(ip);
@@ -761,9 +838,12 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
     if (Number(records.at(-1)?.sequence) === Number.MAX_SAFE_INTEGER)
       return { verdict: "Resolvable", action: `repair ${records.at(-1).path}`, why: "sequence has no safe successor; reconcile execution order before checking" };
   }
+  const details = output.replace(/\.out$/, ".inputs.json");
+  writeFileSync(details, JSON.stringify({ version: 1, entries: before.details }) + "\n", { flag: "wx" });
   const exit = r.signal ? `signal ${r.signal}` : r.status ?? -1, lines = r.lines;
   const rec = [
     `mechanism: ${m.name}`, `commit: ${before.head}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`,
+    `inputs_detail: ${rel(root, details)}`,
     `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${fileDigest(output)}`, `output: ${rel(root, output)}`, `stderr_output: ${rel(root, stderrOutput)}`, `stderr_digest: ${fileDigest(stderrOutput)}`,
     `signal: ${r.signal ?? "none"}`, `execution_error: ${JSON.stringify(r.error ? { code: r.error.code ?? null, message: r.error.message } : null)}`,
   ];

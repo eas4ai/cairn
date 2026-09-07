@@ -43,3 +43,50 @@ command, a model-driven runtime, a next-iteration skill, and release changes.
 No unresolved contradiction was found in this draft review. Implementation,
 format selection, failing/passing demonstrations, and completion review
 remain work for the proposed commitment after agreement.
+
+## Agreement and implementation verification
+
+The developer confirmed the five requirements and falsifiers on 2026-09-07.
+They are now Agreed and the roadmap names this commitment. The earlier
+specification review above is preserved as the record before confirmation.
+
+Before implementation, 28 new integration cases failed against the existing
+CLI for the expected missing receipt, path, rerun, or truthful-cause details.
+After implementation all 28 passed, and the complete suite passed 312 tests.
+A test-fixture correction selected the latest receipt by sequence rather
+than filename after clock rollback; the initial fixture had damaged an older
+output and therefore expected a rerun incorrectly. The runtime was unchanged
+for that correction.
+
+The three deterministic seeds (7, 42, 913) run 27 events each, with two fresh
+wake processes after each event. Their independent model stores fixture
+values and check results, not runtime digests or assessment calls. Additional
+sequences cover revised agreement, mechanism review, completion review, and
+imported receipt history.
+
+A disposable copy of the kernel was changed to conceal input staleness. The
+seed-7 model failed at the first edit: it expected run R-001, but the faulty
+copy selected review first. Restoring the copy made the same sequence pass.
+This demonstrates detection of the wrong action, not merely a process error.
+The development kernel was not modified by that fault demonstration.
+
+Ripwire found two new helper-complexity warnings. Splitting attachment
+validation from I/O and change classification from formatting removed both.
+Remaining warnings are existing-function revision churn plus minor assess
+complexity and wake length increases. Its test gate named 16 test files, all
+run in the complete suite; its unmatched rows are documentation sections.
+The internal revisionVerdict arity changed from three to four arguments, and
+edit-check found both callers compatible. Final committed evidence and the
+post-implementation review remain outstanding.
+
+A follow-up negative case distinguished a malformed list-valued inputs_detail
+field from a legacy receipt that never had the field. It failed on the
+misleading legacy message, then passed with an explicit invalid-path message.
+This adds one case to the initial 28.
+
+One full-suite rerun failed the existing duplicate-decision test. That test
+ignored whether its first command successfully created a record, so the log
+cannot establish why the precondition was absent. The decision-writing code
+was unchanged. The test now asserts successful setup and verifies that the
+original bytes survive refusal; its eight-test file passes. No cause for the
+first command's unrecorded result is claimed.

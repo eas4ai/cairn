@@ -35,8 +35,8 @@ Input details are explanatory facts about a checked state. They do not replace
 the existing input digest or become a second stored freshness status. Record
 paths and identities, not source contents. Share details where practical for
 one mechanism run, preserve historical receipts, and keep memory and repeated
-reads bounded. Record the concrete format choice with cairn decide before
-implementation; a new record kind requires the decision named by PKG-003.
+reads bounded. The format choice is recorded in
+docs/decisions/retain-shared-input-detail-attachments-for-freshness-explanations.md.
 
 ## Mechanism and inputs
 
@@ -89,3 +89,13 @@ what the mechanisms miss without changing code; resolve findings separately.
 All five Agreed requirements have current passing evidence, all inherited
 package requirements pass, and the commitment review is current and clean.
 The tests prove explanation accuracy and preservation of existing decisions.
+
+## Input-detail format
+
+The attachment is a JSON object with version: 1 and entries, a sorted array
+of path, mode, and digest objects. The path is repository-relative, mode is
+100644, 100755, or 120000, and digest is the raw SHA-256 content or link-target
+identity. The filename uses the output stem followed by .inputs.json. Every
+receipt from the run references the same attachment through inputs_detail.
+The existing input digest validates the entries before they explain a change.
+Attachment validation never changes the requirement verdict.

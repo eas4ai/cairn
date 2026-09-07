@@ -123,3 +123,28 @@ error handling, persistence and interrupted writes, reuse of input caches,
 test soundness, documentation, and the runtime ceiling (1102 lines). Changes
 remain local to this development checkout. Verification was on Linux with
 Git conversion fixtures; native macOS and Windows runs were not performed.
+
+## Review of the Muse install notes
+
+Examined tree: 821c4da. The work under review is a docs-only change:
+README.md and docs/manual.md gain Muse install guidance. No shipped
+code, skill, template, or mechanism changed.
+
+Attacked the one documented claim no mechanism observes. PKG-014 fails
+when a README install step leaves a skill unreachable, and neither
+node-test nor pkg-lint runs the install commands. In isolated homes,
+skills 1.5.24 rejects `--agent muse` as invalid, `--agent universal
+--global` installs all three skills into `$HOME/.agents/skills`, and
+`muse skills list` shows all three. A skill directory placed in
+`$HOME/.agents/skills` is listed by Muse, including the symlinked Cairn
+skills in the live home. `muse skills install <path> --scope user`
+copies into `~/.config/muse/skills` and is listed. `muse init`
+scaffolds `AGENTS.md`, the working agreement the project skills write,
+so no vendor-specific agreement file is needed.
+
+Not established: template files under a universal install were not
+inspected one by one; their inclusion relies on the installer's shared
+code path already verified for codex. Combined agent selections and
+non-Linux homes were not exercised. The violating example (an invalid
+`--agent muse`) and the corrected case (`--agent universal`) were both
+demonstrated. No code changed during this review. No finding.

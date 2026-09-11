@@ -1,6 +1,7 @@
 # Make scope breaches diagnosable and developer resolutions actionable
 
 Surfaced from: LOOP-035, LOOP-048, LOOP-049, LOOP-050, LOOP-051
+Promoted to: scope-breaches-have-a-recovery-path (2026-09-07, on the developer's word; stamped 2026-09-11 after the commitment reached Done)
 Captured: 2026-09-07T16:00:24.220Z
 
 Source inspection confirms three related gaps. Before applicable mechanisms declare inputs, committed non-record changes after commitment activation are breaches; wake checks these before missing mechanisms, and check refuses evidence recording. This does not prevent writing a declaration under .cairn/, and current declarations can cover earlier changes. Both wake and check report only the first breaching path, concealing the remaining repair scope. Wake advises escalation for work outside the commitment, but answered escalation annotations match only requirement actions, excluding scope actions; breaches does not consume developer resolutions. Reverting alone retains historical breaches. Clarification: the escalation remedy is runtime LOOP-035 guidance, while the specification paragraph says declare or backlog. Prepare an agreed next commitment covering bootstrap ordering, complete bounded breach reporting, and an explicit developer scope-resolution rule that preserves history without treating a generic ok as unrestricted authorization. Source inspected: bin/cairn.mjs breaches, wake, wakeVerdict, and runChecks; docs/spec/loop.md LOOP-035. No runtime reproduction or implementation performed for this report.

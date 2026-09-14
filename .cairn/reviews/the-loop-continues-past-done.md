@@ -7,9 +7,9 @@ examined:
 findings:
   - resolved: LOOP-029's first clause had no test and no kernel check; a requirement marked Agreed by promotion of a decision that does not exist was accepted by wake. The marker check under LOOP-088 and its tests close it.
   - resolved: The working agreement and its template said stop at Done and stated no promote, next-iteration, or no-deferral move; both now state them, byte for byte the same, and the skills suite reads them.
-  - open: The new-project and existing-project skills do not name the two capture directories or the sort test.
-  - open: Four backlog items that change the contract are not under next-iteration with Changes: lines, and prepare-a-next-iteration is not stamped as absorbed.
-  - open: The README and the manual do not describe promotion, next-iteration, or the no-deferral rule.
+  - resolved: The new-project and existing-project skills did not name the two capture directories or the sort test; both now state the destinations, the sort test, and the no-deferral rule, read by the skills suite.
+  - resolved: Four backlog items that change the contract moved under next-iteration with Changes: lines, the hooks item with Outside because: for the inherited PKG-012, and prepare-a-next-iteration is stamped as absorbed.
+  - resolved: The README and the manual describe promotion, the next-iteration escalation, the promotion marker, and the no-deferral rule.
 ## LOOP-029 mechanism review, 2026-09-14
 
 Revised text: a backlog item needs a recorded promotion decision, and a

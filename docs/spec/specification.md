@@ -213,3 +213,18 @@ that a passing result demonstrates detection.
 unresolved finding or link it to an existing backlog entry.
 Falsifier: a previously unresolved finding disappears from recon without
 a resolution supported by evidence or a link to its backlog entry.
+
+## Promoted from the backlog
+
+[SPEC-025] The specification skills MUST require a Falsifier: line on
+every requirement they record as Agreed, including one whose only
+keyword is `MAY`.
+Falsifier: a skill states that any Agreed requirement carries no
+Falsifier: line, or the spec lint accepts an Agreed block without one.
+Status: Agreed 2026-09-14 by promotion promote-the-may-falsifier-mismatch-the-skill-matches-the-lint
+
+Promoted 2026-09-14 under LOOP-087. The new-project skill said a
+permission-only MAY carries no Falsifier: line while the spec lint
+reported every Agreed block without one. A requirement with no
+observable falsifier cannot produce evidence (SPEC-013); a MAY whose
+limit matters is written as the MUST that bounds it.

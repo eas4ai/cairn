@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-loop-continues-past-done
+Current: the-skill-matches-the-lint-on-may
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -288,3 +288,11 @@ recorded decision, next-iteration items wait for the developer and are
 asked for once with a recommendation, and neither directory is deferral.
 Delivers LOOP-087 through LOOP-093 and revisits LOOP-029 and SPEC-002.
 [Commitment](../commitments/the-loop-continues-past-done.md).
+
+## The skill matches the lint on MAY
+
+Promoted from the backlog by the agent on 2026-09-14, the first
+promotion under LOOP-087. Delivers SPEC-025: every Agreed requirement
+carries a Falsifier: line, a MAY included, and the new-project skill
+says so.
+[Commitment](../commitments/the-skill-matches-the-lint-on-may.md).

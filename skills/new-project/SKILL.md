@@ -122,10 +122,11 @@ domain spec through the confirm-back loop:
 
 - Status: Draft, and Prefix: <PREFIX>.
 - Requirements as [PREFIX-nnn], one obligation per sentence, the actor
-  named. Every MUST and MUST NOT carries a Falsifier: line. A
-  permission-only MAY carries none, because permitted behavior is not
-  obligatory; when a limit on it matters, write the limit as its own
-  MUST or MUST NOT with its own falsifier.
+  named. Every requirement carries a Falsifier: line, a MAY included:
+  for a permission, the falsifier is the state in which the permission
+  is withheld. A MAY with no observable falsifier is not recorded;
+  write the limit it implies as its own MUST or MUST NOT with its own
+  falsifier (SPEC-025).
 - Propose the domain's falsifiers as one set, and for each name the
   mechanism that could observe it. Review the draft (rule 7) and record
   the review. Present for agreement by exception.

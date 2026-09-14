@@ -137,3 +137,10 @@ test("host-path declarations require absolute or home-relative entries", () => {
     assert.equal(r.status, 1, value); assert.match(r.stdout, /Host paths:.*SPEC-024/);
   }
 });
+
+test("an Agreed block whose only keyword is MAY needs a falsifier like any other (SPEC-025, SPEC-002)", () => {
+  let r = lint(fixture(AGREED + "[X-001] The agent MAY skip the cache.\n"));
+  assert.equal(r.status, 1); assert.match(r.stdout, /X-001 is Agreed and carries no Falsifier.*SPEC-002/);
+  r = lint(fixture(AGREED + "[X-001] The agent MAY skip the cache.\nFalsifier: the agent is refused the skip.\n"));
+  assert.equal(r.status, 0, r.stdout);
+});

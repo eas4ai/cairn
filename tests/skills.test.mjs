@@ -71,3 +71,9 @@ test("both skills sort captures into the backlog or next-iteration and forbid de
   has(EXISTING, "Neither is deferral", "LOOP-092 in existing-project");
   has(EXISTING, ".cairn/next-iteration/", "existing-project reads it at wake");
 });
+test("the skill requires a falsifier on every requirement, a MAY included (SPEC-025)", () => {
+  lacks(NEW, "A permission-only MAY carries none", "the old exemption");
+  has(NEW, "Every requirement carries a Falsifier: line, a MAY included", "SPEC-025");
+  has(NEW, "the falsifier is the state in which the permission is withheld", "SPEC-025: what a permission's falsifier is");
+  has(NEW, "A MAY with no observable falsifier is not recorded", "SPEC-013 route");
+});

@@ -2,6 +2,7 @@
 
 Surfaced from: LOOP-036
 Changes: PKG-012 and the working agreement
+Promoted to: hooks-keep-the-agent-in-the-loop (2026-09-14, on the developer's ok to escalation loop-091 and confirmation by exception)
 Outside because: it adds a requirement and supersedes a decision, which enter through a specification phase the developer confirms, not through this commitment's work
 Moved: 2026-09-14 from the backlog under the-loop-continues-past-done
 Captured: 2026-09-14T21:58:09.706Z

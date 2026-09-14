@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: check-runs-only-what-is-stale
+Current: hooks-keep-the-agent-in-the-loop
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -303,3 +303,11 @@ Promoted from the backlog by the agent on 2026-09-14 under LOOP-087.
 Delivers LOOP-094: `cairn check --stale` runs once each mechanism whose
 requirement has missing or stale evidence, and nothing else.
 [Commitment](../commitments/check-runs-only-what-is-stale.md).
+
+## Hooks keep the agent in the loop
+
+Specified on the developer's ok to escalation loop-091, 2026-09-14.
+Delivers PKG-018 and PKG-019, the stop and session-start hooks; revisits
+LOOP-091 so an answered escalation names the specification of the chosen
+item; retires the link script; supersedes the no-hook decision.
+[Commitment](../commitments/hooks-keep-the-agent-in-the-loop.md).

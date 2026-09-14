@@ -152,3 +152,39 @@ Help includes command purposes, required options, global options, exit
 codes, and examples. The flag also works after a command. Unknown options
 still produce usage errors; a literal --help after the argument separator
 is ordinary positional text. Requested by the developer on 2026-09-06.
+
+## Hooks
+
+Drafted 2026-09-14 on the developer's ok to escalation loop-091. Agents
+skipped wake, ignored the verdict, and stopped mid-commitment, and the
+working agreement alone (LOOP-036) did not hold them. The developer
+ruled on 2026-09-14 that a hook which answers the harness with the
+verdict does not manage the agent's execution under PKG-012: it starts,
+stops, and retries nothing; the harness and the agent decide. The
+earlier decision that shipped no hook is superseded on that ruling.
+The hooks are optional: the working agreement is the path an agent
+takes without them (PKG-006), and one contract serves every harness
+that passes JSON on standard input and reads standard output.
+
+[PKG-018] Cairn MUST ship a stop hook that runs wake and returns a
+block decision naming the verdict while the verdict is Resolvable.
+Falsifier: given a repository whose wake prints Resolvable, the hook
+exits without a block decision; or given one whose wake prints
+Escalate or Done, or a directory that is not a Cairn repository, it
+emits a block decision or exits nonzero.
+Status: Agreed 2026-09-14
+
+[PKG-019] Cairn MUST ship a session-start hook that prints the wake
+verdict for a Cairn repository. The hook MUST link the command onto
+the path when the link is missing.
+Falsifier: after the hook runs in a home with no cairn link, the link is
+missing or points elsewhere than the checkout that ran it; or in a
+Cairn repository its output lacks the wake verdict; or in a directory
+that is not a Cairn repository it prints a verdict or exits nonzero.
+Status: Agreed 2026-09-14
+
+The harness caps consecutive blocks, so the stop hook keeps no counter.
+Cairn's own loop bounds real work: three attempts escalate (DEC-016),
+and an escalation lets the agent stop. The install skill registers both
+hooks once, for the harnesses the README documents; the link script is
+retired, since the session-start hook is the install.

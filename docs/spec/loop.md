@@ -989,10 +989,17 @@ ask. The larger change is not built under the smaller record.
 [LOOP-091] When every requirement in the current commitment is met, no
 backlog item lacks a Promoted to: line, and next-iteration holds an
 item, the loop MUST name an escalation that recommends which item to
-specify next rather than Done.
+specify next rather than Done. When that escalation is answered, the
+loop MUST name the specification of the chosen item rather than
+another escalation.
 Falsifier: the commitment is complete, the backlog holds no item without
-a Promoted to: line, next-iteration holds an item, and wake prints Done.
+a Promoted to: line, next-iteration holds an item, and wake prints Done;
+or the escalation is answered and wake names a new escalation.
 Status: Agreed 2026-09-14
+
+Revised 2026-09-14, the day it was agreed: after the developer's ok,
+wake named the escalation again, because nothing read the answer. The
+chosen item is the recommended one on ok, and the named one on instead.
 
 When both the backlog and next-iteration are empty, Done means what it
 meant before: every requirement is met, and the agent stops. The

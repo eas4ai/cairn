@@ -882,7 +882,7 @@ function candidate(root, m, requirements, expectedHead) {
   return snapshot;
 }
 
-async function check(root, only) {
+async function check(root, only, stale = false) {
   const path = checkLockPath(root);
   let fd;
   try { fd = openSync(path, "wx"); }
@@ -897,7 +897,7 @@ async function check(root, only) {
   try {
     writeFileSync(fd, token);
     closeSync(fd); fd = undefined;
-    status = await runChecks(root, only);
+    status = await runChecks(root, only, stale);
   } finally {
     if (fd !== undefined) closeSync(fd);
     if (read(path) === token) unlinkSync(path);
@@ -908,7 +908,7 @@ async function check(root, only) {
   return VERDICT[w.verdict];
 }
 
-async function runChecks(root, only) {
+async function runChecks(root, only, stale = false) {
   const head = headSha(root);
   const ip = join(root, ".cairn", "in-progress");
   if (existsSync(ip) && fields(read(ip)).owner === "kernel") {
@@ -921,7 +921,7 @@ async function runChecks(root, only) {
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) { process.stdout.write(`Resolvable: repair docs/commitments/${c.slug}.md\n  ${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)\n`); return 1; }
   fold(c, inherited);
-  const targets = only.length ? only : c.requirements;
+  const targets = only.length ? [...only] : [...c.requirements];
   const mechs = mechanisms(root);
   const problem = declarationError(root, mechs);
   if (problem) { process.stdout.write(`${problem.verdict}: ${problem.action}\n  ${problem.why}\n`); return 1; }
@@ -930,7 +930,20 @@ async function runChecks(root, only) {
   // Named requirements select which mechanisms run; a run is evidence for
   // every requirement its mechanism speaks for (LOOP-040).
   const runs = new Set();
+  // --stale: the requirements wake would name run for, and no other; a
+  // fresh failure or an unverified result is an implement action (LOOP-094).
+  const waiting = [];
+  if (stale) {
+    targets.length = 0;
+    for (const x of c.requirements.map((r) => assess(root, r, mechs, context(root, mechs)))) {
+      if (!x.mech || x.repair) continue;
+      if (!x.latest || x.stale) targets.push(x.req);
+      else if (x.latest.result !== "pass") waiting.push(x);
+    }
+  }
   for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.add(n); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
+  for (const x of waiting) if (!runs.has(x.mech)) process.stdout.write(`skipped ${x.req}: latest evidence is ${x.latest.result} and not stale; implement, then check ${x.req} (LOOP-094)\n`);
+  if (stale && !runs.size) process.stdout.write("nothing stale: every requirement with a mechanism has current evidence or waits on implementation (LOOP-094)\n");
   const ctx = { requirements: requirementTexts(root), past: new Map() };
   for (const name of runs) {
     const status = await runMechanism(root, mechs.byName.get(name), ctx, head);
@@ -1184,9 +1197,12 @@ Global options:
 Commands:
   wake
     Read the project records and name the next action.
-  check [REQ ...]
+  check [REQ ...] | check --stale
     Run checks and record evidence against committed inputs. With requirement
     IDs, run their mechanisms; otherwise run the current commitment's checks.
+    --stale runs once each mechanism whose requirement has missing or stale
+    evidence and nothing else; a fresh failure or an unverified result is
+    skipped with implement named (LOOP-094).
   decide --title TEXT --level LEVEL --decided-by NAME --rests-on REFS
          --wrong-if TEXT --body TEXT [--history TEXT]
     Record a decision. Levels: ${LEVELS.join(", ")}.
@@ -1246,7 +1262,7 @@ async function main() {
       help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
-      from: { type: "string" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
+      from: { type: "string" }, stale: { type: "boolean" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   if (a.values.help) return help();
   const root = a.values.root ?? process.cwd();
@@ -1260,7 +1276,7 @@ async function main() {
   if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md)`);
   if (git(root, "rev-parse", "--show-toplevel").status !== 0) return usage(`${root} is not a Git working tree; wake and check require Git (LOOP-046)`);
-  if (cmd === "check") return check(root, rest);
+  if (cmd === "check") return a.values.stale && rest.length ? usage("check: --stale selects by evidence; do not name requirements with it (LOOP-094)") : check(root, rest, !!a.values.stale);
   const w = wake(root);
   process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`);
   return VERDICT[w.verdict];

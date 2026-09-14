@@ -27,3 +27,24 @@ the open finding above. The corrected case cannot be shown until the
 kernel reads the marker, which is LOOP-088's implementation; that
 action follows this review and takes the fixture above as its test.
 No code changed during this review.
+
+## SPEC-002 mechanism review, 2026-09-14
+
+Revised text: the agent must not record a requirement as Agreed before
+the developer confirms its falsifier or a promotion decision under
+LOOP-088 names it. Falsifier: an Agreed marker with no confirmed
+falsifier and no promotion decision in its Status: line.
+
+spec-lint speaks for SPEC-002 through one rule: an Agreed block with no
+Falsifier: line is a finding. That rule is the observable proxy for
+both paths, because a promoted requirement still carries its falsifier
+in the spec; the decision names it, it does not replace it. Four cases
+ran through scripts/spec-lint.mjs on a temporary spec directory. Safe
+violating examples: an Agreed block with no Falsifier: line, with and
+without a by promotion marker, each reported "R-001 is Agreed and
+carries no Falsifier: line (SPEC-002)" and exit 1. Corrected cases: the
+same blocks with a Falsifier: line, with and without the marker, each
+clean and exit 0. Whether the marker's decision slug resolves is
+LOOP-088's proxy and is listed under this commitment's spec-lint
+deliverables; it is not part of SPEC-002's falsifier. No mismatch. No
+code changed during this review.

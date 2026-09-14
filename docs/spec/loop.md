@@ -1027,3 +1027,22 @@ the working agreement it would change.
 Falsifier: a file under .cairn/next-iteration/ carries no Changes: line
 naming a requirement identifier or the working agreement.
 Status: Agreed 2026-09-14
+
+## Promoted from the backlog
+
+[LOOP-094] When check is invoked with --stale, the loop MUST run each
+mechanism that speaks for a requirement of the current commitment
+whose evidence is missing or stale. The loop MUST NOT run any other
+mechanism under --stale. The loop MUST run each selected mechanism
+once.
+Falsifier: check --stale runs a mechanism none of whose requirements
+has missing or stale evidence, runs one mechanism twice, or skips a
+mechanism for a requirement whose evidence is missing or stale.
+Status: Agreed 2026-09-14 by promotion promote-the-stale-only-check-selector
+
+Promoted 2026-09-14 under LOOP-087 from the second adoption's request.
+A fresh failure and an unverified result are not stale: wake names
+implement for them, and --stale skips them and says why. A run still
+records evidence for every requirement its mechanism speaks for
+(LOOP-040), so a mechanism shared by a stale and a current requirement
+runs once and refreshes both.

@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-skill-matches-the-lint-on-may
+Current: check-runs-only-what-is-stale
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -296,3 +296,10 @@ promotion under LOOP-087. Delivers SPEC-025: every Agreed requirement
 carries a Falsifier: line, a MAY included, and the new-project skill
 says so.
 [Commitment](../commitments/the-skill-matches-the-lint-on-may.md).
+
+## Check runs only what is stale
+
+Promoted from the backlog by the agent on 2026-09-14 under LOOP-087.
+Delivers LOOP-094: `cairn check --stale` runs once each mechanism whose
+requirement has missing or stale evidence, and nothing else.
+[Commitment](../commitments/check-runs-only-what-is-stale.md).

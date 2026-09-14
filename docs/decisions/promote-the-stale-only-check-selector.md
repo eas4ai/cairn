@@ -12,4 +12,4 @@ Promotes .cairn/backlog/run-only-stale-mechanisms-without-a-requirement-lookup.m
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 90d41e8fef3b0928bf48ef1c06e48deff57ffad1 Promote: check runs only what is stale

@@ -1,0 +1,141 @@
+// The loop continues past Done: backlog items are promoted by a recorded
+// decision, next-iteration items wait for the developer and are asked
+// for once, a promotion marker must resolve, a promoted commitment must
+// not change the contract, and neither directory is deferral.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { writeFileSync, readFileSync, existsSync, mkdirSync, appendFileSync, mkdtempSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { repo as base, cairn, commit, review, fromFile, head } from "./helpers.mjs";
+
+const LINT = new URL("../scripts/spec-lint.mjs", import.meta.url).pathname;
+const lint = (dir) => spawnSync("node", [LINT, dir], { encoding: "utf8" });
+const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
+const green = (root) => { cairn(root, "check"); review(root); commit(root, "green"); };
+const wake = (root) => cairn(root, "wake").stdout;
+const SPEC3 = (status) => `# Test\n\nStatus: Agreed 2026-09-04\nPrefix: R\n\n[R-001] The thing MUST work.\nFalsifier: it does not.\n\n[R-002] The other thing MUST work.\nFalsifier: it does not.\n\n[R-003] The promoted thing MUST work.\nFalsifier: it does not.\n${status}`;
+const PROMOTED = "# First\n\nSlug: first\nRequirements: R-001, R-002\nPromoted from: some-item\n";
+// A realized decision record that names the promoted item.
+const decided = (root, slug = "promote-some-item") => {
+  writeFileSync(join(root, "docs/decisions", `${slug}.md`), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nPromote .cairn/backlog/some-item.md as R-003.\n\n## Realized by\n\n- ${head(root)} init\n`);
+  commit(root, "decision");
+};
+const escalate = (root, concerns, question) => {
+  const r = cairn(root, "escalate", "--concerns", concerns, "--question", question, "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
+  assert.equal(r.status, 0, r.stderr);
+};
+
+test("a complete commitment with an unpromoted backlog item names promote, and a stamped item lets it reach Done (LOOP-087)", () => {
+  const root = repo(); green(root);
+  assert.match(wake(root), /^Done: first/);
+  cairn(root, "backlog", "--title", "An idea", "--body", "Bounded.", "--from", "R-009"); commit(root, "capture");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: promote\n/);
+  assert.match(out, /an-idea/); assert.match(out, /LOOP-087/);
+  appendFileSync(join(root, ".cairn/backlog/an-idea.md"), "Promoted to: second\n"); commit(root, "stamp");
+  assert.match(wake(root), /^Done: first/);
+});
+
+test("an empty backlog with a next-iteration item names an escalation recommending what to specify next; both empty is Done (LOOP-091)", () => {
+  const root = repo(); green(root);
+  const r = cairn(root, "backlog", "--next-iteration", "--changes", "R-009", "--title", "Change the contract", "--body", "Because.");
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(readFileSync(join(root, ".cairn/next-iteration/change-the-contract.md"), "utf8").includes("Changes: R-009"));
+  commit(root, "capture");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: escalate next-iteration\n/);
+  assert.match(out, /change-the-contract/); assert.match(out, /LOOP-091/);
+  escalate(root, "LOOP-091", "Specify change-the-contract next?"); commit(root, "ask");
+  assert.match(wake(root), /^Escalate: /);
+});
+
+test("a promotion marker must resolve to a decision record (LOOP-088)", () => {
+  let root = repo({ "docs/spec/test.md": SPEC3("Status: Agreed 2026-09-14 by promotion no-such-decision\n"),
+    "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-002, R-003\n", ".cairn/mechanisms/m": fromFile("R-001", "R-002", "R-003") });
+  let out = wake(root);
+  assert.match(out, /^Resolvable: repair docs\/spec\/test\.md/);
+  assert.match(out, /R-003 is Agreed by promotion no-such-decision/); assert.match(out, /LOOP-088/);
+  root = repo({ "docs/spec/test.md": SPEC3("Status: Agreed 2026-09-14 by promotion promote-some-item\n"),
+    "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-002, R-003\n", ".cairn/mechanisms/m": fromFile("R-001", "R-002", "R-003") });
+  decided(root);
+  assert.match(wake(root), /^Resolvable: run R-001/);
+});
+
+test("a commitment promoted from an item needs a decision record naming the item (LOOP-088)", () => {
+  const root = repo({ "docs/commitments/first.md": PROMOTED });
+  let out = wake(root);
+  assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/);
+  assert.match(out, /some-item/); assert.match(out, /LOOP-088/);
+  decided(root);
+  assert.match(wake(root), /^Resolvable: run R-001/);
+});
+
+test("the spec lint reports a promotion marker with no decision record (LOOP-088)", () => {
+  const d = mkdtempSync(join(tmpdir(), "lint-")); mkdirSync(join(d, "spec"));
+  writeFileSync(join(d, "spec/x.md"), "# X\n\nStatus: Agreed 2026-09-04\nPrefix: X\n\n[X-001] The thing MUST work.\nFalsifier: it does not.\nStatus: Agreed 2026-09-14 by promotion some-decision\n");
+  let r = lint(join(d, "spec"));
+  assert.equal(r.status, 1); assert.match(r.stdout, /X-001 is Agreed by promotion some-decision.*LOOP-088/);
+  mkdirSync(join(d, "decisions")); writeFileSync(join(d, "decisions/some-decision.md"), "# D\n");
+  r = lint(join(d, "spec"));
+  assert.equal(r.status, 0, r.stdout);
+});
+
+test("a promoted commitment that changes an Agreed requirement or the working agreement is an escalation; an unpromoted one is not (LOOP-089, LOOP-090)", () => {
+  const promoted = repo({ "docs/commitments/first.md": PROMOTED }); decided(promoted); green(promoted);
+  const plain = repo(); green(plain);
+  for (const root of [promoted, plain]) {
+    writeFileSync(join(root, "docs/spec/test.md"), readFileSync(join(root, "docs/spec/test.md"), "utf8").replace("The thing MUST work.", "The thing MUST work well."));
+    commit(root, "revise R-001");
+  }
+  let out = wake(promoted);
+  assert.match(out, /^Resolvable: escalate first\n/); assert.match(out, /R-001/); assert.match(out, /LOOP-089/);
+  assert.doesNotMatch(wake(plain), /escalate first/);
+  escalate(promoted, "LOOP-089", "The promoted commitment first needs R-001 to change."); commit(promoted, "ask");
+  assert.match(wake(promoted), /^Escalate: /);
+
+  const agreement = repo({ "docs/commitments/first.md": PROMOTED }); decided(agreement); green(agreement);
+  writeFileSync(join(agreement, "AGENTS.md"), "# agreement\n"); commit(agreement, "agreement");
+  out = wake(agreement);
+  assert.match(out, /^Resolvable: escalate first\n/); assert.match(out, /AGENTS\.md/);
+});
+
+test("a capture from one of the commitment's own requirements needs Outside because: or an escalation (LOOP-092)", () => {
+  const root = repo(); green(root);
+  cairn(root, "backlog", "--title", "Looks in scope", "--body", "Hmm.", "--from", "R-001"); commit(root, "capture");
+  let out = wake(root);
+  assert.match(out, /^Resolvable: escalate \.cairn\/backlog\/looks-in-scope\.md\n/);
+  assert.match(out, /R-001/); assert.match(out, /Outside because/); assert.match(out, /LOOP-092/);
+  appendFileSync(join(root, ".cairn/backlog/looks-in-scope.md"), "Outside because: it is a later commitment's shape, not this one's work.\n"); commit(root, "reason");
+  assert.match(wake(root), /^Resolvable: promote\n/);
+  const r = cairn(root, "backlog", "--title", "Also from here", "--body", "Hmm.", "--from", "R-002", "--outside", "not this commitment's work");
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(readFileSync(join(root, ".cairn/backlog/also-from-here.md"), "utf8").includes("Outside because: not this commitment's work"));
+  commit(root, "capture 2");
+  assert.match(wake(root), /^Resolvable: promote\n/);
+  const other = repo(); green(other);
+  cairn(other, "backlog", "--title", "Not from here", "--body", "Hmm.", "--from", "R-009"); commit(other, "capture");
+  assert.match(wake(other), /^Resolvable: promote\n/);
+  const asked = repo(); green(asked);
+  cairn(asked, "backlog", "--next-iteration", "--changes", "R-001", "--title", "Change R one", "--body", "Hmm."); commit(asked, "capture");
+  assert.match(wake(asked), /^Resolvable: escalate \.cairn\/next-iteration\/change-r-one\.md\n/);
+  escalate(asked, "R-001", "Cannot finish R-001: .cairn/next-iteration/change-r-one.md explains."); commit(asked, "ask");
+  assert.match(wake(asked), /^Escalate: /);
+});
+
+test("a next-iteration item names what it would change, and the capture refuses one that does not (LOOP-093)", () => {
+  const root = repo(); green(root);
+  let r = cairn(root, "backlog", "--next-iteration", "--title", "No target", "--body", "Hmm.");
+  assert.equal(r.status, 3); assert.match(r.stderr, /--changes/); assert.match(r.stderr, /LOOP-093/);
+  assert.ok(!existsSync(join(root, ".cairn/next-iteration/no-target.md")));
+  mkdirSync(join(root, ".cairn/next-iteration"), { recursive: true });
+  writeFileSync(join(root, ".cairn/next-iteration/bad.md"), "# Bad\n\nCaptured: 2026-09-14T00:00:00.000Z\n\nNo target.\n"); commit(root, "bad");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: repair \.cairn\/next-iteration\/bad\.md/); assert.match(out, /Changes:/); assert.match(out, /LOOP-093/);
+  r = cairn(root, "backlog", "--next-iteration", "--changes", "R-009", "--title", "Twice", "--body", "Once.");
+  assert.equal(r.status, 0, r.stderr);
+  r = cairn(root, "backlog", "--next-iteration", "--changes", "R-009", "--title", "Twice", "--body", "Again.");
+  assert.equal(r.status, 3); assert.match(r.stderr, /never overwrites/);
+  assert.ok(readFileSync(join(root, ".cairn/next-iteration/twice.md"), "utf8").includes("Once."));
+});

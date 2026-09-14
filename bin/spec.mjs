@@ -28,6 +28,7 @@ export function parseSpec(text) {
     const ownStatus = body.find((line) => /^Status:/.test(line));
     blocks.push({ id: m[1], line: start + 1, body,
       status: ownStatus === undefined ? status : /^Status:[ \t]*(\w+)/.exec(ownStatus)?.[1] ?? null,
+      promotion: ownStatus === undefined ? null : /\bby promotion[ \t]+(\S+)/.exec(ownStatus)?.[1] ?? null,
       falsifier: body.some((line) => /^Falsifier:/.test(line)) });
   }
   return { lines, blocks, status, prefix, scope };

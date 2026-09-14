@@ -9,7 +9,8 @@
 //   cairn escalate --concerns X --question Q --recommend R --because B
 //                  --if-wrong W --instead I [--level Blocking]
 //   cairn answer <slug> <reply...>  record the next escalation turn
-//   cairn backlog --title T --body B [--from X]   capture out-of-scope work
+//   cairn backlog --title T --body B [--from X] [--outside W]   capture an idea inside the specification
+//   cairn backlog --next-iteration --changes X --title T --body B   capture an idea that changes it
 //   cairn supersede <old> --cause C ...decide fields...
 //   cairn reversals                 report reversals by decider, cause, domain
 //
@@ -77,15 +78,15 @@ function currentCommitment(root) {
   if (!slug) return { repair: rel(root, p), why: "no Current: line names a commitment" };
   const cp = join(root, "docs", "commitments", `${slug}.md`);
   if (!existsSync(cp)) return { repair: rel(root, p), why: `Current: names ${slug}, and docs/commitments/${slug}.md does not exist` };
-  const reqs = (fields(read(cp))["Requirements"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const f = fields(read(cp)), reqs = (f["Requirements"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (reqs.length === 0) return { repair: rel(root, cp), why: "no Requirements: line names what the commitment includes" };
-  return { slug, requirements: reqs };
+  return { slug, requirements: reqs, promoted: f["Promoted from"] || null };
 }
 
 // The kernel and lint read the same blocks and status defaults.
 function requirementSet(root, commit = null) {
-  const dir = "docs/spec", texts = new Map(), agreed = new Set(), inherited = new Set();
-  const out = { texts, agreed, inherited };
+  const dir = "docs/spec", texts = new Map(), agreed = new Set(), inherited = new Set(), promotions = new Map();
+  const out = { texts, agreed, inherited, promotions };
   const ls = commit ? git(root, "ls-tree", "--name-only", "-z", `${commit}:${dir}`) : null;
   if (ls && (ls.error || ls.status !== 0)) return out;
   const names = ls ? ls.stdout.split("\0").filter(Boolean) : list(join(root, dir));
@@ -96,6 +97,7 @@ function requirementSet(root, commit = null) {
     for (const block of spec.blocks) {
       const body = block.body.filter((line) => !/^Status:/.test(line)).join("\n");
       texts.set(block.id, { path, digest: texts.has(block.id) ? null : sha(body) });
+      if (block.promotion) promotions.set(block.id, block.promotion);
       if (block.status === "Agreed") {
         agreed.add(block.id);
         if (spec.scope === "every commitment") inherited.add(block.id);
@@ -214,6 +216,43 @@ function scopeVerdict(root, c, mechs) {
   if (!paths.length) return null;
   const first = /[\s\x00-\x1f\x7f-\x9f]/.test(paths[0]) ? displayPath(paths[0]) : paths[0];
   return { verdict: "Resolvable", action: `scope ${first}`, why: `${paths.length} unresolved scope paths changed since the commitment began and no mechanism declares them (LOOP-035):\n${paths.map((p) => `  - ${displayPath(p)}`).join("\n")}\n  Declare missing inputs that belong to the agreement. To keep correct committed work outside it, use cairn escalate --scope --keep --concerns LOOP-035 with the decision fields for explicit approval of that exact history. For accidental work, capture it in the backlog, restore the paths to the commitment's activation tree, commit, and use cairn escalate --scope --concerns LOOP-035. Commit the developer's ok before checking. Retention needs fresh checks and review; neither approval grants future changes. An instead answer supplies direction, not an automatic exception.` };
+}
+// Neither capture directory is deferral (LOOP-092): an item added inside
+// the footprint from one of the commitment's own requirements carries the
+// agent's reason it is outside, or an escalation names it. A
+// next-iteration item names what it would change (LOOP-093).
+const recordTexts = (root, ...dir) => list(join(root, ...dir)).map((n) => read(join(root, ...dir, n)));
+function captureVerdict(root, c) {
+  const next = join(root, ".cairn", "next-iteration");
+  for (const n of list(next).filter((n) => n.endsWith(".md"))) {
+    if (!("Changes" in fields(read(join(next, n))))) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${n}`, why: "a next-iteration item names no Changes: line; name the Agreed requirement or the working agreement it would change (LOOP-093)" };
+  }
+  const history = scopeHistory(root, c.slug);
+  if (!history.began || !history.commits) return null;
+  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "--diff-filter=A", "-r", "-z", "--", ".cairn/backlog", ".cairn/next-iteration"],
+    { cwd: root, input: history.commits, encoding: "utf8", maxBuffer: Infinity });
+  if (r.error || r.status !== 0) throw new Error("cannot read the commitment's captures");
+  for (const path of [...new Set(r.stdout.split("\0").filter(Boolean))].sort()) {
+    if (!existsSync(join(root, path))) continue;
+    const f = fields(read(join(root, path)));
+    const hit = (`${f["Surfaced from"] ?? ""} ${f["Changes"] ?? ""}`.match(/\b[A-Z]+-\d+\b/g) ?? []).find((id) => c.requirements.includes(id));
+    if (!hit || "Outside because" in f || recordTexts(root, ".cairn", "escalations").some((t) => t.includes(path))) continue;
+    return { verdict: "Resolvable", action: `escalate ${path}`, why: `captured from ${hit}, which this commitment includes, with no Outside because: line; add the line when the idea is not this commitment's work, or escalate with the evidence when the work cannot be finished, and do not report Done around it (LOOP-092)` };
+  }
+  return null;
+}
+// A promoted commitment stays inside the specification (LOOP-089): a
+// change to an Agreed requirement or the working agreement since it
+// began is the developer's, so the agent escalates (LOOP-090).
+function promotedContractVerdict(root, c, ctx, agreed) {
+  if (!c.promoted) return null;
+  const history = scopeHistory(root, c.slug);
+  if (!history.began) return null;
+  const past = pastRequirements(root, history.began, ctx);
+  const changed = [...agreed].filter((id) => past.get(id)?.digest && ctx.requirements.get(id)?.digest && past.get(id).digest !== ctx.requirements.get(id).digest).sort();
+  if (history.commits && changedPaths(root, history.commits, ["AGENTS.md"]).length) changed.push("AGENTS.md");
+  if (!changed.length || recordTexts(root, ".cairn", "escalations").some((t) => t.includes(c.slug))) return null;
+  return { verdict: "Resolvable", action: `escalate ${c.slug}`, why: `a promoted commitment changed ${changed.join(", ")} since it began at ${history.began.slice(0, 7)}; a change to an Agreed requirement, its falsifier, or the working agreement is the developer's: move the item to next-iteration with the reason and escalate, and do not build it under the promotion's record (LOOP-089, LOOP-090)` };
 }
 function changedPaths(root, commits, inputs = []) {
   const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "-z", "--", ...inputs],
@@ -712,15 +751,23 @@ function wakeVerdict(root) {
   const mechs = mechanisms(root);
   const problem = declarationError(root, mechs);
   if (problem) return problem;
-  const { agreed, inherited } = requirementSet(root);
+  const { agreed, inherited, texts, promotions } = requirementSet(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
+  // A promotion marker resolves to its decision, and a promoted commitment's item is named by one (LOOP-088).
+  const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r)}.md`)));
+  if (marked) return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by promotion ${promotions.get(marked)} and docs/decisions/${promotions.get(marked)}.md does not exist; record the promotion decision or restore the developer's confirmation (LOOP-088)` };
+  if (c.promoted && !recordTexts(root, "docs", "decisions").some((t) => t.includes(c.promoted))) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ names it; record the promotion decision (LOOP-088)` };
   fold(c, inherited);
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   const scope = scopeVerdict(root, c, mechs);
   if (scope) return scope;
+  const captured = captureVerdict(root, c);
+  if (captured) return captured;
   const ctx = context(root, mechs);
+  const contract = promotedContractVerdict(root, c, ctx, agreed);
+  if (contract) return contract;
   const ambiguous = c.requirements.find((r) => !ctx.requirements.get(r)?.digest);
   if (ambiguous) return { verdict: "Resolvable", action: "repair docs/spec/", why: `${ambiguous} needs exactly one requirement definition` };
   const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
@@ -757,7 +804,14 @@ function wakeVerdict(root) {
   const then = rv.commit ? inputsDigestAt(root, inputs, rv.commit) : null;
   if (then === null || then !== committedInputsDigest(root, inputs, mechs.inputs)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
   if (rv.open.length) return { verdict: "Resolvable", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
-  return { verdict: "Done", action: c.slug, why: `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean` };
+  // Done only when nothing remains the agent may decide (LOOP-087, LOOP-091).
+  const complete = `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean`;
+  const items = (dir, keep) => list(join(root, ".cairn", dir)).filter((n) => n.endsWith(".md") && keep(fields(read(join(root, ".cairn", dir, n))))).map((n) => n.replace(/\.md$/, ""));
+  const candidates = items("backlog", (f) => !("Promoted to" in f));
+  if (candidates.length) return { verdict: "Resolvable", action: "promote", why: `${complete}; the backlog holds ${candidates.length} item(s) to promote: ${candidates.join(", ")}; choose one by judgment, record the promotion decision, write its requirement and commitment, and move Current: (LOOP-087)` };
+  const waiting = items("next-iteration", () => true);
+  if (waiting.length) return { verdict: "Resolvable", action: "escalate next-iteration", why: `${complete}; the backlog is empty and next-iteration holds ${waiting.length} item(s): ${waiting.join(", ")}; raise one escalation recommending which to specify next, with the alternatives, and stop (LOOP-091)` };
+  return { verdict: "Done", action: c.slug, why: complete };
 }
 
 // ------------------------------------------------------------ check
@@ -1090,11 +1144,15 @@ function answer(root, slug, reply) {
 
 function backlog(root, o) {
   if (!o.title || !o.body) return usage("backlog: missing --title or --body");
-  const dir = join(root, ".cairn", "backlog");
+  const next = !!o["next-iteration"];
+  if (next && !o.changes) return usage("backlog: --next-iteration needs --changes naming the Agreed requirement or the working agreement the idea would change (LOOP-093)");
+  const dir = join(root, ".cairn", next ? "next-iteration" : "backlog");
   mkdirSync(dir, { recursive: true });
   const path = join(dir, `${slugify(o.title)}.md`);
   if (existsSync(path)) return usage(`backlog: ${rel(root, path)} exists; the backlog never overwrites (LOOP-016)`);
-  writeFileSync(path, `# ${o.title}\n\nSurfaced from: ${o.from ?? "unstated"}\nCaptured: ${new Date().toISOString()}\n\n${o.body}\n`);
+  const source = next ? `Changes: ${o.changes}` : `Surfaced from: ${o.from ?? "unstated"}`;
+  const outside = o.outside ? `Outside because: ${o.outside}\n` : "";
+  writeFileSync(path, `# ${o.title}\n\n${source}\n${outside}Captured: ${new Date().toISOString()}\n\n${o.body}\n`);
   process.stdout.write(`captured ${rel(root, path)}\n`);
   return 0;
 }
@@ -1145,8 +1203,14 @@ Commands:
   answer SLUG ok | instead TEXT | ask TEXT
     Answer an escalation. An ask keeps it open for an explanation.
     After an ask, the agent uses answer SLUG "EXPLANATION" to reply.
-  backlog --title TEXT --body TEXT [--from REQ]
-    Capture work outside the current commitment.
+  backlog --title TEXT --body TEXT [--from REQ] [--outside TEXT]
+    Capture an idea that fits inside the specification. --outside states
+    why an idea surfaced from one of the commitment's own requirements
+    is not its work (LOOP-092). The loop promotes from here at Done.
+  backlog --next-iteration --changes REQ --title TEXT --body TEXT [--outside TEXT]
+    Capture an idea that would change an Agreed requirement, its
+    falsifier, or the working agreement; --changes names it (LOOP-093).
+    The developer brings it in through a specification phase.
   supersede OLD-SLUG --cause CAUSE <decide options>
     Replace an earlier decision and record why it was reversed.
     CAUSE must be one of these exact phrases (quote it in the shell):
@@ -1182,7 +1246,7 @@ async function main() {
       help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
-      from: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
+      from: { type: "string" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   if (a.values.help) return help();
   const root = a.values.root ?? process.cwd();

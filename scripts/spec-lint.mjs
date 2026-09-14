@@ -7,7 +7,7 @@
 // Backticks and double quotes are mentions, not uses, so a rule may name
 // MUST without stating an obligation.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseSpec } from "../bin/spec.mjs";
 
@@ -57,7 +57,8 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
 
   // Status and block boundaries match the kernel exactly.
   for (const block of spec.blocks) {
-    const { id, status, falsifier } = block;
+    const { id, status, falsifier, promotion } = block;
+    if (promotion && !existsSync(join(dir, "..", "decisions", `${promotion}.md`))) findings.push(`${name}: ${id} is Agreed by promotion ${promotion} and docs/decisions/${promotion}.md does not exist (LOOP-088)`);
     const end = block.body.findIndex((line) => /^Falsifier:/.test(line));
     const body = block.body.slice(0, end < 0 ? undefined : end).filter((line) => !/^Status:/.test(line)).join(" ");
     if (status === "Agreed" && !falsifier) findings.push(`${name}: ${id} is Agreed and carries no Falsifier: line (SPEC-002)`);

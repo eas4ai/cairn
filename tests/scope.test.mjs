@@ -35,7 +35,7 @@ test("a commit inside the footprint: check runs; outside it: check names the pat
 
 test("a file under .cairn/ or docs/ is never a breach", () => {
   const root = repo(); green(root);
-  writeFileSync(join(root, "docs/notes.md"), "n\n"); writeFileSync(join(root, ".cairn/backlog/x.md"), "# x\n"); commit(root); review(root);
+  writeFileSync(join(root, "docs/notes.md"), "n\n"); writeFileSync(join(root, ".cairn/backlog/x.md"), "# x\n\nPromoted to: later\n"); commit(root); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/);
 });
 

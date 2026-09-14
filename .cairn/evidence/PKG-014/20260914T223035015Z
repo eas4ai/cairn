@@ -1,0 +1,21 @@
+requirement: PKG-014
+requirement_digest: sha256:a8585ce20456050b7814253cc172fad7a6f5c1e5f6e70184a271c8a2faa9cb23
+sequence: 14
+history_digest: sha256:6f04aa1ca74581632f2153476be4026a029821b6de538475465ffa0329637d0e
+mechanism: node-test
+commit: 948b60b
+inputs_digest: sha256:3fa45f3353907f5b5f41297cff19095cbd01c121cef796eb3f8df0b9fff8a532
+mechanism_digest: sha256:ec3ae6576360144850f69081dcbb1b2609a9d8170973492650b67fb4e510670f
+inputs_detail: .cairn/evidence/LOOP-036/20260914T223011521Z-46627.inputs.json
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:d9b9f3c7c0b83703ace08c956a8d1a36848969efd06a9cdbb45d24f8922bd80f
+output: .cairn/evidence/LOOP-036/20260914T223011521Z-46627.out
+stderr_output: .cairn/evidence/LOOP-036/20260914T223011521Z-46627.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-14T22:30:35.011Z

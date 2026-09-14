@@ -24,13 +24,30 @@ Act on the verdict, and only on it.
   Do not stop while the verdict is Resolvable.
 - Escalate: present the escalation file to the developer, in its own
   words, and stop. Do nothing else until it is answered.
-- Done: the commitment is complete. Report it, and stop. The next
-  commitment is the developer's to name.
+- Done: the commitment is complete, the backlog holds nothing to
+  promote, and next-iteration is empty. Report it, and stop.
 
 When wake says `reply <slug>`, read the developer's question and append
 your explanation with `cairn answer <slug> "<explanation>"`. Run wake again
 to return the decision to the developer. An `ask` answer authorizes only
 an explanation; it does not authorize implementation.
+
+When wake says `promote`, the commitment is complete and the backlog
+holds an item. Choose the item by judgment. Record the promotion with
+`cairn decide` at Judged or Consequential, naming the item, the
+requirement you draft from it, and that requirement's falsifier. Write
+the requirement into the specification with `Status: Agreed <date> by
+promotion <decision slug>`, write docs/commitments/<slug>.md with a
+`Promoted from:` line naming the item, add the roadmap section, move
+the roadmap's Current: line, and stamp the item `Promoted to: <slug>`.
+Commit, then wake. A promoted commitment must not change an Agreed
+requirement, its falsifier, or this file. When the work needs that,
+move the item to next-iteration with the reason, escalate, and stop.
+
+When wake says `escalate next-iteration`, the backlog is empty and
+next-iteration holds items. Raise one escalation that recommends which
+item to specify next, with the alternatives, and stop. The developer's
+`ok` starts a specification phase for that item.
 
 Before you change code, write `.cairn/in-progress`:
 
@@ -91,10 +108,21 @@ under the current commitment; its mechanism's inputs are already in
 the footprint, and a fix outside them means the declaration was
 incomplete: declare, then fix.
 
-Out of scope is captured, never built. An idea outside the current
-commitment goes to `cairn backlog --title ... --body ... --from <REQ>`.
-It enters a commitment only when the developer writes it into the
-specification and names it there.
+Out of scope is captured, never built. An idea that fits inside the
+specification goes to `cairn backlog --title ... --body ... --from
+<REQ>`. An idea that would change an Agreed requirement, its
+falsifier, or this file goes to `cairn backlog --next-iteration
+--title ... --body ... --changes <REQ>`, naming what it would change.
+A backlog item enters a commitment by a recorded promotion at Done. A
+next-iteration item enters only when the developer writes it into the
+specification.
+
+Deferral is not allowed. Work the commitment includes is finished or
+escalated, never captured. When an idea surfaces from one of the
+commitment's own requirements and is not its work, say why on an
+`Outside because:` line. When in-scope work cannot be finished, that
+is a real problem: escalate with the evidence, and do not report Done
+around it.
 
 Review before Done. When every requirement passes, examine the work for
 what the mechanisms would miss, record what you attacked and what you
@@ -147,9 +175,12 @@ removing the queue entry in a commit is the review; the commit's author
 and date are the mark. To reverse it, have the agent supersede the
 record with the cause named.
 
-The next commitment is yours. Write the requirement into the
-specification with its falsifier, name it in a commitment file, and
-move the roadmap's Current: line.
+The next commitment is the loop's while the backlog holds items. Read
+promotions in the review queue; supersede one to reverse it. When the
+loop escalates with a next-iteration recommendation, answer ok, instead,
+or ask. An ok starts a specification phase for that item, in which you
+confirm its falsifier; the agent moves the roadmap's Current: line when
+the phase ends.
 
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own

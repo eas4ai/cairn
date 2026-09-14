@@ -54,3 +54,13 @@ test("the working agreement says a failure no footprint change can address is an
   has(TEMPLATE, "A failure no change inside the footprint can address is not an attempt at all: it is an escalation", "DEC-019");
   has(TEMPLATE, "A failing requirement every commitment inherits is repaired under the current commitment", "LOOP-057");
 });
+test("the working agreement states the promote, next-iteration, and no-deferral moves (LOOP-029, LOOP-087, LOOP-091, LOOP-092)", () => {
+  has(TEMPLATE, "Done: the commitment is complete, the backlog holds nothing to promote, and next-iteration is empty", "LOOP-087, LOOP-091 Done");
+  has(TEMPLATE, "When wake says `promote`", "LOOP-087 move");
+  has(TEMPLATE, "Status: Agreed <date> by promotion <decision slug>", "LOOP-088 marker");
+  has(TEMPLATE, "When wake says `escalate next-iteration`", "LOOP-091 move");
+  has(TEMPLATE, "cairn backlog --next-iteration", "LOOP-093 capture");
+  has(TEMPLATE, "Deferral is not allowed", "LOOP-092");
+  has(TEMPLATE, "`Outside because:` line", "LOOP-092 line");
+  has(TEMPLATE, "The next commitment is the loop's while the backlog holds items", "LOOP-029 developer's move");
+});

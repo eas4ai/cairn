@@ -12,4 +12,4 @@ Promotes .cairn/backlog/the-spec-lint-demands-a-falsifier-on-a-may-that-the-skil
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 5d5cce003dcbbc1b440340603e5508540187915c Promote: the skill matches the lint on MAY

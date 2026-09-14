@@ -12,4 +12,4 @@ The backlog held two kinds of idea beside each other: bounded ones the loop may 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 1a20409742445dc4ec171754797ec0589a01af59 The loop continues past Done: promote, next-iteration, and no deferral

@@ -1,5 +1,5 @@
 commitment: the-loop-continues-past-done
-commit: 7fc5e1ff4b5762153056d4775612e3b66aaf77c0
+commit: 40a5194e7687e2e94df3bd2db7616de624e1bec2
 examined:
   - node-test against the revised LOOP-029: tests/scope.test.mjs, the kernel's requirementSet and currentCommitment, and a throwaway fixture carrying a promotion marker.
   - spec-lint against the revised SPEC-002 with four temporary spec directories.
@@ -111,3 +111,38 @@ LOOP-087 through LOOP-093 and LOOP-029: each move names the command,
 the record, and the stop. No new finding. Three findings remain open:
 the skills, this repository's capture sorting, and the human
 documentation. No code changed during this review.
+
+## Final commitment review at 40a5194, 2026-09-14
+
+Since 7fc5e1f: both skills state the two capture destinations, the sort
+test, and the no-deferral rule, and the skills suite reads them; four
+items that change the contract moved under .cairn/next-iteration/ with
+Changes: lines, the hooks item carrying Outside because: for the
+inherited PKG-012; the next-iteration skill request is stamped as
+absorbed; the README and the manual describe promotion, the
+next-iteration escalation, the promotion marker, and the no-deferral
+rule. The suite is 370 passing, both lints clean, the kernel at 1306 of
+1500 lines. Every one of the nine requirements has current passing
+evidence at this commit. No code changed during this review.
+
+Attacked: the moved items against LOOP-093, which wake accepted without
+a repair verdict; the hooks item against LOOP-092, whose Outside
+because: line was written before the gate could fire on this
+repository, so the gate's behavior is observed in the test and not
+here; the walkthrough and the README diagram, which still say the agent
+stops at Done, and which stay true because their fixtures hold an empty
+backlog; the docs against the working agreement, which agree on the
+marker, the two destinations, and the developer's moves. The
+promotion marker is not yet used by any requirement in this
+repository; its first use is the promotion wake names next.
+
+Outside this commitment and captured: the hooks under next-iteration,
+with three other contract changes. The two backlog items that remain,
+the stale-only check selector and the spec-lint MAY mismatch, are
+inside the specification and are what wake will offer to promote.
+
+Self-audit against the production rules: scope stayed at the nine
+requirements and the deliverables the commitment file lists; every
+check reported here ran and passed; the one weakness recorded, that
+an escalation names a path or slug by substring, is documented in the
+kernel comment and in this review rather than hidden. No open finding.

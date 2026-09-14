@@ -192,9 +192,15 @@ that includes it. Nothing else is scaffolded.
 Run the spec lint over docs/spec. Summarize what exists and where. The
 loop takes over under the working agreement: `cairn wake` names the
 next action from the repository alone, and AGENTS.md says what to do
-with it. An idea outside the current commitment goes to `cairn backlog`,
-and enters a commitment only when the developer writes it into the
-specification and names it there.
+with it. An idea that fits inside the specification goes to
+`cairn backlog --title ... --body ... --from <REQ>`; the loop promotes
+it at Done by a recorded decision (LOOP-087, LOOP-088). An idea that
+would change an Agreed requirement, its falsifier, or the working
+agreement goes to `cairn backlog --next-iteration --changes <REQ>
+--title ... --body ...`; it enters a commitment only when the developer
+writes it into the specification (LOOP-029, LOOP-093). Sort by that one
+test at capture. Neither is deferral: work the commitment includes is
+finished or escalated (LOOP-092).
 
 A mechanism that repeats a command labels each repetition and its result
 in its output, so a failure in one run can be found without repeating

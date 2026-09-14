@@ -18,7 +18,7 @@ test("understanding is restated before writing (SPEC-003)", () => has(NEW, "Stat
 }); test("a requirement goes Agreed only with a nameable mechanism (SPEC-013)", () => has(NEW, "name a mechanism that could observe its falsifier", "SPEC-013")); test("review before agreement, recording what it attacked (SPEC-014, SPEC-015)", () => { has(NEW, "Review before agreement", "SPEC-014"); has(NEW, "Record what the review attacked, not only what it found", "SPEC-015");
 }); test("no spec file without requirements; nothing Agreed without a falsifier (SPEC-001, SPEC-002)", () => { has(NEW, "Create no spec file you have no requirements for", "SPEC-001"); has(NEW, "A requirement is Draft until the developer confirms its text and its falsifier", "SPEC-002");
 }); test("Observed is marked, and is not contract (SPEC-016, SPEC-017)", () => { has(EXISTING, "Status: Observed", "SPEC-016"); has(EXISTING, "only Agreed text is contract", "SPEC-017"); has(EXISTING, "The loop refuses a commitment that names an Observed requirement", "SPEC-017 mechanism");
-}); test("the skills exclude artifacts outside Cairn's workflow", () => { for (const s of ["validators/", "trust <", "conformance.md", "iterations/001.md", "/next-iteration"]) lacks(BOTH, s, "unsupported artifact");
+}); test("the skills exclude artifacts outside Cairn's workflow", () => { for (const s of ["validators/", "trust <", "conformance.md", "iterations/001.md"]) lacks(BOTH, s, "unsupported artifact");
 });
 
 // The working agreement: the file a consumer-repo agent reads at wake.
@@ -63,4 +63,11 @@ test("the working agreement states the promote, next-iteration, and no-deferral 
   has(TEMPLATE, "Deferral is not allowed", "LOOP-092");
   has(TEMPLATE, "`Outside because:` line", "LOOP-092 line");
   has(TEMPLATE, "The next commitment is the loop's while the backlog holds items", "LOOP-029 developer's move");
+});
+test("both skills sort captures into the backlog or next-iteration and forbid deferral (LOOP-029, LOOP-092, LOOP-093)", () => {
+  has(NEW, "cairn backlog --next-iteration --changes", "new-project names the second destination");
+  has(EXISTING, "cairn backlog --next-iteration --changes", "existing-project names the second destination");
+  has(NEW, "Neither is deferral", "LOOP-092 in new-project");
+  has(EXISTING, "Neither is deferral", "LOOP-092 in existing-project");
+  has(EXISTING, ".cairn/next-iteration/", "existing-project reads it at wake");
 });

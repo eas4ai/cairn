@@ -1,6 +1,9 @@
 # Hooks keep the agent in the loop
 
 Surfaced from: LOOP-036
+Changes: PKG-012 and the working agreement
+Outside because: it adds a requirement and supersedes a decision, which enter through a specification phase the developer confirms, not through this commitment's work
+Moved: 2026-09-14 from the backlog under the-loop-continues-past-done
 Captured: 2026-09-14T21:58:09.706Z
 
 Requested by the developer on 2026-09-14: agents skip wake, ignore the verdict, and stop mid-commitment, which the working agreement (LOOP-036) alone did not prevent. Two shipped hook scripts with one harness-neutral contract, verified against Claude Code and Codex on 2026-09-14 (both accept plain stdout or hookSpecificOutput.additionalContext at SessionStart, and decision: block with a reason at Stop). SessionStart: install cairn onto the path if missing, register the Stop hook once, then print the wake verdict into context. Stop: run cairn wake; while the verdict is Resolvable refuse the stop with the verdict as the reason; at Escalate or Done allow it. The harness caps consecutive blocks, so the hook keeps no counter. This supersedes cairn-installs-by-one-link-script-with-no-plugin-and-no-hook: the developer ruled on 2026-09-14 that answering the harness with the verdict does not manage the agent's execution under PKG-012, and that the no-hook decision was the agent's own call against the developer's direction. Retires scripts/link.sh and its test; the README install section and install-cairn skill change with it. Level: next-iteration. It adds a requirement and supersedes a decision, so it enters only through a specification phase the developer confirms. Promotion is the developer's.

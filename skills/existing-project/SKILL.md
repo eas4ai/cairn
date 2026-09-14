@@ -50,7 +50,7 @@ Three more:
 
 Path B first: read the spec set before the code -- glossary.md,
 overview.md, every domain spec, roadmap.md, the current commitment,
-docs/decisions/, and .cairn/backlog/. The glossary's terms are your
+docs/decisions/, .cairn/backlog/, and .cairn/next-iteration/. The glossary's terms are your
 vocabulary from here. Run `cairn wake`: its verdict tells you where the
 loop stands before you form an opinion.
 
@@ -175,10 +175,14 @@ copy alone and say so in the summary.
 A roadmap exists (Path B): read the current commitment's requirements
 against the blast radius. In scope: proceed under it. Out of scope, the
 usual case for work that arrived after the roadmap was agreed:
-`cairn backlog --title ... --from <REQ or slug>`. It enters a commitment
-only when the developer writes the requirement into the specification
-and names it in a commitment (LOOP-029). Do not implement it in the
-meantime.
+`cairn backlog --title ... --body ... --from <REQ or slug>` when it fits
+inside the specification; the loop promotes it at Done by a recorded
+decision (LOOP-087). `cairn backlog --next-iteration --changes <REQ>
+--title ... --body ...` when it would change an Agreed requirement, its
+falsifier, or the working agreement; it enters a commitment only when
+the developer writes it into the specification (LOOP-029, LOOP-093).
+Neither is deferral: work the commitment includes is finished or
+escalated (LOOP-092). Do not implement it in the meantime.
 
 For each requirement the commitment names, write or verify its mechanism
 under .cairn/mechanisms/. Apply /new-project's guidance for a safe violating

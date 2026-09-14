@@ -185,6 +185,11 @@ An `ask` answer keeps the question open. The agent explains in the same
 record, then the decision comes back to you. You can ask again. Only `ok`
 or `instead` closes the question. [Mermaid source](diagrams/explanation-loop.mmd).
 
+One escalation you will see regularly asks which next-iteration idea to
+specify next, with the agent's recommendation. Your `ok` starts a
+specification phase for that idea, where you confirm its falsifier;
+`instead <slug>` picks another.
+
 ### Your three answer forms
 
 Assume Cairn named the escalation `storage-choice`:
@@ -233,6 +238,10 @@ the agent make some decisions and put them in front of you without waiting.
 The agent assigns the level using the [decision rules](spec/decisions.md).
 Cairn records the declared level; it cannot assess whether the judgment was
 sound.
+
+A promotion from the backlog is one of these decisions. Read it for the
+requirement and falsifier the agent wrote; supersede it if the falsifier
+does not prove what you meant.
 
 You can ask:
 
@@ -442,9 +451,16 @@ Try the behavior yourself where that gives you useful information. A review
 record is free text, and Cairn cannot tell a careful review from an empty
 claim. The same limitation applies to a weak mechanism that always passes.
 
-Done finishes this commitment. It does not publish a release or start the
-next commitment. You choose the next goal, and the agent can prepare its
-requirements and roadmap entry for your agreement. Requirements intended
+Done finishes this commitment. It does not publish a release. When the
+backlog holds an idea inside the agreed specification, Cairn names
+`promote` instead of Done: the agent records a promotion decision, drafts
+the requirement and its falsifier, names the new commitment, and
+continues. That requirement's Status line reads `Agreed <date> by
+promotion <decision>`, so one search lists every requirement you did not
+confirm yourself. When the backlog is empty and next-iteration holds ideas
+that would change the contract, Cairn names an escalation: the agent
+recommends which to specify next and stops for your answer. Only when both
+are empty does the loop report Done and stop. Requirements intended
 to apply to every commitment are inherited only from files whose header
 contains `Scope: every commitment`; only their Agreed blocks are included.
 
@@ -586,7 +602,8 @@ by hand.
 | `.cairn/mechanisms/` | Which commands check which requirements and what files they read. |
 | `.cairn/evidence/` | Check results and the logs behind them. |
 | `.cairn/reviews/` | What the agent examined and the findings it recorded. |
-| `.cairn/backlog/` | Ideas captured but not selected for implementation. |
+| `.cairn/backlog/` | Ideas inside the agreed specification, promoted by the agent when a commitment completes. |
+| `.cairn/next-iteration/` | Ideas that would change an agreed requirement or the working agreement; they wait for your answer. |
 | `.cairn/in-progress` | The action claimed by this working tree; this file stays out of Git. |
 
 A requirement such as `APP-001` and a commitment name such as `save-drafts`

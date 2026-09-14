@@ -45,8 +45,10 @@ It is not a Git commit. One commitment can involve many Git commits.
 
 You and the agent agree on a goal and what would count as success. The agent
 then asks Cairn for the next action, does that work, and asks again. When a
-decision belongs to you, the agent presents it and waits. When Cairn reports
-Done, the agent stops; you choose whether and what to do next.
+decision belongs to you, the agent presents it and waits. When the
+commitment is complete, the agent promotes the next idea from the backlog and
+continues, or asks you which contract change to specify next, or stops at
+Done when nothing remains.
 
 The diagram summarizes the workflow. It does not imply that Cairn launches,
 pauses, or supervises your agent. [Mermaid source](docs/diagrams/work-loop.mmd).
@@ -58,7 +60,7 @@ pauses, or supervises your agent. [Mermaid source](docs/diagrams/work-loop.mmd).
 | Choose the goal and confirm the intended behavior. | Investigate, propose requirements, and explain trade-offs. | Read the agreed requirements and selected commitment. |
 | Challenge unclear choices and weak checks. | Implement, commit, run checks, and examine the work. | Record check results and determine whether they are current. |
 | Answer decisions that need your judgment. | Keep decisions and findings in the repository. | Point to the next recorded action or outstanding question. |
-| Review the result and choose the next goal. | Stop when the commitment is complete. | Report Done when its recorded conditions are met. |
+| Review promotions in the queue; answer one question per contract change. | Promote the next backlog idea, or ask which contract change comes next. | Report Done only when nothing remains the agent may decide. |
 
 ### What the three verdicts mean
 
@@ -66,10 +68,19 @@ pauses, or supervises your agent. [Mermaid source](docs/diagrams/work-loop.mmd).
 |---|---|---|
 | `Resolvable` | There is a named action the agent can take. This is normal progress, not a general error. | The agent. |
 | `Escalate` | A recorded question awaits your answer. | You. |
-| `Done` | The required checks are current and passing, the review has no open findings, and no earlier action is blocking completion. | You choose what happens next. |
+| `Done` | The required checks are current and passing, the review has no open findings, the backlog holds nothing to promote, and no contract change waits in next-iteration. | Nobody; the loop has nothing left to decide. |
 
 Done does not mean the whole product is finished, deployed, or guaranteed
 correct. It means the selected commitment meets Cairn's recorded conditions.
+
+Ideas the agent captures during the work go to one of two places. An idea
+that fits inside the agreed specification goes to the backlog, and the agent
+promotes it into the next commitment on its own, recording the decision for
+your review. An idea that would change an agreed requirement or the working
+agreement goes to next-iteration, and the agent asks you once, with a
+recommendation, before any of it is specified. Neither is a place to park
+unfinished work: an in-scope problem the agent cannot solve becomes a
+question to you, not a note.
 
 ## Install
 

@@ -8,10 +8,14 @@ prior meaning, this file wins.
 **Agreed.** The state of a requirement whose text and falsifier the
 developer has confirmed. An artifact is Agreed when the developer has
 confirmed it and every requirement in it is Agreed. Only Agreed
-requirements are contract.
+requirements are contract. A requirement promoted from the backlog is
+Agreed by the promotion decision that names it, and its Status: line
+names that decision.
 
-**Backlog.** Ideas captured during the loop but not promoted into a
-commitment. The scope valve writes here.
+**Backlog.** Ideas captured during the loop that fit inside the
+current specification and are not yet promoted into a commitment. The
+scope valve writes here. At Done, the loop promotes from here without
+the developer.
 
 **Blocking.** The decision level at which the loop stops for the
 developer. Defined in decisions.md.
@@ -42,6 +46,11 @@ until it is met or until a Blocking decision stops it.
 
 **Mechanism.** A program that checks a requirement and reports pass or
 fail. A test, a type check, a lint rule, a script.
+
+**Next-iteration.** Ideas captured during the loop that would change
+an Agreed requirement, its falsifier, or the working agreement. They
+enter a commitment only through a specification phase the developer
+confirms.
 
 **Observed.** The state of specification text derived from an existing
 codebase and not yet confirmed by the developer. Observed text describes

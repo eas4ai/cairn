@@ -242,13 +242,22 @@ Falsifier: the loop implements something no commitment includes.
 Falsifier: the agent identifies out-of-scope work and no artifact
 records it.
 
-[LOOP-029] A backlog item MUST NOT enter a commitment without the
-developer's confirmation.
-Falsifier: a commitment includes a requirement the developer did not
-confirm.
+[LOOP-029] A backlog item MUST NOT enter a commitment without a
+recorded promotion decision. A next-iteration item MUST NOT enter a
+commitment without the developer's confirmation.
+Falsifier: a commitment includes a requirement that neither a promotion
+decision nor the developer's confirmation covers.
+Status: Agreed 2026-09-14
 
-Capture is the agent's. Promotion changes what gets built, which is
-Blocking by the scale, so it is the developer's.
+Capture is the agent's. A backlog item is inside the specification, so
+promoting it changes nothing the developer agreed to: the agent decides
+it at Judged or Consequential and records it. A next-iteration item
+changes an Agreed requirement, its falsifier, or the working agreement,
+which is the Blocking row's change to what gets built, so it is the
+developer's. Revised 2026-09-14: the first text made every promotion
+the developer's, and a confirmation asked for every bounded item is
+given without reading. A confirmation that is always given is not a
+decision, and it spends the attention the Blocking decisions need.
 
 [LOOP-035] A commit made during a commitment MUST NOT change a file
 outside the declared inputs of that commitment's mechanisms, other than
@@ -922,3 +931,99 @@ remain inside role-input JSON rather than readable sections. and Status:
 in progress reports Done with current passing evidence, or valid open,
 resolved, or empty findings lose their established behavior.
 Status: Agreed 2026-09-07
+
+## Continuation
+
+Done was the developer's cue to name the next commitment by hand, and
+the stop repeated for every bounded item. Drafted 2026-09-14 on the
+developer's ruling that the loop continues through the backlog on its
+own and stops only for a change to the specification. Each requirement
+carries its own Status: line.
+
+The backlog holds ideas inside the specification. Next-iteration holds
+ideas that would change an Agreed requirement, its falsifier, or the
+working agreement. The agent sorts at capture; the developer moves a
+file to correct the sort. An item is promoted when its file carries a
+Promoted to: line.
+
+[LOOP-087] When every requirement in the current commitment is met and
+the backlog holds an item with no Promoted to: line, the loop MUST name
+promotion as the next action rather than Done.
+Falsifier: the commitment is complete, a backlog item carries no
+Promoted to: line, and wake prints Done.
+Status: Agreed 2026-09-14
+
+[LOOP-088] The agent MUST promote a backlog item by a decision record at
+Judged or Consequential that names the item, the requirement it drafts,
+and that requirement's falsifier. The promoted requirement's Status:
+line MUST name that decision.
+Falsifier: a requirement's Status: line names a promotion decision that
+no record under docs/decisions/ resolves, or a commitment file carries a
+Promoted from: line and no decision record names that backlog item.
+Status: Agreed 2026-09-14
+
+The marker is `Status: Agreed <date> by promotion <decision slug>`. It
+is the one search that answers which requirements the developer never
+confirmed. A requirement marked Agreed without the marker claims the
+developer's confirmation, and no mechanism observes that claim, as
+before this section.
+
+[LOOP-089] A commitment promoted from the backlog MUST NOT change the
+text or falsifier of an Agreed requirement or the working agreement.
+Falsifier: a commit inside a promoted commitment's footprint changes an
+Agreed requirement's digest or the working agreement file.
+Status: Agreed 2026-09-14
+
+[LOOP-090] When a promoted commitment needs a change LOOP-089 forbids,
+the agent MUST escalate before building it. The agent MUST record the
+item under next-iteration with the reason.
+Falsifier: a commit inside a promoted commitment's footprint changes an
+Agreed requirement's digest or the working agreement file, and no
+escalation names that commitment.
+Status: Agreed 2026-09-14
+
+Source review sometimes shows that a bounded item was not bounded. The
+route is the same as any other Blocking discovery: stop, write it down,
+ask. The larger change is not built under the smaller record.
+
+[LOOP-091] When every requirement in the current commitment is met, no
+backlog item lacks a Promoted to: line, and next-iteration holds an
+item, the loop MUST name an escalation that recommends which item to
+specify next rather than Done.
+Falsifier: the commitment is complete, the backlog holds no item without
+a Promoted to: line, next-iteration holds an item, and wake prints Done.
+Status: Agreed 2026-09-14
+
+When both the backlog and next-iteration are empty, Done means what it
+meant before: every requirement is met, and the agent stops. The
+developer's `ok` to a next-iteration escalation starts a specification
+phase for that item, in which the developer confirms its falsifier
+(SPEC-002). The loop resumes with the commitment that phase names.
+
+Neither directory is deferral. PKG-013 says a concept is in the
+specification and built, or absent until a named failure brings it in,
+and there is no third state. Work a commitment includes is finished or
+escalated. An agent that cannot finish it has a real problem, and the
+evidence of that problem belongs in an escalation the developer reads,
+not in a capture file that lets the commitment report Done.
+
+[LOOP-092] The agent MUST NOT capture work the current commitment
+includes to the backlog or next-iteration. When the agent cannot
+complete such work, the agent MUST escalate with the evidence of the
+problem.
+Falsifier: a file added under .cairn/backlog/ or .cairn/next-iteration/
+by a commit inside the commitment's footprint names a requirement of
+that commitment on its Surfaced from: or Changes: line, carries no
+Outside because: line, and no escalation names the file.
+Status: Agreed 2026-09-14
+
+The Outside because: line is the agent's stated reason that the idea is
+not the commitment's work. No mechanism judges the reason. The line
+makes the claim explicit and attributable in the diff, which is what
+the review queue and the developer's reading need.
+
+[LOOP-093] A next-iteration item MUST name the Agreed requirement or
+the working agreement it would change.
+Falsifier: a file under .cairn/next-iteration/ carries no Changes: line
+naming a requirement identifier or the working agreement.
+Status: Agreed 2026-09-14

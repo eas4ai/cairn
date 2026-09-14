@@ -78,3 +78,8 @@ LOOP-036 was drafted from the backlog on 2026-09-04, presented with its
 falsifier, and confirmed the same way. PKG-014 was drafted the same day
 on the developer's instruction to fix the remaining backlog items, its
 falsifier open to correction by exception.
+
+A requirement promoted from the backlog carries `Status: Agreed <date>
+by promotion <decision slug>`. The decision, not the developer,
+confirmed its falsifier (LOOP-088). The marker is the search that lists
+every requirement the developer never read.

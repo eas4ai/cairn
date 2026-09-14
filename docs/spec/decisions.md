@@ -23,6 +23,16 @@ The agent takes the first level that fits.
 | Consequential | Reversal is expensive, or it crosses the project boundary. | Decide. Write the record. Add to the review queue. |
 | Blocking | It changes what gets built, needs a fact only the developer holds, is irreversible and externally visible, has had three attempts without new passing evidence, or the agent has no recommendation. | Stop. Escalate. |
 
+Promoting a backlog item is inside the specification: it changes
+nothing the developer agreed to, so it takes Judged or Consequential
+by reversal cost and never Blocking. A change to an Agreed
+requirement, its falsifier, or the working agreement is the Blocking
+row's change to what gets built, and it reaches the developer through
+next-iteration (LOOP-029). A confirmation asked for every bounded
+promotion is given without reading; a confirmation that is always
+given is not a decision, and it spends the attention the Blocking
+decisions need.
+
 [DEC-001] The agent MUST assign a level to every decision that has an
 alternative.
 Falsifier: a decision record exists with no level.

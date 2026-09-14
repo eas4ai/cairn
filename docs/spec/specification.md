@@ -18,9 +18,11 @@ Falsifier: a file declaring a requirement prefix contains no requirement.
 ## Agreement
 
 [SPEC-002] The agent MUST NOT record a requirement as Agreed before the
-developer confirms its falsifier.
-Falsifier: a requirement carries an Agreed marker and no confirmed
-falsifier.
+developer confirms its falsifier or a promotion decision under LOOP-088
+names it.
+Falsifier: a requirement carries an Agreed marker, no confirmed
+falsifier, and no promotion decision in its Status: line.
+Status: Agreed 2026-09-14
 
 [SPEC-013] The agent MUST NOT record a requirement as Agreed unless it
 can name a mechanism that could observe the falsifier.

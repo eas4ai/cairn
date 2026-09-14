@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: malformed-review-findings-cannot-complete-work
+Current: the-loop-continues-past-done
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -279,3 +279,12 @@ retention behavior under LOOP-084 and LOOP-085. No runtime behavior changes.
 Developer-requested repair for silently discarded review findings.
 Delivers LOOP-086 while preserving LOOP-020 and LOOP-033.
 [Commitment](../commitments/malformed-review-findings-cannot-complete-work.md).
+
+## The loop continues past Done
+
+Requested by the developer on 2026-09-14. Done stops the loop only when
+nothing remains the agent may decide: backlog items are promoted by a
+recorded decision, next-iteration items wait for the developer and are
+asked for once with a recommendation, and neither directory is deferral.
+Delivers LOOP-087 through LOOP-093 and revisits LOOP-029 and SPEC-002.
+[Commitment](../commitments/the-loop-continues-past-done.md).

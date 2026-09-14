@@ -6,7 +6,7 @@ examined:
   - The continuation implementation at fab3fbf: parseSpec's promotion field, requirementSet, currentCommitment, captureVerdict, promotedContractVerdict, the wake ending, backlog options, help, spec-lint, tests/continuation.test.mjs, and the commitment's deliverables list.
 findings:
   - resolved: LOOP-029's first clause had no test and no kernel check; a requirement marked Agreed by promotion of a decision that does not exist was accepted by wake. The marker check under LOOP-088 and its tests close it.
-  - open: The working agreement and its template still say stop at Done and state no promote, next-iteration, or no-deferral move, and no test reads them for those moves.
+  - resolved: The working agreement and its template said stop at Done and stated no promote, next-iteration, or no-deferral move; both now state them, byte for byte the same, and the skills suite reads them.
   - open: The new-project and existing-project skills do not name the two capture directories or the sort test.
   - open: Four backlog items that change the contract are not under next-iteration with Changes: lines, and prepare-a-next-iteration is not stamped as absorbed.
   - open: The README and the manual do not describe promotion, next-iteration, or the no-deferral rule.

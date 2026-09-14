@@ -809,8 +809,17 @@ function wakeVerdict(root) {
   const items = (dir, keep) => list(join(root, ".cairn", dir)).filter((n) => n.endsWith(".md") && keep(fields(read(join(root, ".cairn", dir, n))))).map((n) => n.replace(/\.md$/, ""));
   const candidates = items("backlog", (f) => !("Promoted to" in f));
   if (candidates.length) return { verdict: "Resolvable", action: "promote", why: `${complete}; the backlog holds ${candidates.length} item(s) to promote: ${candidates.join(", ")}; choose one by judgment, record the promotion decision, write its requirement and commitment, and move Current: (LOOP-087)` };
-  const waiting = items("next-iteration", () => true);
-  if (waiting.length) return { verdict: "Resolvable", action: "escalate next-iteration", why: `${complete}; the backlog is empty and next-iteration holds ${waiting.length} item(s): ${waiting.join(", ")}; raise one escalation recommending which to specify next, with the alternatives, and stop (LOOP-091)` };
+  const waiting = items("next-iteration", (f) => !("Promoted to" in f));
+  if (waiting.length) {
+    // An answered escalation names the specification of the chosen item: the
+    // recommended one on ok, the named one on instead (LOOP-091).
+    const answered = escalations(root).filter((e) => e.turn === "closed" && (e.Concerns ?? "").split(/[\s,]+/).includes("LOOP-091") && Number.isFinite(Date.parse(e.Answered)))
+      .sort((a, b) => Date.parse(b.Answered) - Date.parse(a.Answered))[0];
+    const text = answered ? (/^instead\s/.test(answered.Answer ?? "") ? answered.Answer : answered.Recommend ?? "") : "";
+    const chosen = waiting.find((n) => text.includes(n));
+    if (chosen) return { verdict: "Resolvable", action: `specify ${chosen}`, why: `${complete}; ${answered.name} was answered ${answered.Answer}; run the specification phase for ${chosen}: draft its requirement and falsifier for the developer to confirm, write the commitment, move Current:, and stamp the item Promoted to: (LOOP-091)` };
+    return { verdict: "Resolvable", action: "escalate next-iteration", why: `${complete}; the backlog is empty and next-iteration holds ${waiting.length} item(s): ${waiting.join(", ")}; raise one escalation recommending which to specify next, with the alternatives, and stop (LOOP-091)` };
+  }
   return { verdict: "Done", action: c.slug, why: complete };
 }
 

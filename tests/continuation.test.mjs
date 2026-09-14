@@ -139,3 +139,20 @@ test("a next-iteration item names what it would change, and the capture refuses 
   assert.equal(r.status, 3); assert.match(r.stderr, /never overwrites/);
   assert.ok(readFileSync(join(root, ".cairn/next-iteration/twice.md"), "utf8").includes("Once."));
 });
+
+test("an answered next-iteration escalation makes wake name specify: the recommended item on ok, the named one on instead (LOOP-091)", () => {
+  for (const [answer, chosen] of [["ok", "change-the-contract"], ["instead the-other-change", "the-other-change"]]) {
+    const root = repo(); green(root);
+    for (const title of ["Change the contract", "The other change"]) cairn(root, "backlog", "--next-iteration", "--changes", "R-009", "--title", title, "--body", "Because.");
+    commit(root, "capture");
+    assert.match(wake(root), /^Resolvable: escalate next-iteration\n/);
+    const r = cairn(root, "escalate", "--concerns", "LOOP-091", "--question", "Which next?", "--recommend", "Specify change-the-contract next.", "--because", "y", "--if-wrong", "z", "--instead", "instead the-other-change");
+    assert.equal(r.status, 0, r.stderr); commit(root, "ask");
+    assert.match(wake(root), /^Escalate: /);
+    assert.equal(cairn(root, "answer", "loop-091", ...answer.split(" ")).status, 0); commit(root, "answer");
+    const out = wake(root);
+    assert.match(out, new RegExp(`^Resolvable: specify ${chosen}\\n`)); assert.match(out, /LOOP-091/);
+    appendFileSync(join(root, ".cairn/next-iteration", `${chosen}.md`), "Promoted to: later\n"); commit(root, "stamp");
+    assert.match(wake(root), /^Resolvable: escalate next-iteration\n/, "the other item still waits and the old answer chooses nothing");
+  }
+});

@@ -1,5 +1,7 @@
 # Cairn installs by one link script, with no plugin and no hook
 
+Superseded by: cairn-ships-two-harness-hooks-and-the-session-start-hook-is-the-install
+
 Level: Consequential
 Decided by: agent
 Rests on: PKG-014, PKG-005, PKG-006, PKG-012, PKG-001

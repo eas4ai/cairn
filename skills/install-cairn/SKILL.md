@@ -26,20 +26,38 @@ inspection, not a reset. Recheck help after an update.
 
 ## Install the command
 
-For a fresh installation with both destinations available:
+For a fresh installation, keep a persistent checkout and let the
+session-start hook do the linking:
 
 ```sh
-mkdir -p "$HOME/.local/share" "$HOME/.local/bin"
+mkdir -p "$HOME/.local/share"
 git clone https://github.com/eas4ai/cairn.git "$HOME/.local/share/cairn"
-ln -s "$HOME/.local/share/cairn/bin/cairn.mjs" "$HOME/.local/bin/cairn"
+node "$HOME/.local/share/cairn/bin/hook.mjs" session-start
 export PATH="$HOME/.local/bin:$PATH"
 cairn --help
 ```
 
-Keep the checkout in place because the link points into it. This links
-only the executable. The skills are already installed; running Cairn's
-combined `scripts/link.sh` installer here can conflict with skills managed
-by the skills CLI.
+The hook links `$HOME/.local/bin/cairn` to the checkout's `bin/cairn.mjs`
+when nothing is there, and leaves any existing file or link alone. Keep
+the checkout in place because the link points into it.
+
+Then register the two hooks once, so every later session starts from
+the wake verdict and a stop is refused while the verdict is Resolvable.
+Use the absolute checkout path in place of `<checkout>`. For Claude
+Code, merge into `$HOME/.claude/settings.json`, preserving its other
+contents:
+
+```json
+{ "hooks": {
+  "SessionStart": [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs session-start" }] }],
+  "Stop":         [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs stop" }] }] } }
+```
+
+For Codex, write the same object to `$HOME/.codex/hooks.json`. Show the
+user the entries you wrote. Another harness that passes JSON on standard
+input and reads standard output takes the same two commands under its
+own event names. The hooks are optional: the working agreement is the
+path an agent takes without them.
 
 If the link exists but the command is not found, fix PATH. Add the export
 line to the appropriate startup file for the user's shell only if needed,
@@ -59,5 +77,6 @@ software or `existing-project` for an existing codebase. Installation alone
 does not authorize adopting a project, writing AGENTS.md, or creating specs.
 
 For updates, the checkout and skills are separate: `git pull --ff-only`
-updates a clean Cairn checkout; `npx skills update install-cairn new-project
-existing-project` refreshes skills installed with that CLI.
+updates a clean Cairn checkout, and the link and hooks follow it; `npx
+skills update install-cairn new-project existing-project` refreshes
+skills installed with that CLI.

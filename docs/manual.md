@@ -612,40 +612,47 @@ memorize. Cairn normally prints the relevant label in its next action.
 
 ## Installation details
 
-The [checkout installation](../README.md#install-from-a-checkout) uses the Bash script
-`scripts/link.sh` in the Cairn checkout. The defaults are:
+The [checkout installation](../README.md#install-from-a-checkout) uses the
+session-start hook, `node <checkout>/bin/hook.mjs session-start`. On its
+first run it links `$HOME/.local/bin/cairn` to the checkout's `bin/cairn.mjs`.
+It leaves any existing file or link there alone, so inspect one yourself
+before deciding what should replace it. Inside a Cairn project it also
+prints the wake verdict, which is what it does at every session start once
+registered.
 
-| Link | Target |
-|---|---|
-| `$HOME/.local/bin/cairn` | This checkout's `bin/cairn.mjs`. |
-| `$HOME/.agents/skills/install-cairn` | The executable setup skill. |
-| `$HOME/.agents/skills/new-project` | This checkout's new-project skill. |
-| `$HOME/.agents/skills/existing-project` | This checkout's existing-project skill. |
+Register the hooks once with your agent. Claude Code reads
+`$HOME/.claude/settings.json`; Codex reads `$HOME/.codex/hooks.json`. Both
+take the same two commands, `node <checkout>/bin/hook.mjs session-start` and
+`node <checkout>/bin/hook.mjs stop`, under their `SessionStart` and `Stop`
+events. The stop hook runs `cairn wake` when the agent tries to stop and
+refuses the stop, with the verdict as the reason, only while the verdict is
+Resolvable. At Escalate or Done, outside a Cairn project, or on any error it
+lets the agent stop. Both harnesses cap how many times in a row a stop can
+be refused. The hooks are optional: the working agreement is the path an
+agent takes without them.
 
-Muse reads `$HOME/.agents/skills`, so the default checkout install
-reaches it. Its project rules file is `AGENTS.md`, the working agreement
-the project skills write.
+Skills live in your agent's skill directory. The skills CLI below puts them
+there; from a checkout, link each folder under `skills/` into that directory
+yourself. Muse reads `$HOME/.agents/skills`. Its project rules file is
+`AGENTS.md`, the working agreement the project skills write.
 
-Use `--bin DIR` or `--skills DIR` to change those locations. Repeat
-`--skills DIR` when installing into several agent applications. A conflicting
-link is kept unless you pass `--force`. A real file or directory is kept even
-with `--force`; inspect it yourself before deciding what should replace it.
-
-Run `scripts/link.sh --unlink` from the Cairn checkout to remove links pointing
-at that checkout. Supply the same custom directories if you used them during
-installation. It does not remove your project records.
+To remove an installation, delete the hook entries from your agent's
+settings and remove `$HOME/.local/bin/cairn` and the skill links. That does
+not remove your project records.
 
 To update a clean installation checkout, use `git pull --ff-only` there.
-The links follow the updated files. This updates the Cairn tool checkout,
-not your project's specifications. If Git refuses because the checkout has
-diverged, inspect it before proceeding. This installation update is separate
-from the project's rule for merging another development branch with `--no-ff`.
+The link and the hooks follow the updated files. This updates the Cairn tool
+checkout, not your project's specifications. If Git refuses because the
+checkout has diverged, inspect it before proceeding. This installation
+update is separate from the project's rule for merging another development
+branch with `--no-ff`.
 
 The CLI also supports `--root DIR`, for example `cairn wake --root ../my-app`,
 so you can name a project root without changing directories. There is no
-`cairn status`, `cairn init`, or `cairn check stale` command in this source.
-Use `wake` for the next action and `check <REQ>` to select a requirement's
-mechanism.
+`cairn status` or `cairn init` command in this source. Use `wake` for the
+next action, `check <REQ>` to select a requirement's mechanism, and
+`check --stale` to rerun only the mechanisms whose evidence is missing or
+stale.
 
 `wake` and `check` return 0 for Done, 1 for Resolvable, 2 for Escalate, and 3
 for a usage or execution error. A `check` can return 1 after its tests pass
@@ -694,10 +701,10 @@ npx skills list --global --agent codex
 In Muse, `muse skills list` shows the installed skills once they are in
 `$HOME/.agents/skills`.
 
-Use one installer for each skill location. `scripts/link.sh` links skills
-directly to your checkout; the skills CLI manages its own installed copies.
-The install skill links only the executable, leaving those skill copies
-in place. Keep its checkout because the executable link points into it.
+The skills CLI manages its own installed copies of the skills. The install
+skill links only the executable, through the session-start hook, and
+registers the two hooks, leaving those skill copies in place. Keep its
+checkout because the executable link and the hook commands point into it.
 
 A `git pull --ff-only` in a clean Cairn checkout updates the executable.
 Refresh skills managed by the skills CLI separately:
@@ -758,7 +765,7 @@ answer, or act as a permission system for the coding agent.
 | Scope declarations, restoration, and retention | `breaches()`, `scopeApprovals()`, and `retentionChanged()` in [the CLI](../bin/cairn.mjs) | [Scope tests](../tests/scope.test.mjs), [restoration tests](../tests/scope-recovery.test.mjs), [retention tests](../tests/scope-retention.test.mjs) |
 | Interrupted work and execution ownership | `reconcile()` and `checkOwner()` in [the CLI](../bin/cairn.mjs) | [Recovery tests](../tests/recovery.test.mjs), [ownership tests](../tests/check-ownership.test.mjs) |
 | Decision levels and the review queue | [Decision rules](spec/decisions.md), `decide()` in [the CLI](../bin/cairn.mjs) | [Decision tests](../tests/decide.test.mjs) |
-| Installation and link handling | [Link script](../scripts/link.sh) | [Installation tests](../tests/install.test.mjs) |
+| Installation and the harness hooks | [The hooks](../bin/hook.mjs) | [Hook tests](../tests/hooks.test.mjs) |
 
 The diagrams are simplified views of those workflows, not a second set of
 rules. Their [Mermaid sources](diagrams/) are rendered to SVG with

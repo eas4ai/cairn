@@ -16,7 +16,9 @@ unsound mechanisms, and the agent must demonstrate what makes them fail.
 Wake. Before anything else, run `cairn wake`. Read the glossary, the
 keystone, the roadmap, the current commitment, and the decision records
 for what it names. Nothing you remember from an earlier session counts; the
-repository does.
+repository does. When the harness runs Cairn's hooks, the verdict arrives
+at session start and a stop is refused while it is Resolvable; this
+agreement holds without them.
 
 Act on the verdict, and only on it.
 

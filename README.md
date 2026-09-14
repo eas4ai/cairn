@@ -110,22 +110,21 @@ use `new-project` or `existing-project` to begin. See the manual for
 
 ### Install from a checkout
 
-If you prefer to install the command and skills yourself, use this method
-instead of the skills CLI for the same skill locations.
+If you prefer to set things up yourself, use this method instead of the
+skills CLI.
 
-Have Node, Git, and Bash available. Run these commands in the directory
-where you want to keep the Cairn checkout:
+Have Node and Git available. Run these commands in the directory where
+you want to keep the Cairn checkout:
 
 ```sh
 git clone https://github.com/eas4ai/cairn.git
-cairn/scripts/link.sh
+node cairn/bin/hook.mjs session-start
 ```
 
-The installer links the `cairn` command into `$HOME/.local/bin` and the
-`install-cairn`, `new-project`, and `existing-project` skills into
-`$HOME/.agents/skills`. Muse reads that directory, so the default
-install reaches it with no extra flag.
-It leaves existing files in place and reports conflicting links.
+The second command links `$HOME/.local/bin/cairn` to the checkout's
+`bin/cairn.mjs` when nothing is there. It is the same hook that runs at
+every session start once registered, so inside a Cairn project it also
+prints the wake verdict.
 
 Make sure `$HOME/.local/bin` is on your `PATH`. If it is not, add this to
 your shell's startup file, then open a new terminal:
@@ -144,13 +143,25 @@ cairn --help
 `cairn --help` (or `cairn -h`) lists commands, options, and examples.
 It works outside a project and does not run any checks or change records.
 
-If your agent reads skills from another directory, use the installer's
-`--skills DIR` option. It can be repeated for more than one directory.
-`--bin DIR` changes the command location. See the
-[installation details](docs/manual.md#installation-details) for conflicts,
-updates, and removal.
+Then register the two hooks with your agent, once. For Claude Code, merge
+this into `$HOME/.claude/settings.json`; for Codex, write it to
+`$HOME/.codex/hooks.json`. `<checkout>` is the absolute path of the clone:
 
-The links point into this checkout, so keep it in place. There is no
+```json
+{ "hooks": {
+  "SessionStart": [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs session-start" }] }],
+  "Stop":         [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs stop" }] }] } }
+```
+
+From then on every session starts from the wake verdict, and the agent
+cannot stop while the verdict is Resolvable. The hooks are optional: the
+working agreement in AGENTS.md is the path an agent takes without them.
+Skills go into your agent's skill directory through the skills CLI above,
+or by linking each folder under `skills/` yourself. See the
+[installation details](docs/manual.md#installation-details) for removal
+and updates.
+
+The link points into this checkout, so keep it in place. There is no
 `cairn init` command: the project skills help the agent prepare your project.
 
 ## Start with your project

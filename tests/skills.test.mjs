@@ -77,3 +77,12 @@ test("the skill requires a falsifier on every requirement, a MAY included (SPEC-
   has(NEW, "the falsifier is the state in which the permission is withheld", "SPEC-025: what a permission's falsifier is");
   has(NEW, "A MAY with no observable falsifier is not recorded", "SPEC-013 route");
 });
+test("the working agreement names the hooks as optional and the install skill registers them for two harnesses (PKG-006, PKG-018, PKG-019)", () => {
+  has(TEMPLATE, "When the harness runs Cairn's hooks, the verdict arrives at session start and a stop is refused while it is Resolvable; this agreement holds without them", "hooks are optional");
+  const INSTALL = flat("../skills/install-cairn/SKILL.md");
+  has(INSTALL, "bin/hook.mjs session-start", "session-start registration");
+  has(INSTALL, "bin/hook.mjs stop", "stop registration");
+  has(INSTALL, ".claude/settings.json", "Claude Code settings path");
+  has(INSTALL, ".codex/hooks.json", "Codex hooks path");
+  lacks(INSTALL, "link.sh", "the link script is retired");
+});

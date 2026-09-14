@@ -14,4 +14,4 @@ One file, bin/hook.mjs, with two modes. stop: when the harness asks whether the 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 8596e21a4c40843fdbcf3d7fb8c3463b3864d9b8 Hooks keep the agent in the loop

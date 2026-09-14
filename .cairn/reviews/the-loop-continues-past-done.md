@@ -1,5 +1,5 @@
 commitment: the-loop-continues-past-done
-commit: fab3fbf5b233e601442e65678f8047da918fb198
+commit: 7fc5e1ff4b5762153056d4775612e3b66aaf77c0
 examined:
   - node-test against the revised LOOP-029: tests/scope.test.mjs, the kernel's requirementSet and currentCommitment, and a throwaway fixture carrying a promotion marker.
   - spec-lint against the revised SPEC-002 with four temporary spec directories.
@@ -98,3 +98,16 @@ tests/agreement.test.mjs, which becomes part of node-test's evidence.
 Self-audit against the production rules: the change is bounded to the
 nine requirements, adds no dependency, keeps the kernel at 1306 of
 1500 lines, and every check reported here ran and passed.
+
+## Review at 7fc5e1f, 2026-09-14
+
+Since fab3fbf the working agreement and its template gained the Done
+wording, the promote and escalate next-iteration moves, the two capture
+destinations, the no-deferral paragraph, and the developer's new last
+paragraph; tests/skills.test.mjs reads each phrase from the template and
+the byte-for-byte check keeps AGENTS.md identical to it. The suite is
+369 passing and both lints are clean. Read the new paragraphs against
+LOOP-087 through LOOP-093 and LOOP-029: each move names the command,
+the record, and the stop. No new finding. Three findings remain open:
+the skills, this repository's capture sorting, and the human
+documentation. No code changed during this review.

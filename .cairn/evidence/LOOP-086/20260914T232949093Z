@@ -1,0 +1,21 @@
+requirement: LOOP-086
+requirement_digest: sha256:14206cdd5e56f29f33613252e587590bca7e939546f50786e05ff6a1cf303d99
+sequence: 9
+history_digest: sha256:5e3b9177a484d1c6ba328c0c4e56111068ee775eb95fcc0261bc50057b164305
+mechanism: node-test
+commit: 7fda1d6
+inputs_digest: sha256:6da89224bdceeab5a34d8caaabd403402338363b5084f20f185c4225231de6b3
+mechanism_digest: sha256:36969afd64690d1f9cdc642f2a914cee330f2a9ce7ad118c08f6fe585cda4b33
+inputs_detail: .cairn/evidence/LOOP-036/20260914T232928561Z-1008753.inputs.json
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:c8b4481337d244d89b4a12c61a5beed08f62ebe01f1b023941737683ffe261ec
+output: .cairn/evidence/LOOP-036/20260914T232928561Z-1008753.out
+stderr_output: .cairn/evidence/LOOP-036/20260914T232928561Z-1008753.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-14T23:29:49.085Z

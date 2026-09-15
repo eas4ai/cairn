@@ -1,12 +1,13 @@
 // cairn decide: a structured decision record, queued when Consequential.
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const CLI = new URL("../bin/cairn.mjs", import.meta.url).pathname;
+const CLI = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
 function repo() {
   const root = mkdtempSync(join(tmpdir(), "cairn-"));
   mkdirSync(join(root, "docs/decisions"), { recursive: true });

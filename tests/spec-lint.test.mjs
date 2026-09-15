@@ -1,14 +1,15 @@
 // The spec lint against fixtures that realize each rule's falsifier, and
 // against this repository's own specification.
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const LINT = new URL("../scripts/spec-lint.mjs", import.meta.url).pathname;
-const ROOT = new URL("..", import.meta.url).pathname;
+const LINT = fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url));
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const lint = (dir) => spawnSync("node", [LINT, dir], { encoding: "utf8" });
 function fixture(text) { const d = mkdtempSync(join(tmpdir(), "lint-")); writeFileSync(join(d, "x.md"), text); return d; }
 const AGREED = "# X\n\nStatus: Agreed 2026-09-04\nPrefix: X\n\n";

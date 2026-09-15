@@ -3,6 +3,7 @@
 // for once, a promotion marker must resolve, a promoted commitment must
 // not change the contract, and neither directory is deferral.
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { writeFileSync, readFileSync, existsSync, mkdirSync, appendFileSync, mkdtempSync } from "node:fs";
@@ -10,7 +11,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as base, cairn, commit, review, fromFile, head } from "./helpers.mjs";
 
-const LINT = new URL("../scripts/spec-lint.mjs", import.meta.url).pathname;
+const LINT = fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url));
 const lint = (dir) => spawnSync("node", [LINT, dir], { encoding: "utf8" });
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
 const green = (root) => { cairn(root, "check"); review(root); commit(root, "green"); };
@@ -19,7 +20,7 @@ const SPEC3 = (status) => `# Test\n\nStatus: Agreed 2026-09-04\nPrefix: R\n\n[R-
 const PROMOTED = "# First\n\nSlug: first\nRequirements: R-001, R-002\nPromoted from: some-item\n";
 // A realized decision record that names the promoted item.
 const decided = (root, slug = "promote-some-item") => {
-  writeFileSync(join(root, "docs/decisions", `${slug}.md`), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nPromote .cairn/backlog/some-item.md as R-003.\n\n## Realized by\n\n- ${head(root)} init\n`);
+  writeFileSync(join(root, "docs/decisions", `${slug}.md`), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nPromotes: some-item\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nPromote .cairn/backlog/some-item.md as R-003.\n\n## Realized by\n\n- ${head(root)} init\n`);
   commit(root, "decision");
 };
 const escalate = (root, concerns, question) => {
@@ -92,7 +93,7 @@ test("a promoted commitment that changes an Agreed requirement or the working ag
   let out = wake(promoted);
   assert.match(out, /^Resolvable: escalate first\n/); assert.match(out, /R-001/); assert.match(out, /LOOP-089/);
   assert.doesNotMatch(wake(plain), /escalate first/);
-  escalate(promoted, "LOOP-089", "The promoted commitment first needs R-001 to change."); commit(promoted, "ask");
+  escalate(promoted, "R-001", "The promoted commitment needs R-001 to change."); commit(promoted, "ask");
   assert.match(wake(promoted), /^Escalate: /);
 
   const agreement = repo({ "docs/commitments/first.md": PROMOTED }); decided(agreement); green(agreement);
@@ -161,4 +162,36 @@ test("a by deference marker resolves to a decision record like a promotion marke
   assert.match(wake(root), /^Resolvable: run R-001/);
   const r = lint(join(root, "docs/spec"));
   assert.equal(r.status, 0, r.stdout);
+});
+
+test("the LOOP-090 gate reads the Concerns line, not the slug as a substring (LOOP-114)", () => {
+  const root = repo({ "docs/commitments/first.md": PROMOTED }); decided(root); green(root);
+  escalate(root, "R-002", "Which should we do first?"); cairn(root, "answer", "r-002", "ok"); commit(root, "an unrelated answered escalation mentioning first");
+  writeFileSync(join(root, "docs/spec/test.md"), readFileSync(join(root, "docs/spec/test.md"), "utf8").replace("The thing MUST work.", "The thing MUST work well.")); commit(root, "revise R-001");
+  assert.match(wake(root), /^Resolvable: escalate first\n/, "prose is not a record");
+  escalate(root, "R-001", "R-001 must change."); commit(root, "the escalation that names it");
+  assert.match(wake(root), /^Escalate: /);
+});
+
+test("the LOOP-088 check reads the Promotes line, and decide --promotes writes it (LOOP-115)", () => {
+  const root = repo({ "docs/commitments/first.md": PROMOTED });
+  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nWe considered some-item.\n\n## Realized by\n\n- ${head(root)} init\n`); commit(root, "prose only");
+  let out = wake(root);
+  assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/); assert.match(out, /Promotes/); assert.match(out, /LOOP-115/);
+  const r = cairn(root, "decide", "--title", "Promote it properly", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", "some-item");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(readFileSync(join(root, "docs/decisions/promote-it-properly.md"), "utf8"), /^Promotes: some-item$/m);
+  appendFileSync(join(root, "docs/decisions/promote-it-properly.md"), `- ${head(root)} init\n`); commit(root, "recorded");
+  assert.doesNotMatch(wake(root), /repair docs\/commitments/);
+});
+
+test("the activation commit of a promoted commitment is inside the LOOP-089 comparison (LOOP-116)", () => {
+  const root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: zero\n", "docs/commitments/zero.md": "# Zero\n\nSlug: zero\nRequirements: R-001\n" });
+  decided(root);
+  writeFileSync(join(root, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n");
+  writeFileSync(join(root, "docs/commitments/first.md"), PROMOTED);
+  writeFileSync(join(root, "docs/spec/test.md"), readFileSync(join(root, "docs/spec/test.md"), "utf8").replace("The thing MUST work.", "The thing MUST work differently."));
+  commit(root, "activate first and rewrite R-001 in one commit");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: escalate first\n/, out); assert.match(out, /R-001/);
 });

@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
@@ -7,7 +8,7 @@ import { tmpdir } from "node:os";
 import { parseSpec } from "../bin/spec.mjs";
 import { repo, cairn, passing, review } from "./helpers.mjs";
 
-const LINT = new URL("../scripts/spec-lint.mjs", import.meta.url).pathname;
+const LINT = fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url));
 const commitment = "# First\n\nRequirements: R-003\n";
 const extra = (header, status, falsifier = true) => `# Extra\n\n${header}\nPrefix: R\n\n[R-003] The service MUST reject an empty request.\n${falsifier ? "Falsifier: An empty request succeeds.\n" : ""}${status ? `Status: ${status}\n` : ""}`;
 const setup = (text) => repo({ "docs/spec/extra.md": text, "docs/commitments/first.md": commitment, ".cairn/mechanisms/m": passing("R-003") });

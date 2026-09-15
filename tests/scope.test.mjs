@@ -33,10 +33,13 @@ test("a commit inside the footprint: check runs; outside it: check names the pat
   assert.match(cairn(root, "wake").stdout, /^Resolvable: scope unrelated\.txt/, "wake reports the same, ahead of mechanisms");
 });
 
-test("a file under .cairn/ or docs/ is never a breach", () => {
+test("Cairn's records are never a breach; another file under docs/ is (LOOP-117)", () => {
   const root = repo(); green(root);
-  writeFileSync(join(root, "docs/notes.md"), "n\n"); writeFileSync(join(root, ".cairn/backlog/x.md"), "# x\n\nPromoted to: later\n"); commit(root); review(root);
+  writeFileSync(join(root, "docs/spec/notes.md"), "# Notes\n"); writeFileSync(join(root, "docs/recon.md"), "# Recon\n"); writeFileSync(join(root, ".cairn/backlog/x.md"), "# x\n\nPromoted to: later\n"); commit(root); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/);
+  writeFileSync(join(root, "docs/notes.md"), "n\n"); commit(root); review(root);
+  const out = cairn(root, "wake").stdout;
+  assert.match(out, /^Resolvable: scope docs\/notes\.md/); assert.match(out, /LOOP-035/);
 });
 
 test("declaring the path as an input clears the breach", () => {

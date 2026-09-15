@@ -1303,3 +1303,50 @@ say so rather than name the decision as unbuilt.
 Falsifier: a depth-1 clone names build for a decision realized by a
 commit outside its history.
 Status: Agreed 2026-09-15
+
+## Gates read record fields
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the third remediation commitment. The LOOP-089 gate and the LOOP-088
+check matched a slug or an item name as a substring anywhere in any
+escalation or decision, so an unrelated answered escalation whose
+question contained the word "first" let a promoted commitment named
+first change Agreed text unseen; and the activation commit of a
+promoted commitment was outside the comparison.
+
+[LOOP-114] The loop MUST recognize the escalation that covers a
+promoted commitment's contract change by a Concerns line naming every
+changed requirement, with LOOP-036 standing for the working agreement.
+Falsifier: an escalation that mentions the commitment's slug in prose
+and names none of the changed requirements silences the LOOP-090
+gate.
+Status: Agreed 2026-09-15
+
+[LOOP-115] The loop MUST recognize the promotion record of a promoted
+commitment by a Promotes line naming the item.
+Falsifier: a decision record that mentions the item in prose and
+carries no Promotes line satisfies the LOOP-088 check.
+Status: Agreed 2026-09-15
+
+`cairn decide --promotes <item>` writes the line into the record's
+header. A promotion recorded before this rule names its item in prose
+only; it is history, and the check reads the current commitment's
+record.
+
+[LOOP-116] The loop MUST compare a promoted commitment's Agreed text
+against the tree before the commit that activated it.
+Falsifier: an activation commit that rewrites an Agreed requirement
+passes the LOOP-089 gate.
+Status: Agreed 2026-09-15
+
+[LOOP-117] The loop MUST exempt from the footprint only Cairn's
+records: the specification, commitments, decisions, and recon report
+under docs/, the working agreement and its include file, .gitignore,
+and .cairn/.
+Falsifier: a commit inside a commitment changes a file under docs/
+that is none of those and that no mechanism declares, and wake reports
+no breach.
+Status: Agreed 2026-09-15
+
+LOOP-035 said records; the kernel exempted every path under docs/. A
+project whose deliverables live there had no footprint over them.

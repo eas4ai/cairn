@@ -2,14 +2,15 @@
 // this repository. Fixtures are git repositories, because the lint reads
 // the tracked set.
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-const LINT = new URL("../scripts/pkg-lint.mjs", import.meta.url).pathname;
-const ROOT = new URL("..", import.meta.url).pathname;
+const LINT = fileURLToPath(new URL("../scripts/pkg-lint.mjs", import.meta.url));
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const git = (root, ...a) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd: root, encoding: "utf8" });
 const lint = (root) => spawnSync("node", [LINT, root], { encoding: "utf8" });
 

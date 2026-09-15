@@ -170,6 +170,12 @@ requirements:
   - LOOP-111
   - LOOP-112
   - LOOP-113
+  - PKG-021
+  - PKG-022
+  - LOOP-114
+  - LOOP-115
+  - LOOP-116
+  - LOOP-117
 reviewed:
   - LOOP-035 sha256:ae47c483f002f00bdc035e4001f9d799bd702aed08c9e38e6ac77082be162b23
   - LOOP-024 sha256:60e41fd9bd95b487c08ad685d17b27df6c3cf302de3d57cd886c1dd2fac82d4c

@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-kernel-refuses-bad-records-and-leaves-no-trap
+Current: the-hooks-and-gates-judge-by-records
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -380,3 +380,14 @@ decision fields the gates read, the write-ahead record asked for,
 file modes under core.filemode false, project roots below the Git
 toplevel, and shallow clones.
 [Commitment](../commitments/the-kernel-refuses-bad-records-and-leaves-no-trap.md).
+
+## The hooks and gates judge by records
+
+Requested by the developer on 2026-09-15 after the audit, the third
+remediation commitment. Delivers PKG-021, PKG-022, and LOOP-114
+through LOOP-117: the hooks resolve their path as a file system path,
+run the kernel the command link resolves to, and never exit nonzero;
+the LOOP-090 escalation and the LOOP-088 promotion record are read by
+their fields; the activation commit enters the LOOP-089 comparison;
+the footprint exempts Cairn's records only.
+[Commitment](../commitments/the-hooks-and-gates-judge-by-records.md).

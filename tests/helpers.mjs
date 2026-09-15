@@ -2,11 +2,12 @@
 // requirements. Evidence is produced by cairn check, never hand-written,
 // so its digests are honest.
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-export const CLI = new URL("../bin/cairn.mjs", import.meta.url).pathname;
+export const CLI = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
 const GIT = ["-c", "user.name=t", "-c", "user.email=t@t"];
 export const git = (root, ...a) => spawnSync("git", [...GIT, ...a], { cwd: root, encoding: "utf8" });
 export const cairn = (root, ...a) => spawnSync("node", [CLI, ...a], { cwd: root, encoding: "utf8" });

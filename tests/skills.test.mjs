@@ -57,6 +57,7 @@ test("the working agreement says a failure no footprint change can address is an
 test("the working agreement states the promote, next-iteration, and no-deferral moves (LOOP-029, LOOP-087, LOOP-091, LOOP-092)", () => {
   has(TEMPLATE, "Done: the commitment is complete and the backlog holds nothing to promote", "LOOP-087, LOOP-091 Done");
   has(TEMPLATE, "When wake says `promote`", "LOOP-087 move");
+  has(TEMPLATE, "--promotes", "LOOP-115: the promotion record names its item on a Promotes line");
   has(TEMPLATE, "Status: Agreed <date> by promotion <decision slug>", "LOOP-088 marker");
   lacks(TEMPLATE, "When wake says `escalate next-iteration`", "LOOP-091: the loop never chooses a next-iteration item");
   has(TEMPLATE, "Next-iteration is the developer's to open", "LOOP-091");

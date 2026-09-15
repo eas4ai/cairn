@@ -194,3 +194,32 @@ Cairn's own loop bounds real work: three attempts escalate (DEC-016),
 and an escalation lets the agent stop. The install skill registers both
 hooks once, for the harnesses the README documents; the link script is
 retired, since the session-start hook is the install.
+
+## The hook and the command share one referee
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the third remediation commitment. The hook ran its own checkout's
+kernel while the agent ran the command on the path; when the two
+checkouts differed, every record one wrote was stale to the other,
+and the stop hook blocked on "the kernel changed" until the harness
+cap. A checkout path with a space linked a command that resolved to
+nothing, because the hook built its path from a URL.
+
+[PKG-021] A hook MUST run the kernel that the command link on the
+path resolves to when that link exists, and its own checkout's kernel
+otherwise.
+Falsifier: with the command linked to another checkout, the stop
+hook's verdict differs from that checkout's wake.
+Status: Agreed 2026-09-15
+
+[PKG-022] On any error, a hook MUST exit 0 with one line on standard
+error.
+Falsifier: a hook exits nonzero or prints a stack trace when its
+input is not an object, when the link's directory is a regular file,
+or when the kernel cannot be found.
+Status: Agreed 2026-09-15
+
+A link that resolves to nothing is a missing link under PKG-019: the
+session-start hook replaces it and says so. A link to another checkout
+is reported once at session start, since the hooks then judge with
+that checkout's kernel and this one's records are not consulted.

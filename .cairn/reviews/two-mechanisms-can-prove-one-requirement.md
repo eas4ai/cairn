@@ -1,10 +1,11 @@
 commitment: two-mechanisms-can-prove-one-requirement
-commit: 2f8ec1d
+commit: 25df31c
 examined:
   - node-test against the revised LOOP-056: the three tests in tests/two-mechanisms.test.mjs, the LOOP-044 test that lost its duplicate-owner half, and the red and green runs of the suite around the implementation commit.
+  - The manual paragraph added at 25a595b, against LOOP-056 and LOOP-099 and against the kernel's check and --stale selection.
   - The build at 882e9d8: mechanisms, declarationError, breaches, the mode check, assess and standing, ownRecords, the wake loop over flattened standings, runChecks under --stale and with named requirements, runMechanism's revision gate, and the manual's section on one command checking several requirements.
 findings:
-  - open: docs/manual.md says a check selects the requirement's mechanism and describes one command checking several requirements; it does not say that several mechanisms can now check one requirement, that each must pass, or that a named check runs all of them (LOOP-056, LOOP-099)
+  - resolved: docs/manual.md says a check selects the requirement's mechanism and describes one command checking several requirements; it does not say that several mechanisms can now check one requirement, that each must pass, or that a named check runs all of them (LOOP-056, LOOP-099)
 
 ## LOOP-056 mechanism review, 2026-09-14
 
@@ -88,3 +89,18 @@ Self-audit against the production rules: one kernel change of nine
 lines across six places, three tests added and one narrowed, and a
 documentation gap found and recorded rather than patched during the
 review; every check reported here ran and passed. One open finding.
+
+## Review at 25df31c, 2026-09-14
+
+The open finding is resolved at 25a595b: the manual's section on one
+command checking several requirements now states the mirror case, that
+each of several mechanisms must pass, that a named check runs all of
+them, that --stale runs only the one whose own result needs it, and
+that three failures of one mechanism escalate while the other passes.
+Read against the kernel: the named-check route adds every speaker to
+the run set, --stale adds the mechanism of a standing whose latest
+record is missing or stale, and the escalation comes from the
+per-mechanism streak; the paragraph claims nothing the code does not
+do. pkg-lint ran again on the changed manual and passed; node-test and
+spec-lint evidence is current, since their inputs did not change. No
+code changed during this review. No open finding.

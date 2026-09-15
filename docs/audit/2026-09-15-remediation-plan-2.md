@@ -122,20 +122,20 @@ committed under the named commit.
 | F5 | 4 | 038e748 | closed |
 | F6 | 4 | 038e748 | closed |
 | D10 PKG-004 | 4 | 038e748 | closed |
-| B6 | 5 | | open |
-| B9 | 5 | | open |
-| D1 | 5 | | open |
-| D3 | 5 | | open |
-| D4 | 5 | | open |
-| D5 | 5 | | open |
-| D6 | 5 | | open |
-| D7 | 5 | | open |
+| B6 | 5 | ed6531b | closed |
+| B9 | 5 | 9649512 | closed |
+| D1 | 5 | 9649512 | closed |
+| D3 | 5 | 9649512 | closed |
+| D4 | 5 | 9649512 | closed |
+| D5 | 5 | 9649512 | closed |
+| D6 | 5 | 9649512 | closed |
+| D7 | 5 | 9649512 | closed |
 | D8 | before commitment 1 | ec1c335 | closed |
-| D9 | 5 | | open |
-| D10 text | 5 | | open |
-| D11 | 5 | | open |
-| D12 walkthrough | 5 | | open |
-| E4 | 5 | | open |
-| E5 | 5 | | open |
+| D9 | 5 | 9649512 | closed |
+| D10 text | 5 | 9649512 | closed |
+| D11 | 5 | 9649512 | closed |
+| D12 walkthrough | 5 | 9649512 | closed |
+| E4 | 5 | 9649512 | closed |
+| E5 | 5 | 9649512 | closed |
 | C7 | withdrawn | d18ece7 | closed |
 | F7 | not remediated | | by the slug rule |

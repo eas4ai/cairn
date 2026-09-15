@@ -14,4 +14,4 @@ The two audits of 2026-09-15 required gates the kernel did not have: repository 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 8d83d6661ed62973bffdf8ee5d1a55005d23b016 Activate the-hooks-find-the-kernel-and-the-project: PKG-033 to PKG-036, PKG-004 raised to 1600 by a superseding decision

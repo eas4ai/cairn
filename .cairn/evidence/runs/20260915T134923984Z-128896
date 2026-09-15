@@ -1,0 +1,25 @@
+mechanism: spec-lint
+commit: 6ecfc25
+inputs_digest: sha256:948902677ee665d062b891c7da958e55aff598fcc2bdd9f47bcfa629de3ac914
+mechanism_digest: sha256:8c46fbf7402502c7097f5714867323bd1059540cf38b659b2ae72b13855d3a81
+kernel_digest: sha256:d1f7331234d403a6eb444ab0e45d908c66aea9785c013879aaf2cd5893a75a76
+inputs_detail: .cairn/evidence/runs/20260915T134923984Z-128896.inputs.json
+command: node scripts/spec-lint.mjs docs/spec
+cwd: .
+exit: 0
+output_digest: sha256:01329d0d0d6ff0abecaca74caa406b5fdc021de3e868416f7d8eccaaabfdfff0
+output: .cairn/evidence/runs/20260915T134923984Z-128896.out
+stderr_output: .cairn/evidence/runs/20260915T134923984Z-128896.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+recorded: 2026-09-15T13:49:24.099Z
+results:
+  - SPEC-001 pass exit sha256:81da40e6d12842ed2c005561e60e903da132a397ce45b6e5d0fe6a2100a45e37 22 sha256:28ce153f66970ff69bdbb8b6494a304547f2b3524e5ec313664f94825b5ac5f6
+  - SPEC-002 pass exit sha256:fe6c53439a3ca0b4f2b1129cccebf9d845114b9d30e28f37ac1fcbffa7f6256c 22 sha256:e1efadadfddd91dcfe3e862fc09dfe26b3adbbaae4ccbdbcf6bd027599d81846
+  - PKG-007 pass exit sha256:0237bbb551cb12637ee758da97560416e8f0d6f0987467eaf29196e04686184d 22 sha256:e5ca1d44752d31c8dee9fb9e8c4f3ab7085bc8622a6ca319102af6032ecabead
+  - PKG-010 pass exit sha256:59000f4cc0450c22e060f5740b96ec7e00f936f298a8a4909cb8e370fdb49a23 22 sha256:59872a1bb25954b4df2d5c41bd2487bdc2d60b8ef8ad9fa7ba57e7f92ad7f3b6
+  - SPEC-020 pass exit sha256:5a37c95b4fcb7c723065a9a427375449a401d0f71fb33c7450826182e13ce787 22 sha256:bb43802de4445fe1ce40f7ea86b2f6ccab0fe58fbace99e5c289652739f53b1b
+  - SPEC-021 pass exit sha256:720bdb21f298fadb17e6c1697d734926f2a405df2b73ad21c794fabab5be9423 22 sha256:45fc91c6571f68cf7555da09abb9ace4fd2da3dbee9d7e11ac6a6df95ea97b5c
+  - SPEC-019 pass exit sha256:778ef8d17a61dd0ae0cab4b0c87569267462e9dfab79810eb91f392cedb1b8bc 22 sha256:ce2bb16dd574ec5d959de609ca50fed9882b37ed4533bfca5dcb6aeac1d015b6
+  - SPEC-024 pass exit sha256:222aaa5b7f7c4692bb9d4f51027ae2c17e33fbcec6d92f467a30e1c75b7677cf 22 sha256:f467385554c3aa3a5822f1b0ac222a43c8ef3253a4d3a19164a190fe44029f02

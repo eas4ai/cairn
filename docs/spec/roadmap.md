@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: one-receipt-per-run
+Current: the-loop-stops-at-done
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -329,3 +329,10 @@ result line per requirement, read in execution order beside every
 receipt written before. Revisits LOOP-040, LOOP-041, LOOP-070, and
 LOOP-075 by name only; their text stands.
 [Commitment](../commitments/one-receipt-per-run.md).
+
+## The loop stops at Done
+
+Ruled by the developer on 2026-09-14: next-iteration is the next feature
+specification and the loop never pulls from it. Revises LOOP-091 so Done
+is reported with items waiting, and removes the escalation and specify
+paths. [Commitment](../commitments/the-loop-stops-at-done.md).

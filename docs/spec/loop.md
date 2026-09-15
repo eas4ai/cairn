@@ -989,20 +989,24 @@ Source review sometimes shows that a bounded item was not bounded. The
 route is the same as any other Blocking discovery: stop, write it down,
 ask. The larger change is not built under the smaller record.
 
-[LOOP-091] When every requirement in the current commitment is met, no
-backlog item lacks a Promoted to: line, and next-iteration holds an
-item, the loop MUST name an escalation that recommends which item to
-specify next rather than Done. When that escalation is answered, the
-loop MUST name the specification of the chosen item rather than
-another escalation.
+[LOOP-091] When every requirement in the current commitment is met and
+no backlog item lacks a Promoted to: line, the loop MUST report Done,
+whatever next-iteration holds. The loop MUST NOT name a next-iteration
+item as an action.
 Falsifier: the commitment is complete, the backlog holds no item without
-a Promoted to: line, next-iteration holds an item, and wake prints Done;
-or the escalation is answered and wake names a new escalation.
+a Promoted to: line, and wake names an escalation or a specification
+for a next-iteration item instead of Done.
 Status: Agreed 2026-09-14
 
-Revised 2026-09-14, the day it was agreed: after the developer's ok,
-wake named the escalation again, because nothing read the answer. The
-chosen item is the recommended one on ok, and the named one on instead.
+Revised twice on 2026-09-14. The first text made Done an escalation
+asking which next-iteration item to specify, and its answer a
+specification the agent drafted; four items went through that gate in
+one evening. The developer ruled that next-iteration is the next
+feature specification: the loop never pulls from it, and Done is the
+end of the loop's authority. A waiting item starts a new loop the way a
+new project or a new feature does: the developer opens a specification
+phase with the project skills, and that phase ends by naming the next
+commitment. Wake may say how many items wait, as information.
 
 When both the backlog and next-iteration are empty, Done means what it
 meant before: every requirement is met, and the agent stops. The

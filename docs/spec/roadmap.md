@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: hooks-keep-the-agent-in-the-loop
+Current: evidence-names-the-kernel-that-wrote-it
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -311,3 +311,12 @@ Delivers PKG-018 and PKG-019, the stop and session-start hooks; revisits
 LOOP-091 so an answered escalation names the specification of the chosen
 item; retires the link script; supersedes the no-hook decision.
 [Commitment](../commitments/hooks-keep-the-agent-in-the-loop.md).
+
+## Evidence names the kernel that wrote it
+
+Specified on the developer's ok to escalation loop-091-2, 2026-09-14.
+Delivers LOOP-095 and LOOP-096 and revisits LOOP-023 and LOOP-024: every
+evidence record carries the kernel's digest, a record from another kernel
+is stale with the reason named, and the working agreement says the kernel
+is upgraded at Done.
+[Commitment](../commitments/evidence-names-the-kernel-that-wrote-it.md).

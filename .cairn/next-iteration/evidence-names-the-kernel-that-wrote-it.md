@@ -2,6 +2,7 @@
 
 Surfaced from: LOOP-023
 Changes: LOOP-024
+Promoted to: evidence-names-the-kernel-that-wrote-it (2026-09-14, on the developer's ok to escalation loop-091-2 and confirmation by exception)
 Moved: 2026-09-14 from the backlog under the-loop-continues-past-done; it changes what fresh means
 Captured: 2026-09-11T23:01:17.946Z
 

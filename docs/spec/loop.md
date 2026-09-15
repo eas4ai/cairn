@@ -114,18 +114,21 @@ failure Cairn exists to remove.
 Falsifier: a mechanism exists with no declared inputs.
 
 [LOOP-023] Evidence MUST record a digest of the mechanism's declared
-inputs and of the mechanism itself.
+inputs, of the mechanism itself, and of the kernel that wrote it.
 Falsifier: evidence exists with no digest, or with a digest that omits
-the mechanism.
+the mechanism or the kernel.
+Status: Agreed 2026-09-14
 
 [LOOP-024] The agent MUST NOT treat an unrelated file change or movement
 of HEAD alone as making evidence stale. This rule MUST NOT suppress the
 freshness requirements for changed agreement, mechanism declarations,
-receipt history, captured output, or applicable retention approval and
-retained candidates under LOOP-085.
+receipt history, captured output, the kernel that wrote the record, or
+applicable retention approval and retained candidates under LOOP-085.
 Falsifier: a file change makes evidence stale while the requirement,
 falsifier, mechanism, declared inputs, receipt history, captured output,
-and applicable retention approval and retained candidate are unchanged.
+kernel, and applicable retention approval and retained candidate are
+unchanged.
+Status: Agreed 2026-09-14
 Status: Agreed 2026-09-07
 
 [LOOP-034] Evidence MUST carry the command that ran, its arguments, its
@@ -1053,3 +1056,40 @@ implement for them, and --stale skips them and says why. A run still
 records evidence for every requirement its mechanism speaks for
 (LOOP-040), so a mechanism shared by a stale and a current requirement
 runs once and refreshes both.
+
+## The kernel that wrote the record
+
+Specified on the developer's ok to escalation loop-091-2, 2026-09-14.
+The kernel knew when a mechanism, an input, or a review went stale and
+had no idea when the referee itself changed. A production kernel
+upgrade in the middle of a live commitment on 2026-09-11 carried bug
+fixes to the referee, and the agent rewound to re-check everything
+because nothing on disk said which records the old kernel had written.
+On 2026-09-14 a development session ran a whole commitment's verdicts
+through an older kernel on the path before noticing.
+
+The kernel's digest is the digest of the files that decide verdicts and
+write records, bin/cairn.mjs and bin/spec.mjs, computed when the kernel
+starts. A review is not stamped: it records the agent's examination,
+not the kernel's verdict, and its freshness follows the declared inputs
+it examined (LOOP-032).
+
+[LOOP-095] The loop MUST treat an evidence record that carries no
+kernel digest, or a kernel digest other than the running kernel's, as
+stale, with a reason that names the kernel.
+Falsifier: a record written under another kernel, or under none, is
+treated as current; or the reason wake prints for it names no kernel.
+Status: Agreed 2026-09-14
+
+Every record written before this rule carries no kernel digest, so an
+upgrade to a kernel that applies it re-runs each mechanism once. That
+is the cost of knowing, and it is paid once per upgrade.
+
+[LOOP-096] The working agreement MUST state that the kernel is upgraded
+at Done and never inside a commitment.
+Falsifier: the working agreement lacks the sentence.
+Status: Agreed 2026-09-14
+
+A commitment starts and finishes on one referee. The digest makes the
+rule observable: records inside one commitment carry one kernel digest,
+and a second digest names the upgrade that broke the rule.

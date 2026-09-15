@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { writeFileSync, readFileSync, existsSync, mkdirSync, appendFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, mkdirSync, appendFileSync, mkdtempSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as base, cairn, commit, review, fromFile, head } from "./helpers.mjs";
@@ -275,4 +275,14 @@ test("a superseded promotion no longer satisfies the LOOP-088 check, and the rep
   appendFileSync(join(root, "docs/decisions/reverse-the-promotion.md"), `- ${head(root)} init\n`); commit(root, "reversed");
   const out = wake(root);
   assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/, out); assert.match(out, /reversed/); assert.match(out, /LOOP-123/);
+});
+
+test("the restore route measures from the tree before activation, so a path the activation commit added must go (LOOP-120, LOOP-035)", () => {
+  const root = repo(EARLIER); decided(root);
+  writeFileSync(join(root, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n"); writeFileSync(join(root, "docs/commitments/first.md"), PROMOTED);
+  writeFileSync(join(root, "stray.txt"), "z\n"); commit(root, "activate first and add a stray file");
+  const raise = () => cairn(root, "escalate", "--scope", "--concerns", "LOOP-035", "--question", "Acknowledge the restoration?", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
+  let r = raise(); assert.equal(r.status, 3, r.stdout + r.stderr); assert.match(r.stderr, /restore these paths.*stray\.txt/);
+  unlinkSync(join(root, "stray.txt")); commit(root, "restore");
+  r = raise(); assert.equal(r.status, 0, r.stderr);
 });

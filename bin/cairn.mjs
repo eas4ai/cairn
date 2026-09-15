@@ -181,7 +181,9 @@ function scopeSnapshot(raw) {
   return s;
 }
 function changedScope(root, s) {
-  const r = git(root, "diff", "--name-only", "--no-renames", "-z", s.mode === "keep" ? s.through : s.began, "HEAD", "--");
+  // Restoration is to the tree before activation, since the activation commit is inside the footprint (LOOP-120).
+  const from = s.mode === "keep" ? s.through : git(root, "rev-parse", "--verify", "-q", `${s.began}^`).status === 0 ? `${s.began}^` : s.began;
+  const r = git(root, "diff", "--name-only", "--no-renames", "-z", from, "HEAD", "--");
   if (r.error || r.status !== 0) return new Set(s.paths);
   const changed = new Set(r.stdout.split("\0").filter(Boolean));
   return new Set(s.paths.filter((p) => changed.has(p)));
@@ -1188,7 +1190,7 @@ function scopeEscalation(root, o) {
         || git(root, "rev-parse", "HEAD").stdout.trim() !== s.through) return { error: "commit the retained paths and keep HEAD stable before --scope --keep" };
   }
   const unrestored = changedScope(root, s);
-  if (unrestored.size) return { error: `restore these paths to activation commit ${s.began} and commit before --scope: ${[...unrestored].map(displayPath).join(", ")}` };
+  if (unrestored.size) return { error: `restore these paths to the tree before activation commit ${s.began} and commit before --scope: ${[...unrestored].map(displayPath).join(", ")}` };
   return { snapshot: s };
 }
 function scopeEscalationLines(scope) {

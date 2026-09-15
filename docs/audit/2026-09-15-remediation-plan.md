@@ -2,8 +2,8 @@
 
 Basis: docs/audit/2026-09-15-audit.md (65 findings). Finding labels
 below (A1, B4, C12, ...) are that report's.
-Status: In execution from 2026-09-15 on the developer's direction; see
-the Direction section.
+Status: Executed 2026-09-15. The five commitments named under Direction
+reached Done in order; see the Result section at the end.
 
 ## How the plan runs under Cairn
 
@@ -341,3 +341,17 @@ receipt becomes history when the requirement is Agreed), the
 unobservable-by-design list in the audit, and F4 (unverified; check
 the skills CLI's universal directory when the README is next
 edited).
+
+## Result
+
+All five commitments reached Done on 2026-09-15, each with its
+evidence and a clean review: the-contract-says-what-the-kernel-does
+(DEC-016, LOOP-026, PKG-004, SPEC-002 revised; LOOP-101),
+the-kernel-refuses-bad-records-and-leaves-no-trap (LOOP-102 through
+LOOP-113), the-hooks-and-gates-judge-by-records (PKG-021, PKG-022,
+LOOP-114 through LOOP-117), this-repository-declares-and-lints-what-
+it-reads (SPEC-028, SPEC-029, PKG-023 through PKG-027), and
+consumers-can-run-the-lint-and-open-the-skills (PKG-028 through
+PKG-032). Two findings the packages did not carry, A11 and the
+capture-gate half of B10, are captured to the backlog for promotion.
+The items under "Left as designed" stand.

@@ -88,7 +88,7 @@ test("three attempts with no escalation since: wake says escalate, not a fourth 
   const r = cairn(root, "wake");
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: escalate R-001/);
-  assert.match(r.stdout, /three consecutive/);
+  assert.match(r.stdout, /three attempts/);
   writeFileSync(join(root, ".cairn/escalations/r-001.md"), "Question: x\nConcerns: R-001\nStatus: open\nRaised: 2999-01-01T00:00:00Z\n");
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/, "an escalation since the run is honored");
 });

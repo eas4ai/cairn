@@ -7,11 +7,12 @@
 // Backticks and double quotes are mentions, not uses, so a rule may name
 // MUST without stating an obligation.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parseSpec } from "../bin/spec.mjs";
 
 const dir = process.argv[2] ?? "docs/spec";
+if (!existsSync(dir) || !statSync(dir).isDirectory()) { console.error(`spec lint: ${dir} is not a directory`); process.exit(3); }
 const findings = [];
 const KEYWORD = /\bMUST NOT\b|\bMUST\b|\bMAY\b/g;
 // A mention leaves a placeholder word, so a backticked actor still counts as one (PKG-010, SPEC-028).

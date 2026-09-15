@@ -68,12 +68,14 @@ function recordFields(text) {
 }
 // A record the kernel cannot read is named as a repair, never an error exit (LOOP-107).
 const read = (p) => { try { return readFileSync(p, "utf8"); } catch (e) { e.record = p; throw e; } };
-const list = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => !n.startsWith(".")).sort() : []);
+const list = (dir) => { try { return existsSync(dir) ? readdirSync(dir).filter((n) => !n.startsWith(".")).sort() : []; } catch (e) { e.record = dir; throw e; } };
 // The regular files of a record kind: slug-named `.md` records, or declarations, which carry no extension (LOOP-103).
 const SLUG_MD = /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const files = (dir, name = SLUG_MD) => list(dir).filter((n) => name.test(n) && lstatSync(join(dir, n)).isFile());
 const rel = (root, p) => relative(root, p).split("\\").join("/");
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+// An item named by slug, filename, repository path, or backticked slug (LOOP-125).
+const item = (s) => String(s).trim().replace(/^`|`$/g, "").replace(/^\.cairn\/(?:backlog|next-iteration)\//, "").replace(/\.md$/, "");
 const sha = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
 // The kernel that writes a record: the two files that decide verdicts and write (LOOP-023, LOOP-095).
 const KERNEL_DIGEST = sha(["cairn.mjs", "spec.mjs"].map((f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8")).join("\n"));
@@ -82,14 +84,14 @@ const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD");
 
 function currentCommitment(root) {
   const p = join(root, "docs", "spec", "roadmap.md"), text = read(p);
-  if ((text.match(/^Current:/gm) ?? []).length > 1) return { repair: rel(root, p), why: "more than one Current: line names a commitment; keep one (LOOP-019, LOOP-104)" };
+  if ((withoutFences(text).join("\n").match(/^Current:/gm) ?? []).length > 1) return { repair: rel(root, p), why: "more than one Current: line names a commitment; keep one (LOOP-019, LOOP-104)" };
   const slug = fields(text)["Current"];
   if (!slug) return { repair: rel(root, p), why: "no Current: line names a commitment" };
   const cp = join(root, "docs", "commitments", `${slug}.md`);
   if (!existsSync(cp)) return { repair: rel(root, p), why: `Current: names ${slug}, and docs/commitments/${slug}.md does not exist` };
   const f = fields(read(cp)), reqs = asList(f["Requirements"]).join(",").split(",").map((s) => s.trim()).filter(Boolean);   // a list reads as the flat form (LOOP-102)
   if (reqs.length === 0) return { repair: rel(root, cp), why: "no Requirements: line names what the commitment includes" };
-  return { slug, requirements: reqs, promoted: f["Promoted from"] || null, specified: asList(f["Specified from"]).join(" ") || null };
+  return { slug, requirements: reqs, promoted: item(asList(f["Promoted from"]).join(" ")) || null, specified: asList(f["Specified from"]).map(item).join(" ") || null };
 }
 
 // The kernel and lint read the same blocks and status defaults.
@@ -134,7 +136,9 @@ const revisionVerdict = (req, m, digest, reason) => ({ verdict: "Resolvable", ac
 // Files changed by commits since the commitment began: since the commit
 // that wrote its Current: line. The footprint is the union of its
 // mechanisms' declared inputs plus Cairn's own records.
+const histories = new Map();   // one reading per process: HEAD does not move while the kernel runs
 function scopeHistory(root, slug) {
+  if (histories.has(slug)) return histories.get(slug);
   const roadmap = "docs/spec/roadmap.md";
   const commits = git(root, "log", "--first-parent", "--format=%H %P", "--", roadmap).stdout.trim().split("\n").filter(Boolean).map((l) => l.split(" "));
   let began = null, base = null;
@@ -143,11 +147,11 @@ function scopeHistory(root, slug) {
     if (show.status !== 0 || fields(show.stdout).Current !== slug) break;
     began = commit; base = parent ?? commit;   // the footprint and the contract comparison start at the activation commit's parent, so that commit is inside both (LOOP-116, LOOP-120); a root activation has none
   }
-  if (!began) return { began, commits: "", line: [] };
+  if (!began) return histories.set(slug, { began, commits: "", line: [] }).get(slug);
   const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${base}..HEAD`);
   const line = git(root, "rev-list", "--first-parent", `${base}..HEAD`);
   if (ownCommits.error || ownCommits.status !== 0 || line.error || line.status !== 0) throw new Error("cannot read the commitment's Git history");
-  return { began, base, commits: ownCommits.stdout, line: line.stdout.trim().split("\n").filter(Boolean) };
+  return histories.set(slug, { began, base, commits: ownCommits.stdout, line: line.stdout.trim().split("\n").filter(Boolean) }).get(slug);
 }
 // The working agreement's include files: the root files whose whole content is @AGENTS.md, known by blob id, so one listing finds them (LOOP-122).
 const INCLUDE = new Set(["@AGENTS.md", "@AGENTS.md\n", "@AGENTS.md\r\n"].flatMap((s) => ["sha1", "sha256"].map((h) => createHash(h).update(`blob ${Buffer.byteLength(s)}\0${s}`).digest("hex"))));
@@ -183,7 +187,7 @@ function scopeSnapshot(raw) {
 function changedScope(root, s) {
   // Restoration is to the tree before activation, since the activation commit is inside the footprint (LOOP-120).
   const from = s.mode === "keep" ? s.through : git(root, "rev-parse", "--verify", "-q", `${s.began}^`).status === 0 ? `${s.began}^` : s.began;
-  const r = git(root, "diff", "--name-only", "--no-renames", "-z", from, "HEAD", "--");
+  const r = git(root, "diff", "--name-only", "--no-renames", "--relative", "-z", from, "HEAD", "--");   // root-relative below the toplevel (LOOP-130)
   if (r.error || r.status !== 0) return new Set(s.paths);
   const changed = new Set(r.stdout.split("\0").filter(Boolean));
   return new Set(s.paths.filter((p) => changed.has(p)));
@@ -210,13 +214,8 @@ function scopeApprovals(root, slug, history) {
   }
   return approvals;
 }
-function acknowledgedScope(root, slug, history) {
-  return new Set(scopeApprovals(root, slug, history).flatMap((a) => a.paths));
-}
-function retentionApprovals(root) {
-  const slug = currentCommitment(root).slug;
-  return scopeApprovals(root, slug, scopeHistory(root, slug)).filter((a) => a.snapshot.mode === "keep");
-}
+const acknowledgedScope = (root, slug, history) => new Set(scopeApprovals(root, slug, history).flatMap((a) => a.paths));
+const retentionApprovals = (root) => { const slug = currentCommitment(root).slug; return scopeApprovals(root, slug, scopeHistory(root, slug)).filter((a) => a.snapshot.mode === "keep"); };
 function retentionChanged(root, commit, ctx) {
   if (!ctx.retention.length) return false;
   if (!ctx.retentionPast.has(commit)) ctx.retentionPast.set(commit, ctx.retention.some((a) => {
@@ -225,10 +224,8 @@ function retentionChanged(root, commit, ctx) {
   }));
   return ctx.retentionPast.get(commit);
 }
-function retentionReasons(root, commit, ctx) {
-  return [retentionChanged(root, commit, ctx) ? "the check predates the committed retention approval (LOOP-085)" : null,
-    ctx.retentionDirty ? "a retained path has uncommitted changes (LOOP-085)" : null].filter(Boolean);
-}
+const retentionReasons = (root, commit, ctx) => [retentionChanged(root, commit, ctx) ? "the check predates the committed retention approval (LOOP-085)" : null,
+  ctx.retentionDirty ? "a retained path has uncommitted changes (LOOP-085)" : null].filter(Boolean);
 function scopeVerdict(root, c, mechs) {
   // There is no footprint until a mechanism belongs to this commitment.
   // Wake will name declaration; a targeted check of another mechanism can run.
@@ -243,19 +240,24 @@ function scopeVerdict(root, c, mechs) {
 // agent's reason it is outside, or an escalation names it. A
 // next-iteration item names what it would change (LOOP-093).
 // The paths a commitment's own commits added under the named directories.
-function addedPaths(root, commits, ...dirs) {
-  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "--diff-filter=A", "-r", "--relative", "-z", "--", ...dirs],
-    { cwd: root, input: commits, encoding: "utf8", maxBuffer: Infinity });
-  if (r.error || r.status !== 0) throw new Error("cannot read the commitment's captures");
-  return [...new Set(r.stdout.split("\0").filter(Boolean))].sort();
-}
+const addedPaths = (root, commits, ...dirs) => changedPaths(root, commits, dirs, true);
 // An escalation covers a capture or a contract change only when this commitment raised it; an older one, from any commitment, names the requirement by coincidence (LOOP-114, LOOP-119).
 const ownEscalations = (root, history) => { const added = new Set(addedPaths(root, history.commits, ".cairn/escalations")); return escalations(root).filter((e) => added.has(`.cairn/escalations/${e.name}.md`)); };
+// A Consequential record this commitment added was queued for the developer's review; the entry must be committed, or the review never happens (DEC-004, LOOP-131).
+function queueVerdict(root, c) {
+  const history = scopeHistory(root, c.slug);
+  if (!history.began || !history.commits) return null;
+  const queued = new Set(addedPaths(root, history.commits, ".cairn/queue"));
+  for (const path of addedPaths(root, history.commits, "docs/decisions")) {
+    const entry = `.cairn/queue/${path.replace(/^docs\/decisions\//, "").replace(/\.md$/, "")}`, present = existsSync(join(root, entry));
+    if (existsSync(join(root, path)) && fields(read(join(root, path))).Level === "Consequential" && !queued.has(entry))
+      return { verdict: "Resolvable", action: present ? `commit ${entry}` : `repair ${path}`, why: `the record is Consequential and no commit queued it for the developer's review; ${present ? "commit the queue entry" : `write ${entry} holding the record's path and commit it`} (DEC-004, LOOP-131)` };
+  }
+  return null;
+}
 function captureVerdict(root, c) {
   const next = join(root, ".cairn", "next-iteration");
-  for (const n of files(next)) {
-    if (!("Changes" in fields(read(join(next, n))))) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${n}`, why: "a next-iteration item names no Changes: line; name the Agreed requirement or the working agreement it would change (LOOP-093)" };
-  }
+  for (const n of files(next)) if (!("Changes" in fields(read(join(next, n))))) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${n}`, why: "a next-iteration item names no Changes: line; name the Agreed requirement or the working agreement it would change (LOOP-093)" };
   const history = scopeHistory(root, c.slug);
   if (!history.began || !history.commits) return null;
   const own = ownEscalations(root, history);
@@ -287,11 +289,11 @@ function promotedContractVerdict(root, c, ctx, agreed) {
   if (!changed.length || ownEscalations(root, history).some((e) => { const named = (e.Concerns ?? "").split(/[\s,]+/); return ids.every((id) => named.includes(id)); })) return null;
   return { verdict: "Resolvable", action: `escalate ${c.slug}`, why: `a promoted commitment changed ${changed.join(", ")} since it began at ${history.began.slice(0, 7)}; a change to an Agreed requirement, its falsifier, or the working agreement is the developer's: move the item to next-iteration with the reason and raise one escalation with --concerns ${ids.join(",")}, and do not build it under the promotion's record (LOOP-089, LOOP-090, LOOP-114)` };
 }
-function changedPaths(root, commits, inputs = []) {
-  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "-r", "--relative", "-z", "--", ...inputs],
+function changedPaths(root, commits, inputs = [], added = false) {
+  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", ...(added ? ["--diff-filter=A"] : []), "-r", "--relative", "-z", "--", ...inputs],
     { cwd: root, input: commits, encoding: "utf8", maxBuffer: Infinity });
   if (r.error || r.status !== 0) throw new Error("cannot read the commitment's changed paths");
-  return [...new Set(r.stdout.split("\0").filter(Boolean))];
+  return [...new Set(r.stdout.split("\0").filter(Boolean))].sort();
 }
 
 // Every decision record with its header fields. A record's domain is the
@@ -301,16 +303,14 @@ function decisions(root) {
   const dir = join(root, "docs", "decisions");
   return files(dir).map((n) => {
     const f = recordFields(read(join(dir, n)));
-    const ids = [...(f["Rests on"] ?? "").matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
+    const ids = [...asList(f["Rests on"]).join(" ").matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
     return { slug: n.replace(/\.md$/, ""), ...f, domain: ids.length ? [...new Set(ids)] : ["unspecified"] };
   });
 }
 const reversed = (root) => decisions(root).filter((d) => "Superseded by" in d);
 
 // Inheritance is declared by Scope in the specification, never by prefix.
-function fold(c, inherited) {
-  for (const r of [...inherited].sort()) if (!c.requirements.includes(r)) c.requirements.push(r);
-}
+const fold = (c, inherited) => { for (const r of [...inherited].sort()) if (!c.requirements.includes(r)) c.requirements.push(r); };
 
 // A decision record is read whole: its header (DEC-005, LOOP-109), its
 // predecessor (DEC-010), and its Realized by section, where a resolving
@@ -338,7 +338,7 @@ function decisionVerdict(root) {
 }
 function escalations(root) {
   const dir = join(root, ".cairn", "escalations");
-  return files(dir).map((n) => { const text = read(join(dir, n)); return { name: n.replace(/\.md$/, ""), ...fields(text), ...escalationTurn(text), text }; });
+  return files(dir).map((n) => { const text = read(join(dir, n)), f = fields(text); return { name: n.replace(/\.md$/, ""), ...f, Concerns: asList(f.Concerns).join(" "), ...escalationTurn(text), text }; });
 }
 // The initial Reply line lists options; only replies after an Answer are turns.
 function escalationTurn(text) {
@@ -575,7 +575,8 @@ function declarationError(root, mechs) {
     if (invalid) return mechanismRepair(name, invalid);
     if (m.def.cwd && m.def.cwd !== "." && !existsSync(join(root, m.def.cwd))) return mechanismRepair(name, `cwd ${m.def.cwd} does not exist (LOOP-105)`);
     for (const input of asList(m.def.inputs)) {
-      const files = inputEntries(root, [input], mechs.inputs);
+      const files = inputEntries(root, [input], mechs.inputs), own = files.find((e) => e.path.startsWith(".cairn/evidence/"));
+      if (own) return mechanismRepair(name, `input ${input} matches ${own.path}, Cairn's own output; declare the paths the command reads (LOOP-105, LOOP-126)`);
       if (!files.length) return mechanismRepair(name, `input ${input} matches no tracked file (LOOP-044)`);
       for (const entry of files) {
         const error = declaredEntryError(root, name, entry);
@@ -631,7 +632,9 @@ function checkOwner(root, path = checkLockPath(root)) {
 function dirtyInputs(root, inputs) {
   const r = git(root, "status", "--porcelain", "-z", "--", ...inputs);
   if (r.error || r.status !== 0) throw new Error(`cannot inspect committed inputs: ${r.stderr || r.error?.message}`);
-  return r.stdout.split("\0").filter(Boolean).map((l) => l.slice(3));
+  const toks = r.stdout.split("\0"), out = [];
+  for (let i = 0; i < toks.length; i++) if (toks[i]) { out.push(toks[i].slice(3)); if (/[RC]/.test(toks[i].slice(0, 2))) out.push(toks[++i]); }   // a rename or copy carries its origin as the next token
+  return out;
 }
 
 const RECEIPT_NAME = /^\d{8}T\d{9}Z(?:-\d+)?$/;
@@ -742,7 +745,7 @@ function reviewOf(root, slug) {
   if (!existsSync(p)) return null;
   const text = read(p), f = recordFields(text);
   // The header the gate reads: commit, a nonempty examined list, a findings list (LOOP-108).
-  const missing = !f.commit ? "commit: names the commit the review examined" : !asList(f.examined).length ? "examined: needs a nonempty list of what the review examined (LOOP-020)" : !("findings" in f) ? "findings: is missing; write findings: [] when there are none (LOOP-086)" : null;
+  const missing = !f.commit ? "commit: names the commit the review examined" : !asList(f.examined).filter((x) => x !== "[]").length ? "examined: needs a nonempty list of what the review examined (LOOP-020)" : !("findings" in f) ? "findings: is missing; write findings: [] when there are none (LOOP-086)" : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t]/m.test(text) && /^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };
   const findings = f.findings === "[]" ? [] : asList(f.findings);
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
@@ -812,9 +815,7 @@ function standing(root, req, m, h, orderError, ctx) {
   return { req, mech: name, latest, everPassed, threeFails, escalatedSince, stuck, stale, revision, inputsChanged };
 }
 
-function wake(root) {
-  return withAnswer(root, wakeVerdict(root));
-}
+const wake = (root) => withAnswer(root, wakeVerdict(root));
 function withAnswer(root, w) {
   const req = w.action.startsWith("scope ") ? "LOOP-035" : /^(?:run|implement|declare|escalate|review mechanism) ([A-Z]+-\d+)$/.exec(w.action)?.[1];
   if (!req) return w;
@@ -847,7 +848,7 @@ function wakeVerdict(root) {
   // A decision marker, by promotion or by deference, resolves to its record (LOOP-088, SPEC-002).
   const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r).slug}.md`)));
   if (marked) { const { kind, slug } = promotions.get(marked); return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by ${kind} ${slug} and docs/decisions/${slug}.md does not exist; record the decision or restore the developer's confirmation (LOOP-088, SPEC-002)` }; }
-  const promo = c.promoted ? decisions(root).filter((d) => d.Promotes === c.promoted) : [];
+  const promo = c.promoted ? decisions(root).filter((d) => d.Promotes && item(d.Promotes) === c.promoted) : [];
   if (c.promoted && !promo.length) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ carries Promotes: ${c.promoted}; record the promotion with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-115)` };
   // A reversed promotion: every record that promoted the item is superseded (LOOP-123).
   if (promo.length && promo.every((d) => "Superseded by" in d)) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted}, and ${promo[0].slug}, the decision that promoted it, is superseded by ${promo[0]["Superseded by"]}: the promotion was reversed; return the item to the backlog and move the roadmap's Current: line off this commitment, or record the promotion again with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-123)` };
@@ -863,7 +864,7 @@ function wakeVerdict(root) {
   if (dirty.length) return { verdict: "Resolvable", action: `record ${dirty[0]}`, why: `${dirty.length} declared input(s) have uncommitted changes and no .cairn/in-progress record names the action; write the record (action, target, base, started) for the change under way, or commit it (LOOP-022, LOOP-110)` };
   const scope = scopeVerdict(root, c, mechs);
   if (scope) return scope;
-  const captured = captureVerdict(root, c);
+  const captured = captureVerdict(root, c) ?? queueVerdict(root, c);
   if (captured) return captured;
   const ctx = context(root, mechs);
   const contract = promotedContractVerdict(root, c, ctx, agreed);
@@ -880,7 +881,7 @@ function wakeVerdict(root) {
     return verdict;
   }
   if ((s = first((x) => x.mech && x.threeFails && !x.escalatedSince)))
-    return { verdict: "Resolvable", action: `escalate ${s.req}`, why: `three consecutive failing records and no escalation since; a fourth attempt is not the next action (DEC-016)` };
+    return { verdict: "Resolvable", action: `escalate ${s.req}`, why: `three attempts without new passing evidence and no escalation since; a fourth attempt is not the next action (DEC-016)` };
   if ((s = first((x) => x.mech && x.latest?.result === "fail" && x.everPassed && !x.stale)))
     return { verdict: "Resolvable", action: `implement ${s.req}`, why: `regression: latest evidence fails after an earlier pass (${s.mech})` };
   for (const x of state) {
@@ -1000,7 +1001,7 @@ async function check(root, only, stale = false) {
     status = await runChecks(root, only, stale);
   } finally {
     if (fd !== undefined) closeSync(fd);
-    if (read(path) === token) unlinkSync(path);
+    if (existsSync(path) && readFileSync(path, "utf8") === token) unlinkSync(path);
   }
   if (status !== null) return status;
   const w = wake(root);
@@ -1059,7 +1060,7 @@ async function runChecks(root, only, stale = false) {
 async function runMechanism(root, m, ctx, head, mechs) {
   const name = m.name, reqs = asList(m.def.requirements);
   const before = candidate(root, m, ctx.requirements, head), dirty = before.dirty;
-  if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
+  if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030); commit them, or write .cairn/in-progress while the work continues (LOOP-110)\n`); return 1; }
   if (!before.digest) { process.stdout.write(`Resolvable: run ${reqs[0]}\n  candidate changed before ${name}; no evidence recorded\n`); return 1; }
   if (before.committed !== inputsDigestAt(root, before.paths, head)) {
     process.stdout.write(`Resolvable: commit candidate for ${name}\n  inputs do not match the committed candidate at ${head}; inspect Git flags, file modes, and declared paths before rerunning (LOOP-030)\n`);
@@ -1083,7 +1084,9 @@ async function runMechanism(root, m, ctx, head, mechs) {
     const r = await capture(m.def.command, cwd, output, stderrOutput, reqs, name);
     const after = candidate(root, m, ctx.requirements, head);
     if (after.digest !== before.digest || after.committed !== before.committed) {
-      process.stdout.write(`Resolvable: ${after.dirty.length ? `commit ${after.dirty[0]}` : `run ${reqs[0]}`}\n  candidate changed during ${name}; no evidence recorded; retained output: ${rel(root, output)} and ${rel(root, stderrOutput)} (LOOP-063)\n`);
+      const retained = `retained output: ${rel(root, output)} and ${rel(root, stderrOutput)}`, own = after.dirty.length && after.dirty.every((p) => p.startsWith(".cairn/evidence/"));
+      process.stdout.write(own ? `Resolvable: repair .cairn/mechanisms/${name}\n  an input covers .cairn/evidence/, Cairn's own output, so every run changes the candidate; declare the paths the command reads; ${retained} (LOOP-105, LOOP-126)\n`
+        : `Resolvable: ${after.dirty.length ? `commit ${after.dirty[0]}` : `run ${reqs[0]}`}\n  candidate changed during ${name}; no evidence recorded; ${retained} (LOOP-063)\n`);
       return 1;
     }
     const repair = recordEvidence(root, m, ctx.requirements, { before, output, stderrOutput, r });
@@ -1140,6 +1143,7 @@ function decide(root, o) {
   if (!LEVELS.includes(o.level)) return usage(`decide: --level must be one of ${LEVELS.join(", ")}`);
   if (o.supersedes && !CAUSES.includes(o.cause ?? "")) return usage(`decide: --supersedes needs --cause, one of: ${CAUSES.join("; ")}`);
   const slug = slugify(o.title);
+  if (!slug) return usage("decide: the title has no letters or digits to name the record (LOOP-128)");
   const path = join(root, "docs", "decisions", `${slug}.md`);
   if (existsSync(path)) return usage(`decide: ${rel(root, path)} exists; supersede it rather than overwrite it`);
   const oldPath = o.supersedes ? join(root, "docs", "decisions", `${o.supersedes}.md`) : null;
@@ -1150,7 +1154,7 @@ function decide(root, o) {
   const prior = reversed(root).filter((d) => d.domain.some((x) => domain.includes(x)));
   if (prior.length && !o.history) return usage(`decide: ${domain.join("/")} carries ${prior.length} reversal(s): ${prior.map((d) => d.slug).join(", ")}; pass --history stating what that history changed about the level (DEC-012)`);
   const head = [`# ${o.title}`, "", `Level: ${o.level}`, `Decided by: ${o["decided-by"]}`];
-  if (o.promotes) head.push(`Promotes: ${o.promotes}`);   // the item a promotion record names (LOOP-088, LOOP-115)
+  if (o.promotes) head.push(`Promotes: ${item(o.promotes)}`);   // the item a promotion record names (LOOP-088, LOOP-115)
   if (o.supersedes) head.push(`Supersedes: ${o.supersedes}`, `Cause: ${o.cause}`);
   head.push(`Rests on: ${o["rests-on"]}`, `Would be wrong if: ${o["wrong-if"]}`);
   if (o.history) head.push(`History: ${o.history}`);
@@ -1267,7 +1271,8 @@ function backlog(root, o) {
   if (next && !o.changes) return usage("backlog: --next-iteration needs --changes naming the Agreed requirement or the working agreement the idea would change (LOOP-093)");
   const dir = join(root, ".cairn", next ? "next-iteration" : "backlog");
   mkdirSync(dir, { recursive: true });
-  const path = join(dir, `${slugify(o.title)}.md`);
+  const slug = slugify(o.title), path = join(dir, `${slug}.md`);
+  if (!slug) return usage("backlog: the title has no letters or digits to name the item (LOOP-128)");
   if (existsSync(path)) return usage(`backlog: ${rel(root, path)} exists; the backlog never overwrites (LOOP-016)`);
   const source = next ? `Changes: ${o.changes}` : `Surfaced from: ${o.from ?? "unstated"}`;
   const outside = o.outside ? `Outside because: ${o.outside}\n` : "";
@@ -1379,7 +1384,7 @@ async function main() {
   const root = ROOT = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   // The checker is a script beside this kernel; the command reaches it from any project (PKG-028).
-  if (cmd === "lint") return spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }).status ?? 3;
+  if (cmd === "lint") { if (rest.length > 1) return usage("lint takes one directory"); const r = spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }); return r.error ? usage(`cannot run the checker in ${root}: ${r.error.message}`) : r.status ?? 3; }
   if (!["wake", "check", "decide", "escalate", "answer", "backlog", "supersede", "reversals"].includes(cmd)) return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals|lint> [--root DIR]");
   // Every command that reads or writes a record needs the repository (LOOP-046, LOOP-118).
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md); run from the project root or pass --root DIR`);

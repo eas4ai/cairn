@@ -1,5 +1,5 @@
 commitment: the-capture-gate-reads-the-concerns-line
-commit: dc1a895
+commit: ac8566c
 examined:
   - captureVerdict's new condition, limited to items with a Changes: line, and the LOOP-090 route end to end in tests/continuation.test.mjs, red before the change and green after.
   - the second audit, docs/audit/2026-09-15-audit-2.md, against the gate this commitment built and the LOOP-114 gate it shares a route with: findings A1 and A2.
@@ -42,3 +42,5 @@ kernel at 1480 of 1500 lines. Attacked: an escalation raised in the
 activation commit itself is outside that set, since the footprint
 starts after activation (audit-2 B1); it would be raised after the
 wake that asks for it, so the case does not arise. No open finding.
+
+Refreshed at ac8566c: the audit report notes the resolution; no code changed.

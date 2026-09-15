@@ -139,3 +139,14 @@ test("a next-iteration item names what it would change, and the capture refuses 
   assert.equal(r.status, 3); assert.match(r.stderr, /never overwrites/);
   assert.ok(readFileSync(join(root, ".cairn/next-iteration/twice.md"), "utf8").includes("Once."));
 });
+
+test("a commitment specified from a next-iteration item needs the item stamped before anything else (SPEC-027)", () => {
+  const root = repo({ "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-002\nSpecified from: change-the-contract\n" });
+  cairn(root, "backlog", "--next-iteration", "--changes", "R-009", "--title", "Change the contract", "--body", "Because."); commit(root, "capture");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: repair .cairn\/next-iteration\/change-the-contract\.md/); assert.match(out, /Promoted to: first/); assert.match(out, /SPEC-027/);
+  appendFileSync(join(root, ".cairn/next-iteration/change-the-contract.md"), "Promoted to: first\n"); commit(root, "stamp");
+  assert.doesNotMatch(wake(root), /repair .cairn\/next-iteration/);
+  green(root);
+  assert.match(wake(root), /^Done: first/);
+});

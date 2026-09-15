@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-loop-stops-at-done
+Current: the-next-iteration-starts-from-the-specification
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -336,3 +336,13 @@ Ruled by the developer on 2026-09-14: next-iteration is the next feature
 specification and the loop never pulls from it. Revises LOOP-091 so Done
 is reported with items waiting, and removes the escalation and specify
 paths. [Commitment](../commitments/the-loop-stops-at-done.md).
+
+## The next iteration starts from the specification
+
+Specified 2026-09-14 from the next-iteration item
+prepare-a-next-iteration-without-repeating-project-adoption, on the
+developer's advance deference to the agent's recommendation. Delivers
+SPEC-026 and SPEC-027, the next-iteration skill and the stamp that
+ends an item's wait, and revises SPEC-012 so a later commitment is
+specified at Done, by promotion or in the phase the developer opens.
+[Commitment](../commitments/the-next-iteration-starts-from-the-specification.md).

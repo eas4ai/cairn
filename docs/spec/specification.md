@@ -134,11 +134,25 @@ first commitment is Agreed.
 Falsifier: the loop starts while a requirement inside the first
 commitment has no confirmed falsifier.
 
-[SPEC-012] The agent MUST specify a later commitment during the loop.
-The agent MUST NOT require the whole roadmap to be specified before
-work starts.
+[SPEC-012] The agent MUST specify a later commitment at Done, by
+promotion from the backlog or in a phase the developer opens from the
+specification that exists. The agent MUST NOT require the whole
+roadmap to be specified before work starts.
 Falsifier: a documented step tells the developer that every commitment
-must be specified before implementation begins.
+must be specified before implementation begins, or that a later
+commitment needs the codebase adopted again.
+Status: Agreed 2026-09-14
+
+Revised 2026-09-14. The first text said "during the loop". The loop
+now stops at Done (LOOP-091): a bounded item is promoted there by the
+agent (LOOP-088), and a change to the contract is specified between
+loops, by the developer and the agent, from the specification that
+exists rather than from the code. The developer deferred to the
+agent's recommendation for this revision in advance on 2026-09-14,
+unless the review changed it substantively; the review changed the
+draft to name both routes, promotion and the phase, and the developer
+reads that in the queued decision
+cairn-ships-a-next-iteration-skill-for-the-phase-between-loops.
 
 ## Drafted from the first adoptions
 
@@ -228,3 +242,40 @@ permission-only MAY carries no Falsifier: line while the spec lint
 reported every Agreed block without one. A requirement with no
 observable falsifier cannot produce evidence (SPEC-013); a MAY whose
 limit matters is written as the MUST that bounds it.
+
+## Between loops
+
+Drafted 2026-09-14 from the next-iteration item
+prepare-a-next-iteration-without-repeating-project-adoption. The
+developer noted on 2026-09-07 that no skill opened the next iteration
+and ran existing-project, which reads the whole codebase before it
+asks anything and writes a cited recon report. On 2026-09-14 the loop
+stopped at Done with items waiting and the same phase was run by hand.
+The phase between loops starts from the specification, not from the
+code: the code is read only where an item's blast radius touches it.
+
+[SPEC-026] Cairn MUST ship a skill that specifies a later commitment
+from the existing specification without repeating the adoption of the
+codebase.
+Falsifier: no shipped skill starts from an Agreed specification and
+ends by naming the next commitment, or the one that does requires a
+recon report or Observed specification text before it can end.
+Status: Agreed 2026-09-14
+
+[SPEC-027] When the phase between loops writes a next-iteration item
+into the specification, the agent MUST stamp the item with a
+Promoted to: line naming the commitment that carries it.
+Falsifier: a commitment file carries a Specified from: line naming a
+next-iteration item with no Promoted to: line, and wake names an
+action other than repairing the item.
+Status: Agreed 2026-09-14
+
+The commitment file's Specified from: line names each next-iteration
+item it carries, the way Promoted from: names a backlog item
+(LOOP-088). It is not a promotion: the developer confirmed the
+requirement, so LOOP-089 does not bind the commitment, and the
+commitment may change the Agreed text the item names. The stamp is
+what makes wake stop counting the item as waiting (LOOP-091). The
+developer deferred to the agent's recommendation for both
+requirements in advance on 2026-09-14; the review before agreement is
+recorded in the commitment file.

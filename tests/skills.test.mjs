@@ -14,7 +14,7 @@ const lacks = (text, s, why) => assert.ok(!text.includes(s), `${why}: still cont
 
 test("understanding is restated before writing (SPEC-003)", () => has(NEW, "State your understanding in your own words before writing any artifact", "SPEC-003")); test("falsifiers are proposed as one set and confirmed by exception (SPEC-004)", () => { has(NEW, "Propose the falsifiers for a whole domain as one set", "SPEC-004"); has(NEW, "correct only the wrong ones", "SPEC-004"); has(EXISTING, "propose the section's falsifiers as one set", "SPEC-004 on Path A/B");
 }); test("depth is inferred and domains derived, never asked or imposed (SPEC-008, SPEC-009)", () => { has(NEW, "Infer documentation depth", "SPEC-008"); lacks(BOTH, "what documentation depth is warranted", "SPEC-008"); has(NEW, "Derive the domains from the project", "SPEC-009"); lacks(BOTH, "NN-<domain>", "SPEC-009: numbered domain scheme"); has(EXISTING, "Depth follows the work, not the size of the codebase", "SPEC-008 on an existing codebase");
-}); test("a term enters the glossary at first occurrence (SPEC-010)", () => has(NEW, "add it to glossary.md at that moment", "SPEC-010")); test("the phase ends at the first commitment, and later ones are specified during the loop (SPEC-011, SPEC-012)", () => { has(NEW, "ends at the keystone, the glossary, and the first commitment", "SPEC-011"); has(NEW, "Later commitments are specified during the loop", "SPEC-012"); has(NEW, "for the first commitment only", "SPEC-012");
+}); test("a term enters the glossary at first occurrence (SPEC-010)", () => has(NEW, "add it to glossary.md at that moment", "SPEC-010")); test("the phase ends at the first commitment, and later ones are specified during the loop (SPEC-011, SPEC-012)", () => { has(NEW, "ends at the keystone, the glossary, and the first commitment", "SPEC-011"); has(NEW, "A later commitment is specified at Done", "SPEC-012"); has(NEW, "/next-iteration", "SPEC-012: the phase between loops"); has(NEW, "for the first commitment only", "SPEC-012");
 }); test("a requirement goes Agreed only with a nameable mechanism (SPEC-013)", () => has(NEW, "name a mechanism that could observe its falsifier", "SPEC-013")); test("review before agreement, recording what it attacked (SPEC-014, SPEC-015)", () => { has(NEW, "Review before agreement", "SPEC-014"); has(NEW, "Record what the review attacked, not only what it found", "SPEC-015");
 }); test("no spec file without requirements; nothing Agreed without a falsifier (SPEC-001, SPEC-002)", () => { has(NEW, "Create no spec file you have no requirements for", "SPEC-001"); has(NEW, "A requirement is Draft until the developer confirms its text and its falsifier", "SPEC-002");
 }); test("Observed is marked, and is not contract (SPEC-016, SPEC-017)", () => { has(EXISTING, "Status: Observed", "SPEC-016"); has(EXISTING, "only Agreed text is contract", "SPEC-017"); has(EXISTING, "The loop refuses a commitment that names an Observed requirement", "SPEC-017 mechanism");
@@ -89,4 +89,31 @@ test("the working agreement names the hooks as optional and the install skill re
 });
 test("the working agreement says the kernel is upgraded at Done, never inside a commitment (LOOP-096)", () => {
   has(TEMPLATE, "The kernel is upgraded at Done, never inside a commitment; a commitment starts and finishes on one referee", "LOOP-096");
+});
+
+// The phase between loops: the skill the developer opens at Done (SPEC-012, SPEC-026, SPEC-027).
+test("the next-iteration skill starts from the specification and ends by naming the next commitment (SPEC-026, SPEC-027)", () => {
+  const NEXT = flat("../skills/next-iteration/SKILL.md");
+  has(NEXT, "name: next-iteration", "the skill under its name");
+  has(NEXT, "Do not write docs/recon.md", "SPEC-026: no recon report");
+  has(NEXT, "Write no Observed text", "SPEC-026: no Observed specs");
+  has(NEXT, "Run `cairn wake`", "the phase starts where the loop stands");
+  has(NEXT, "ends by naming the next commitment", "SPEC-012, SPEC-026");
+  has(NEXT, "Specified from:", "SPEC-027: the commitment names its items");
+  has(NEXT, "Promoted to: <slug>", "SPEC-027: the stamp");
+  has(NEXT, "Revised <date>", "a revised requirement says what its first text said");
+  has(NEXT, "Rules 1 through 8 of /new-project apply", "the standing rules carry over");
+  has(NEXT, "If this isn't clear, ask me to explain it another way before you decide", "the invitation to ask");
+  lacks(NEXT, "CLAUDE.md", "PKG-006");
+});
+test("every document that names the project skills names next-iteration beside them (SPEC-026, PKG-014)", () => {
+  const INSTALL = flat("../skills/install-cairn/SKILL.md");
+  has(INSTALL, "npx skills update install-cairn new-project existing-project next-iteration", "install-cairn refreshes it");
+  has(INSTALL, "`next-iteration` for a project already under Cairn", "install-cairn hands it back");
+  has(flat("../README.md"), "--skill install-cairn new-project existing-project next-iteration", "the README installs it");
+  has(flat("../docs/manual.md"), "--skill install-cairn new-project existing-project next-iteration", "the manual installs it");
+  has(flat("../docs/manual.md"), "| `next-iteration` |", "the manual's skill table");
+  has(EXISTING, "switch to /next-iteration", "existing-project routes a project already under Cairn to it");
+  has(TEMPLATE, "run next-iteration", "the working agreement names the developer's move");
+  lacks(TEMPLATE, "run new-project or existing-project as for one", "the old route is gone");
 });

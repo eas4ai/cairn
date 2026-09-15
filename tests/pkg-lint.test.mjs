@@ -81,3 +81,10 @@ test("a vendor-naming step wrapped across lines is matched (PKG-006, PKG-027)", 
   const r = lint(root);
   assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, /PKG-006: skills\/x\/SKILL\.md/);
 });
+
+test("PKG-013 scans the README, the manual, and the walkthrough (PKG-032)", () => {
+  for (const file of ["README.md", "docs/manual.md", "docs/walkthrough.md"]) {
+    const r = lint(repo({ [file]: "# Doc\n\nThis arrives in a later version.\n" }));
+    assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, new RegExp(`PKG-013: ${file.replace(/[./]/g, "\\$&")}`));
+  }
+});

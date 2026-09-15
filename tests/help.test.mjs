@@ -36,3 +36,8 @@ test("help does not hide invalid options or consume literal arguments", (t) => {
     assert.match(r.stderr, /cairn:/);
   }
 });
+
+test("help lists the lint command (PKG-028, PKG-017)", () => {
+  const r = spawnSync("node", [CLI, "--help"], { encoding: "utf8" });
+  assert.match(r.stdout, /^  lint \[DIR\]/m);
+});

@@ -32,4 +32,5 @@ test("the linked walkthrough runs from agreement through the next commitment (PK
     assert.equal(r.status, steps[i][0], `step ${i + 1}: ${r.stdout}\n${r.stderr}`);
     assert.match(r.stdout, steps[i][1], `step ${i + 1}: ${r.stderr}`);
   }
+  assert.equal(spawnSync("git", ["status", "--porcelain"], { cwd: project, encoding: "utf8" }).stdout, "", "the blocks leave a clean tree: evidence is committed (LOOP-043)");
 });

@@ -264,3 +264,41 @@ wrapped paragraph.
 Falsifier: a step that names a vendor's product across a line break
 passes PKG-006.
 Status: Agreed 2026-09-15
+
+## A consumer's agent runs the checker and opens the skills
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the fifth remediation commitment. The skills named the checker by a
+path that exists only in Cairn's checkout; the README asked for the
+phase skills in prose that a harness which hides them from the model
+cannot answer; no minimum Node or Git version was stated; and the
+deferral scan skipped the documents people read first.
+
+[PKG-028] Cairn MUST provide a lint command that runs the shipped
+specification checker from the checkout the command resolves to.
+Falsifier: `cairn lint docs/spec` fails in a project where the
+command is on the path.
+Status: Agreed 2026-09-15
+
+[PKG-029] The specification skills MUST name the checker through the
+cairn command.
+Falsifier: a skill names the checker by a path inside the consumer's
+project.
+Status: Agreed 2026-09-15
+
+[PKG-030] The README MUST show the three phase skills invoked by name,
+as the agent application invokes a skill, rather than asked for in
+prose.
+Falsifier: the README's example prompt asks the agent to use a phase
+skill in prose.
+Status: Agreed 2026-09-15
+
+[PKG-031] The README MUST state the minimum Node and Git versions and
+the platforms Cairn supports.
+Falsifier: the README names no minimum version or no platform.
+Status: Agreed 2026-09-15
+
+[PKG-032] The package lint MUST scan the README, the manual, and the
+walkthrough for deferral language.
+Falsifier: a later-version phrase in the README passes PKG-013.
+Status: Agreed 2026-09-15

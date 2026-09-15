@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: this-repository-declares-and-lints-what-it-reads
+Current: consumers-can-run-the-lint-and-open-the-skills
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -402,3 +402,13 @@ scans shipped files only, and matches wrapped steps; every declared
 requirement is named by a test and every path the tests read is
 declared.
 [Commitment](../commitments/this-repository-declares-and-lints-what-it-reads.md).
+
+## Consumers can run the lint and open the skills
+
+Requested by the developer on 2026-09-15 after the audit, the fifth
+and last remediation commitment. Delivers PKG-028 through PKG-032:
+`cairn lint`, the skills naming it, the README invoking the phase
+skills by name and stating versions and platforms, the deferral scan
+over the human documents; and the stale sentences the audit listed,
+corrected in place.
+[Commitment](../commitments/consumers-can-run-the-lint-and-open-the-skills.md).

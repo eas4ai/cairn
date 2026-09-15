@@ -139,3 +139,27 @@ test("the skills demonstrate a safe violating example and preserve recon finding
   has(NEW, "demonstrate that it catches a safe example of the stated violation", "SPEC-022");
   has(EXISTING, "carry each unresolved finding forward with its evidence", "SPEC-023");
 });
+
+// The documents a consumer reads say what the code does (PKG-029, PKG-030, PKG-031, LOOP-087).
+test("the specification skills run the checker through the cairn command (PKG-029)", () => {
+  const NEXT = flat("../skills/next-iteration/SKILL.md");
+  for (const [text, name] of [[NEW, "new-project"], [EXISTING, "existing-project"], [NEXT, "next-iteration"]]) {
+    has(text, "cairn lint docs/spec", `${name} names the command`);
+    lacks(text, "scripts/spec-lint.mjs", `${name} names no checkout path`);
+  }
+  has(EXISTING, "separate file that includes the template", "a consumer's own instructions stay out of the working agreement file");
+});
+test("the README invokes the phase skills by name and states versions and platforms (PKG-030, PKG-031)", () => {
+  const README = flat("../README.md");
+  for (const s of ["> /new-project", "> /existing-project", "> /next-iteration"]) has(README, s, "invoked by name");
+  lacks(README, "Use the new-project skill", "no prose request"); lacks(README, "Use the existing-project skill", "no prose request"); lacks(README, "Use the next-iteration skill", "no prose request");
+  has(README, "Node 18", "minimum Node"); has(README, "Git 2.5", "minimum Git"); has(README, "Windows", "platform statement");
+  has(README, "up to the harness's cap", "the stop hook is bounded");
+});
+test("the manual and the walkthrough say the loop promotes backlog items at Done (LOOP-087)", () => {
+  const MANUAL = flat("../docs/manual.md"), WALK = flat("../docs/walkthrough.md");
+  lacks(MANUAL, "You select the next commitment when you are ready", "the old sentence");
+  lacks(WALK, "the agent does not start them automatically", "the old sentence");
+  has(WALK, "promotes", "the walkthrough names promotion");
+  has(MANUAL, ".cairn/evidence/runs/", "the receipt path"); lacks(MANUAL, "numeric collision suffix", "the suffix is the process id");
+});

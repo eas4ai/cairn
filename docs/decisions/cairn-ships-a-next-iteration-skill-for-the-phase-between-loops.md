@@ -12,4 +12,4 @@ The loop stops at Done and the developer opens the next specification phase (LOO
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 1f3d96263086bf40cb32d2cded9126175b8ed87b The next iteration starts from the specification

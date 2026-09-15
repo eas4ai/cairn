@@ -12,4 +12,4 @@ The kernel digest written into every evidence record is the SHA-256 of bin/cairn
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 3ed6021c2ecf3542a60ab58fb2a8959c5fd641fb Evidence names the kernel that wrote it

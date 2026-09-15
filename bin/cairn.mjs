@@ -99,7 +99,7 @@ function requirementSet(root, commit = null) {
     for (const block of spec.blocks) {
       const body = block.body.filter((line) => !/^Status:/.test(line)).join("\n");
       texts.set(block.id, { path, digest: texts.has(block.id) ? null : sha(body) });
-      if (block.promotion) promotions.set(block.id, block.promotion);
+      if (block.promotion) promotions.set(block.id, { kind: block.agreedBy, slug: block.promotion });
       if (block.status === "Agreed") {
         agreed.add(block.id);
         if (spec.scope === "every commitment") inherited.add(block.id);
@@ -789,9 +789,9 @@ function wakeVerdict(root) {
   const { agreed, inherited, texts, promotions } = requirementSet(root);
   const unknown = c.requirements.find((r) => !agreed.has(r));
   if (unknown) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `${unknown} is not an Agreed requirement in docs/spec/ (LOOP-029)` };
-  // A promotion marker resolves to its decision, and a promoted commitment's item is named by one (LOOP-088).
-  const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r)}.md`)));
-  if (marked) return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by promotion ${promotions.get(marked)} and docs/decisions/${promotions.get(marked)}.md does not exist; record the promotion decision or restore the developer's confirmation (LOOP-088)` };
+  // A decision marker, by promotion or by deference, resolves to its record (LOOP-088, SPEC-002).
+  const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r).slug}.md`)));
+  if (marked) { const { kind, slug } = promotions.get(marked); return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by ${kind} ${slug} and docs/decisions/${slug}.md does not exist; record the decision or restore the developer's confirmation (LOOP-088, SPEC-002)` }; }
   if (c.promoted && !recordTexts(root, "docs", "decisions").some((t) => t.includes(c.promoted))) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ names it; record the promotion decision (LOOP-088)` };
   // A commitment specified from a next-iteration item stamps the item, so wake stops counting it as waiting (SPEC-027).
   const unstamped = (c.specified ?? "").split(/[\s,]+/).filter(Boolean).find((s) => { const p = join(root, ".cairn", "next-iteration", `${s}.md`); return existsSync(p) && !("Promoted to" in fields(read(p))); });
@@ -1162,7 +1162,7 @@ function escalate(root, o) {
   while (existsSync(path)) path = join(dir, `${slug}-${++i}.md`);
   const oneLine = (value) => (value ?? "").replace(/[\r\n\u2028\u2029]+/g, " ");
   const body = ["DECISION", "", ...ESC_FIELDS.map(([k, label]) => `${label} ${oneLine(o[k])}`), "", "Reply: ok | instead | ask. If this isn't clear, ask me to explain it another way before you decide.", "",
-                  `Concerns: ${oneLine(o.concerns)}`, "Status: open", `Raised: ${new Date().toISOString()}`, `Raised after: ${evidenceMilestones(root, o.concerns)}`, ...request.lines];
+                  `Concerns: ${oneLine(o.concerns)}`, `Raised: ${new Date().toISOString()}`, `Raised after: ${evidenceMilestones(root, o.concerns)}`, ...request.lines];
   if (request.malformed) body.push(`Malformed: ${request.malformed}`);
   writeFileSync(path, body.join("\n") + "\n");
   process.stdout.write(`raised ${rel(root, path)}${request.malformed ? ` (malformed: ${request.malformed}; written because Blocking)` : ""}\n`);

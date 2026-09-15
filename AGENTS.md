@@ -30,6 +30,26 @@ Act on the verdict, and only on it.
   promote. Report it, and stop. Next-iteration is the developer's to
   open.
 
+Wake names one action. `run <REQ>`: check it, below.
+`implement <REQ>`: read the latest evidence and its output, fix the
+code, commit, and check. `declare <REQ>`: write its mechanism
+declaration, below. `review mechanism <REQ>`: the mechanism review,
+below. `review <slug>`: the completion review, below.
+`resolve <slug>`: fix the open finding as its own work, then mark it
+`resolved:` in the review. `build <decision>`: build what the record
+says, then add `- <sha> <subject>` under its Realized by.
+`repair <path>`: fix the named record as the reason says, and nothing
+else. `commit <path>`: commit the declared input.
+`reconcile <action>`: finish or abandon the recorded action, below.
+`scope <path>`: the scope paragraph, below. `escalate <REQ>`: raise
+the escalation the reason asks for. `escalate <path>`: add an
+`Outside because:` line to the captured file, or escalate with the
+evidence. `escalate <slug>`: a promoted commitment needs a contract
+change; move the item to next-iteration and raise one escalation
+whose Concerns line names every changed requirement.
+`present <slug>` and `reply <slug>`: the Escalate verdict, and the
+paragraph below. `promote`: below.
+
 When wake says `reply <slug>`, read the developer's question and append
 your explanation with `cairn answer <slug> "<explanation>"`. Run wake again
 to return the decision to the developer. An `ask` answer authorizes only
@@ -49,13 +69,41 @@ move the item to next-iteration with the reason, escalate, and stop.
 
 Before you change code, write `.cairn/in-progress`:
 
-    action: implement | build-decision | run-mechanism | review
+    action: implement | build-decision | run-mechanism | review |
+            declare | repair | promote | resolve
     target: <requirement, decision slug, or commitment slug>
     base: <commit identifier>
     started: <iso timestamp>
 
 Remove it when the change is committed. On wake, an existing record is
 reconciled before any new work: finish or abandon the action it names.
+
+A mechanism declaration is `.cairn/mechanisms/<name>`:
+
+    command: <shell command>
+    inputs:
+      - <path or directory it reads>
+    requirements:
+      - <REQ>
+    results: per-requirement
+    reviewed:
+      - <REQ> sha256:<digest>
+
+`results:` is present only when the command prints `cairn: <REQ>:
+pass` or `fail` lines; `reviewed:` entries come from mechanism
+reviews. A review record is `.cairn/reviews/<slug>.md`, its fields
+above the first heading:
+
+    commitment: <slug>
+    commit: <sha>
+    examined:
+      - <what you examined>
+    findings:
+      - open: <defect>
+      - resolved: <defect, and how>
+
+`findings:` may be an empty list, never absent. Prose follows the
+header.
 
 Check execution has a separate working-tree lock. When wake names
 `cairn-check.lock`, wait for a live owner. If the owner is dead or the
@@ -93,7 +141,8 @@ Apply the same failure demonstration when building a new check.
 
 Decide by level. Routine: decide, no record. Judged and above: record
 it with `cairn decide` before you build it. Blocking: `cairn escalate`,
-then stop. Three attempts at a requirement without new passing evidence
+then stop; when a field cannot be filled, add `--level Blocking` and
+the escalation is written anyway (LOOP-013). Three attempts at a requirement without new passing evidence
 make the next decision about it Blocking. An attempt is one distinct
 digest of the mechanism's declared inputs among the failing checks
 since the last pass; reruns, documentation changes, and a return to a
@@ -108,7 +157,8 @@ incomplete: declare, then fix.
 
 Out of scope is captured, never built. An idea that fits inside the
 specification goes to `cairn backlog --title ... --body ... --from
-<REQ>`. An idea that would change an Agreed requirement, its
+<REQ>`, with `--outside "<why>"` when it surfaced from one of the
+commitment's own requirements. An idea that would change an Agreed requirement, its
 falsifier, or this file goes to `cairn backlog --next-iteration
 --title ... --body ... --changes <REQ>`, naming what it would change.
 A backlog item enters a commitment by a recorded promotion at Done. A
@@ -126,6 +176,23 @@ Review before Done. When every requirement passes, examine the work for
 what the mechanisms would miss, record what you attacked and what you
 found in `.cairn/reviews/<slug>.md`, and change no code while you look.
 A finding is resolved as its own work, after the review is recorded.
+
+Merge other branches with `git merge --no-ff` so their commits stay off
+this loop's first-parent history. Cairn checks each of this loop's own
+commits; reverting a change does not erase a footprint breach. Declare a
+missing input when it belongs to the commitment; this can cover earlier
+correct changes without reverting them. To retain correct committed work
+outside that agreement, use `cairn escalate --scope --keep --concerns
+LOOP-035` with decision fields explaining why to keep the exact recorded
+changes. Stop for the developer. A committed `ok` corrects scope only for
+that incident and requires fresh checks and review; it does not extend the
+mechanism footprint or authorize later edits. For accidental work, capture the
+work in the backlog, restore the breaching paths to the commitment activation
+tree, and commit the restoration. Use `cairn escalate --scope --concerns
+LOOP-035` with the decision fields to request acknowledgment of that exact
+restored history. Commit the developer's `ok` answer before checking. An
+ordinary answer or `instead` supplies direction but grants no acknowledgment;
+new changes remain breaches. Read every path in the scope explanation.
 
 ## Writing for the developer
 
@@ -184,20 +251,3 @@ The kernel is upgraded at Done, never inside a commitment; a commitment
 starts and finishes on one referee. Every evidence record names the
 kernel that wrote it, and a record from another kernel is stale, so an
 upgrade re-runs each mechanism once.
-
-Merge other branches with `git merge --no-ff` so their commits stay off
-this loop's first-parent history. Cairn checks each of this loop's own
-commits; reverting a change does not erase a footprint breach. Declare a
-missing input when it belongs to the commitment; this can cover earlier
-correct changes without reverting them. To retain correct committed work
-outside that agreement, use `cairn escalate --scope --keep --concerns
-LOOP-035` with decision fields explaining why to keep the exact recorded
-changes. Stop for the developer. A committed `ok` corrects scope only for
-that incident and requires fresh checks and review; it does not extend the
-mechanism footprint or authorize later edits. For accidental work, capture the
-work in the backlog, restore the breaching paths to the commitment activation
-tree, and commit the restoration. Use `cairn escalate --scope --concerns
-LOOP-035` with the decision fields to request acknowledgment of that exact
-restored history. Commit the developer's `ok` answer before checking. An
-ordinary answer or `instead` supplies direction but grants no acknowledgment;
-new changes remain breaches. Read every path in the scope explanation.

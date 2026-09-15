@@ -58,7 +58,7 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
   // Status and block boundaries match the kernel exactly.
   for (const block of spec.blocks) {
     const { id, status, falsifier, promotion } = block;
-    if (promotion && !existsSync(join(dir, "..", "decisions", `${promotion}.md`))) findings.push(`${name}: ${id} is Agreed by promotion ${promotion} and docs/decisions/${promotion}.md does not exist (LOOP-088)`);
+    if (promotion && !existsSync(join(dir, "..", "decisions", `${promotion}.md`))) findings.push(`${name}: ${id} is Agreed by ${block.agreedBy} ${promotion} and docs/decisions/${promotion}.md does not exist (LOOP-088, SPEC-002)`);
     const end = block.body.findIndex((line) => /^Falsifier:/.test(line));
     const body = block.body.slice(0, end < 0 ? undefined : end).filter((line) => !/^Status:/.test(line)).join(" ");
     if (status === "Agreed" && !falsifier) findings.push(`${name}: ${id} is Agreed and carries no Falsifier: line (SPEC-002)`);

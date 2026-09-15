@@ -26,9 +26,11 @@ export function parseSpec(text) {
     const start = i, body = [m[2]];
     while (i + 1 < lines.length && lines[i + 1].trim() && !/^(?:\[[A-Z]+-\d+\]|#)/.test(lines[i + 1])) body.push(lines[++i]);
     const ownStatus = body.find((line) => /^Status:/.test(line));
+    // A decision marker: Agreed by promotion (LOOP-088) or by deference (SPEC-002), naming the record.
+    const marker = ownStatus === undefined ? null : /\bby (promotion|deference)[ \t]+(\S+)/.exec(ownStatus);
     blocks.push({ id: m[1], line: start + 1, body,
       status: ownStatus === undefined ? status : /^Status:[ \t]*(\w+)/.exec(ownStatus)?.[1] ?? null,
-      promotion: ownStatus === undefined ? null : /\bby promotion[ \t]+(\S+)/.exec(ownStatus)?.[1] ?? null,
+      promotion: marker?.[2] ?? null, agreedBy: marker?.[1] ?? null,
       falsifier: body.some((line) => /^Falsifier:/.test(line)) });
   }
   return { lines, blocks, status, prefix, scope };

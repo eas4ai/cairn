@@ -32,7 +32,7 @@ test("PKG-003: a command, a directory, or a record kind no decision names", () =
   finds({ ".cairn/mystery/.keep": "" }, "PKG-003");
   finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nA widget record, one per run:\n\n    x: y\n" }, "PKG-003");
 });
-test("PKG-004: a kernel over 1500 lines", () => finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1501) }, "PKG-004"));
+test("PKG-004: a kernel over 1600 lines", () => finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1601) }, "PKG-004"));
 test("PKG-006: a skill step naming a vendor's product", () => finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006"));
 test("PKG-008: a non-ASCII character in a tracked text file", () => finds({ "docs/n.md": "caf\u00e9\n" }, "PKG-008"));
 test("PKG-009: the kernel importing from tests", () => finds({ "bin/x.mjs": '// cairn wake\nimport { h } from "../tests/helpers.mjs";\n' }, "PKG-009"));

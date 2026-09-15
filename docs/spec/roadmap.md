@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-gates-bind-to-the-commitment
+Current: records-in-every-shape
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -445,3 +445,11 @@ activation commit, a demoted or removed requirement is a contract
 change, the include files are observable and compared, and a reversed
 promotion is seen.
 [Commitment](../commitments/the-gates-bind-to-the-commitment.md).
+
+## Records in every shape
+
+Requested by the developer on 2026-09-15 after the second audit, the
+second remediation commitment. Delivers LOOP-124 through LOOP-131
+and repairs eight behaviors under their existing requirements: every
+record shape is read or named, no state exits raw or traps the loop.
+[Commitment](../commitments/records-in-every-shape.md).

@@ -1427,3 +1427,64 @@ escaped it; "its include file" in LOOP-117 named nothing observable,
 and the kernel exempted CLAUDE.md without comparing it; a superseded
 promotion still satisfied LOOP-088, so the reversal the working
 agreement offers the developer had no effect.
+
+## Records in every shape
+
+[LOOP-124] The loop MUST read a Concerns:, Rests on:, or Promoted
+from: field written as a list as the flat form.
+Falsifier: a record with one of those fields as a list makes a
+command exit 3, or names a repair that its own remedy cannot clear.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-125] The loop MUST resolve an item named on a Specified from:
+or Promoted from: line, or by --promotes, whether it is written as
+the slug, the filename, the repository path, or a backticked slug.
+Falsifier: `Specified from: foo.md` leaves .cairn/next-iteration/
+foo.md unstamped at Done.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-126] The loop MUST name a declaration as the repair when one
+of its inputs matches a tracked path under .cairn/evidence/, or when
+a check under it changed only paths under .cairn/evidence/.
+Falsifier: a declaration with input `.cairn/*` or `*` ends a check by
+asking to commit .cairn/evidence/.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-127] The loop MUST name an unreadable record directory as a
+repair.
+Falsifier: an unreadable .cairn/escalations/ makes wake exit 3.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-128] The loop MUST refuse a title that slugifies to nothing.
+Falsifier: `backlog --title '!!!'` writes a file.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-129] The loop MUST read `examined: []` in a review as an empty
+list.
+Falsifier: a review with `examined: []` and `findings: []` reaches
+Done.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-130] The scope restore check MUST compare paths relative to
+the project root when the root is below the Git toplevel.
+Falsifier: in a nested project, a scope escalation is accepted while
+its paths are unrestored.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-131] The loop MUST name the queue entry of a Consequential
+decision record that the commitment's own commits added when no
+commit queued it.
+Falsifier: such a record reaches Done with no .cairn/queue/<slug>
+ever committed.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Agreed 2026-09-15 on the developer's direction after the second audit
+(A3 to A9, A13, B5). The same commitment repairs, under their own
+requirements, the lint's stack trace on a missing directory and its
+silent extra argument (PKG-028), the check lock read that printed a
+repair after evidence was recorded (LOOP-107), the rename token that
+read as a second dirty path (LOOP-030, LOOP-110), a Current: line
+inside a fenced example (LOOP-104), a Status: word taken from wrapped
+prose after the block's own line (SPEC-018), the check message that
+never mentioned the write-ahead record (LOOP-110), and the DEC-016
+message that counted records where the rule counts attempts.

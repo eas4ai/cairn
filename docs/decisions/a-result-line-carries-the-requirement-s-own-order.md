@@ -12,4 +12,4 @@ Each results: entry is one line of six whitespace-separated tokens: the requirem
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 3c96bcf1d0d07b0cbde4562a1b3891732949ad6b One receipt per run

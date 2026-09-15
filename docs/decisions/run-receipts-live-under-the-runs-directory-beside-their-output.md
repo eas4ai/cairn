@@ -12,4 +12,4 @@ A check writes one receipt per mechanism run under .cairn/evidence/runs/, named 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 3c96bcf1d0d07b0cbde4562a1b3891732949ad6b One receipt per run

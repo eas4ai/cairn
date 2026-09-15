@@ -12,4 +12,4 @@ The 2026-09-15 audit found that bin/hook.mjs builds the kernel path from URL.pat
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 439ab0e61b9ced61bed15ade00ed82d58a5b9e31 The hooks and gates judge by records

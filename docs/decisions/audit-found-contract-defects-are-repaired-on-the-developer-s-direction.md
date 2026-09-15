@@ -12,4 +12,4 @@ The 2026-09-15 audit found contract text that contradicts the kernel and other r
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 74c15a1feb4156a4eb253e0b5053d42c94d3d41f The contract says what the kernel does

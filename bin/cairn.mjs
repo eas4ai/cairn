@@ -233,7 +233,15 @@ function scopeVerdict(root, c, mechs) {
 // the footprint from one of the commitment's own requirements carries the
 // agent's reason it is outside, or an escalation names it. A
 // next-iteration item names what it would change (LOOP-093).
-const recordTexts = (root, ...dir) => files(join(root, ...dir)).map((n) => read(join(root, ...dir, n)));
+// The paths a commitment's own commits added under the named directories.
+function addedPaths(root, commits, ...dirs) {
+  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "--diff-filter=A", "-r", "--relative", "-z", "--", ...dirs],
+    { cwd: root, input: commits, encoding: "utf8", maxBuffer: Infinity });
+  if (r.error || r.status !== 0) throw new Error("cannot read the commitment's captures");
+  return [...new Set(r.stdout.split("\0").filter(Boolean))].sort();
+}
+// An escalation covers a capture or a contract change only when this commitment raised it; an older one, from any commitment, names the requirement by coincidence (LOOP-114, LOOP-119).
+const ownEscalations = (root, history) => { const added = new Set(addedPaths(root, history.commits, ".cairn/escalations")); return escalations(root).filter((e) => added.has(`.cairn/escalations/${e.name}.md`)); };
 function captureVerdict(root, c) {
   const next = join(root, ".cairn", "next-iteration");
   for (const n of files(next)) {
@@ -241,16 +249,14 @@ function captureVerdict(root, c) {
   }
   const history = scopeHistory(root, c.slug);
   if (!history.began || !history.commits) return null;
-  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", "--diff-filter=A", "-r", "--relative", "-z", "--", ".cairn/backlog", ".cairn/next-iteration"],
-    { cwd: root, input: history.commits, encoding: "utf8", maxBuffer: Infinity });
-  if (r.error || r.status !== 0) throw new Error("cannot read the commitment's captures");
-  for (const path of [...new Set(r.stdout.split("\0").filter(Boolean))].sort()) {
+  const own = ownEscalations(root, history);
+  for (const path of addedPaths(root, history.commits, ".cairn/backlog", ".cairn/next-iteration")) {
     if (!existsSync(join(root, path))) continue;
     const f = fields(read(join(root, path)));
     const hit = (`${f["Surfaced from"] ?? ""} ${f["Changes"] ?? ""}`.match(/\b[A-Z]+-\d+\b/g) ?? []).find((id) => c.requirements.includes(id));
     // A next-iteration item is also covered by the escalation whose Concerns line names the requirement it changes (LOOP-119).
-    if (!hit || "Outside because" in f || recordTexts(root, ".cairn", "escalations").some((t) => t.includes(path))
-        || ("Changes" in f && escalations(root).some((e) => (e.Concerns ?? "").split(/[\s,]+/).includes(hit)))) continue;
+    if (!hit || "Outside because" in f || own.some((e) => e.text.includes(path))
+        || ("Changes" in f && own.some((e) => (e.Concerns ?? "").split(/[\s,]+/).includes(hit)))) continue;
     return { verdict: "Resolvable", action: `escalate ${path}`, why: `captured from ${hit}, which this commitment includes, with no Outside because: line; add the line when the idea is not this commitment's work, or escalate with the evidence when the work cannot be finished, and do not report Done around it (LOOP-092)` };
   }
   return null;
@@ -270,7 +276,7 @@ function promotedContractVerdict(root, c, ctx, agreed) {
   if (now.status === 0 && (was.status !== 0 || was.stdout !== now.stdout)) changed.push("AGENTS.md");
   // The escalation that covers the change names every changed requirement on its Concerns line (LOOP-114).
   const ids = changed.map((id) => id === "AGENTS.md" ? "LOOP-036" : id);
-  if (!changed.length || escalations(root).some((e) => { const named = (e.Concerns ?? "").split(/[\s,]+/); return ids.every((id) => named.includes(id)); })) return null;
+  if (!changed.length || ownEscalations(root, history).some((e) => { const named = (e.Concerns ?? "").split(/[\s,]+/); return ids.every((id) => named.includes(id)); })) return null;
   return { verdict: "Resolvable", action: `escalate ${c.slug}`, why: `a promoted commitment changed ${changed.join(", ")} since it began at ${history.began.slice(0, 7)}; a change to an Agreed requirement, its falsifier, or the working agreement is the developer's: move the item to next-iteration with the reason and raise one escalation with --concerns ${ids.join(",")}, and do not build it under the promotion's record (LOOP-089, LOOP-090, LOOP-114)` };
 }
 function changedPaths(root, commits, inputs = []) {
@@ -324,7 +330,7 @@ function decisionVerdict(root) {
 }
 function escalations(root) {
   const dir = join(root, ".cairn", "escalations");
-  return files(dir).map((n) => { const text = read(join(dir, n)); return { name: n.replace(/\.md$/, ""), ...fields(text), ...escalationTurn(text) }; });
+  return files(dir).map((n) => { const text = read(join(dir, n)); return { name: n.replace(/\.md$/, ""), ...fields(text), ...escalationTurn(text), text }; });
 }
 // The initial Reply line lists options; only replies after an Answer are turns.
 function escalationTurn(text) {

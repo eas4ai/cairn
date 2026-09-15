@@ -207,3 +207,29 @@ test("the LOOP-090 route needs one escalation: its Concerns line covers the move
   const out = wake(root);
   assert.doesNotMatch(out, /escalate \.cairn\/next-iteration/, out); assert.doesNotMatch(out, /escalate first/, out);
 });
+
+// An escalation from an earlier commitment that names the requirement covers nothing here (audit-2 A1, A2).
+const EARLIER = { "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: zero\n", "docs/commitments/zero.md": "# Zero\n\nSlug: zero\nRequirements: R-001\n" };
+const activate = (root) => { writeFileSync(join(root, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n"); writeFileSync(join(root, "docs/commitments/first.md"), PROMOTED); commit(root, "activate first"); };
+
+test("an escalation raised before the promoted commitment began does not silence the LOOP-090 gate (LOOP-114)", () => {
+  const root = repo(EARLIER); decided(root);
+  escalate(root, "R-001", "Should R-001 change?"); cairn(root, "answer", "r-001", "instead keep R-001 exactly as written"); commit(root, "an earlier commitment's answered escalation on R-001");
+  activate(root);
+  writeFileSync(join(root, "docs/spec/test.md"), readFileSync(join(root, "docs/spec/test.md"), "utf8").replace("The thing MUST work.", "The thing MUST work well.")); commit(root, "revise R-001");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: escalate first\n/, out);
+  escalate(root, "R-001", "R-001 must change for first."); commit(root, "the escalation first raised");
+  assert.match(wake(root), /^Escalate: present r-001-2/);
+});
+
+test("an escalation raised before the commitment began does not silence the capture gate (LOOP-119)", () => {
+  const root = repo(EARLIER); decided(root);
+  escalate(root, "R-001", "Should R-001 change?"); cairn(root, "answer", "r-001", "ok"); commit(root, "an earlier commitment's answered escalation on R-001");
+  activate(root);
+  cairn(root, "backlog", "--next-iteration", "--changes", "R-001", "--title", "R-001 must change", "--body", "Found while building first."); commit(root, "move the item");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: escalate \.cairn\/next-iteration\/r-001-must-change\.md/, out);
+  escalate(root, "R-001", "R-001 must change for first."); commit(root, "the escalation first raised");
+  assert.match(wake(root), /^Escalate: present r-001-2/);
+});

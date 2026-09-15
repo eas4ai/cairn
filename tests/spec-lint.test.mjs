@@ -143,11 +143,14 @@ test("an Agreed block whose only keyword is MAY needs a falsifier like any other
 
 test("a regex literal is not a path, a drive path and a file URL are, and a skill's slash name is allowed (SPEC-028, SPEC-029)", () => {
   const dir = mkdtempSync(join(tmpdir(), "cairn-spec-"));
-  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST reject a name matching `/^\\s*$/` or `/(a|b)?c/`.\nFalsifier: it accepts one.\n\n[A-002] The app MUST read C:\\Users\\alex\\config.toml and file:///tmp/secret.\nFalsifier: it does not.\n\nThe developer opens /next-iteration at Done.\n");
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST reject a name matching `/^\\s*$/`, `/(a|b)?c/`, `/[a-z]+/`, or `/[0-9]{3}/`.\nFalsifier: it accepts one.\n\n[A-002] The app MUST read C:\\Users\\alex\\config.toml and file:///tmp/secret.\nFalsifier: it does not.\n\nThe developer opens /next-iteration at Done.\n");
   const r = lint(dir);
   assert.equal(r.status, 1, r.stdout);
-  assert.doesNotMatch(r.stdout, /\/\^\\s|\/\(a|\/next-iteration/, r.stdout);
+  assert.doesNotMatch(r.stdout, /\/\^\\s|\/\(a|\/\[a-z|\/\[0-9|\/next-iteration/, r.stdout);
   assert.match(r.stdout, /C:\\Users/); assert.match(r.stdout, /file:\/\/\/tmp\/secret/);
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST read C:/Users/alex/config.toml and file:/tmp/secret.\nFalsifier: it does not.\n");
+  const r2 = lint(dir);
+  assert.equal(r2.status, 1, r2.stdout); assert.match(r2.stdout, /C:\/Users/); assert.match(r2.stdout, /file:\/tmp\/secret/);
 });
 
 test("a backticked or quoted actor still counts as one (PKG-010)", () => {

@@ -17,7 +17,7 @@ const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf
 // Shipped text: records under .cairn/ are a project's, not the package's (PKG-008, PKG-024).
 const text = (p) => !p.startsWith(".cairn/") && (/\.(md|mjs|js|json|sh|yaml|yml|txt)$/.test(p) || /(^|\/)[^./]+$/.test(p) && !/^reference\//.test(p));
 const present = tracked.filter((p) => existsSync(join(root, p)));
-const kernel = present.filter((p) => p.startsWith("bin/") && p.endsWith(".mjs")).map((p) => read(p)).join("\n");
+const kernel = present.filter((p) => p.startsWith("bin/")).map((p) => read(p)).join("\n");   // every file under bin/ counts (PKG-004)
 const decisions = present.filter((p) => p.startsWith("docs/decisions/")).map((p) => read(p)).join("\n");
 
 // PKG-001: no infrastructure to provision
@@ -31,7 +31,7 @@ if (existsSync(join(root, ".gitignore"))) for (const line of read(".gitignore").
   if (l.startsWith(".cairn/") && !/^\.cairn\/in-progress$/.test(l)) f.push(`PKG-002: .gitignore excludes ${l}; only the in-progress record may be ignored`);
 }
 
-if (spawnSync("git", ["check-ignore", "--no-index", ".cairn/evidence/probe"], { cwd: root }).status === 0) f.push("PKG-002: evidence is ignored; its history must survive a clone");
+for (const probe of [".cairn/evidence/probe", ".cairn/evidence/runs/probe.out", ".cairn/evidence/runs/probe.err"]) if (spawnSync("git", ["check-ignore", "--no-index", probe], { cwd: root }).status === 0) { f.push(`PKG-002: ${probe} is ignored; evidence and its output must survive a clone`); break; }
 
 // PKG-002: the write-ahead record is a claim about one working tree; a
 // fresh clone that inherits one is blocked by a stranger's interruption.
@@ -64,7 +64,8 @@ if (lines > 1600) f.push(`PKG-004: kernel is ${lines} lines`);
 for (const p of present.filter((p) => p.startsWith("skills/"))) {
   const lines = read(p).split("\n");
   for (let start = 0, i = 0; i <= lines.length; i++) if (i === lines.length || lines[i].trim() === "") {
-    if (/\b(run|use|invoke|open|type)\b[^.]*\b(claude code|codex cli|cursor|windsurf|copilot)\b/i.test(lines.slice(start, i).join(" "))) f.push(`PKG-006: ${p}:${start + 1} instructs a step by naming a vendor's product`);
+    const para = lines.slice(start, i).join(" ").replace(/\s+/g, " "), verb = "run|use|invoke|open|type|launch|start|press|click|select|install|paste", product = "claude code|codex cli|cursor|windsurf|copilot";
+    if (new RegExp(`\\b(?:${verb})\\b[^.]*\\b(?:${product})\\b|\\b(?:${product})\\b[^.]*\\b(?:${verb})\\b`, "i").test(para)) f.push(`PKG-006: ${p}:${start + 1} instructs a step by naming a vendor's product`);
     start = i + 1;
   }
 }
@@ -79,7 +80,7 @@ if (/from\s+["'][^"']*\btests\//.test(kernel)) f.push("PKG-009: the kernel impor
 if (/\bfetch\s*\(|https?:\/\/|node:https?\b|\banthropic\b|\bopenai\b/i.test(kernel)) f.push("PKG-012: the kernel makes a network call or names a model vendor");
 
 // PKG-013: no deferral language, outside quotes and code
-const DEFER = /\b(v1|version one|version 1|mvp|phase (two|2)|later (version|release|phase)|future release|postpone[ds]?|for now)\b/i;
+const DEFER = /\b(v1|version one|version 1|mvp|phase (two|2)|later (version|release|phase|milestone)|future (release|version)|next release|coming soon|not yet supported|postpone[ds]?|for now)\b/i;
 for (const p of present.filter((p) => (/^(docs\/(spec|commitments|decisions)|skills)\//.test(p) && p.endsWith(".md")) || ["README.md", "docs/manual.md", "docs/walkthrough.md"].includes(p))) {   // the human documents too (PKG-032)
   const t = read(p).replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ");
   // An indented block is code. A requirement block, from [ID] to the next

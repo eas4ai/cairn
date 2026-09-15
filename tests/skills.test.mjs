@@ -156,7 +156,7 @@ test("the README invokes the phase skills by name and states versions and platfo
   has(README, "Node 18", "minimum Node"); has(README, "Git 2.5", "minimum Git"); has(README, "Windows", "platform statement");
   has(README, "up to the harness's cap", "the stop hook is bounded");
 });
-test("the manual and the walkthrough say the loop promotes backlog items at Done (LOOP-087)", () => {
+test("the manual and the walkthrough say the loop promotes backlog items at Done", () => {
   const MANUAL = flat("../docs/manual.md"), WALK = flat("../docs/walkthrough.md");
   lacks(MANUAL, "You select the next commitment when you are ready", "the old sentence");
   lacks(WALK, "the agent does not start them automatically", "the old sentence");

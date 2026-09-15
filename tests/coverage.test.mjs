@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const declaration = readFileSync(here("../.cairn/mechanisms/node-test"), "utf8");
 const section = (name) => { const m = new RegExp(`^${name}:\\n((?:  - .*\\n)*)`, "m").exec(declaration); return m ? [...m[1].matchAll(/^  - (.*)$/gm)].map((x) => x[1]) : []; };
-const tests = readdirSync(here("..")).length && readdirSync(here(".")).filter((n) => n.endsWith(".mjs")).map((n) => [n, readFileSync(here(n), "utf8")]);
+const tests = readdirSync(here(".")).filter((n) => n.endsWith(".mjs")).map((n) => [n, readFileSync(here(n), "utf8")]);
 
 test("every requirement the node-test declaration speaks for is named in a test title (PKG-025)", () => {
   const named = new Set();
@@ -21,8 +21,8 @@ test("every repository path the tests read is a declared input of node-test (PKG
   const inputs = section("inputs");
   const covered = (p) => inputs.some((i) => i.endsWith("/") ? p.startsWith(i) : p === i);
   const read = new Set();
-  // Repository reads: a URL built from import.meta.url, or the skills tests' flat/raw/here helpers.
-  for (const [, text] of tests) for (const m of text.matchAll(/(?:new URL\(|\b(?:flat|raw|here)\()\s*["'`]\.\.\/([^"'`$]+)["'`]/g)) read.add(m[1]);
+  // Repository reads: a URL built from import.meta.url, a relative import, or the skills tests' flat/raw/here helpers, each with a plain or template literal whose static prefix is the path (PKG-026).
+  for (const [, text] of tests) for (const m of text.matchAll(/(?:new URL\(|\bfrom\s+|\b(?:flat|raw|here)\()\s*["'`]\.\.\/([^"'`$]+)(?=["'`$])/g)) read.add(m[1]);
   const undeclared = [...read].filter((p) => !covered(p)).sort();
   assert.deepEqual(undeclared, [], `read by a test and declared by no input: ${undeclared.join(", ")}`);
 });

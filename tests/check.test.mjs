@@ -43,10 +43,13 @@ test("a nonzero exit records fail, and the receipt keeps the exit code (LOOP-034
   assert.match(r.stdout, /^Resolvable: implement R-001/m);
 });
 
-test("two checks write two records; nothing is overwritten or deleted (LOOP-025)", () => {
+test("a pass after a fail keeps the failing record; nothing is overwritten or deleted (LOOP-025)", () => {
   const root = repo();
-  cairn(root, "check"); cairn(root, "check");
-  assert.equal(records(root, "R-001").length, 2);
+  writeFileSync(join(root, "src/exit"), "1\n"); commit(root); cairn(root, "check");
+  writeFileSync(join(root, "src/exit"), "0\n"); commit(root); cairn(root, "check");
+  const paths = records(root, "R-001");
+  assert.equal(paths.length, 2);
+  assert.match(readFileSync(join(root, paths[0]), "utf8"), /^  - R-001 fail /m, "the earlier fail stays"); assert.match(readFileSync(join(root, paths[1]), "utf8"), /^  - R-001 pass /m);
 });
 
 test("a commit changing a declared input makes evidence stale; an undeclared one does not (LOOP-007)", () => {
@@ -127,9 +130,10 @@ test("check names a requested requirement that no mechanism claims", () => {
   assert.match(r.stdout, /skipped R-999: no mechanism claims it/);
 });
 
-test("check writes and clears an in-progress record around the run (LOOP-021)", () => {
-  const root = repo();
+test("check writes the in-progress record before the run and clears it after (LOOP-021)", () => {
+  const root = repo({ ".cairn/mechanisms/m": "command: node -e \"require('fs').copyFileSync('.cairn/in-progress','src/seen')\"\ninputs:\n  - src/exit\nrequirements:\n  - R-001\n  - R-002\n" });
   cairn(root, "check");
+  assert.match(readFileSync(join(root, "src/seen"), "utf8"), /^action: run-mechanism$/m, "the record was on disk while the mechanism ran");
   assert.ok(!existsSync(join(root, ".cairn/in-progress")), "cleared after a completed run");
 });
 

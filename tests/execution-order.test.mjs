@@ -55,7 +55,7 @@ test("LOOP-070: imported branch receipts stale a later sequence until a new chec
   assert.equal(at(root, "2026-09-06T10:00:00.000Z").status, 0, "the new run incorporates both histories despite an older timestamp");
 });
 
-test("LOOP-070, LOOP-098: legacy receipts need one ordered check and remain byte-for-byte unchanged", () => {
+test("LOOP-070, LOOP-098: legacy receipts need one ordered check, remain byte-for-byte unchanged, and precede the run receipt in the history", () => {
   const root = setup(); cairn(root, "check"); review(root); commit(root);
   legacyize(root);
   const names = records(root, "R-001");
@@ -64,6 +64,9 @@ test("LOOP-070, LOOP-098: legacy receipts need one ordered check and remain byte
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001[\s\S]*(order|sequence)/);
   assert.equal(cairn(root, "check").status, 0);
   assert.equal(readFileSync(recordPath(root, names[0]), "utf8"), before);
+  const after = records(root, "R-001");
+  assert.equal(after.length, 2, "the legacy receipt and the run receipt are both history");
+  assert.equal(after[0], names[0]); assert.match(after[1], /^\.cairn\/evidence\/runs\//, "in sequence order, the legacy one first");
 });
 
 for (const change of ["edit", "remove"])

@@ -26,19 +26,25 @@ const finds = (files, req) => { const r = lint(repo(files)); assert.equal(r.stat
 
 test("a clean package passes", () => { const r = lint(repo()); assert.equal(r.status, 0, r.stdout); });
 test("PKG-001: a dependency, or a service manifest", () => { finds({ "package.json": '{"dependencies":{"left-pad":"1"}}' }, "PKG-001"); finds({ "Dockerfile": "FROM x\n" }, "PKG-001"); });
-test("PKG-002: ignoring evidence or other durable state", () => finds({ ".gitignore": ".cairn/evidence/\n.cairn/queue/\n" }, "PKG-002"));
+test("PKG-002: ignoring evidence or other durable state, by directory or by extension", () => { finds({ ".gitignore": ".cairn/evidence/\n.cairn/queue/\n" }, "PKG-002"); finds({ ".gitignore": "*.out\n*.err\n" }, "PKG-002"); });
 test("PKG-003: a command, a directory, or a record kind no decision names", () => {
   finds({ "bin/x.mjs": "// cairn wake\n// cairn frobnicate\n" }, "PKG-003");
   finds({ ".cairn/mystery/.keep": "" }, "PKG-003");
   finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nA widget record, one per run:\n\n    x: y\n" }, "PKG-003");
 });
-test("PKG-004: a kernel over 1600 lines", () => finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1601) }, "PKG-004"));
-test("PKG-006: a skill step naming a vendor's product", () => finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006"));
+test("PKG-004: a kernel over 1600 lines, counting every file under bin/", () => { finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1601) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1600) }, "PKG-004"); });
+test("PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)", () => {
+  finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006");
+  finds({ "skills/s/SKILL.md": "1. Open Claude\n   Code and paste the prompt.\n" }, "PKG-006");
+  finds({ "skills/s/SKILL.md": "Launch Cursor next.\n" }, "PKG-006");
+  finds({ "skills/s/SKILL.md": "In Claude Code, press enter.\n" }, "PKG-006");
+});
 test("PKG-008: a non-ASCII character in a tracked text file", () => finds({ "docs/n.md": "caf\u00e9\n" }, "PKG-008"));
 test("PKG-009: the kernel importing from tests", () => finds({ "bin/x.mjs": '// cairn wake\nimport { h } from "../tests/helpers.mjs";\n' }, "PKG-009"));
 test("PKG-012: a network call or a model vendor in the kernel", () => { finds({ "bin/x.mjs": "// cairn wake\nawait fetch(u);\n" }, "PKG-012"); finds({ "bin/x.mjs": "// cairn wake\n// anthropic\n" }, "PKG-012"); });
 test("PKG-013: deferral language, but not in code, quotes, or a rule", () => {
   finds({ "docs/spec/s.md": "# S\n\nStatus: Agreed\n\nThis ships in v1; the rest comes in a later release.\n" }, "PKG-013");
+  for (const phrase of ["a future version", "not yet supported", "coming soon", "the next release", "a later milestone"]) finds({ "docs/spec/s.md": `# S\n\nStatus: Agreed\n\nThat is ${phrase}.\n` }, "PKG-013");
   const ok = lint(repo({ "docs/spec/s.md": '# S\n\nStatus: Agreed\n\n    v1 is a code sample\n\nNothing is "postponed".\n\n[S-001] The agent MUST NOT name a later version.\nFalsifier: it does.\n' }));
   assert.equal(ok.status, 0, ok.stdout);
 });

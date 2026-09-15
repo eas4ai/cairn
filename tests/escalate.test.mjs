@@ -21,6 +21,10 @@ test("escalate writes the six-line format followed by its facts, and wake presen
   for (const k of ["Question:   Store sessions where?", "Recommend:  SQLite", "Because:    No infrastructure.",
                    "If wrong:   One migration, an hour.", "Instead:    Postgres, if ops prefer it.", "Reply: ok | instead | ask",
                    "Concerns: R-001", "Raised: "]) assert.ok(t.includes(k), k);
+  // The six fields, in order, one line each, with no record line inside the block (LOOP-026).
+  const at = ["Question:", "Recommend:", "Because:", "If wrong:", "Instead:", "Reply:", "Concerns:"].map((l) => lines.findIndex((x) => x.startsWith(l)));
+  assert.ok(at.every((i, n) => i >= 0 && (n === 0 || i > at[n - 1])), `fields in order, then the record lines: ${at}`);
+  assert.equal(at[4] - at[0], 4, "the five fields are consecutive single lines"); assert.equal(lines[at[5] - 1], "", "the reply options follow a blank line");
   const w = cairn(root, "wake");
   assert.equal(w.status, 2); assert.match(w.stdout, /^Escalate: present r-001/);
 });
@@ -41,10 +45,15 @@ test("a Blocking escalation that fails the format is written anyway, naming the 
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
 });
 
-test("a --level other than Blocking is refused rather than silently losing the bypass (DEC-002)", () => {
+test("the loop stops for the developer only at Blocking: a recorded decision below it never yields Escalate, and the Blocking bypass must be spelled exactly (DEC-002)", () => {
   const root = repo();
-  const r = esc(root, "--level", "Blokcing");
+  const d = cairn(root, "decide", "--title", "Small call", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x");
+  assert.equal(d.status, 0, d.stderr);
+  assert.notEqual(cairn(root, "wake").status, 2, "a Consequential decision does not stop the loop");
+  let r = esc(root, "--level", "Blokcing");
   assert.equal(r.status, 3); assert.match(r.stderr, /Blokcing/); assert.ok(!existsSync(file(root)));
+  r = esc(root); assert.equal(r.status, 0, r.stderr);
+  assert.equal(cairn(root, "wake").status, 2, "an escalation, a Blocking decision, does");
 });
 
 test("a second escalation while one is open is refused (LOOP-011)", () => {

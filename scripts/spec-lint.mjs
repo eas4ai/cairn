@@ -52,9 +52,9 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
     if (hostLines.has(i)) continue;
     // A file URL and a drive path are host paths (SPEC-029); a regex literal is not a path (SPEC-028).
     const local = line.replace(/\b(?!file:)[a-z][a-z0-9+.-]*:\/\/[^\s<>"'`]+/gi, " ");
-    for (const m of local.matchAll(/(?:^|[\s`"'(=<\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/|[A-Za-z]:\\|file:\/\/)[^\s`"'<>),;]*)/g)) {
-      const path = m[1].replace(/[.!?:]+$/, "");
-      if (path === "/" || SKILLS.includes(path) || (/^[/~]/.test(path) && /[\^$*|?\\]/.test(path))) continue;
+    for (const m of local.matchAll(/(?:^|[\s`"'(=<\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/|[A-Za-z]:[\\/]|file:\/)[^\s`"'<>),;]*)/g)) {
+      const path = m[1].replace(/[.!?:\]]+$/, "");   // a closing bracket or sentence mark after the path is not part of it
+      if (path === "/" || SKILLS.includes(path) || (/^[/~]/.test(path) && /[\^$*|?\\[\](){}+]/.test(path))) continue;   // a class, group, quantifier, anchor, or alternation is a regex, not a path (SPEC-028)
       if (hostPaths.some((host) => path === host || path.startsWith(host === "/" ? "/" : host + "/"))) continue;
       findings.push(`${name}:${i + 1}: absolute path ${path}; cite a repository-relative path or declare software behavior in Host paths: (SPEC-019)`);
     }

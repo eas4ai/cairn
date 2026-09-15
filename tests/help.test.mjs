@@ -37,7 +37,7 @@ test("help does not hide invalid options or consume literal arguments", (t) => {
   }
 });
 
-test("help lists the lint command (PKG-028, PKG-017)", () => {
+test("help lists the lint command (PKG-017)", () => {
   const r = cairn(mkdtempSync(join(tmpdir(), "cairn-help-")), "--help");
   assert.match(r.stdout, /^  lint \[DIR\]/m);
 });

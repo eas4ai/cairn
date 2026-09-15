@@ -76,7 +76,7 @@ test("a checkout under a path with a space links a command that resolves, and it
   assert.match(JSON.parse(hookFrom(bin, "stop", root, { HOME: home }).stdout).reason, /^Resolvable: run R-001/);
 });
 
-test("the hooks run the kernel the command link resolves to, so hook and agent share one referee (PKG-021, LOOP-096)", () => {
+test("the hooks run the kernel the command link resolves to, so hook and agent share one referee (PKG-021)", () => {
   const other = copy(mkdtempSync(join(tmpdir(), "cairn-other-")), true), root = repo(), home = mkdtempSync(join(tmpdir(), "cairn-home-"));
   mkdirSync(join(home, ".local/bin"), { recursive: true }); spawnSync("ln", ["-s", join(other, "cairn.mjs"), join(home, ".local/bin/cairn")]);
   const otherCairn = (...a) => spawnSync(process.execPath, [join(other, "cairn.mjs"), ...a], { cwd: root, encoding: "utf8" });

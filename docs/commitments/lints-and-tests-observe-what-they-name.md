@@ -25,10 +25,9 @@ to F6, D10 (the PKG-004 count).
   drive paths with either slash and `file:/`.
 - scripts/pkg-lint.mjs: a vendor-naming step matched across wrapped
   list items; the verbs launch, start, press, click, select, install
-  and paste, in either order with the product; the phrases future
-  version, not yet supported, coming soon, next release and later
-  milestone; the ignore probe with .out and .err names; every file
-  under bin/ counted.
+  and paste, in either order with the product; the deferral phrases
+  the audit listed under F5, added to the scan; the ignore probe with
+  .out and .err names; every file under bin/ counted.
 - tests/coverage.test.mjs: every `../` literal and relative import;
   the root listing removed.
 - fourteen test titles retitled or their bodies strengthened to

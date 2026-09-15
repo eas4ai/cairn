@@ -29,7 +29,7 @@ test("a subdirectory or a README in a record directory changes nothing (LOOP-103
   assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /^Done: first/);
 });
 
-test("two Current: lines are a roadmap repair (LOOP-019, LOOP-104)", () => {
+test("two Current: lines are a roadmap repair (LOOP-104)", () => {
   const root = setup({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: first\nCurrent: second\n" });
   const r = wake(root);
   assert.match(r.stdout, /^Resolvable: repair docs\/spec\/roadmap\.md/); assert.match(r.stdout, /LOOP-104/);
@@ -132,7 +132,7 @@ test("a shallow clone names history to fetch, not a decision to build (LOOP-113)
   assert.doesNotMatch(r.stdout, /^Resolvable: build/); assert.match(r.stdout, /shallow/); assert.match(r.stdout, /LOOP-113/);
 });
 
-test("record-writing commands refuse to run outside a Cairn repository and write nothing (LOOP-118, LOOP-046)", () => {
+test("record-writing commands refuse to run outside a Cairn repository and write nothing (LOOP-118)", () => {
   const plain = mkdtempSync(join(tmpdir(), "not-cairn-"));
   const fields = ["--title", "T", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x"];
   for (const args of [["decide", ...fields], ["escalate", "--concerns", "R-001", "--question", "q", "--recommend", "r", "--because", "b", "--if-wrong", "w", "--instead", "i"], ["answer", "q", "ok"], ["backlog", "--title", "T", "--body", "b"], ["supersede", "old", "--cause", "the premise was false", ...fields], ["reversals"]]) {

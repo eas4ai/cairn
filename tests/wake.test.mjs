@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { repo, cairn, review, passing, failing, head } from "./helpers.mjs";
+import { repo, cairn, review, passing, failing, head, commit } from "./helpers.mjs";
 
 const wake = (root) => cairn(root, "wake");
 
@@ -65,18 +65,19 @@ test("step 6 before step 7: failing evidence outranks a missing mechanism", () =
   assert.match(wake(root).stdout, /^Resolvable: implement R-002/);
 });
 
-test("step 7: a requirement with no mechanism is declared (LOOP-006)", () => {
+test("step 7: a requirement with no mechanism is declared (LOOP-106)", () => {
   const r = wake(repo({}));
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: declare R-001/);
 });
 
-test("step 10: every requirement current and passing, review clean, is Done (LOOP-004)", () => {
+test("every verdict names who acts: Resolvable is the agent's, Done needs nobody, Escalate waits for the developer (LOOP-004)", () => {
   const root = repo({ ".cairn/mechanisms/t": passing("R-001", "R-002") });
+  let r = wake(root); assert.equal(r.status, 1); assert.match(r.stdout, /^Resolvable: run R-001/, "missing evidence is the agent's to resolve, never the developer's");
   cairn(root, "check"); review(root);
-  const r = wake(root);
-  assert.equal(r.status, 0);
-  assert.match(r.stdout, /^Done: first/);
+  r = wake(root); assert.equal(r.status, 0); assert.match(r.stdout, /^Done: first/);
+  cairn(root, "escalate", "--concerns", "R-001", "--question", "q", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
+  r = wake(root); assert.equal(r.status, 2); assert.match(r.stdout, /^Escalate: present r-001/, "only an escalation waits for the developer");
 });
 
 test("malformed roadmap is Resolvable, not fatal (LOOP-005)", () => {
@@ -91,11 +92,14 @@ test("a commitment naming no requirements is Resolvable (LOOP-018)", () => {
   assert.match(r.stdout, /^Resolvable: repair docs\/commitments\/first\.md/);
 });
 
-test("the primary test: two wakes on the same checkout give the same action (LOOP-001, LOOP-003)", () => {
-  const root = repo({ "docs/decisions/z.md": "# Z\n\nLevel: Judged\n\n## Realized by\n", ".cairn/mechanisms/t": passing("R-001", "R-002") });
-  const a = wake(root), b = wake(root);
-  assert.equal(a.stdout, b.stdout);
-  assert.equal(a.status, b.status);
+test("the primary test: two wakes on the same checkout give the same action, before and after a persisted transition (LOOP-001, LOOP-003)", () => {
+  const root = repo({ "docs/decisions/z.md": "# Z\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n", ".cairn/mechanisms/t": passing("R-001", "R-002") });
+  let a = wake(root), b = wake(root);
+  assert.match(a.stdout, /^Resolvable: build docs\/decisions\/z\.md/); assert.equal(a.stdout, b.stdout); assert.equal(a.status, b.status);
+  writeFileSync(join(root, "docs/decisions/z.md"), "# Z\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- " + head(root) + " init\n"); commit(root, "built");
+  cairn(root, "check");   // a persisted transition: evidence on disk
+  a = wake(root); b = wake(root);
+  assert.match(a.stdout, /^Resolvable: review first/); assert.equal(a.stdout, b.stdout); assert.equal(a.status, b.status);
 });
 
 test("outside a cairn repository wake cannot run", () => {

@@ -28,7 +28,7 @@ test("writes a record with every required field and an empty realized-by (DEC-00
   assert.equal(readdirSync(join(root, ".cairn/queue")).length, 0);
 });
 
-test("a Consequential decision is queued for review (DEC-004, DEC-013)", () => {
+test("a Consequential decision is queued for review (DEC-013)", () => {
   const root = repo();
   assert.equal(decide(root, "--level", "Consequential").status, 0);
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));

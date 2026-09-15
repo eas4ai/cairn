@@ -144,7 +144,7 @@ function scopeHistory(root, slug) {
 function breaches(root, slug, mechs, requirements) {
   const history = scopeHistory(root, slug);
   const changed = changedPaths(root, history.commits);
-  const inputs = [...new Set(requirements.map((r) => mechs.byReq.get(r)).filter(Boolean).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
+  const inputs = [...new Set(requirements.flatMap((r) => mechs.byReq.get(r) ?? []).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
   const covered = new Set(inputs.length ? changedPaths(root, history.commits, inputs) : []);
   const paths = changed.filter((f) => !f.startsWith(".cairn/") && !f.startsWith("docs/") && !["AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f) && !covered.has(f));
   const acknowledged = paths.length ? acknowledgedScope(root, slug, history) : new Set();
@@ -314,17 +314,14 @@ const openEscalations = (root) => escalations(root).filter((e) => e.turn !== "cl
 function mechanisms(root) {
   const dir = join(root, ".cairn", "mechanisms");
   const byName = new Map(), byReq = new Map();
-  let invalid = null;
   for (const n of list(dir)) {
     const text = read(join(dir, n));
     const m = { name: n, def: fields(text), digest: sha(text) };
     byName.set(n, m);
-    for (const r of asList(m.def.requirements)) {
-      if (byReq.has(r) && byReq.get(r) !== n) invalid ??= { verdict: "Resolvable", action: `repair .cairn/mechanisms/${n}`, why: `${r} is declared by both ${byReq.get(r)} and ${n}; put the commands in one mechanism (LOOP-056)` };
-      byReq.set(r, n);
-    }
+    // Several mechanisms may speak for one requirement; each must pass (LOOP-056).
+    for (const r of asList(m.def.requirements)) if (!byReq.get(r)?.includes(n)) (byReq.get(r) ?? byReq.set(r, []).get(r)).push(n);
   }
-  return { byName, byReq, invalid, inputs: inputCache() };
+  return { byName, byReq, inputs: inputCache() };
 }
 const modeError = (m) => "results" in m.def && m.def.results !== "per-requirement" ? `results: ${m.def.results}; expected per-requirement, or omit results for legacy reporting (LOOP-061)` : null;
 // The tracked entries a mechanism declares, including their kind and mode.
@@ -522,7 +519,6 @@ function declaredEntryError(root, name, { path, mode, stage }) {
   }
 }
 function declarationError(root, mechs) {
-  if (mechs.invalid) return mechs.invalid;
   for (const [name, m] of mechs.byName) {
     const invalid = declarationFieldsError(m);
     if (invalid) return mechanismRepair(name, invalid);
@@ -715,14 +711,19 @@ function context(root, mechs) {
   const retentionDirty = retainedPaths.length && (dirtyInputs(root, retainedPaths).length || committedInputsDigest(root, retainedPaths) !== inputsDigestAt(root, retainedPaths, "HEAD"));
   return { digests, escalations: escalations(root), requirements: requirementTexts(root), past: new Map(), outputs: new Map(), details: new Map(), retention, retentionDirty, retentionPast: new Map() };
 }
-// One requirement's standing, from facts on disk.
+// A requirement's standings, one per mechanism that speaks for it, from
+// facts on disk. With several mechanisms each is assessed over its own
+// records; with one, over the whole history (LOOP-056, LOOP-100).
+const ownRecords = (h, names, name) => names.length > 1 ? h.filter((e) => e.mechanism === name) : h;
 function assess(root, req, mechs, ctx) {
-  const name = mechs.byReq.get(req);
-  const m = name ? mechs.byName.get(name) : null;
-  const h = history(root, req);
+  const names = mechs.byReq.get(req) ?? [], h = history(root, req);
   const repair = historyRepair(h);
-  if (repair) return { req, mech: name, repair };
+  if (repair) return [{ req, mech: names[0] ?? null, repair }];
   const orderError = historyOrderError(h);
+  return (names.length ? names : [null]).map((name) => standing(root, req, name ? mechs.byName.get(name) : null, ownRecords(h, names, name), orderError, ctx));
+}
+function standing(root, req, m, h, orderError, ctx) {
+  const name = m?.name ?? null;
   const latest = h[h.length - 1] ?? null;
   const everPassed = h.some((e) => e.result === "pass");
   // Attempts: the failing streak back from the latest, one attempt per
@@ -796,7 +797,7 @@ function wakeVerdict(root) {
   const unstamped = (c.specified ?? "").split(/[\s,]+/).filter(Boolean).find((s) => { const p = join(root, ".cairn", "next-iteration", `${s}.md`); return existsSync(p) && !("Promoted to" in fields(read(p))); });
   if (unstamped) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${unstamped}.md`, why: `docs/commitments/${c.slug}.md is specified from it and it carries no Promoted to: line; add the line Promoted to: ${c.slug} (SPEC-027)` };
   fold(c, inherited);
-  const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
+  const invalid = c.requirements.flatMap((r) => mechs.byReq.get(r) ?? []).map((n) => mechs.byName.get(n)).find(modeError);
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   const scope = scopeVerdict(root, c, mechs);
   if (scope) return scope;
@@ -807,7 +808,7 @@ function wakeVerdict(root) {
   if (contract) return contract;
   const ambiguous = c.requirements.find((r) => !ctx.requirements.get(r)?.digest);
   if (ambiguous) return { verdict: "Resolvable", action: "repair docs/spec/", why: `${ambiguous} needs exactly one requirement definition` };
-  const state = c.requirements.map((r) => assess(root, r, mechs, ctx));
+  const state = c.requirements.flatMap((r) => assess(root, r, mechs, ctx));
   const first = (pred) => state.find(pred);
   let s;
   if ((s = first((x) => x.repair))) return s.repair;
@@ -972,24 +973,26 @@ async function runChecks(root, only, stale = false) {
   const waiting = [];
   if (stale) {
     targets.length = 0;
-    for (const x of c.requirements.map((r) => assess(root, r, mechs, context(root, mechs)))) {
+    const ctx = context(root, mechs);
+    for (const x of c.requirements.flatMap((r) => assess(root, r, mechs, ctx))) {
       if (!x.mech || x.repair) continue;
-      if (!x.latest || x.stale) targets.push(x.req);
+      if (!x.latest || x.stale) runs.add(x.mech);
       else if (x.latest.result !== "pass") waiting.push(x);
     }
   }
-  for (const r of targets) { const n = mechs.byReq.get(r); if (n) runs.add(n); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
+  // A named requirement runs every mechanism that speaks for it (LOOP-099).
+  for (const r of targets) { const ns = mechs.byReq.get(r) ?? []; if (ns.length) ns.forEach((n) => runs.add(n)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   for (const x of waiting) if (!runs.has(x.mech)) process.stdout.write(`skipped ${x.req}: latest evidence is ${x.latest.result} and not stale; implement, then check ${x.req} (LOOP-094)\n`);
   if (stale && !runs.size) process.stdout.write("nothing stale: every requirement with a mechanism has current evidence or waits on implementation (LOOP-094)\n");
   const ctx = { requirements: requirementTexts(root), past: new Map() };
   for (const name of runs) {
-    const status = await runMechanism(root, mechs.byName.get(name), ctx, head);
+    const status = await runMechanism(root, mechs.byName.get(name), ctx, head, mechs);
     if (status !== null) return status;
   }
   return null;
 }
 
-async function runMechanism(root, m, ctx, head) {
+async function runMechanism(root, m, ctx, head, mechs) {
   const name = m.name, reqs = asList(m.def.requirements);
   const before = candidate(root, m, ctx.requirements, head), dirty = before.dirty;
   if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030)\n`); return 1; }
@@ -1002,7 +1005,7 @@ async function runMechanism(root, m, ctx, head) {
     if (!ctx.requirements.get(req)?.digest) { process.stdout.write(`Resolvable: repair docs/spec/\n  ${req} needs exactly one requirement definition\n`); return 1; }
     const h = history(root, req), repair = historyRepair(h);
     if (repair) { process.stdout.write(`${repair.verdict}: ${repair.action}\n  ${repair.why}\n`); return 1; }
-    const revision = requirementChange(root, req, m, h.at(-1), ctx);
+    const revision = requirementChange(root, req, m, ownRecords(h, mechs.byReq.get(req) ?? [], name).at(-1), ctx);
     if (revision.needsReview) { const w = revisionVerdict(req, name, revision.digest, revision.reason); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
   }
   // The write-ahead record, unless the agent's own already covers this run.

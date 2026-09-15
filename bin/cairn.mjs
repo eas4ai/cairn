@@ -248,7 +248,9 @@ function captureVerdict(root, c) {
     if (!existsSync(join(root, path))) continue;
     const f = fields(read(join(root, path)));
     const hit = (`${f["Surfaced from"] ?? ""} ${f["Changes"] ?? ""}`.match(/\b[A-Z]+-\d+\b/g) ?? []).find((id) => c.requirements.includes(id));
-    if (!hit || "Outside because" in f || recordTexts(root, ".cairn", "escalations").some((t) => t.includes(path))) continue;
+    // A next-iteration item is also covered by the escalation whose Concerns line names the requirement it changes (LOOP-119).
+    if (!hit || "Outside because" in f || recordTexts(root, ".cairn", "escalations").some((t) => t.includes(path))
+        || ("Changes" in f && escalations(root).some((e) => (e.Concerns ?? "").split(/[\s,]+/).includes(hit)))) continue;
     return { verdict: "Resolvable", action: `escalate ${path}`, why: `captured from ${hit}, which this commitment includes, with no Outside because: line; add the line when the idea is not this commitment's work, or escalate with the evidence when the work cannot be finished, and do not report Done around it (LOOP-092)` };
   }
   return null;

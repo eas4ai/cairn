@@ -6,17 +6,14 @@ import { repo, cairn, git, commit, head, review, passing } from "./helpers.mjs";
 
 const setup = (o = {}) => repo({ ".cairn/mechanisms/m": passing("R-001", "R-002"), ...o });
 
-test("each unmatched input and each duplicate owner is refused before execution (LOOP-044, LOOP-056)", () => {
-  for (const declaration of [passing("R-001", "R-002") + "inputs:\n  - src/other\n  - nowhere/**\n", passing("R-001")]) {
-    const duplicate = !declaration.includes("nowhere");
-    const root = setup(duplicate ? { ".cairn/mechanisms/n": declaration } : { ".cairn/mechanisms/m": declaration });
-    for (const command of ["wake", "check"]) {
-      const r = cairn(root, command);
-      assert.equal(r.status, 1, r.stderr);
-      assert.match(r.stdout, /Resolvable: repair .cairn\/mechanisms\//);
-      assert.match(r.stdout, duplicate ? /R-001.*both m and n/ : /nowhere\/\*\*/);
-      assert.doesNotMatch(r.stdout, /recorded/);
-    }
+test("an unmatched input is refused before execution (LOOP-044)", () => {
+  const root = setup({ ".cairn/mechanisms/m": passing("R-001", "R-002") + "inputs:\n  - src/other\n  - nowhere/**\n" });
+  for (const command of ["wake", "check"]) {
+    const r = cairn(root, command);
+    assert.equal(r.status, 1, r.stderr);
+    assert.match(r.stdout, /Resolvable: repair .cairn\/mechanisms\//);
+    assert.match(r.stdout, /nowhere\/\*\*/);
+    assert.doesNotMatch(r.stdout, /recorded/);
   }
 });
 

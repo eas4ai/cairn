@@ -493,15 +493,30 @@ evidence was written, so removing it loses nothing; a record with no
 process id left an agent unable to tell a run still going elsewhere
 from a dead one.
 
-[LOOP-056] The loop MUST refuse a requirement that two mechanisms
-speak for, naming both.
-Falsifier: two declarations claim one requirement and the kernel runs
-either.
-Status: Agreed 2026-09-05
+[LOOP-056] When more than one mechanism speaks for a requirement, the
+loop MUST treat the requirement as met only when each of them has
+current passing evidence.
+Falsifier: two declarations claim one requirement, one has current
+passing evidence, the other has failing, stale, unverified, or no
+evidence, and wake does not name the requirement.
+Status: Agreed 2026-09-14
 
-Last-wins was silent, and the older evidence then read as "the
-mechanism changed", which misdescribes what happened. A requirement
-two commands prove is one mechanism that runs both.
+Revised 2026-09-14. The first text refused a requirement two
+mechanisms spoke for, naming both, because last-wins was silent and
+the older evidence then read as "the mechanism changed". The second
+adoption had a targeted twenty-run test and a whole-binary ten-run
+mechanism that both legitimately proved one requirement, and had to
+give it to one. Now each mechanism's evidence for the requirement is
+assessed as one mechanism's was before: its latest record, its
+freshness, its failing streak, and its review of revised text
+(LOOP-059) are its own, and wake's reason line names the mechanism it
+acted on. A requirement with one mechanism keeps its whole history,
+whatever mechanism names its records carry; with several, each
+mechanism's history is the records that name it. Under --stale
+(LOOP-094), the mechanism that runs is the one whose own evidence for
+the requirement is missing or stale. The developer deferred to the
+agent's recommendation for this revision in advance on 2026-09-14;
+the review before agreement is recorded in the commitment file.
 
 [LOOP-057] The agent MUST repair a failing requirement that every
 commitment inherits under the current commitment.
@@ -1136,3 +1151,30 @@ Status: Agreed 2026-09-14
 
 A kernel from before this rule cannot see run receipts, so a project
 that upgrades does not downgrade inside a commitment (LOOP-096).
+
+## Two mechanisms for one requirement
+
+Specified 2026-09-14 from the next-iteration item
+two-mechanisms-that-both-prove-one-requirement, on the developer's
+advance deference, in the first run of the next-iteration skill.
+LOOP-056 is revised above; the two requirements below say what a
+check and the attempt count do with a second mechanism.
+
+[LOOP-099] When a check names a requirement, the loop MUST run every
+mechanism that speaks for it.
+Falsifier: `cairn check R-001` with two mechanisms speaking for R-001
+records evidence from only one of them.
+Status: Agreed 2026-09-14
+
+[LOOP-100] The loop MUST count a requirement's attempts within the
+records of one mechanism.
+Falsifier: one mechanism fails at three distinct inputs digests while
+another mechanism speaking for the same requirement passes between
+those failures, and wake names no escalation (DEC-016).
+Status: Agreed 2026-09-14
+
+A pass from the other mechanism is not new passing evidence for the
+failing one: its streak runs back through its own records to its own
+last pass (DEC-017), and its first record is its baseline (DEC-018).
+Counting across mechanisms would let the passing one reset the count
+on every check, and the loop would spin where DEC-016 says stop.

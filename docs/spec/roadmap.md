@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-next-iteration-starts-from-the-specification
+Current: two-mechanisms-can-prove-one-requirement
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -346,3 +346,14 @@ SPEC-026 and SPEC-027, the next-iteration skill and the stamp that
 ends an item's wait, and revises SPEC-012 so a later commitment is
 specified at Done, by promotion or in the phase the developer opens.
 [Commitment](../commitments/the-next-iteration-starts-from-the-specification.md).
+
+## Two mechanisms can prove one requirement
+
+Specified 2026-09-14 from the next-iteration item
+two-mechanisms-that-both-prove-one-requirement, on the developer's
+advance deference, in the first run of the next-iteration skill.
+Revises LOOP-056 so a requirement with several mechanisms is met only
+when each passes, and delivers LOOP-099 and LOOP-100: a named check
+runs every mechanism that speaks for the requirement, and attempts
+count within one mechanism's records.
+[Commitment](../commitments/two-mechanisms-can-prove-one-requirement.md).

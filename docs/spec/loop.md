@@ -68,10 +68,9 @@ Verdicts classify by who must act next, not by how certain the agent is.
 
 | Verdict | Meaning | Who acts |
 |---|---|---|
-| Proceed | The requirement is met. | The agent, silently. |
 | Resolvable | The commitment is not met and the agent has the next action. | The agent, unattended. |
 | Escalate | Only the developer can settle it. | The developer. |
-| Done | Every requirement in the commitment is met. | The agent stops. |
+| Done | Every requirement in the commitment is met, the review is clean, and the backlog holds nothing to promote. | The agent stops. |
 
 [LOOP-004] The loop MUST classify every verdict by who must act next.
 Falsifier: a verdict that only the agent can resolve is presented to the
@@ -129,7 +128,6 @@ falsifier, mechanism, declared inputs, receipt history, captured output,
 kernel, and applicable retention approval and retained candidate are
 unchanged.
 Status: Agreed 2026-09-14
-Status: Agreed 2026-09-07
 
 [LOOP-034] Evidence MUST carry the command that ran, its arguments, its
 working directory, its exit code, and a digest of its output.
@@ -351,10 +349,9 @@ The requirements below were drafted on 2026-09-05 from two live
 projects running the loop. Each carries its own Status: line, which
 SPEC-018 makes the kernel read ahead of this file's. The developer
 confirmed the set by exception on 2026-09-05, with corrections to
-LOOP-039 and DEC-017 recorded in place. Until SPEC-018 is built, the
-kernel reads one Status: per file, so a requirement drafted after
-this date goes in docs/spec/draft.md under `Status: Draft` and moves
-to its domain file when the developer confirms it.
+LOOP-039 and DEC-017 recorded in place. SPEC-018 is built: the kernel
+reads a requirement's own Status: line, and a later requirement is
+drafted in its domain file.
 
 ### Evidence per requirement
 
@@ -1034,10 +1031,7 @@ phase with the next-iteration skill (SPEC-026), and that phase ends by
 naming the next commitment. Wake may say how many items wait, as information.
 
 When both the backlog and next-iteration are empty, Done means what it
-meant before: every requirement is met, and the agent stops. The
-developer's `ok` to a next-iteration escalation starts a specification
-phase for that item, in which the developer confirms its falsifier
-(SPEC-002). The loop resumes with the commitment that phase names.
+meant before: every requirement is met, and the agent stops.
 
 Neither directory is deferral. PKG-013 says a concept is in the
 specification and built, or absent until a named failure brings it in,

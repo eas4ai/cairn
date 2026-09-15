@@ -13,6 +13,7 @@
 //   cairn backlog --next-iteration --changes X --title T --body B   capture an idea that changes it
 //   cairn supersede <old> --cause C ...decide fields...
 //   cairn reversals                 report reversals by decider, cause, domain
+//   cairn lint [DIR]                run the shipped specification checker over DIR
 //
 // Exit: 0 Done, 1 Resolvable (the agent acts), 2 Escalate (the developer
 // acts), 3 usage or not a Cairn repository. Node only, no dependencies.
@@ -23,6 +24,7 @@ import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { openSync, closeSync, readSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ------------------------------------------------------------ reading
 
@@ -1319,6 +1321,9 @@ Commands:
 ${CAUSES.map((cause) => "      " + cause).join("\n")}
   reversals
     Report decision reversals by decider, cause, and domain.
+  lint [DIR]
+    Run the shipped specification checker over DIR (default docs/spec) and
+    print its findings; exit 1 on a finding. Works wherever cairn is linked.
 
 Examples:
   cairn wake
@@ -1351,6 +1356,7 @@ async function main() {
       from: { type: "string" }, stale: { type: "boolean" }, promotes: { type: "string" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   if (a.values.help) return help();
+  if (Number(process.versions.node.split(".")[0]) < 18) return usage(`Cairn needs Node 18 or newer; this is ${process.versions.node}`);
   const root = ROOT = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   if (cmd === "decide") return decide(root, a.values);
@@ -1359,7 +1365,9 @@ async function main() {
   if (cmd === "backlog") return backlog(root, a.values);
   if (cmd === "supersede") return rest[0] ? decide(root, { ...a.values, supersedes: rest[0] }) : usage("usage: cairn supersede <old-slug> --cause C ...decide fields");
   if (cmd === "reversals") return reversals(root);
-  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals> [--root DIR]");
+  // The checker is a script beside this kernel; the command reaches it from any project (PKG-028).
+  if (cmd === "lint") return spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }).status ?? 3;
+  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals|lint> [--root DIR]");
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md); run from the project root or pass --root DIR`);
   if (git(root, "rev-parse", "--show-toplevel").status !== 0) return usage(`${root} is not a Git working tree; wake and check require Git (LOOP-046)`);
   if (cmd === "check") return a.values.stale && rest.length ? usage("check: --stale selects by evidence; do not name requirements with it (LOOP-094)") : check(root, rest, !!a.values.stale);

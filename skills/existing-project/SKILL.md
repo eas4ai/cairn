@@ -175,8 +175,10 @@ Both paths: the working agreement, AGENTS.md at the repository root,
 contains templates/AGENTS.md beside /new-project, verbatim (LOOP-036).
 Write it when it is missing. When the file exists with the project's
 own instructions, append the template after a blank line and keep the
-rest. When the copy it holds differs from the template, replace that
-copy alone and say so in the summary.
+rest, or better, move the project's own instructions to a separate file
+that includes the template, so a change to them is never a change to
+the working agreement (LOOP-089). When the copy it holds differs from
+the template, replace that copy alone and say so in the summary.
 
 A roadmap exists (Path B): read the current commitment's requirements
 against the blast radius. In scope: proceed under it. Out of scope, the
@@ -204,7 +206,7 @@ its process failure is recorded separately.
 
 ## Closing
 
-Run the spec lint. Summarize: recon.md, the glossary, the Observed and
+Run `cairn lint docs/spec`. Summarize: recon.md, the glossary, the Observed and
 Agreed specs, the roadmap and commitment, and what `cairn wake` says.
 The loop takes over under the working agreement. Remind the developer that Observed sections are not
 contract, and that the loop will refuse a commitment that names one.

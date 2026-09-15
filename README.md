@@ -115,8 +115,10 @@ use `new-project` or `existing-project` to begin. See the manual for
 If you prefer to set things up yourself, use this method instead of the
 skills CLI.
 
-Have Node and Git available. Run these commands in the directory where
-you want to keep the Cairn checkout:
+Have Node 18 or newer and Git 2.5 or newer available. Cairn runs on Linux
+and macOS; Windows is not supported, since the hooks use symbolic links
+and HOME. Run these commands in the directory where you want to keep the
+Cairn checkout:
 
 ```sh
 git clone https://github.com/eas4ai/cairn.git
@@ -155,8 +157,9 @@ this into `$HOME/.claude/settings.json`; for Codex, write it to
   "Stop":         [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs stop" }] }] } }
 ```
 
-From then on every session starts from the wake verdict, and the agent
-cannot stop while the verdict is Resolvable. The hooks are optional: the
+From then on every session starts from the wake verdict, and a stop is
+refused while the verdict is Resolvable, up to the harness's cap on
+consecutive refusals. The hooks are optional: the
 working agreement in AGENTS.md is the path an agent takes without them.
 Skills go into your agent's skill directory through the skills CLI above,
 or by linking each folder under `skills/` yourself. See the
@@ -168,24 +171,25 @@ The link points into this checkout, so keep it in place. There is no
 
 ## Start with your project
 
-Open your project's repository in your coding agent. The exact way to select
-a skill depends on the agent application; the skill names are `new-project`,
-`existing-project`, and `next-iteration`.
+Open your project's repository in your coding agent. The three phase
+skills are opened by you, by name, the way your agent application invokes
+a skill: in Claude Code, type the name with a slash. They do not appear in
+the agent's own skill list, so a prose request does not reach them.
 
-For new software, you can say:
+For new software:
 
-> Use the new-project skill. I want to build [describe the software]. Help
-> me agree on the first useful piece of work and how we will check it.
+> /new-project I want to build [describe the software]. Help me agree on
+> the first useful piece of work and how we will check it.
 
 For a codebase that already exists:
 
-> Use the existing-project skill. Read the code before making claims about
-> it. Explain what you found, then help me prepare [describe the change].
+> /existing-project Read the code before making claims about it. Explain
+> what you found, then help me prepare [describe the change].
 
 For a project already under Cairn, once the loop reports Done:
 
-> Use the next-iteration skill. Specify [the waiting item or the feature]
-> as the next commitment.
+> /next-iteration Specify [the waiting item or the feature] as the next
+> commitment.
 
 The agent should explain requirements in terms you understand and propose
 observable failures that would show they are not met. Cairn calls one of

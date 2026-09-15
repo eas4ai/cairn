@@ -102,8 +102,7 @@ say in the block's rationale who confirmed and how. A revised
 requirement makes its evidence stale (LOOP-058); the loop names a
 mechanism review before it checks again (LOOP-059).
 
-Run the spec lint before the stage closes, with the command the
-project's spec-lint declaration names.
+Run `cairn lint docs/spec` before the stage closes.
 
 ## Stage 3 -- The commitment
 

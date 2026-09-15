@@ -72,3 +72,12 @@ not a claim that the new requirements pass.
 | Platform limits | The recon ran on Linux with local Node and Git. macOS and Windows behavior was not established here. Existing tests include conversion fixtures, which are narrower evidence than native-host testing: [conversion cases](../tests/git-conversion.test.mjs). |
 | Discovery limits | Graph tracing connected assess to a test helper named has because of a same-name match. Source inspection shows a Set.has call; that graph edge is not a runtime test dependency: [assess](../bin/cairn.mjs#L502). |
 | Historical scope | Reviewed the recent record-integrity and candidate-identity changes, including 54bcbee, 70e0cce, and 68bd2bd, plus the current commitment and related decisions. Older backlog entries are historical claims, not assumed current defects; they remain intact in [.cairn/backlog](../.cairn/backlog). |
+
+## Resolution, 2026-09-15
+
+Two findings above are closed, with the evidence in the commitments
+that closed them (SPEC-023): the missing stale-input explanation was
+delivered by evidence-explains-its-freshness (LOOP-076 through
+LOOP-080), and the absent next-iteration skill by
+the-next-iteration-starts-from-the-specification (SPEC-026). The
+other rows stand as the observations of 2026-09-07 at commit a97d238.

@@ -2,7 +2,9 @@
 
 Status: Agreed 2026-09-04. Not normative.
 
-Order lives here. Filenames carry meaning, never sequence.
+Order lives here. Filenames carry meaning, never sequence. Each section
+states the contract as it stood on its date; where a later commitment
+revised it, the section says so in one line.
 
 Current: consumers-can-run-the-lint-and-open-the-skills
 
@@ -42,7 +44,8 @@ LOOP-009 through LOOP-014 and LOOP-026.
 
 Delivers: `cairn backlog`, and the footprint check in `check` and
 `wake`. Out-of-commitment work captured rather than implemented or
-discarded, promoted only by the developer, and a commit outside the
+discarded, promoted only by the developer (revised 2026-09-14 by LOOP-029:
+the loop promotes backlog items by a recorded decision), and a commit outside the
 commitment's declared footprint made visible. Covers LOOP-015,
 LOOP-016, LOOP-029, and LOOP-035.
 
@@ -103,7 +106,8 @@ same way in both views. Covers LOOP-023 and LOOP-024.
 
 Promoted from the backlog on the developer's word, 2026-09-04.
 
-Delivers: scripts/link.sh, which links the kernel onto the path and the
+Delivers: scripts/link.sh (retired 2026-09-14; the session-start hook is
+the install), which links the kernel onto the path and the
 skills into any agent's skill directories; the README's install
 section; and a test that runs the script into a temporary home and
 runs the linked cairn. Covers PKG-014, PKG-005, and PKG-006.
@@ -285,7 +289,8 @@ Delivers LOOP-086 while preserving LOOP-020 and LOOP-033.
 Requested by the developer on 2026-09-14. Done stops the loop only when
 nothing remains the agent may decide: backlog items are promoted by a
 recorded decision, next-iteration items wait for the developer and are
-asked for once with a recommendation, and neither directory is deferral.
+asked for once with a recommendation (revised the same day by the-loop-
+stops-at-done: the loop never asks), and neither directory is deferral.
 Delivers LOOP-087 through LOOP-093 and revisits LOOP-029 and SPEC-002.
 [Commitment](../commitments/the-loop-continues-past-done.md).
 
@@ -309,7 +314,8 @@ requirement has missing or stale evidence, and nothing else.
 Specified on the developer's ok to escalation loop-091, 2026-09-14.
 Delivers PKG-018 and PKG-019, the stop and session-start hooks; revisits
 LOOP-091 so an answered escalation names the specification of the chosen
-item; retires the link script; supersedes the no-hook decision.
+item (revised the same day by the-loop-stops-at-done); retires the link
+script; supersedes the no-hook decision.
 [Commitment](../commitments/hooks-keep-the-agent-in-the-loop.md).
 
 ## Evidence names the kernel that wrote it

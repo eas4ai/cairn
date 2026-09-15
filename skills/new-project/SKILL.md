@@ -52,7 +52,7 @@ with no memory of this conversation.
    being written.
 6. One obligation per sentence, the actor named (PKG-007, PKG-010). Run
    the spec lint before any stage that wrote normative text closes:
-   `node scripts/spec-lint.mjs docs/spec`. Resolve findings through the
+   `cairn lint docs/spec`. Resolve findings through the
    confirm-back loop.
 7. Review before agreement. Before presenting a domain's requirements
    for agreement, examine them for contradictions, for falsifiers that
@@ -192,7 +192,7 @@ that includes it. Nothing else is scaffolded.
 
 ## Closing
 
-Run the spec lint over docs/spec. Summarize what exists and where. The
+Run `cairn lint docs/spec`. Summarize what exists and where. The
 loop takes over under the working agreement: `cairn wake` names the
 next action from the repository alone, and AGENTS.md says what to do
 with it. An idea that fits inside the specification goes to

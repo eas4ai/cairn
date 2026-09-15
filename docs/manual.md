@@ -42,10 +42,11 @@ Describe an outcome, not a list of implementation steps. For example:
 > People keep losing unfinished drafts when they close the app. I want them
 > to be able to reopen a draft and continue writing.
 
-For a new project, ask the agent to use `new-project`. For existing software,
-ask it to use `existing-project`. For a project already under Cairn whose
-loop reports Done, ask it to use `next-iteration`, which starts from the
-agreed specification instead of reading the whole codebase again. The existing-project skill instructs the
+For a new project, open the `new-project` skill by name, the way your
+agent application invokes a skill. For existing software, open
+`existing-project`. For a project already under Cairn whose loop reports
+Done, open `next-iteration`, which starts from the agreed specification
+instead of reading the whole codebase again. The existing-project skill instructs the
 agent to inspect the code first and cite what it finds. A description of
 what the code currently does is marked **Observed**. It becomes an agreement
 about what the code should do only after you confirm it.
@@ -59,8 +60,9 @@ You can ask:
 > Explain what this commitment includes, what it leaves out, and what I will
 > be able to do when it is finished.
 
-The agent records ideas outside that task in the backlog. Capturing an idea
-does not authorize it. You select the next commitment when you are ready.
+The agent records ideas outside that task in the backlog. At Done it
+promotes one by a recorded decision that waits for your review; an idea
+that would change the agreement waits in next-iteration for you.
 
 ## Agree on behavior you can recognize
 
@@ -143,7 +145,7 @@ Typical output starts with one of these:
 
 | Output | What it means for you |
 |---|---|
-| `Resolvable: run APP-001` | A check needs to run. The agent can use `cairn check APP-001`; Cairn chooses the mechanism. |
+| `Resolvable: run APP-001` | A check needs to run. The agent can use `cairn check APP-001`; Cairn runs every mechanism that speaks for it. |
 | `Resolvable: implement APP-001` | The latest result is not a pass. The agent needs to inspect the evidence before deciding what to fix. |
 | `Resolvable: review save-drafts` | Checks pass; the agent still needs to examine what they might have missed. |
 | `Resolvable: reply storage-choice` | You asked a question, and the agent owes you an explanation. |
@@ -341,7 +343,7 @@ receipt, then states the next permitted action. For example:
 ```text
 Resolvable: run APP-001
   evidence is stale: a declared input changed (tests)
-  Evidence: APP-001; mechanism tests; receipt ".cairn/evidence/APP-001/20260907T120000000Z"
+  Evidence: APP-001; mechanism tests; receipt ".cairn/evidence/runs/20260907T120000000Z-4242"
     content-changed: "src/cache.mjs"
     added: "src/cache-options.mjs"
   Next: cairn check APP-001
@@ -433,8 +435,8 @@ decisions. Legacy dates are used only for legacy, unsequenced receipts; three
 new failed runs still need a new escalation through the existing commands.
 
 Supporting notes such as README.md are not receipts. Receipt names use a
-timestamp such as `20260906T120000000Z`, optionally followed by a numeric
-collision suffix. If a file with a receipt name has malformed identity,
+timestamp such as `20260906T120000000Z`, followed by the process id of
+the run that wrote it. If a file with a receipt name has malformed identity,
 result, or order fields, Cairn names that file for repair. Restore its facts
 from the saved evidence or Git history; do not delete failures to advance.
 
@@ -663,7 +665,7 @@ branch with `--no-ff`.
 The CLI also supports `--root DIR`, for example `cairn wake --root ../my-app`,
 so you can name a project root without changing directories. There is no
 `cairn status` or `cairn init` command in this source. Use `wake` for the
-next action, `check <REQ>` to select a requirement's mechanism, and
+next action, `check <REQ>` to run a requirement's mechanisms, and
 `check --stale` to rerun only the mechanisms whose evidence is missing or
 stale.
 

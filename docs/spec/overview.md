@@ -71,8 +71,9 @@ Agreed 2026-09-04. The developer reviewed every requirement and its
 falsifier by exception, after one self-review and two independent
 reviews, and corrected none. Seven requirements drawn from two papers
 later that day were presented the same way and confirmed the same way. A later requirement is Draft until the
-developer confirms it and its falsifier; the loop MUST NOT treat a Draft
-requirement as contract.
+developer confirms it and its falsifier, or a promotion or deference
+decision names it; the loop refuses a commitment that names a Draft
+requirement (LOOP-029).
 
 LOOP-036 was drafted from the backlog on 2026-09-04, presented with its
 falsifier, and confirmed the same way. PKG-014 was drafted the same day

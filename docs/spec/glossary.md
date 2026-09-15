@@ -36,7 +36,8 @@ make it. Durable on disk, and the loop's resume point.
 requirement, together with the state of the code when it ran.
 
 **Falsifier.** The observable state that would prove a requirement is
-not met. Confirmed by the developer when the requirement is confirmed.
+not met. Confirmed by the developer when the requirement is confirmed,
+or by the promotion or deference decision that names it.
 
 **Freshness.** Whether evidence still describes the current requirement,
 its falsifier, and the code checked against them.

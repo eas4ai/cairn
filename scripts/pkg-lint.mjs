@@ -80,7 +80,7 @@ if (/\bfetch\s*\(|https?:\/\/|node:https?\b|\banthropic\b|\bopenai\b/i.test(kern
 
 // PKG-013: no deferral language, outside quotes and code
 const DEFER = /\b(v1|version one|version 1|mvp|phase (two|2)|later (version|release|phase)|future release|postpone[ds]?|for now)\b/i;
-for (const p of present.filter((p) => /^(docs\/(spec|commitments|decisions)|skills)\//.test(p) && p.endsWith(".md"))) {
+for (const p of present.filter((p) => (/^(docs\/(spec|commitments|decisions)|skills)\//.test(p) && p.endsWith(".md")) || ["README.md", "docs/manual.md", "docs/walkthrough.md"].includes(p))) {   // the human documents too (PKG-032)
   const t = read(p).replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ");
   // An indented block is code. A requirement block, from [ID] to the next
   // blank line, is a rule; a rule that forbids a phrase necessarily names it.

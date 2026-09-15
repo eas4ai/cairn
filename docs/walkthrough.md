@@ -71,7 +71,9 @@ can take the named action. Its exit code is 1; that is normal here.
 cairn check
 ```
 
-Commit the receipts and logs under `.cairn/evidence/` after each check.
+The receipts and logs under `.cairn/evidence/` are committed before the
+next step, as the working agreement says; each block below begins by
+committing the check before it.
 Cairn records a failure and says `Resolvable: implement APP-001`. Running
 `node tests/names.mjs` directly shows the assertion: the empty string was
 accepted. This demonstrates that the check catches the intended violation.
@@ -80,6 +82,8 @@ A missing dependency or a crash before the assertion would not do that.
 The agent records its action before editing, then commits the correction:
 
 ```sh
+git add .cairn/evidence
+git commit -qm 'Record the failing check'
 printf 'action: implement\ntarget: APP-001\nbase: %s\nstarted: %s\n' \
   "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .cairn/in-progress
 printf 'export const validName = (name) => name.length > 0;\n' > src/names.mjs
@@ -104,6 +108,8 @@ permission to invent extra requirements.
 After that examination, record it:
 
 ```sh
+git add .cairn/evidence
+git commit -qm 'Record the passing check'
 printf 'commitment: reject-empty-names\ncommit: %s\nexamined:\n  - empty-name failure before the fix and success after it\n  - ordinary-name acceptance; spaces and non-string values are outside this agreement\nfindings: []\n' \
   "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.md
 git add .cairn/reviews/reject-empty-names.md
@@ -170,8 +176,9 @@ cairn wake
 ```
 
 Cairn says `Resolvable: run APP-002`. The next loop begins with a check
-that will expose the missing behavior. Ideas you have not selected stay
-in `.cairn/backlog/`; the agent does not start them automatically.
+that will expose the missing behavior. Ideas the agent captured wait in
+`.cairn/backlog/`; at Done the agent promotes one by a recorded decision
+you review later, and only next-iteration waits for you.
 
 ## When you revise an existing requirement
 

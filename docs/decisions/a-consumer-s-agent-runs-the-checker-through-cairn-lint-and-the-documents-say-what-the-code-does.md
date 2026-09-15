@@ -12,4 +12,4 @@ The 2026-09-15 audit found that the specification skills tell a consumer's agent
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 516266a14ba0fef94355f3cae08d28e103b087af Consumers can run the lint and open the skills

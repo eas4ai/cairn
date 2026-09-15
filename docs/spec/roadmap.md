@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: lints-and-tests-observe-what-they-name
+Current: the-documents-say-what-the-code-does
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -126,8 +126,8 @@ confirms by exception before the commitment is named Current.
 Delivers: a mechanism reports a result per requirement on its standard
 output and check records each from its own line; a targeted check
 records every requirement the mechanisms it ran speak for; an attempt
-is a failing record at inputs the previous failing record did not
-see, and the first record is the baseline; a failure no change in
+is a failing record at a digest not yet in the failing streak (as
+DEC-018 later put it), and the first record is the baseline; a failure no change in
 the footprint can address is an escalation, and the wake says so; an
 escalation concerns every identifier it names. Covers LOOP-037
 through LOOP-040, LOOP-052, LOOP-053, DEC-017 through DEC-019, and
@@ -172,8 +172,9 @@ that wrote the exact Current: line and covers the loop's own commits
 on the first-parent line; review freshness digests a commit in one
 git process; a realized-by line carries its subject; a stale
 in-progress record whose base is behind a clean HEAD is named as
-committed; two declarations for one requirement are refused by name;
-the kernel's run record carries a process id and a dead one is
+committed; two declarations for one requirement are refused by name
+(withdrawn by LOOP-056's revision, which lets two mechanisms prove one
+requirement); the kernel's run record carries a process id and a dead one is
 removed by the wake. Covers LOOP-044 through LOOP-047, LOOP-054
 through LOOP-056, and revisits LOOP-024, LOOP-027, LOOP-032,
 LOOP-035, and DEC-006.
@@ -471,3 +472,14 @@ the lints catch the violations their requirements name, the coverage
 scan sees every read shape, fourteen test titles say what their
 bodies observe, and the two lint declarations say what they read.
 [Commitment](../commitments/lints-and-tests-observe-what-they-name.md).
+
+## The documents say what the code does
+
+Requested by the developer on 2026-09-15 after the second audit, the
+fifth remediation commitment. Revises LOOP-088 (promotions at
+Consequential), LOOP-105, LOOP-108, PKG-022, LOOP-118, PKG-028,
+SPEC-029 and LOOP-026; stamps the requirements agreed under the first
+remediation's ruling; corrects the working agreement, the manual, the
+README, the walkthrough, the install skill, the glossary and this
+roadmap where they said what the code no longer does.
+[Commitment](../commitments/the-documents-say-what-the-code-does.md).

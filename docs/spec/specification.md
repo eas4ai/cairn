@@ -25,7 +25,7 @@ names it, or a recorded deference by the developer covers it.
 Falsifier: a requirement carries an Agreed marker with no confirmed
 falsifier and neither a promotion nor a deference decision on its
 status line.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 Revised 2026-09-15 on the developer's direction after the audit. A
 deference is the developer's recorded ruling, in their own words, that
@@ -327,9 +327,13 @@ regex literal, and that is what the rule now names.
 
 [SPEC-029] The specification checker MUST report a Windows drive
 path or a file URL as a host path.
-Falsifier: a drive-letter path or a file URL in specification text,
-outside backticks and quotes, passes the check.
-Status: Agreed 2026-09-15
+Falsifier: a drive-letter path or a file URL in specification text
+passes the check.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): "outside backticks and quotes" came from the withdrawn
+SPEC-028 draft; the scan runs over raw lines.
 
 A skill's slash name is not a path; the checker reads the names under
 skills/ in the checkout it runs from. In the obligation checks, a

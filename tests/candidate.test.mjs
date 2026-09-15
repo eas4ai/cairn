@@ -82,7 +82,7 @@ test("LOOP-064: current and historical input ordering agrees for Unicode filenam
   const root = repo({ ".cairn/mechanisms/m": mechanism("node -e 0"), "src/\ue000": "one", "src/\ud83d\ude00": "two" });
   cairn(root, "check"); review(root);
   const r = cairn(root, "wake");
-  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.equal(r.status, 0, r.stdout + r.stderr);   // a mode-only change git hides under core.filemode=false certifies by design (LOOP-111); no test covers a mode-only change under filemode=true (audit-2 E4)
 });
 
 // The mode variant left with LOOP-111: under core.filemode false the index mode is the identity, so a chmod is not a change Git hides.

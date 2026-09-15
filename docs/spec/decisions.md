@@ -55,7 +55,7 @@ it Blocking.
 Falsifier: a requirement's evidence history shows a fourth attempt,
 as DEC-017 and DEC-018 count attempts, with no escalation raised
 since the third.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 Revised 2026-09-15 on the developer's direction after the audit. The
 first falsifier counted failing records; DEC-017 and DEC-018 count

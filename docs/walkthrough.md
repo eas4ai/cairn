@@ -72,8 +72,8 @@ cairn check
 ```
 
 The receipts and logs under `.cairn/evidence/` are committed before the
-next step, as the working agreement says; each block below begins by
-committing the check before it.
+next step, as the working agreement says; a block that follows a check
+begins by committing it.
 Cairn records a failure and says `Resolvable: implement APP-001`. Running
 `node tests/names.mjs` directly shows the assertion: the empty string was
 accepted. This demonstrates that the check catches the intended violation.

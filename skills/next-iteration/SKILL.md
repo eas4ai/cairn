@@ -98,7 +98,10 @@ check (SPEC-014). Record what the review attacked and what it found in
 the commitment file under "Review before agreement" (SPEC-015).
 Present for agreement by exception. When the developer confirms, add
 `Status: Agreed <date>` inside each confirmed block (SPEC-002), and
-say in the block's rationale who confirmed and how. A revised
+say in the block's rationale who confirmed and how. When the developer
+instead rules that your recommendation stands for the phase, record
+that ruling with `cairn decide` at Consequential, quoting their words,
+and add `Status: Agreed <date> by deference <decision slug>` instead. A revised
 requirement makes its evidence stale (LOOP-058); the loop names a
 mechanism review before it checks again (LOOP-059).
 

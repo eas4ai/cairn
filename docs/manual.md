@@ -149,6 +149,9 @@ Typical output starts with one of these:
 | `Resolvable: implement APP-001` | The latest result is not a pass. The agent needs to inspect the evidence before deciding what to fix. |
 | `Resolvable: review save-drafts` | Checks pass; the agent still needs to examine what they might have missed. |
 | `Resolvable: reply storage-choice` | You asked a question, and the agent owes you an explanation. |
+| `Resolvable: record src/app.js` | A declared input has uncommitted changes and no record says what is under way. The agent writes `.cairn/in-progress` or commits. |
+| `Resolvable: declare APP-002` | No mechanism speaks for the requirement yet. The agent writes a declaration. |
+| `Resolvable: resolve save-drafts` | The review names an open finding. The agent fixes it as its own work and marks it resolved. |
 | `Escalate: present storage-choice` | The recorded decision is waiting for you. |
 | `Done: save-drafts` | This commitment has met the tool's recorded completion conditions. |
 
@@ -399,7 +402,9 @@ included. Ask the agent to explain what can affect each result rather than
 removing an input simply to avoid a slow run.
 
 A declaration needs a nonempty command, declared input paths, and valid
-requirement identifiers. An empty input list is an error. Git submodules
+requirement identifiers; an optional `cwd:` line names the directory
+the command runs in, for a project whose checks live below the root.
+An empty input list is an error. Git submodules
 are unsupported inputs and produce a named repair message. Narrow an input
 around a submodule only if the check does not read it; otherwise its
 dependencies need a mechanism Cairn can represent.
@@ -489,7 +494,7 @@ silently changing what you agreed to build.
 |---|---|
 | `cairn` is not found. | Check the install link and your `PATH`; see installation details below. |
 | The directory is not a Cairn repository or Git working tree. | Open your project root. A plain directory needs Git and the project files prepared through a project skill. |
-| `repair` names a mechanism. | Inspect missing fields, unmatched inputs, unsupported submodules, reporting mode, or duplicate requirement ownership. Repair the declaration before rerunning. |
+| `repair` names a mechanism. | Inspect missing fields, unmatched inputs, unsupported submodules, reporting mode, a repeated identifier, or an input that covers Cairn's own evidence. Repair the declaration before rerunning. |
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
@@ -508,8 +513,10 @@ since the current commitment began. A revert does not
 erase the earlier change from that history. The agreement tells agents to
 merge other branches with a merge commit (`git merge --no-ff`) so those
 branches' commits remain separate. A merged change to a declared input still
-makes evidence stale. `AGENTS.md`, `CLAUDE.md`, `.gitignore`, and files under
-`.cairn/` and `docs/` are treated as Cairn's own records for scope purposes.
+makes evidence stale. Cairn's own records are outside the footprint:
+`AGENTS.md`, any root file holding only `@AGENTS.md`, `.gitignore`,
+`.cairn/`, `docs/spec/`, `docs/commitments/`, `docs/decisions/`, and
+`docs/recon.md`. Any other file under `docs/` is an ordinary path.
 
 Before any mechanism belongs to the current commitment, there is no footprint
 to enforce. Wake asks for a declaration. An explicitly requested check for
@@ -630,10 +637,13 @@ memorize. Cairn normally prints the relevant label in its next action.
 The [checkout installation](../README.md#install-from-a-checkout) uses the
 session-start hook, `node <checkout>/bin/hook.mjs session-start`. On its
 first run it links `$HOME/.local/bin/cairn` to the checkout's `bin/cairn.mjs`.
-It leaves any existing file or link there alone, so inspect one yourself
-before deciding what should replace it. Inside a Cairn project it also
-prints the wake verdict, which is what it does at every session start once
-registered.
+It replaces a link whose target no longer exists and says so; it leaves
+any other file or link alone. The hooks judge with the `cairn` on your
+PATH, then with that link's target, then with their own checkout, and
+session start says which when it is not their own. Inside a Cairn
+project it also prints the wake verdict, which is what it does at every
+session start once registered. Contributors run `cairn lint docs/spec`
+for the specification checker.
 
 Register the hooks once with your agent. Claude Code reads
 `$HOME/.claude/settings.json`; Codex reads `$HOME/.codex/hooks.json`. Both
@@ -656,7 +666,8 @@ settings and remove `$HOME/.local/bin/cairn` and the skill links. That does
 not remove your project records.
 
 To update a clean installation checkout, use `git pull --ff-only` there.
-The link and the hooks follow the updated files. This updates the Cairn tool
+The link and the hooks follow the updated files when both point at that
+checkout; with two checkouts, session start names the one that judges. This updates the Cairn tool
 checkout, not your project's specifications. If Git refuses because the
 checkout has diverged, inspect it before proceeding. This installation
 update is separate from the project's rule for merging another development

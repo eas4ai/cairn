@@ -38,8 +38,11 @@ cairn --help
 ```
 
 The hook links `$HOME/.local/bin/cairn` to the checkout's `bin/cairn.mjs`
-when nothing is there, and leaves any existing file or link alone. Keep
-the checkout in place because the link points into it.
+when nothing is there or the link's target no longer exists, and leaves
+any other file or link alone. The hooks judge with the `cairn` on PATH,
+then with that link's target, then with their own checkout, and say
+which at session start. Keep the checkout in place because the link
+points into it.
 
 Then register the two hooks once, so every later session starts from
 the wake verdict and a stop is refused while the verdict is Resolvable.

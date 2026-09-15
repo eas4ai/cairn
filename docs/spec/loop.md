@@ -198,10 +198,14 @@ Falsifier: an escalation reaches the developer with no recommendation.
 consist of exactly these fields, in this order, each on one line: the
 question, the recommendation, the reason, the cost of being wrong,
 one alternative, and the reply options.
-Falsifier: an escalation reaches the developer with one of those
-fields missing, spanning more than one line, or out of order, or with
-another field inside that block.
-Status: Agreed 2026-09-15
+Falsifier: an escalation raised without --level Blocking reaches the
+developer with one of those fields missing, spanning more than one
+line, or out of order, or with another field inside that block.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): the falsifier fired on a --level Blocking escalation with
+a missing field, which LOOP-013 requires to be delivered as written.
 
 Revised 2026-09-15 on the developer's direction after the audit. The
 record lines after the block are not part of it: Concerns (LOOP-053),
@@ -690,7 +694,9 @@ required field reaches command execution instead of a named repair action.
 
 An empty input list never means the entire repository. Existing scalar
 input and requirement fields remain valid as one-item lists. Validation
-also retains the existing reporting-mode and duplicate-owner checks.
+also retains the existing reporting-mode check; the duplicate-owner
+refusal was withdrawn by LOOP-056's revision, and LOOP-105 refuses a
+repeated identifier inside one declaration.
 
 [LOOP-068] The loop MUST name an unsupported Git submodule input as a
 declaration repair before attempting to hash or execute it.
@@ -979,13 +985,21 @@ Promoted to: line, and wake prints Done.
 Status: Agreed 2026-09-14
 
 [LOOP-088] The agent MUST promote a backlog item by a decision record at
-Judged or Consequential that names the item, the requirement it drafts,
-and that requirement's falsifier. The promoted requirement's Status:
-line MUST name that decision.
+Consequential that names the item, the requirement it drafts, and that
+requirement's falsifier. The promoted requirement's Status: line MUST
+name that decision.
 Falsifier: a requirement's Status: line names a promotion decision that
 no record under docs/decisions/ resolves, or a commitment file carries a
-Promoted from: line and no decision record names that backlog item.
-Status: Agreed 2026-09-14
+Promoted from: line and no Consequential decision record names that
+backlog item.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (B6): the first text allowed Judged, which never enters the
+review queue, while every document sent the developer to the queue to
+read promotions. A promotion adds a requirement the developer never
+read, which is what the queue is for. The two promotions recorded at
+Judged on 2026-09-15 are history; their commitments are Done.
 
 The marker is `Status: Agreed <date> by promotion <decision slug>`. It
 is the one search that answers which requirements the developer never
@@ -1206,7 +1220,7 @@ working agreement gave a move for nine.
 the wake can name.
 Falsifier: the kernel prints an action verb that the working
 agreement does not name.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 The verbs are read from the kernel's own source by the test that
 speaks for this requirement, so a new action without a move fails it.
@@ -1224,13 +1238,13 @@ misjudged.
 way it reads the flat form.
 Falsifier: a commitment file whose Requirements: line is written as a
 list makes wake exit with an error.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-103] The loop MUST read only the regular files of a record
 directory's kind and ignore every other entry.
 Falsifier: a subdirectory or a README in a record directory changes
 the verdict or makes wake exit with an error.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 Decisions, escalations, backlog items and next-iteration items are
 the `.md` files of their directories whose names are slugs, lowercase
@@ -1241,13 +1255,14 @@ declaration is a regular file whose name carries no extension.
 loop MUST name the roadmap as a repair.
 Falsifier: a roadmap with two Current: lines selects a commitment
 silently.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-105] The loop MUST refuse a declaration that repeats a
 requirement identifier, declares an input under .cairn/evidence/, or
-names a cwd that does not exist, naming the fault.
-Falsifier: such a declaration runs.
-Status: Agreed 2026-09-15
+names a cwd that does not exist. The refusal MUST name the fault.
+Falsifier: such a declaration runs, or the refusal does not say which
+of the three it is.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
 
 A repeated identifier wrote two result lines with one sequence and
 made every rerun ambiguous; an input covering the evidence directory
@@ -1258,19 +1273,22 @@ a missing cwd recorded a failure the command never produced.
 name declare for it ahead of any action its evidence would select.
 Falsifier: wake names implement or escalate for a requirement no
 mechanism speaks for.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-107] When the loop cannot read a record, the wake MUST name the
 record as a repair rather than exit with an error.
 Falsifier: an unreadable record file makes wake exit with an error.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-108] The loop MUST accept a review record only when it carries
-a commit line, a nonempty examined list, and a findings list, naming
-the missing field as the repair.
+a commit line, a nonempty examined list, and a findings list. The
+repair it names MUST say which field is missing.
 Falsifier: a review with only a commit line reaches Done, or a review
 whose fields sit under a heading reaches Done.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): one obligation per sentence.
 
 An empty findings list stays valid (LOOP-086); an absent one is the
 repair. The fields sit above the first heading, as LOOP-071 reads
@@ -1280,14 +1298,14 @@ them.
 lacks a Level, Decided by, Rests on, or Would be wrong if line, or
 when its Supersedes line names no record.
 Falsifier: such a record reaches Done.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-110] When a declared input of the current commitment's
 mechanisms has uncommitted changes and no in-progress record exists,
 the wake MUST name writing the record ahead of any evidence action.
 Falsifier: wake names run, implement, or review for a commitment
 whose declared input is dirty while no in-progress record exists.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 This is LOOP-022 observed. The action is `record <path>`: write the
 four-field record for the change under way, or commit it.
@@ -1296,20 +1314,20 @@ four-field record for the change under way, or commit it.
 input's mode from the index rather than from the file system.
 Falsifier: with core.filemode false, a mode difference between the
 tree and the index refuses every check.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-112] The loop MUST run a check when the project root is a
 subdirectory of the Git worktree.
 Falsifier: check exits with an error for a project at packages/app of
 a repository.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-113] When a Realized by identifier cannot be resolved because
 the history is shallow or the identifier is ambiguous, the wake MUST
 say so rather than name the decision as unbuilt.
 Falsifier: a depth-1 clone names build for a decision realized by a
 commit outside its history.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 ## Gates read record fields
 
@@ -1327,13 +1345,13 @@ changed requirement, with LOOP-036 standing for the working agreement.
 Falsifier: an escalation that mentions the commitment's slug in prose
 and names none of the changed requirements silences the LOOP-090
 gate.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-115] The loop MUST recognize the promotion record of a promoted
 commitment by a Promotes line naming the item.
 Falsifier: a decision record that mentions the item in prose and
 carries no Promotes line satisfies the LOOP-088 check.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 `cairn decide --promotes <item>` writes the line into the record's
 header. A promotion recorded before this rule names its item in prose
@@ -1344,7 +1362,7 @@ record.
 against the tree before the commit that activated it.
 Falsifier: an activation commit that rewrites an Agreed requirement
 passes the LOOP-089 gate.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-117] The loop MUST exempt from the footprint only Cairn's
 records: the specification, commitments, decisions, and recon report
@@ -1353,19 +1371,26 @@ and .cairn/.
 Falsifier: a commit inside a commitment changes a file under docs/
 that is none of those and that no mechanism declares, and wake reports
 no breach.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 LOOP-035 said records; the kernel exempted every path under docs/. A
 project whose deliverables live there had no footprint over them.
 
 ## Record-writing commands run only in a Cairn repository
 
-[LOOP-118] The loop MUST refuse a record-writing command outside a
-Cairn repository with the message wake and check give.
+[LOOP-118] The loop MUST refuse a command that reads or writes a
+record outside a Cairn repository with the message wake and check
+give.
 Falsifier: decide, escalate, answer, backlog, supersede, or reversals
 in a directory with no docs/spec/roadmap.md or no Git working tree
 writes a file or exits with a raw error.
-Status: Agreed 2026-09-15 by promotion promote-the-record-writing-commands-repository-check
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): the first text said "record-writing" while the falsifier
+and the kernel include reversals, which only reads; the promotion
+record promote-the-record-writing-commands-repository-check still
+names the requirement it drafted.
 
 Promoted 2026-09-15 under LOOP-087 from the audit's finding A11: decide
 exited with a raw ENOENT and backlog created .cairn/backlog/ in any

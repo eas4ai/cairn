@@ -218,14 +218,17 @@ path resolves to when that link exists, and its own checkout's kernel
 otherwise.
 Falsifier: with the command linked to another checkout, the stop
 hook's verdict differs from that checkout's wake.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
-[PKG-022] On any error, a hook MUST exit 0 with one line on standard
-error.
+[PKG-022] On any error, a hook MUST exit 0. The hook MUST print one
+line on standard error for that error.
 Falsifier: a hook exits nonzero or prints a stack trace when its
 input is not an object, when the link's directory is a regular file,
 or when the kernel cannot be found.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): one obligation per sentence.
 
 A link that resolves to nothing is a missing link under PKG-019: the
 session-start hook replaces it and says so. A link to another checkout
@@ -247,13 +250,13 @@ paths the declaration did not list.
 help output.
 Falsifier: a command in the kernel's help and dispatch but not in its
 header comment passes PKG-003.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [PKG-024] The package lint MUST scan only the files Cairn ships for
 PKG-008.
 Falsifier: a non-ASCII byte in an evidence receipt under .cairn/
 fails the lint.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 The lint also reads .cairn/ in three ways the footprint cannot
 express: the tracked set, for PKG-002's check that the in-progress
@@ -288,7 +291,7 @@ process, and the declaration lists what those processes read.
 wrapped paragraph.
 Falsifier: a step that names a vendor's product across a line break
 passes PKG-006.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 ## A consumer's agent runs the checker and opens the skills
 
@@ -301,9 +304,13 @@ deferral scan skipped the documents people read first.
 
 [PKG-028] Cairn MUST provide a lint command that runs the shipped
 specification checker from the checkout the command resolves to.
-Falsifier: `cairn lint docs/spec` fails in a project where the
-command is on the path.
-Status: Agreed 2026-09-15
+Falsifier: `cairn lint docs/spec` fails to run in a project where the
+command is on the path; a finding is exit 1 and is not a failure to
+run.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D10): "fails" conflated a finding with failing to run.
 
 The checker's own code runs from Cairn's checkout, outside a
 consumer's repository: like the kernel, it is outside any footprint a
@@ -316,24 +323,28 @@ directory whose names it reads.
 cairn command.
 Falsifier: a skill names the checker by a path inside the consumer's
 project.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [PKG-030] The README MUST show the three phase skills invoked by name,
 as the agent application invokes a skill, rather than asked for in
 prose.
 Falsifier: the README's example prompt asks the agent to use a phase
 skill in prose.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [PKG-031] The README MUST state the minimum Node and Git versions and
 the platforms Cairn supports.
 Falsifier: the README names no minimum version or no platform.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
+The tests for PKG-029, PKG-030 and PKG-031 read the documents for
+phrases: a README that names the versions and platforms in other
+words would pass or fail them by wording alone. They are listed here
+so the limit stays visible (audit-2 E5).
 [PKG-032] The package lint MUST scan the README, the manual, and the
 walkthrough for deferral language.
 Falsifier: a later-version phrase in the README passes PKG-013.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 ## The hooks find the kernel and the project
 

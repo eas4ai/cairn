@@ -81,6 +81,8 @@ on the developer's instruction to fix the remaining backlog items, its
 falsifier open to correction by exception.
 
 A requirement promoted from the backlog carries `Status: Agreed <date>
-by promotion <decision slug>`. The decision, not the developer,
-confirmed its falsifier (LOOP-088). The marker is the search that lists
-every requirement the developer never read.
+by promotion <decision slug>`; one agreed under the developer's
+recorded ruling that the agent's recommendation stands carries `by
+deference <decision slug>` (SPEC-002). The decision, not the
+developer, confirmed its falsifier (LOOP-088). One search for `by `
+lists every requirement the developer never read line by line.

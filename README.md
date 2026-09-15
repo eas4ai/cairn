@@ -126,7 +126,9 @@ node cairn/bin/hook.mjs session-start
 ```
 
 The second command links `$HOME/.local/bin/cairn` to the checkout's
-`bin/cairn.mjs` when nothing is there. It is the same hook that runs at
+`bin/cairn.mjs` when nothing is there or the link's target is gone; any
+other file or link stays. The hooks judge with the `cairn` on your PATH,
+then with that link, then with their own checkout, and say which. It is the same hook that runs at
 every session start once registered, so inside a Cairn project it also
 prints the wake verdict.
 
@@ -268,5 +270,5 @@ commitment: a commitment starts and finishes on one referee.
 
 Cairn's own development uses the same workflow. From this repository,
 `node bin/cairn.mjs wake` reports its current action. Contributors can run
-`npm test`, `node scripts/spec-lint.mjs`, and `node scripts/pkg-lint.mjs`;
+`npm test`, `cairn lint docs/spec`, and `node scripts/pkg-lint.mjs`;
 recorded evidence is produced by `node bin/cairn.mjs check` after committing.

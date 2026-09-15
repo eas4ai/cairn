@@ -59,8 +59,9 @@ an explanation; it does not authorize implementation.
 
 When wake says `promote`, the commitment is complete and the backlog
 holds an item. Choose the item by judgment. Record the promotion with
-`cairn decide --promotes <item>` at Judged or Consequential, naming
-the requirement you draft from it and that requirement's falsifier.
+`cairn decide --promotes <item>` at Consequential, so it reaches the
+review queue, naming the requirement you draft from it and that
+requirement's falsifier.
 Write the requirement into the specification with `Status: Agreed
 <date> by promotion <decision slug>`, write docs/commitments/<slug>.md with a
 `Promoted from:` line naming the item, add the roadmap section, move
@@ -77,12 +78,16 @@ Before you change code, write `.cairn/in-progress`:
     base: <commit identifier>
     started: <iso timestamp>
 
-Remove it when the change is committed. On wake, an existing record is
-reconciled before any new work: finish or abandon the action it names.
+Remove it when the change is committed, and before you escalate:
+wake reconciles an existing record before it presents an escalation,
+and after the answer it asks for the record again. On wake, an
+existing record is reconciled before any new work: finish or abandon
+the action it names.
 
 A mechanism declaration is `.cairn/mechanisms/<name>`:
 
     command: <shell command>
+    cwd: <directory it runs in; omit for the project root>
     inputs:
       - <path or directory it reads>
     requirements:
@@ -189,8 +194,8 @@ LOOP-035` with decision fields explaining why to keep the exact recorded
 changes. Stop for the developer. A committed `ok` corrects scope only for
 that incident and requires fresh checks and review; it does not extend the
 mechanism footprint or authorize later edits. For accidental work, capture the
-work in the backlog, restore the breaching paths to the commitment activation
-tree, and commit the restoration. Use `cairn escalate --scope --concerns
+work in the backlog, restore the breaching paths to the tree before the
+activation commit, and commit the restoration. Use `cairn escalate --scope --concerns
 LOOP-035` with the decision fields to request acknowledgment of that exact
 restored history. Commit the developer's `ok` answer before checking. An
 ordinary answer or `instead` supplies direction but grants no acknowledgment;

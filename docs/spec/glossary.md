@@ -9,8 +9,9 @@ prior meaning, this file wins.
 developer has confirmed. An artifact is Agreed when the developer has
 confirmed it and every requirement in it is Agreed. Only Agreed
 requirements are contract. A requirement promoted from the backlog is
-Agreed by the promotion decision that names it, and its Status: line
-names that decision.
+Agreed by the promotion decision that names it, one agreed by
+deference by the decision that records the ruling, and its Status:
+line names that decision.
 
 **Backlog.** Ideas captured during the loop that fit inside the
 current specification and are not yet promoted into a commitment. The
@@ -29,6 +30,11 @@ against exactly one commitment at a time.
 **Decision record.** The durable record of a decision, what it rests on,
 who made it, what would make it wrong, and which commits realized it.
 
+**Deference.** The developer's recorded ruling, in their own words,
+that the agent's recommendation stands for a named scope of work
+unless review changes it substantively. A requirement agreed that
+way carries `by deference <decision slug>` (SPEC-002).
+
 **Escalation.** A decision the loop parks because only the developer can
 make it. Durable on disk, and the loop's resume point.
 
@@ -41,6 +47,12 @@ or by the promotion or deference decision that names it.
 
 **Freshness.** Whether evidence still describes the current requirement,
 its falsifier, and the code checked against them.
+
+**Kernel.** The files under bin/ that Cairn executes: the command,
+its parser, and the hooks, together under the PKG-004 ceiling. The
+kernel digest that stamps evidence covers the two files that decide
+verdicts and write records, bin/cairn.mjs and bin/spec.mjs; a change
+to the hooks does not stale evidence.
 
 **Loop.** The autonomous phase. The agent works against one commitment
 until it is met or until a Blocking decision stops it.

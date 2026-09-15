@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, rmSync, chmodSync, symlinkSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync, chmodSync, symlinkSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { repo, cairn, commit, review, records, passing, git } from "./helpers.mjs";
 
 const field = (text, name) => new RegExp(`^${name}: (.*)$`, "m").exec(text)?.[1];
-const receipt = (r, req = "R-001") => join(r, ".cairn/evidence", req, records(r, req).at(-1));
+const receipt = (r, req = "R-001") => join(r, records(r, req).at(-1));
 function setup(t, overrides = {}) {
   const r = repo({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("src/other", "src/"), ...overrides });
   t.after(() => rmSync(r, { recursive: true, force: true }));
@@ -101,7 +101,7 @@ test("LOOP-077: receipts from one run share details and do not store source cont
   assert.equal(attachment.version, 1);
   assert.deepEqual(attachment.entries.map((e) => e.path), ["src/exit", "src/other"]);
   assert.ok(attachment.entries.every((e) => /^sha256:[a-f0-9]{64}$/.test(e.digest)));
-  assert.equal(readdirSync(join(r, ".cairn/evidence/R-001")).filter((n) => n.endsWith(".inputs.json")).length, 1);
+  assert.equal(readdirSync(join(r, ".cairn/evidence/runs")).filter((n) => n.endsWith(".inputs.json")).length, 1);
 });
 
 for (const mode of ["legacy", "invalid-field", "missing", "invalid-json", "mismatched", "duplicate", "unsafe-path", "directory", "symlink"])
@@ -114,7 +114,7 @@ for (const mode of ["legacy", "invalid-field", "missing", "invalid-json", "misma
       if (mode === "missing") rmSync(p);
       else if (mode === "invalid-json") writeFileSync(p, "{bad");
       else if (mode === "unsafe-path") editReceipt(r, (s) => s.replace(/^inputs_detail:.*$/m, "inputs_detail: .cairn/evidence/../../secret"));
-      else if (mode === "directory") editReceipt(r, (s) => s.replace(/^inputs_detail:.*$/m, "inputs_detail: .cairn/evidence/R-001"));
+      else if (mode === "directory") editReceipt(r, (s) => s.replace(/^inputs_detail:.*$/m, "inputs_detail: .cairn/evidence/runs"));
       else if (mode === "symlink") { const bytes = readFileSync(p); rmSync(p); writeFileSync(join(r, ".git/details"), bytes); symlinkSync("../../../../.git/details", p); }
       else {
         const attachment = JSON.parse(readFileSync(p, "utf8"));
@@ -135,7 +135,12 @@ for (const mode of ["legacy", "invalid-field", "missing", "invalid-json", "misma
 
 test("LOOP-078: unavailable old requirement text is not claimed as a proven change", (t) => {
   const r = setup(t);
-  editReceipt(r, (s) => s.replace(/^requirement_digest:.*\n/m, "").replace(/^commit:.*$/m, "commit: deadbeef"));
+  // A receipt from before one-receipt-per-run, without the requirement digest and at a commit that no longer resolves.
+  const run = receipt(r), text = readFileSync(run, "utf8");
+  const m = /^  - R-001 (\S+) (\S+) /m.exec(text), top = text.split("\n").filter((l) => /^[a-z_]+: /.test(l)).join("\n").replace(/^commit:.*$/m, "commit: deadbeef");
+  mkdirSync(join(r, ".cairn/evidence/R-001"), { recursive: true });
+  writeFileSync(join(r, ".cairn/evidence/R-001", "20260901T000000000Z"), `requirement: R-001\n${top}\nresult: ${m[1]}\nsource: ${m[2]}\n`);
+  rmSync(run);
   const output = cairn(r, "wake").stdout;
   assert.match(output, /^Resolvable: review mechanism R-001/);
   assert.match(output, /old requirement or falsifier text is unavailable/);

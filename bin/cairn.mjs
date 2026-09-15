@@ -598,16 +598,47 @@ function receiptError(f, req) {
 }
 // Timestamp filenames identify receipts, but do not order new executions.
 // Legacy history is retained before sequenced records and needs one fresh run.
+// One receipt per run lives under runs/; a requirement's history is its legacy
+// receipts plus its result line from every run receipt (LOOP-097, LOOP-098).
+const RUNS = "runs";
+let runCache = null;
+function runReceipts(root) {
+  if (runCache?.root === root) return runCache.entries;
+  const dir = join(root, ".cairn", "evidence", RUNS);
+  const entries = list(dir).filter((n) => RECEIPT_NAME.test(n)).map((n) => {
+    const p = join(dir, n), path = rel(root, p);
+    try {
+      if (!lstatSync(p).isFile()) return { path, error: "receipt is not a regular file" };
+      const text = read(p), f = fields(text);
+      return { path, f, receipt_digest: sha(text), error: Array.isArray(f.results) ? null : "run receipt has no results list (LOOP-097)" };
+    } catch (e) { return { path, error: `cannot read receipt: ${e.code ?? e.message}` }; }
+  });
+  runCache = { root, entries };
+  return entries;
+}
 function history(root, req) {
   const dir = join(root, ".cairn", "evidence", req);
-  return list(dir).filter((n) => RECEIPT_NAME.test(n)).map((n) => {
+  const legacy = list(dir).filter((n) => RECEIPT_NAME.test(n)).map((n) => {
     const p = join(dir, n), path = rel(root, p);
     try {
       if (!lstatSync(p).isFile()) return { path, error: "receipt is not a regular file" };
       const text = read(p), f = fields(text);
       return { ...f, path, receipt_digest: sha(text), error: receiptError(f, req) };
     } catch (e) { return { path, error: `cannot read receipt: ${e.code ?? e.message}` }; }
-  }).sort((a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  });
+  const runs = [];
+  for (const r of runReceipts(root)) {
+    if (r.error) { runs.push({ path: r.path, error: r.error }); continue; }
+    for (const line of r.f.results) {
+      const t = String(line).trim().split(/\s+/);
+      if (t[0] !== req) continue;
+      const { results, ...shared } = r.f;
+      const e = { ...shared, requirement: t[0], result: t[1], source: t[2], requirement_digest: t[3], sequence: t[4], history_digest: t[5], path: r.path, receipt_digest: r.receipt_digest };
+      e.error = t.length !== 6 ? `result line for ${req} must have six tokens: requirement, result, source, requirement_digest, sequence, history_digest` : receiptError(e, req);
+      runs.push(e);
+    }
+  }
+  return [...legacy, ...runs].sort((a, b) => (Number(a.sequence) || 0) - (Number(b.sequence) || 0) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 const historyDigest = (h) => sha(h.map((e) => `${e.path}\0${e.receipt_digest}\0`).sort().join(""));
 function historyRepair(h) {
@@ -985,7 +1016,7 @@ async function runMechanism(root, m, ctx, head) {
   if (mine) writeFileSync(ip, `owner: kernel\npid: ${process.pid}\naction: run-mechanism\ntarget: ${name}\nbase: ${head}\nstarted: ${new Date().toISOString()}\n`);
   try {
     const cwd = m.def.cwd && m.def.cwd !== "." ? join(root, m.def.cwd) : root;
-    const logDir = join(root, ".cairn", "evidence", reqs[0]);
+    const logDir = join(root, ".cairn", "evidence", RUNS);
     mkdirSync(logDir, { recursive: true });
     const stem = join(logDir, `${stamp()}-${process.pid}`), output = stem + ".out", stderrOutput = stem + ".err";
     const r = await capture(m.def.command, cwd, output, stderrOutput, reqs, name);
@@ -1019,16 +1050,17 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
   ];
   const recorded = new Date().toISOString();
   const perRequirement = m.def.results === "per-requirement" || lines.size > 0;
+  // One receipt per run at the run's stem, one result line per requirement (LOOP-097).
+  const p = output.replace(/\.out$/, ""), results = [], report = [];
   for (const { req, records } of histories) {
     const result = lines.get(req) ?? (perRequirement ? "unverified" : exit === 0 ? "pass" : "fail"), source = lines.has(req) ? "line" : perRequirement ? "none" : "exit";
-    const dir = join(root, ".cairn", "evidence", req);
-    mkdirSync(dir, { recursive: true });
-    let p = join(dir, stamp()), i = 0;
-    while (existsSync(p)) p = join(dir, `${stamp()}-${++i}`);       // never overwrite (LOOP-025)
     const sequence = Number(records.at(-1)?.sequence ?? 0) + 1;
-    writeFileSync(p, `requirement: ${req}\nrequirement_digest: ${requirements.get(req).digest}\nsequence: ${sequence}\nhistory_digest: ${historyDigest(records)}\n${rec.join("\n")}\nresult: ${result}\nsource: ${source}\nrecorded: ${recorded}\n`, { flag: "wx" });
-    process.stdout.write(`recorded ${rel(root, p)}: ${result} (${source === "line" ? "by line" : source === "none" ? "not reported" : `exit ${exit}`})\n`);
+    results.push(`  - ${req} ${result} ${source} ${requirements.get(req).digest} ${sequence} ${historyDigest(records)}`);
+    report.push(`recorded ${rel(root, p)} ${req}: ${result} (${source === "line" ? "by line" : source === "none" ? "not reported" : `exit ${exit}`})\n`);
   }
+  writeFileSync(p, `${rec.join("\n")}\nrecorded: ${recorded}\nresults:\n${results.join("\n")}\n`, { flag: "wx" });   // never overwrite (LOOP-025)
+  runCache = null;
+  for (const line of report) process.stdout.write(line);
   return null;
 }
 

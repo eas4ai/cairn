@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { repo, cairn, commit, records, review, passing } from "./helpers.mjs";
 
-const latest = (root) => join(root, ".cairn/evidence/R-001", records(root, "R-001").at(-1));
+const latest = (root) => join(root, records(root, "R-001").at(-1));
 const field = (text, key) => new RegExp(`^${key}: (.*)$`, "m").exec(text)?.[1];
 const setup = () => {
   const root = repo({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("node -e 0", "node -e \"console.log('checked'); console.error('diagnostic')\"") });

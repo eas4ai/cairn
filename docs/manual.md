@@ -404,14 +404,19 @@ need to account for it.
 
 ### Where to find the output
 
-Receipts live under `.cairn/evidence/<requirement>/`. Read the receipt's
-`output:` path for the combined command log and `stderr_output:` for the
-stderr log. Several receipts from one mechanism run can point to the same
-files. The terminal shows the recorded results; the full logs are kept on
-disk.
+Receipts live under `.cairn/evidence/runs/`, one per mechanism run, named
+by a timestamp. A receipt carries the run's command, exit code, digests, and
+file paths once, and a `results:` list with one line per requirement the
+mechanism spoke for: the requirement, its result, the source of that result,
+its requirement digest, its sequence, and the digest of its prior receipts.
+Read the receipt's `output:` path for the combined command log and
+`stderr_output:` for the stderr log; both sit beside the receipt. Receipts
+written before this format live under `.cairn/evidence/<requirement>/` and
+remain part of that requirement's history. The terminal shows the recorded
+results; the full logs are kept on disk.
 
-New receipts carry a per-requirement `sequence` and a `history_digest` of
-the prior receipts. Execution order survives a clock adjustment; timestamps
+Each result line carries the requirement's `sequence` and a digest of that
+requirement's prior receipts. Execution order survives a clock adjustment; timestamps
 describe when the machine thought the run happened. Importing, deleting, or
 editing a prior receipt makes the latest result stale. Run the check again
 to incorporate the visible history, preserving earlier results.
@@ -603,7 +608,7 @@ by hand.
 | `.cairn/escalations/` | Questions, explanations, and your answers in order. |
 | `.cairn/queue/` | Decisions waiting for your review while work continues. |
 | `.cairn/mechanisms/` | Which commands check which requirements and what files they read. |
-| `.cairn/evidence/` | Check results and the logs behind them. |
+| `.cairn/evidence/` | Run receipts under `runs/`, one per mechanism run, with the logs beside them; older per-requirement receipts stay in their own directories. |
 | `.cairn/reviews/` | What the agent examined and the findings it recorded. |
 | `.cairn/backlog/` | Ideas inside the agreed specification, promoted by the agent when a commitment completes. |
 | `.cairn/next-iteration/` | Ideas that would change an agreed requirement or the working agreement; they wait for your answer. |

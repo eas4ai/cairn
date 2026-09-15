@@ -27,7 +27,7 @@ const blocked = (root) => {
 };
 const runs = (root) => {
   const before = records(root, "R-001").length;
-  assert.match(cairn(root, "check").stdout, /^recorded .cairn\/evidence\/R-001/m);
+  assert.match(cairn(root, "check").stdout, /^recorded .cairn\/evidence\/runs\/\S+ R-001/m);
   assert.equal(records(root, "R-001").length, before + 1);
 };
 

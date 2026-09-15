@@ -25,9 +25,9 @@ for (const [name, mutation] of Object.entries(mutations)) test(`LOOP-063: reject
   assert.equal(records(root, "R-002").length, 0);
   assert.match(r.stdout, /candidate changed/);
   assert.match(r.stdout, /no evidence recorded/);
-  const logs = readdirSync(join(root, ".cairn/evidence/R-001")).filter((n) => n.endsWith(".out"));
+  const logs = readdirSync(join(root, ".cairn/evidence/runs")).filter((n) => n.endsWith(".out"));
   assert.equal(logs.length, 1);
-  assert.equal(readFileSync(join(root, ".cairn/evidence/R-001", logs[0]), "utf8"), "checked starting candidate\n");
+  assert.equal(readFileSync(join(root, ".cairn/evidence/runs", logs[0]), "utf8"), "checked starting candidate\n");
   assert.equal(existsSync(join(root, ".cairn/in-progress")), false);
   commit(root, "retain rejected run"); review(root);
   assert.doesNotMatch(cairn(root, "wake").stdout, /^Done:/);

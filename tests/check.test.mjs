@@ -2,9 +2,9 @@
 // and records evidence with receipts. Fixtures are real git repositories.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, readFileSync, existsSync, symlinkSync, rmSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, symlinkSync, rmSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { repo as base, cairn, commit, head, records, review, fromFile, failing } from "./helpers.mjs";
+import { repo as base, cairn, commit, head, records, review, fromFile, failing, entry } from "./helpers.mjs";
 
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
 
@@ -20,14 +20,17 @@ test("check refuses a dirty declared input and names it; a dirty undeclared file
   assert.equal(records(root, "R-001").length, 1, "declared dirt blocks the run");
 });
 
-test("check writes one record per requirement carrying the full receipt", () => {
+test("check writes one receipt per run carrying the full record and a result line per requirement (LOOP-097)", () => {
   const root = repo();
   cairn(root, "check");
   const [f] = records(root, "R-001");
-  const t = readFileSync(join(root, ".cairn/evidence/R-001", f), "utf8");
-  for (const k of ["requirement: R-001", "mechanism: m", `commit: ${head(root)}`, "inputs_digest: sha256:", "mechanism_digest: sha256:",
-                   "command: node -e", "cwd: .", "exit: 0", "output_digest: sha256:", "result: pass", "recorded: "]) assert.ok(t.includes(k), k);
+  const t = readFileSync(join(root, f), "utf8");
+  for (const k of ["mechanism: m", `commit: ${head(root)}`, "inputs_digest: sha256:", "mechanism_digest: sha256:", "kernel_digest: sha256:",
+                   "command: node -e", "cwd: .", "exit: 0", "output_digest: sha256:", "recorded: ", "results:", "  - R-001 pass exit sha256:", "  - R-002 pass exit sha256:"]) assert.ok(t.includes(k), k);
   assert.equal(records(root, "R-002").length, 1);
+  assert.equal(records(root, "R-002")[0], f, "one receipt for the run, shared by both requirements");
+  assert.match(f, /^\.cairn\/evidence\/runs\//);
+  assert.equal(readdirSync(join(root, ".cairn/evidence/runs")).filter((n) => /^\d{8}T\d{9}Z(?:-\d+)?$/.test(n)).length, 1);
 });
 
 test("a nonzero exit records fail, and the receipt keeps the exit code", () => {
@@ -35,8 +38,8 @@ test("a nonzero exit records fail, and the receipt keeps the exit code", () => {
   writeFileSync(join(root, "src/exit"), "3\n"); commit(root);
   const r = cairn(root, "check");
   assert.equal(r.status, 1);
-  const t = readFileSync(join(root, ".cairn/evidence/R-001", records(root, "R-001")[0]), "utf8");
-  assert.ok(t.includes("exit: 3") && t.includes("result: fail"));
+  const t = readFileSync(join(root, records(root, "R-001")[0]), "utf8");
+  assert.ok(t.includes("exit: 3") && entry(root, "R-001").result === "fail");
   assert.match(r.stdout, /^Resolvable: implement R-001/m);
 });
 
@@ -144,11 +147,10 @@ test("a linked declared input digests the same at a commit and in the tree (LOOP
 test("a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052)", () => {
   const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('cairn: R-002: pass'); process.exit(1)"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
   const r = cairn(root, "check");
-  const rec = (req) => readFileSync(join(root, ".cairn/evidence", req, records(root, req)[0]), "utf8");
-  assert.ok(rec("R-001").includes("result: unverified") && rec("R-001").includes("source: none"), rec("R-001"));
-  assert.ok(rec("R-002").includes("result: pass") && rec("R-002").includes("source: line"), rec("R-002"));
-  assert.match(r.stdout, /R-002\/.*: pass \(by line\)/);
-  assert.match(r.stdout, /R-001\/.*: unverified \(not reported\)/);
+  assert.equal(entry(root, "R-001").result, "unverified"); assert.equal(entry(root, "R-001").source, "none");
+  assert.equal(entry(root, "R-002").result, "pass"); assert.equal(entry(root, "R-002").source, "line");
+  assert.match(r.stdout, / R-002: pass \(by line\)/);
+  assert.match(r.stdout, / R-001: unverified \(not reported\)/);
   assert.match(r.stdout, /^Resolvable: implement R-001/m);
   assert.match(r.stdout, /latest evidence is unverified \(m, exit 1\)/);
 });
@@ -156,7 +158,7 @@ test("a result line is the mechanism's statement about one requirement; what it 
 test("a mechanism that says nothing is read by its exit code for every requirement (LOOP-039)", () => {
   const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('ok 1 - cairn: LOOP-001: pass is a test name, not a line'); process.exit(0)"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
   cairn(root, "check");
-  for (const req of ["R-001", "R-002"]) assert.ok(readFileSync(join(root, ".cairn/evidence", req, records(root, req)[0]), "utf8").includes("result: pass\nsource: exit"));
+  for (const req of ["R-001", "R-002"]) assert.deepEqual([entry(root, req).result, entry(root, req).source], ["pass", "exit"]);
 });
 
 test("unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018)", () => {
@@ -184,7 +186,7 @@ test("a result line for a requirement the mechanism does not speak for is named 
 test("a result line inside ordinary output, or without the marker, does not count", () => {
   const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('note cairn: R-002: pass here'); console.log('R-002: pass'); console.log('cairn: R-002: passed')"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
   cairn(root, "check");
-  assert.ok(readFileSync(join(root, ".cairn/evidence/R-002", records(root, "R-002")[0]), "utf8").includes("source: exit"));
+  assert.equal(entry(root, "R-002").source, "exit");
 });
 
 test("a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040)", () => {
@@ -200,7 +202,7 @@ test("a targeted check runs the named requirements' mechanisms and records every
 test("two result lines for one requirement: a fail on any line wins", () => {
   const root = repo({ ".cairn/mechanisms/m": `command: node -e "console.log('cairn: R-001: fail'); console.log('cairn: R-001: pass')"\ninputs:\n  - src/other\nrequirements:\n  - R-001\n  - R-002\n` });
   cairn(root, "check");
-  assert.ok(readFileSync(join(root, ".cairn/evidence/R-001", records(root, "R-001")[0]), "utf8").includes("result: fail"));
+  assert.equal(entry(root, "R-001").result, "fail");
 });
 
 test("three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053)", () => {

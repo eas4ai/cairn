@@ -32,7 +32,7 @@ const blocked = (root) => {
 };
 const runs = (root) => {
   const before = records(root, "R-001").length;
-  const r = cairn(root, "check"); assert.match(r.stdout, /recorded .cairn\/evidence\/R-001/, r.stderr);
+  const r = cairn(root, "check"); assert.match(r.stdout, /recorded .cairn\/evidence\/runs\/\S+ R-001/, r.stderr);
   assert.equal(records(root, "R-001").length, before + 1);
 };
 
@@ -58,7 +58,7 @@ test("an empty current footprint does not block an explicitly requested existing
     "docs/spec/other.md": "# Other\n\nStatus: Agreed 2026-09-07\nPrefix: U\n\n[U-001] Other work MUST pass.\nFalsifier: other work fails.\n" });
   write(root, "unrelated.txt", "new commitment work\n"); commit(root);
   const r = cairn(root, "check", "U-001");
-  assert.match(r.stdout, /recorded .cairn\/evidence\/U-001/);
+  assert.match(r.stdout, /recorded .cairn\/evidence\/runs\/\S+ U-001/);
   assert.match(r.stdout, /Resolvable: declare R-001/);
   assert.equal(records(root, "R-001").length, 0);
 });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync, mkdirSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { repo, cairn, commit, git, records, passing, fromFile, review, CLI } from "./helpers.mjs";
@@ -12,7 +12,19 @@ function at(root, time, exit = 0, args = ["check"]) {
   return spawnSync(process.execPath, [CLI, ...args], { cwd: root, encoding: "utf8", env: { ...process.env,
     NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require=${preload}`, CAIRN_PROBE_TIME: time, CAIRN_PROBE_EXIT: String(exit) } });
 }
-const recordPath = (root, name) => join(root, ".cairn/evidence/R-001", name);
+const recordPath = (root, name) => join(root, name.startsWith(".cairn/") ? name : `.cairn/evidence/runs/${name}`);
+// Rewrite every run receipt as legacy per-requirement receipts with no execution order, as a kernel before LOOP-097 wrote them.
+function legacyize(root) {
+  const dir = join(root, ".cairn/evidence/runs");
+  for (const n of readdirSync(dir).filter((x) => /^\d{8}T\d{9}Z(?:-\d+)?$/.test(x))) {
+    const t = readFileSync(join(dir, n), "utf8"), top = t.split("\n").filter((l) => /^[a-z_]+: /.test(l)).join("\n");
+    for (const m of t.matchAll(/^  - (R-\d+) (\S+) (\S+) (\S+) \S+ \S+$/gm)) {
+      mkdirSync(join(root, ".cairn/evidence", m[1]), { recursive: true });
+      writeFileSync(join(root, ".cairn/evidence", m[1], n), `requirement: ${m[1]}\nrequirement_digest: ${m[4]}\n${top}\nresult: ${m[2]}\nsource: ${m[3]}\n`);
+    }
+    unlinkSync(join(dir, n));
+  }
+}
 
 test("LOOP-070: a later failure is latest even when the clock moves backward", () => {
   const root = setup(); at(root, "2026-09-06T12:00:00.000Z"); review(root); commit(root);
@@ -45,11 +57,9 @@ test("LOOP-070: imported branch receipts stale a later sequence until a new chec
 
 test("LOOP-070: legacy receipts need one ordered check and remain byte-for-byte unchanged", () => {
   const root = setup(); cairn(root, "check"); review(root); commit(root);
+  legacyize(root);
   const names = records(root, "R-001");
-  for (const req of ["R-001", "R-002"]) for (const name of records(root, req)) {
-    const p = join(root, ".cairn/evidence", req, name);
-    writeFileSync(p, readFileSync(p, "utf8").replace(/^(sequence|history_digest):.*\n/gm, ""));
-  }
+  assert.match(names[0], /^\.cairn\/evidence\/R-001\//, "the legacy receipt sits in the requirement's own directory");
   const before = readFileSync(recordPath(root, names[0]), "utf8");
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001[\s\S]*(order|sequence)/);
   assert.equal(cairn(root, "check").status, 0);
@@ -73,16 +83,16 @@ for (const name of ["README.md", "notes.txt", "support", ".DS_Store"])
     assert.equal(cairn(root, "check").status, 0, "a rerun does not loop on the supporting file");
   });
 
-for (const [field, value] of [["requirement", "R-999"], ["result", "success"], ["sequence", "NaN"], ["sequence", "9007199254740992"], ["sequence", "\n  - 1"], ["history_digest", "wrong"]])
-  test(`LOOP-075: malformed receipt ${field}=${value} names a repair before execution`, () => {
-    const root = setup(); cairn(root, "check"); const name = records(root, "R-001")[0], p = recordPath(root, name);
-    const before = readFileSync(p, "utf8"), line = `${field}: ${value}\n`;
-    writeFileSync(p, new RegExp(`^${field}:.*$`, "m").test(before) ? before.replace(new RegExp(`^${field}:.*\\n`, "m"), line) : before + line);
+for (const [field, index, value] of [["result", 1, "success"], ["sequence", 4, "NaN"], ["sequence", 4, "9007199254740992"], ["history_digest", 5, "wrong"], ["tokens", null, null]])
+  test(`LOOP-075: a malformed result line (${field}${value === null ? "" : `=${value}`}) names a repair before execution`, () => {
+    const root = setup(); cairn(root, "check"); const p = recordPath(root, records(root, "R-001")[0]);
+    const before = readFileSync(p, "utf8");
+    writeFileSync(p, before.replace(/^  - R-001 .*$/m, (line) => { if (index === null) return "  - R-001 pass exit"; const t = line.trim().slice(2).split(/\s+/); t[index] = value; return "  - " + t.join(" "); }));
     const count = records(root, "R-001").length;
     for (const cmd of ["wake", "check"]) {
       const r = cairn(root, cmd);
       assert.equal(r.status, 1, r.stdout + r.stderr);
-      assert.match(r.stdout, /^Resolvable: repair .cairn\/evidence\/R-001\//);
+      assert.match(r.stdout, /^Resolvable: repair .cairn\/evidence\/runs\//);
       assert.ok(r.stdout.includes(field), r.stdout);
     }
     assert.equal(records(root, "R-001").length, count);
@@ -91,7 +101,7 @@ for (const [field, value] of [["requirement", "R-999"], ["result", "success"], [
 test("LOOP-075: a receipt-shaped directory is a named repair instead of an EISDIR crash", () => {
   const root = setup(); cairn(root, "check"); review(root); commit(root);
   mkdirSync(recordPath(root, "29990101T000000000Z"));
-  assert.match(cairn(root, "wake").stdout, /^Resolvable: repair .cairn\/evidence\/R-001\/29990101T000000000Z/);
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: repair .cairn\/evidence\/runs\/29990101T000000000Z/);
 });
 
 const escalationArgs = ["escalate", "--concerns", "R-001, R-002", "--question", "Retry?", "--recommend", "Retry",
@@ -134,10 +144,7 @@ test("LOOP-070: the newest answer wins between checks even when its clock timest
 test("LOOP-070: legacy escalation dates cover old receipts but not three newer sequenced runs", () => {
   const root = repo({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), "src/exit": "1\n" });
   for (let i = 0; i < 3; i++) at(root, `2026-09-06T12:0${i}:00Z`);
-  for (const req of ["R-001", "R-002"]) for (const name of records(root, req)) {
-    const p = join(root, ".cairn/evidence", req, name);
-    writeFileSync(p, readFileSync(p, "utf8").replace(/^(sequence|history_digest):.*\n/gm, ""));
-  }
+  legacyize(root);
   at(root, "2026-09-06T12:03:00Z", 0, escalationArgs);
   at(root, "2026-09-06T12:04:00Z", 0, ["answer", "r-001-r-002", "ok"]);
   const path = join(root, ".cairn/escalations/r-001-r-002.md");

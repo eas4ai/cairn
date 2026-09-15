@@ -2,7 +2,7 @@
 // requirements. Evidence is produced by cairn check, never hand-written,
 // so its digests are honest.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -12,7 +12,28 @@ export const git = (root, ...a) => spawnSync("git", [...GIT, ...a], { cwd: root,
 export const cairn = (root, ...a) => spawnSync("node", [CLI, ...a], { cwd: root, encoding: "utf8" });
 export const commit = (root, msg = "c") => { git(root, "add", "-A"); git(root, "commit", "-q", "-m", msg); };
 export const head = (root) => git(root, "rev-parse", "--short", "HEAD").stdout.trim();
-export const records = (root, req) => { const d = join(root, ".cairn", "evidence", req); return existsSync(d) ? readdirSync(d).filter((n) => /^\d{8}T\d{9}Z(?:-\d+)?$/.test(n)).sort() : []; };
+// A requirement's receipts in history order, as paths relative to root:
+// legacy per-requirement receipts and the run receipts naming it (LOOP-098).
+const RECEIPT = /^\d{8}T\d{9}Z(?:-\d+)?$/;
+const listing = (d) => { try { return readdirSync(d).filter((n) => RECEIPT.test(n)); } catch { return []; } };
+const text = (p) => { try { return readFileSync(p, "utf8"); } catch { return ""; } };
+export const records = (root, req) => {
+  const legacy = listing(join(root, ".cairn/evidence", req)).map((n) => ({ p: `.cairn/evidence/${req}/${n}`, seq: Number(/^sequence: (\d+)/m.exec(text(join(root, ".cairn/evidence", req, n)))?.[1] ?? 0) }));
+  const runs = listing(join(root, ".cairn/evidence/runs")).map((n) => {
+    const m = new RegExp(`^  - ${req} \\S+ \\S+ \\S+ (\\d+)`, "m").exec(text(join(root, ".cairn/evidence/runs", n)));
+    return m ? { p: `.cairn/evidence/runs/${n}`, seq: Number(m[1]) } : null;
+  }).filter(Boolean);
+  return [...legacy, ...runs].sort((a, b) => a.seq - b.seq || (a.p < b.p ? -1 : a.p > b.p ? 1 : 0)).map((x) => x.p);
+};
+// The latest receipt's facts for one requirement: the run's fields plus its result line.
+export const entry = (root, req) => {
+  const p = records(root, req).at(-1);
+  if (!p) return null;
+  const t = readFileSync(join(root, p), "utf8");
+  const top = Object.fromEntries(t.split("\n").filter((l) => /^[a-z_]+: /.test(l)).map((l) => [l.slice(0, l.indexOf(": ")), l.slice(l.indexOf(": ") + 2)]));
+  const m = new RegExp(`^  - ${req} (\\S+) (\\S+) (\\S+) (\\S+) (\\S+)`, "m").exec(t);
+  return m ? { ...top, path: p, result: m[1], source: m[2], requirement_digest: m[3], sequence: m[4], history_digest: m[5] } : { ...top, path: p };
+};
 
 // Mechanism declarations. exitFile lets a test flip pass/fail by editing one declared input.
 export const passing = (...reqs) => `command: node -e 0\ninputs:\n  - src/other\nrequirements:\n${reqs.map((r) => `  - ${r}\n`).join("")}`;

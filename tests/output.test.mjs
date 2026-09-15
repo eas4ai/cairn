@@ -4,10 +4,10 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, readdirSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { repo, cairn, records, commit, git } from "./helpers.mjs";
+import { repo, cairn, records, commit, git, entry } from "./helpers.mjs";
 
 const mechanism = (command) => `command: ${command}\ninputs:\n  - src/\nrequirements:\n  - R-001\n  - R-002\n`;
-const receipt = (root, req) => Object.fromEntries(readFileSync(join(root, ".cairn/evidence", req, records(root, req).at(-1)), "utf8").split("\n").filter((l) => l.includes(": ")).map((l) => [l.slice(0, l.indexOf(": ")), l.slice(l.indexOf(": ") + 2)]));
+const receipt = (root, req) => entry(root, req);
 
 test("three megabytes are retained exactly once with matching digests (LOOP-041, LOOP-042)", () => {
   const root = repo({ ".cairn/mechanisms/m": mechanism('node -e "process.stdout.write(Buffer.alloc(3000000,97))"') });
@@ -17,8 +17,8 @@ test("three megabytes are retained exactly once with matching digests (LOOP-041,
   assert.equal(bytes.length, 3000000); assert.ok(bytes.equals(Buffer.alloc(3000000, 97)));
   assert.equal(a.output, b.output);
   assert.equal(a.output_digest, "sha256:" + createHash("sha256").update(bytes).digest("hex"));
-  assert.equal(readdirSync(join(root, ".cairn/evidence/R-001")).filter((n) => n.endsWith(".out")).length, 1);
-  assert.equal(readdirSync(join(root, ".cairn/evidence/R-002")).filter((n) => n.endsWith(".out")).length, 0);
+  assert.equal(readdirSync(join(root, ".cairn/evidence/runs")).filter((n) => n.endsWith(".out")).length, 1);
+  assert.equal(a.path, b.path, "one receipt for the run");
 });
 
 test("split stdout result lines survive a long non-result line; stderr is never a verdict", () => {

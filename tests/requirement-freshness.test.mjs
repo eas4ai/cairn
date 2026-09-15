@@ -6,7 +6,7 @@ import { repo, cairn, commit, records, review, passing, git } from "./helpers.mj
 
 const text = (root, path) => readFileSync(resolve(root, path), "utf8");
 const edit = (root, path, change) => writeFileSync(resolve(root, path), change(text(root, path)));
-const receipt = (root, req = "R-001") => join(root, ".cairn/evidence", req, records(root, req).at(-1));
+const receipt = (root, req = "R-001") => join(root, records(root, req).at(-1));
 const setup = () => {
   const root = repo({ ".cairn/mechanisms/m": passing("R-001"), ".cairn/mechanisms/n": passing("R-002") });
   cairn(root, "check"); review(root); commit(root, "review original requirements");

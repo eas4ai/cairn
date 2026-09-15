@@ -2,10 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { repo, cairn, commit, records, review } from "./helpers.mjs";
+import { repo, cairn, commit, records, review, entry } from "./helpers.mjs";
 
 const declaration = (command, mode = "per-requirement") => `command: ${command}\n${mode === null ? "" : `results: ${mode}\n`}inputs:\n  - src/\nrequirements:\n  - R-001\n  - R-002\n`;
-const record = (root, req) => readFileSync(join(root, ".cairn/evidence", req, records(root, req).at(-1)), "utf8");
+const record = (root, req) => { const e = entry(root, req); return `result: ${e.result}\nsource: ${e.source}\nexit: ${e.exit}\nexecution_error: ${e.execution_error}\nstderr_output: ${e.stderr_output}\n`; };
 
 for (const exit of [0, 1]) test(`explicit reporting with no lines and exit ${exit} establishes no requirement verdicts`, () => {
   const root = repo({ ".cairn/mechanisms/m": declaration(`node -e "process.exit(${exit})"`) });

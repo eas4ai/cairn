@@ -24,7 +24,7 @@ test("a commit inside the footprint: check runs; outside it: check names the pat
   const root = repo();
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root);
   let r = cairn(root, "check");
-  assert.match(r.stdout, /recorded .cairn\/evidence\/R-001/, "declared input: runs");
+  assert.match(r.stdout, /recorded .cairn\/evidence\/runs\/\S+ R-001/, "declared input: runs");
   writeFileSync(join(root, "unrelated.txt"), "z\n"); commit(root);
   r = cairn(root, "check");
   assert.equal(r.status, 1);

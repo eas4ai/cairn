@@ -7,8 +7,7 @@ import { repo, cairn, commit, review, records, fromFile, passing, git, CLI } fro
 
 const firstLine = (result) => result.stdout.split("\n")[0];
 const valueOf = (text, key) => new RegExp(`^${key}: (.*)$`, "m").exec(text)?.[1];
-const latest = (root) => records(root, "R-001").map((name) => join(root, ".cairn/evidence/R-001", name))
-  .sort((a, b) => Number(valueOf(readFileSync(a, "utf8"), "sequence")) - Number(valueOf(readFileSync(b, "utf8"), "sequence"))).at(-1);
+const latest = (root) => join(root, records(root, "R-001").at(-1));
 function restarted(root, expected, trace) {
   const one = cairn(root, "wake"), two = cairn(root, "wake");
   assert.equal(firstLine(one), expected, `${trace}\n${one.stdout}${one.stderr}`);

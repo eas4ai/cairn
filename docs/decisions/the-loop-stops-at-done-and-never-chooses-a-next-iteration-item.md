@@ -14,4 +14,4 @@ Next-iteration is the next feature specification. When the commitment is complet
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 50672fd6496c8b43dde26f40545738f4a23c0692 The loop stops at Done

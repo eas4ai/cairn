@@ -3,7 +3,7 @@ commit: 4c5b01b007e2ba4f8642ef210c0993388fe799dc
 examined:
   - node-test against the revised LOOP-091: the two LOOP-091 tests in tests/continuation.test.mjs, the wake ending in bin/cairn.mjs, and a green fixture with one waiting next-iteration item.
 findings:
-  - open: The wake ending and its two tests implement the reversed rule; a complete commitment with an empty backlog and a waiting next-iteration item gets escalate next-iteration, and an answered escalation gets specify, where the revised text requires Done.
+  - resolved: The wake ending and its two tests implemented the reversed rule; the ending now reports Done with the waiting count, the escalate and specify branches are gone, and the replacement test ran red on the old ending and green on this one.
 
 ## LOOP-091 mechanism review, 2026-09-14
 

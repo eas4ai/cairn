@@ -32,7 +32,11 @@ test("PKG-003: a command, a directory, or a record kind no decision names", () =
   finds({ ".cairn/mystery/.keep": "" }, "PKG-003");
   finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nA widget record, one per run:\n\n    x: y\n" }, "PKG-003");
 });
-test("PKG-004: a kernel over 1600 lines, counting every file under bin/", () => { finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1601) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1600) }, "PKG-004"); });
+test("PKG-004: a kernel over 1600 lines, counting every file under bin/ as wc -l does; exactly 1600 passes", () => {
+  finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1600) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1600) }, "PKG-004");
+  let r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1599) })); assert.equal(r.status, 0, r.stdout);
+  r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(799), "bin/y.mjs": "1;\n".repeat(800) })); assert.equal(r.status, 0, r.stdout);
+});
 test("PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)", () => {
   finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006");
   finds({ "skills/s/SKILL.md": "1. Open Claude\n   Code and paste the prompt.\n" }, "PKG-006");

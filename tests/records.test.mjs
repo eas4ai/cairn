@@ -78,22 +78,41 @@ test("examined: [] is an empty list (LOOP-129, LOOP-108)", () => {
   assert.match(r.stdout, /^Resolvable: repair \.cairn\/reviews\/first\.md/, r.stdout); assert.match(r.stdout, /examined/);
 });
 
-test("below the Git toplevel the restore check compares root-relative paths (LOOP-130, LOOP-035)", () => {
-  const top = repo(); const project = join(top, "packages/app");
+// A project at packages/app below the Git toplevel, committed; run() is the kernel from inside it.
+const nested = (mechanism = passing("R-001", "R-002")) => {
+  const top = repo(), project = join(top, "packages/app");
   for (const d of ["docs/spec", "docs/commitments", "docs/decisions", ".cairn/mechanisms", "src"]) mkdirSync(join(project, d), { recursive: true });
   writeFileSync(join(project, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n");
   writeFileSync(join(project, "docs/spec/test.md"), readFileSync(join(top, "docs/spec/test.md"), "utf8"));
   writeFileSync(join(project, "docs/commitments/first.md"), "# First\n\nSlug: first\nRequirements: R-001, R-002\n");
-  writeFileSync(join(project, ".cairn/mechanisms/m"), passing("R-001", "R-002"));
+  writeFileSync(join(project, ".cairn/mechanisms/m"), mechanism);
   writeFileSync(join(project, "src/other"), "x\n");
   commit(top, "nested project");
+  return { top, project, run: (...a) => spawnSync("node", [CLI, ...a], { cwd: project, encoding: "utf8" }) };
+};
+
+test("below the Git toplevel the restore check compares root-relative paths (LOOP-130, LOOP-035)", () => {
+  const { top, project, run } = nested();
   writeFileSync(join(project, "src/extra"), "stray\n"); commit(top, "stray work in the nested project");
-  const nested = (...a) => spawnSync("node", [CLI, ...a], { cwd: project, encoding: "utf8" });
-  assert.match(nested("wake").stdout, /^Resolvable: scope src\/extra/);
-  const raise = () => nested("escalate", "--scope", "--concerns", "LOOP-035", "--question", "Acknowledge?", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
+  assert.match(run("wake").stdout, /^Resolvable: scope src\/extra/);
+  const raise = () => run("escalate", "--scope", "--concerns", "LOOP-035", "--question", "Acknowledge?", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
   let r = raise(); assert.equal(r.status, 3, r.stdout + r.stderr); assert.match(r.stderr, /restore these paths.*src\/extra/);
   unlinkSync(join(project, "src/extra")); commit(top, "restored");
   r = raise(); assert.equal(r.status, 0, r.stderr);
+});
+
+test("below the Git toplevel an uncommitted declared input is named from the project root (LOOP-132, LOOP-030)", () => {
+  const { project, run } = nested();
+  writeFileSync(join(project, "src/other"), "y\n");
+  let r = run("wake"); assert.match(r.stdout, /^Resolvable: record src\/other\n/, r.stdout);
+  r = run("check"); assert.match(r.stdout, /^Resolvable: commit src\/other\n/, r.stdout); assert.match(r.stdout, /uncommitted changes: src\/other \(LOOP-030\)/, r.stdout);
+});
+
+test("an input spelled .. from a project below the Git toplevel covers the evidence directory (LOOP-126, LOOP-105)", () => {
+  const { project, run } = nested(passing("R-001", "R-002").replace("  - src/other", "  - .."));
+  const r = run("check");
+  assert.equal(r.status, 1, r.stdout + r.stderr); assert.match(r.stdout, /^Resolvable: repair \.cairn\/mechanisms\/m\n  input \.\. covers \.cairn\/evidence\//, r.stdout); assert.match(r.stdout, /LOOP-126/);
+  assert.doesNotMatch(r.stdout, /commit .*\.cairn\/evidence/); assert.equal(existsSync(join(project, ".cairn/evidence")), false, "nothing ran");
 });
 
 test("a Consequential record this commitment added needs its queue entry committed (LOOP-131, DEC-004)", () => {
@@ -126,9 +145,11 @@ test("a staged rename reads as its two paths, never as a bare origin token (LOOP
   assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, /^Resolvable: commit src\//); assert.doesNotMatch(r.stdout, /[ ,]\/other/, r.stdout); assert.match(r.stdout, /in-progress/);
 });
 
-test("a Current: line inside a fenced example is not a second Current: line (LOOP-104)", () => {
-  const root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nThe line looks like this:\n\n```\nCurrent: example\n```\n\nCurrent: first\n" });
+test("a Current: line inside a fenced example is neither a second Current: line nor the commitment, before or after the real line (LOOP-104)", () => {
+  let root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nThe line looks like this:\n\n```\nCurrent: example\n```\n\nCurrent: first\n" });
   assert.doesNotMatch(wake(root).stdout, /repair docs\/spec\/roadmap/);
+  root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: first\n\nThe line looks like this:\n\n```\nCurrent: example\n```\n" });
+  const out = wake(root).stdout; assert.match(out, /^Resolvable: run R-001/, out); assert.doesNotMatch(out, /example/);
 });
 
 test("a Status: word is taken only from a line that carries one, never from wrapped prose after it (SPEC-018)", () => {

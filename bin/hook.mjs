@@ -47,7 +47,7 @@ try {
   } else if (mode === "session-start") {
     try {   // the link is not the verdict: a failure here is one line, and the verdict still prints (PKG-019, PKG-022)
       const entry = link && lstatSync(link, { throwIfNoEntry: false });
-      if (link && (!entry || (entry.isSymbolicLink() && !existsSync(link)))) {   // missing, or a link whose target does not exist (PKG-019, PKG-034)
+      if (link && (!entry || (entry.isSymbolicLink() && !resolves(link)))) {   // missing, or a link whose target is not a regular file (PKG-019, PKG-034)
         mkdirSync(join(home, ".local", "bin"), { recursive: true });
         if (entry) unlinkSync(link);
         symlinkSync(OWN, link);

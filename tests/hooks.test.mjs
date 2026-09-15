@@ -122,7 +122,7 @@ test("the hooks judge with the cairn on PATH, a wrapper included, and session-st
   assert.doesNotMatch(r.stdout, /judge with/, "this checkout's own kernel is not announced");
 });
 
-test("a link whose target exists is kept, whatever it is; only a dangling one is replaced (PKG-034)", () => {
+test("a link to a wrapper or file is kept; a dangling link or one to a directory is replaced (PKG-034)", () => {
   const root = repo(), home = mkdtempSync(join(tmpdir(), "cairn-home-")), other = copy(mkdtempSync(join(tmpdir(), "cairn-other-"))), dir = wrapper(other);
   mkdirSync(join(home, ".local/bin"), { recursive: true }); spawnSync("ln", ["-s", join(dir, "cairn"), join(home, ".local/bin/cairn")]);
   let r = hook("session-start", root, { HOME: home });
@@ -131,6 +131,10 @@ test("a link whose target exists is kept, whatever it is; only a dangling one is
   spawnSync("ln", ["-sfn", "/nowhere/cairn", join(home, ".local/bin/cairn")]);
   r = hook("session-start", root, { HOME: home });
   assert.match(r.stdout, /linked /); assert.equal(readlinkSync(join(home, ".local/bin/cairn")), KERNEL);
+  const folder = join(mkdtempSync(join(tmpdir(), "cairn-dir-")), "cairn.mjs"); mkdirSync(folder);   // a link to a directory resolves to no file
+  spawnSync("ln", ["-sfn", folder, join(home, ".local/bin/cairn")]);
+  r = hook("session-start", root, { HOME: home });
+  assert.match(r.stdout, /linked /, r.stdout + r.stderr); assert.equal(readlinkSync(join(home, ".local/bin/cairn")), KERNEL); assert.doesNotMatch(r.stdout, /judge with/); assert.match(r.stdout, /Resolvable: run R-001/);
 });
 
 test("a project below the Git toplevel gets the verdict and the stop refusal (PKG-035)", () => {

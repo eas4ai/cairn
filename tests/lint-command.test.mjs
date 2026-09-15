@@ -20,4 +20,5 @@ test("cairn lint names a missing directory in one line, takes one argument, and 
   assert.equal(r.status, 3, r.stdout + r.stderr); assert.match(r.stderr, /not a directory/); assert.doesNotMatch(r.stderr, /^\s+at /m);
   r = cairn(root, "lint", "docs/spec", "extra"); assert.equal(r.status, 3); assert.match(r.stderr, /one directory/);
   r = cairn(root, "--root", "/nonexistent/x", "lint"); assert.equal(r.status, 3, r.stdout); assert.ok(r.stderr.trim().split("\n").length === 1, r.stderr);
+  assert.match(r.stderr, /^cairn: \/nonexistent\/x is not a directory/, r.stderr); assert.doesNotMatch(r.stderr, /checker|ENOENT/, "the root is named, not the checker");
 });

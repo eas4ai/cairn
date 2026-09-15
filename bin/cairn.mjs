@@ -22,8 +22,8 @@ import { parseArgs } from "node:util";
 import { parseSpec, withoutFences } from "./spec.mjs";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { openSync, closeSync, readSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, writeFileSync, unlinkSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { openSync, closeSync, readSync, writeSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, statSync, writeFileSync, unlinkSync } from "node:fs";
+import { join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // ------------------------------------------------------------ reading
@@ -73,6 +73,7 @@ const list = (dir) => { try { return existsSync(dir) ? readdirSync(dir).filter((
 const SLUG_MD = /^[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const files = (dir, name = SLUG_MD) => list(dir).filter((n) => name.test(n) && lstatSync(join(dir, n)).isFile());
 const rel = (root, p) => relative(root, p).split("\\").join("/");
+const isDir = (p) => { try { return statSync(p).isDirectory(); } catch { return false; } };
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // An item named by slug, filename, repository path, or backticked slug (LOOP-125).
 const item = (s) => String(s).trim().replace(/^`|`$/g, "").replace(/^\.cairn\/(?:backlog|next-iteration)\//, "").replace(/\.md$/, "");
@@ -85,7 +86,7 @@ const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD");
 function currentCommitment(root) {
   const p = join(root, "docs", "spec", "roadmap.md"), text = read(p);
   if ((withoutFences(text).join("\n").match(/^Current:/gm) ?? []).length > 1) return { repair: rel(root, p), why: "more than one Current: line names a commitment; keep one (LOOP-019, LOOP-104)" };
-  const slug = fields(text)["Current"];
+  const slug = fields(withoutFences(text).join("\n"))["Current"];   // a fenced example never names the commitment (LOOP-104)
   if (!slug) return { repair: rel(root, p), why: "no Current: line names a commitment" };
   const cp = join(root, "docs", "commitments", `${slug}.md`);
   if (!existsSync(cp)) return { repair: rel(root, p), why: `Current: names ${slug}, and docs/commitments/${slug}.md does not exist` };
@@ -547,15 +548,17 @@ function inputsDigestAt(root, inputs, commit) {
 }
 // Validate before hashing or running, including a missing file still in the index.
 const mechanismRepair = (name, why) => ({ verdict: "Resolvable", action: `repair .cairn/mechanisms/${name}`, why });
-function declarationFieldsError(m) {
+function declarationFieldsError(m, root) {
   if (typeof m.def.command !== "string" || !m.def.command.trim()) return "command needs nonempty text (LOOP-067)";
   if (!asList(m.def.inputs).length) return "inputs needs a nonempty list of declared paths (LOOP-067)";
   const reqs = asList(m.def.requirements);
   if (!reqs.length || reqs.some((r) => !/^[A-Z]+-\d+$/.test(r))) return "requirements needs valid requirement identifiers (LOOP-067)";
   const twice = reqs.find((r, i) => reqs.indexOf(r) !== i);
   if (twice) return `requirements names ${twice} twice; one line per requirement (LOOP-105)`;
-  const covering = asList(m.def.inputs).map((i) => String(i).replace(/^\.\/|\/+$/g, "")).find((i) => i === "." || i === "" || i === ".cairn" || i.startsWith(".cairn/evidence"));
-  if (covering !== undefined) return `input ${covering || "."} covers .cairn/evidence/, Cairn's own output; declare the paths the command reads (LOOP-105)`;
+  // An input is resolved against the root before the test, so `..` from a nested project covers the evidence directory (LOOP-126).
+  const evidence = resolve(root, ".cairn", "evidence"), within = (a, b) => a === b || a.startsWith(b + sep);
+  const covering = asList(m.def.inputs).map(String).find((i) => { const abs = resolve(root, i); return within(evidence, abs) || within(abs, evidence); });
+  if (covering !== undefined) return `input ${covering.replace(/^\.\/|\/+$/g, "") || "."} covers .cairn/evidence/, Cairn's own output; declare the paths the command reads (LOOP-105, LOOP-126)`;
   return modeError(m);
 }
 function declaredEntryError(root, name, { path, mode, stage }) {
@@ -571,7 +574,7 @@ function declaredEntryError(root, name, { path, mode, stage }) {
 }
 function declarationError(root, mechs) {
   for (const [name, m] of mechs.byName) {
-    const invalid = declarationFieldsError(m);
+    const invalid = declarationFieldsError(m, root);
     if (invalid) return mechanismRepair(name, invalid);
     if (m.def.cwd && m.def.cwd !== "." && !existsSync(join(root, m.def.cwd))) return mechanismRepair(name, `cwd ${m.def.cwd} does not exist (LOOP-105)`);
     for (const input of asList(m.def.inputs)) {
@@ -629,12 +632,14 @@ function checkOwner(root, path = checkLockPath(root)) {
       : "the check owner is dead or incomplete; inspect its command and .cairn/in-progress, then remove this lock when execution has stopped" };
 }
 
-function dirtyInputs(root, inputs) {
+function dirtyInputs(root, inputs, cache = inputCache()) {
   const r = git(root, "status", "--porcelain", "-z", "--", ...inputs);
   if (r.error || r.status !== 0) throw new Error(`cannot inspect committed inputs: ${r.stderr || r.error?.message}`);
   const toks = r.stdout.split("\0"), out = [];
   for (let i = 0; i < toks.length; i++) if (toks[i]) { out.push(toks[i].slice(3)); if (/[RC]/.test(toks[i].slice(0, 2))) out.push(toks[++i]); }   // a rename or copy carries its origin as the next token
-  return out;
+  if (!out.length) return out;
+  const pre = prefix(root, cache);   // Git prints paths from the toplevel; the loop names them from the project root (LOOP-132)
+  return pre ? out.map((p) => posix.relative(pre, p) || ".") : out;
 }
 
 const RECEIPT_NAME = /^\d{8}T\d{9}Z(?:-\d+)?$/;
@@ -861,7 +866,7 @@ function wakeVerdict(root) {
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   // An uncommitted change to a declared input with no write-ahead record: the record comes first (LOOP-022, LOOP-110).
   const footprint = [...new Set(c.requirements.flatMap((r) => mechs.byReq.get(r) ?? []).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
-  const dirty = footprint.length && !existsSync(ip) ? dirtyInputs(root, footprint) : [];
+  const dirty = footprint.length && !existsSync(ip) ? dirtyInputs(root, footprint, mechs.inputs) : [];
   if (dirty.length) return { verdict: "Resolvable", action: `record ${dirty[0]}`, why: `${dirty.length} declared input(s) have uncommitted changes and no .cairn/in-progress record names the action; write the record (action, target, base, started) for the change under way, or commit it (LOOP-022, LOOP-110)` };
   const scope = scopeVerdict(root, c, mechs);
   if (scope) return scope;
@@ -972,13 +977,12 @@ function candidate(root, m, requirements, expectedHead) {
   const inputs = asList(m.def.inputs);
   const retainedPaths = retentionApprovals(root).flatMap((a) => a.paths.map((p) => `:(literal)${p}`));
   const paths = [...inputs, ...retainedPaths, `.cairn/mechanisms/${m.name}`, ...asList(m.def.requirements).map((r) => requirements.get(r)?.path).filter(Boolean)];
-  const head = headSha(root), dirty = dirtyInputs(root, paths);
+  const cache = inputCache(), head = headSha(root), dirty = dirtyInputs(root, paths, cache);
   if (dirty.length || head !== expectedHead) return { head, dirty };
-  const cache = inputCache();
   const snapshot = { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache), details: inputDetails(root, inputs, cache) };
   // Git status and clean filters can themselves run local commands. Finish
   // those operations before validating the final HEAD and raw file state.
-  const finalDirty = dirtyInputs(root, paths), finalHead = headSha(root);
+  const finalDirty = dirtyInputs(root, paths, cache), finalHead = headSha(root);
   if (finalDirty.length || finalHead !== expectedHead) return { head: finalHead, dirty: finalDirty };
   if (inputsDigest(root, paths) !== snapshot.digest) return { head: finalHead, dirty: [] };
   return snapshot;
@@ -1386,7 +1390,7 @@ async function main() {
   const root = ROOT = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
   // The checker is a script beside this kernel; the command reaches it from any project (PKG-028).
-  if (cmd === "lint") { if (rest.length > 1) return usage("lint takes one directory"); const r = spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }); return r.error ? usage(`cannot run the checker in ${root}: ${r.error.message}`) : r.status ?? 3; }
+  if (cmd === "lint") { if (rest.length > 1) return usage("lint takes one directory"); if (!isDir(root)) return usage(`${root} is not a directory; pass --root DIR`); const r = spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }); return r.error ? usage(`cannot run the checker in ${root}: ${r.error.message}`) : r.status ?? 3; }
   if (!["wake", "check", "decide", "escalate", "answer", "backlog", "supersede", "reversals"].includes(cmd)) return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals|lint> [--root DIR]");
   // Every command that reads or writes a record needs the repository (LOOP-046, LOOP-118).
   if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md); run from the project root or pass --root DIR`);

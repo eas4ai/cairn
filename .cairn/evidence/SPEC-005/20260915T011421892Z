@@ -1,0 +1,21 @@
+requirement: SPEC-005
+requirement_digest: sha256:9f9ad43687a4fedde82a2c16e123cdac137b49b2c4f5eabe4df545ad2c7f811e
+sequence: 20
+history_digest: sha256:27867ea147c644649c0f0c3390d14a2d35dd5ca1d7e8fba2dc356552e572519a
+mechanism: node-test
+commit: 4d28bdd
+inputs_digest: sha256:6c5d750821f5da8f05ea1c819136ac7bd55343b412d5aa2622ca69991bba0920
+mechanism_digest: sha256:9b3c545ea432c4599f6ac39a8f1ecfab6312128927f5ff725db71e94d048203d
+inputs_detail: .cairn/evidence/LOOP-036/20260915T011359910Z-2153908.inputs.json
+command: node --test tests/*.test.mjs
+cwd: .
+exit: 0
+output_digest: sha256:408297430ab5fad9726222874d97d412e21330254668e20718c71ea2dec6902f
+output: .cairn/evidence/LOOP-036/20260915T011359910Z-2153908.out
+stderr_output: .cairn/evidence/LOOP-036/20260915T011359910Z-2153908.err
+stderr_digest: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signal: none
+execution_error: null
+result: pass
+source: exit
+recorded: 2026-09-15T01:14:21.889Z

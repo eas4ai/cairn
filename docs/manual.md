@@ -185,11 +185,6 @@ An `ask` answer keeps the question open. The agent explains in the same
 record, then the decision comes back to you. You can ask again. Only `ok`
 or `instead` closes the question. [Mermaid source](diagrams/explanation-loop.mmd).
 
-One escalation you will see regularly asks which next-iteration idea to
-specify next, with the agent's recommendation. Your `ok` starts a
-specification phase for that idea, where you confirm its falsifier;
-`instead <slug>` picks another.
-
 ### Your three answer forms
 
 Assume Cairn named the escalation `storage-choice`:
@@ -465,10 +460,10 @@ backlog holds an idea inside the agreed specification, Cairn names
 the requirement and its falsifier, names the new commitment, and
 continues. That requirement's Status line reads `Agreed <date> by
 promotion <decision>`, so one search lists every requirement you did not
-confirm yourself. When the backlog is empty and next-iteration holds ideas
-that would change the contract, Cairn names an escalation: the agent
-recommends which to specify next and stops for your answer. Only when both
-are empty does the loop report Done and stop. Requirements intended
+confirm yourself. When the backlog is empty, the loop reports Done and
+stops, and wake says how many ideas wait in next-iteration. Those are the
+next feature specification: open it with the project skills, as for a new
+project or a new feature, when you choose. Requirements intended
 to apply to every commitment are inherited only from files whose header
 contains `Scope: every commitment`; only their Agreed blocks are included.
 
@@ -611,7 +606,7 @@ by hand.
 | `.cairn/evidence/` | Run receipts under `runs/`, one per mechanism run, with the logs beside them; older per-requirement receipts stay in their own directories. |
 | `.cairn/reviews/` | What the agent examined and the findings it recorded. |
 | `.cairn/backlog/` | Ideas inside the agreed specification, promoted by the agent when a commitment completes. |
-| `.cairn/next-iteration/` | Ideas that would change an agreed requirement or the working agreement; they wait for your answer. |
+| `.cairn/next-iteration/` | Ideas that would change an agreed requirement or the working agreement; they wait for the next feature specification, which you open. |
 | `.cairn/in-progress` | The action claimed by this working tree; this file stays out of Git. |
 
 A requirement such as `APP-001` and a commitment name such as `save-drafts`

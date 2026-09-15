@@ -26,8 +26,9 @@ Act on the verdict, and only on it.
   Do not stop while the verdict is Resolvable.
 - Escalate: present the escalation file to the developer, in its own
   words, and stop. Do nothing else until it is answered.
-- Done: the commitment is complete, the backlog holds nothing to
-  promote, and next-iteration is empty. Report it, and stop.
+- Done: the commitment is complete and the backlog holds nothing to
+  promote. Report it, and stop. Next-iteration is the developer's to
+  open.
 
 When wake says `reply <slug>`, read the developer's question and append
 your explanation with `cairn answer <slug> "<explanation>"`. Run wake again
@@ -45,11 +46,6 @@ the roadmap's Current: line, and stamp the item `Promoted to: <slug>`.
 Commit, then wake. A promoted commitment must not change an Agreed
 requirement, its falsifier, or this file. When the work needs that,
 move the item to next-iteration with the reason, escalate, and stop.
-
-When wake says `escalate next-iteration`, the backlog is empty and
-next-iteration holds items. Raise one escalation that recommends which
-item to specify next, with the alternatives, and stop. The developer's
-`ok` starts a specification phase for that item.
 
 Before you change code, write `.cairn/in-progress`:
 
@@ -178,11 +174,11 @@ and date are the mark. To reverse it, have the agent supersede the
 record with the cause named.
 
 The next commitment is the loop's while the backlog holds items. Read
-promotions in the review queue; supersede one to reverse it. When the
-loop escalates with a next-iteration recommendation, answer ok, instead,
-or ask. An ok starts a specification phase for that item, in which you
-confirm its falsifier; the agent moves the roadmap's Current: line when
-the phase ends.
+promotions in the review queue; supersede one to reverse it. Ideas that
+would change the contract wait in next-iteration; the loop never works
+them. A waiting item starts a new loop the way a new project or a new
+feature does: run new-project or existing-project as for one, and that
+specification phase ends by naming the next commitment.
 
 The kernel is upgraded at Done, never inside a commitment; a commitment
 starts and finishes on one referee. Every evidence record names the

@@ -1,5 +1,7 @@
 # An answered next-iteration escalation chooses by its text
 
+Superseded by: the-loop-stops-at-done-and-never-chooses-a-next-iteration-item
+
 Level: Judged
 Decided by: agent
 Rests on: LOOP-091, LOOP-014

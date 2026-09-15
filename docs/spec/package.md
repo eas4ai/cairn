@@ -223,3 +223,44 @@ A link that resolves to nothing is a missing link under PKG-019: the
 session-start hook replaces it and says so. A link to another checkout
 is reported once at session start, since the hooks then judge with
 that checkout's kernel and this one's records are not consulted.
+
+## The package lint reads what its requirements name
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the fourth remediation commitment. The lint read command names from
+header comments where PKG-003 names the help text, scanned every
+tracked file for ASCII including thousands of evidence receipts it
+never declared, and matched a vendor-naming step one line at a time.
+The suite named 36 of the requirements the declaration speaks for in
+no test title, and two of its tests read this repository through
+paths the declaration did not list.
+
+[PKG-023] The package lint MUST read the kernel's commands from its
+help output.
+Falsifier: a command in the kernel's help and dispatch but not in its
+header comment passes PKG-003.
+Status: Agreed 2026-09-15
+
+[PKG-024] The package lint MUST scan only the files Cairn ships for
+PKG-008.
+Falsifier: a non-ASCII byte in an evidence receipt under .cairn/
+fails the lint.
+Status: Agreed 2026-09-15
+
+[PKG-025] Cairn's test suite MUST name, in a test title, every
+requirement the node-test declaration speaks for.
+Falsifier: the declaration speaks for a requirement that no test
+title names.
+Status: Agreed 2026-09-15
+
+[PKG-026] The node-test declaration MUST list every repository path
+the tests read.
+Falsifier: a test reads a repository file that the declaration's
+inputs do not cover.
+Status: Agreed 2026-09-15
+
+[PKG-027] The package lint MUST match a vendor-naming step across a
+wrapped paragraph.
+Falsifier: a step that names a vendor's product across a line break
+passes PKG-006.
+Status: Agreed 2026-09-15

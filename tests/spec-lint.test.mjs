@@ -145,3 +145,19 @@ test("an Agreed block whose only keyword is MAY needs a falsifier like any other
   r = lint(fixture(AGREED + "[X-001] The agent MAY skip the cache.\nFalsifier: the agent is refused the skip.\n"));
   assert.equal(r.status, 0, r.stdout);
 });
+
+test("the path scan treats backticked and quoted text as mentions and flags drive paths and file URLs (SPEC-028, SPEC-029)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "cairn-spec-"));
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST reject a name matching `/^\\s*$/` and show \"/help\".\nFalsifier: it accepts one.\n\n[A-002] The app MUST read C:\\Users\\alex\\config.toml and file:///tmp/secret.\nFalsifier: it does not.\n\nThe developer opens /next-iteration at Done.\n");
+  const r = lint(dir);
+  assert.equal(r.status, 1, r.stdout);
+  assert.doesNotMatch(r.stdout, /\/\^\\s|\/help|\/next-iteration/, r.stdout);
+  assert.match(r.stdout, /C:\\Users/); assert.match(r.stdout, /file:\/\/\/tmp\/secret/);
+});
+
+test("a backticked or quoted actor still counts as one (PKG-010)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "cairn-spec-"));
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] `cairn wake` MUST print the verdict.\nFalsifier: it does not.\n\n[A-002] \"The tool\" MUST exist.\nFalsifier: it does not.\n");
+  const r = lint(dir);
+  assert.equal(r.status, 0, r.stdout);
+});

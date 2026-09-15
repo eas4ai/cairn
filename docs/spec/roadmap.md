@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-hooks-and-gates-judge-by-records
+Current: this-repository-declares-and-lints-what-it-reads
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -391,3 +391,14 @@ the LOOP-090 escalation and the LOOP-088 promotion record are read by
 their fields; the activation commit enters the LOOP-089 comparison;
 the footprint exempts Cairn's records only.
 [Commitment](../commitments/the-hooks-and-gates-judge-by-records.md).
+
+## This repository declares and lints what it reads
+
+Requested by the developer on 2026-09-15 after the audit, the fourth
+remediation commitment. Delivers SPEC-028, SPEC-029, and PKG-023
+through PKG-027: the checker treats mentions as mentions and flags
+drive paths and file URLs; the package lint reads commands from help,
+scans shipped files only, and matches wrapped steps; every declared
+requirement is named by a test and every path the tests read is
+declared.
+[Commitment](../commitments/this-repository-declares-and-lints-what-it-reads.md).

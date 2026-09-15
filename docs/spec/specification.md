@@ -296,3 +296,26 @@ what makes wake stop counting the item as waiting (LOOP-091). The
 developer deferred to the agent's recommendation for both
 requirements in advance on 2026-09-14; the review before agreement is
 recorded in the commitment file.
+
+## The checker reads mentions as mentions
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the fourth remediation commitment. The checker's path scan ran over
+raw lines, so a regex literal in backticks was an absolute path, and
+it stripped every scheme before matching, so a file URL passed.
+
+[SPEC-028] The specification checker MUST exclude backticked and
+quoted text from its host path scan.
+Falsifier: a backticked regex literal beginning with a slash is
+reported as an absolute path.
+Status: Agreed 2026-09-15
+
+[SPEC-029] The specification checker MUST report a Windows drive
+path or a file URL as a host path.
+Falsifier: a drive-letter path or a file URL in specification text,
+outside backticks and quotes, passes the check.
+Status: Agreed 2026-09-15
+
+A skill's slash name is not a path; the checker reads the names under
+skills/ in the checkout it runs from. A mention keeps a placeholder
+word, so a backticked actor still counts as one (PKG-010).

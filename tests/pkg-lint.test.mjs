@@ -65,3 +65,21 @@ test("a record kind named by its path alone is checked", () => {
 test("PKG-002: a tracked in-progress record", () => finds({ ".gitignore": "", ".cairn/in-progress": "action: implement\n" }, "PKG-002"));
 
 test("PKG-002: ignoring evidence alone is a finding", () => finds({ ".gitignore": ".cairn/evidence/\n" }, "PKG-002"));
+
+test("PKG-003 reads the kernel's commands from its help output (PKG-023)", () => {
+  const root = repo({ "bin/cairn.mjs": "// cairn wake\nif (process.argv[2] === '--help') console.log('Commands:\\n  wake\\n  frobnicate\\n\\nExamples:');\n", "docs/decisions/one.md": "# One\n\nnames cairn wake\n" });
+  const r = lint(root);
+  assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, /PKG-003: command frobnicate/);
+});
+
+test("the ASCII scan covers shipped files, not records under .cairn/ (PKG-024)", () => {
+  const root = repo({ ".cairn/evidence/runs/20260915T120000000Z-1": "mechanism: m\ncommand: caf\u00e9\n" });
+  const r = lint(root);
+  assert.equal(r.status, 0, r.stdout);
+});
+
+test("a vendor-naming step wrapped across lines is matched (PKG-006, PKG-027)", () => {
+  const root = repo({ "skills/x/SKILL.md": "# X\n\nTo finish, open Claude\nCode and run the command there.\n" });
+  const r = lint(root);
+  assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, /PKG-006: skills\/x\/SKILL\.md/);
+});

@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: the-contract-says-what-the-kernel-does
+Current: the-kernel-refuses-bad-records-and-leaves-no-trap
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -368,3 +368,15 @@ adds LOOP-101 so the working agreement names a move for every action
 wake prints, stamps the six deferred requirements, and stops the
 kernel writing a derivable status on escalations (LOOP-028).
 [Commitment](../commitments/the-contract-says-what-the-kernel-does.md).
+
+## The kernel refuses bad records and leaves no trap
+
+Requested by the developer on 2026-09-15 after the audit, the second
+remediation commitment. Delivers LOOP-102 through LOOP-113: list-form
+fields, record directories read by kind, a duplicate Current: line,
+declaration refusals for the three loop traps, declare ahead of
+evidence actions, unreadable records as repairs, the review and
+decision fields the gates read, the write-ahead record asked for,
+file modes under core.filemode false, project roots below the Git
+toplevel, and shallow clones.
+[Commitment](../commitments/the-kernel-refuses-bad-records-and-leaves-no-trap.md).

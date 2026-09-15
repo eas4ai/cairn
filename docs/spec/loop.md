@@ -1203,3 +1203,102 @@ Status: Agreed 2026-09-15
 
 The verbs are read from the kernel's own source by the test that
 speaks for this requirement, so a new action without a move fails it.
+
+## Bad records are repairs, and no state traps the loop
+
+Specified 2026-09-15 on the developer's direction after the audit,
+the second remediation commitment. The audit reproduced records that
+made the kernel exit with a JavaScript error, three states the loop
+could not leave, gate fields the kernel never read, a write-ahead
+record it reconciled but never asked for, and three environments it
+misjudged.
+
+[LOOP-102] The loop MUST read a record field written as a list the
+way it reads the flat form.
+Falsifier: a commitment file whose Requirements: line is written as a
+list makes wake exit with an error.
+Status: Agreed 2026-09-15
+
+[LOOP-103] The loop MUST read only the regular files of a record
+directory's kind and ignore every other entry.
+Falsifier: a subdirectory or a README in a record directory changes
+the verdict or makes wake exit with an error.
+Status: Agreed 2026-09-15
+
+Decisions, escalations, backlog items and next-iteration items are
+the `.md` files of their directories; a mechanism declaration is a
+regular file whose name does not end in `.md`.
+
+[LOOP-104] When the roadmap carries more than one Current: line, the
+loop MUST name the roadmap as a repair.
+Falsifier: a roadmap with two Current: lines selects a commitment
+silently.
+Status: Agreed 2026-09-15
+
+[LOOP-105] The loop MUST refuse a declaration that repeats a
+requirement identifier, declares an input under .cairn/evidence/, or
+names a cwd that does not exist, naming the fault.
+Falsifier: such a declaration runs.
+Status: Agreed 2026-09-15
+
+A repeated identifier wrote two result lines with one sequence and
+made every rerun ambiguous; an input covering the evidence directory
+found the run's own output as a candidate change and never recorded;
+a missing cwd recorded a failure the command never produced.
+
+[LOOP-106] When no mechanism speaks for a requirement, the wake MUST
+name declare for it ahead of any action its evidence would select.
+Falsifier: wake names implement or escalate for a requirement no
+mechanism speaks for.
+Status: Agreed 2026-09-15
+
+[LOOP-107] When the loop cannot read a record, the wake MUST name the
+record as a repair rather than exit with an error.
+Falsifier: an unreadable record file makes wake exit with an error.
+Status: Agreed 2026-09-15
+
+[LOOP-108] The loop MUST accept a review record only when it carries
+a commit line, a nonempty examined list, and a findings list, naming
+the missing field as the repair.
+Falsifier: a review with only a commit line reaches Done, or a review
+whose fields sit under a heading reaches Done.
+Status: Agreed 2026-09-15
+
+An empty findings list stays valid (LOOP-086); an absent one is the
+repair. The fields sit above the first heading, as LOOP-071 reads
+them.
+
+[LOOP-109] The loop MUST name a decision record as a repair when it
+lacks a Level, Decided by, Rests on, or Would be wrong if line, or
+when its Supersedes line names no record.
+Falsifier: such a record reaches Done.
+Status: Agreed 2026-09-15
+
+[LOOP-110] When a declared input of the current commitment's
+mechanisms has uncommitted changes and no in-progress record exists,
+the wake MUST name writing the record ahead of any evidence action.
+Falsifier: wake names run, implement, or review for a commitment
+whose declared input is dirty while no in-progress record exists.
+Status: Agreed 2026-09-15
+
+This is LOOP-022 observed. The action is `record <path>`: write the
+four-field record for the change under way, or commit it.
+
+[LOOP-111] When core.filemode is false, the loop MUST take a declared
+input's mode from the index rather than from the file system.
+Falsifier: with core.filemode false, a mode difference between the
+tree and the index refuses every check.
+Status: Agreed 2026-09-15
+
+[LOOP-112] The loop MUST run a check when the project root is a
+subdirectory of the Git worktree.
+Falsifier: check exits with an error for a project at packages/app of
+a repository.
+Status: Agreed 2026-09-15
+
+[LOOP-113] When a Realized by identifier cannot be resolved because
+the history is shallow or the identifier is ambiguous, the wake MUST
+say so rather than name the decision as unbuilt.
+Falsifier: a depth-1 clone names build for a decision realized by a
+commit outside its history.
+Status: Agreed 2026-09-15

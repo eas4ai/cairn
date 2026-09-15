@@ -13,4 +13,4 @@ Promotes .cairn/backlog/the-capture-gate-accepts-the-escalation-that-names-the-c
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 52d0176c61daf8f6cce4a76098bcb50d219d19d0 The capture gate reads the Concerns line

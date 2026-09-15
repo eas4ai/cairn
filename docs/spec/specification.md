@@ -307,10 +307,17 @@ raw lines, so a regex literal in backticks was an absolute path, and
 it stripped every scheme before matching, so a file URL passed.
 
 [SPEC-028] The specification checker MUST NOT report a slash-led
-token that carries a regular expression metacharacter as a host path.
-Falsifier: a backticked regex literal beginning with a slash is
+token that carries a regular expression metacharacter other than the
+dot as a host path.
+Falsifier: a backticked regex literal beginning with a slash and
+carrying a class, group, quantifier, anchor, or alternation is
 reported as an absolute path.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (F1): the checker exempted `^ $ * | ? \\` only, so a class or a
+quantifier was still a path; the set is now `^ $ * | ? \\ [ ] ( ) { }
++`, and the dot stays out because real paths carry it.
 
 Revised 2026-09-15, the same day: the first text excluded every
 backticked and quoted token, which SPEC-024 forbids, since a host

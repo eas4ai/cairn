@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-hooks-find-the-kernel-and-the-project
+Current: lints-and-tests-observe-what-they-name
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -462,3 +462,12 @@ revises PKG-004: the hooks judge with the command the agent runs, keep
 a link whose target exists, find a project below the toplevel, report
 a kernel that prints no verdict, and the ceiling is 1600 lines.
 [Commitment](../commitments/the-hooks-find-the-kernel-and-the-project.md).
+
+## Lints and tests observe what they name
+
+Requested by the developer on 2026-09-15 after the second audit, the
+fourth remediation commitment. Revises PKG-025, PKG-026 and SPEC-028;
+the lints catch the violations their requirements name, the coverage
+scan sees every read shape, fourteen test titles say what their
+bodies observe, and the two lint declarations say what they read.
+[Commitment](../commitments/lints-and-tests-observe-what-they-name.md).

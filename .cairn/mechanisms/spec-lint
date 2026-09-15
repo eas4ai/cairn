@@ -4,6 +4,7 @@ inputs:
   - scripts/spec-lint.mjs
   - bin/spec.mjs
   - docs/decisions/
+  - skills/
 requirements:
   - SPEC-001
   - SPEC-002

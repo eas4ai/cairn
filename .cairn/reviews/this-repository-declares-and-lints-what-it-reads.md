@@ -53,3 +53,10 @@ Attacked:
 Self-audit against the production rules: the deliverables the
 commitment lists, one same-day revision recorded in place; every check
 reported here ran and passed. No open finding.
+
+Correction, 2026-09-15, after the second audit (E1): the sentence
+"the suite has no other shape today" was false. The scan matched
+three read shapes; template-string URLs, relative imports, and
+cpSync of the kernel directory were not matched, though all fell
+under declared inputs. The scan is broadened under
+lints-and-tests-observe-what-they-name.

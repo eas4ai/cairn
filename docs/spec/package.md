@@ -255,17 +255,34 @@ Falsifier: a non-ASCII byte in an evidence receipt under .cairn/
 fails the lint.
 Status: Agreed 2026-09-15
 
-[PKG-025] Cairn's test suite MUST name, in a test title, every
-requirement the node-test declaration speaks for.
-Falsifier: the declaration speaks for a requirement that no test
-title names.
-Status: Agreed 2026-09-15
+The lint also reads .cairn/ in three ways the footprint cannot
+express: the tracked set, for PKG-002's check that the in-progress
+record is untracked; the directory listing, for PKG-003; and git
+check-ignore, which reads the ignore files. LOOP-105 refuses `.cairn`
+as a declared input, so these reads are recorded here and in the
+commitment review of lints-and-tests-observe-what-they-name rather
+than declared (audit-2 B8).
 
-[PKG-026] The node-test declaration MUST list every repository path
-the tests read.
+[PKG-025] Cairn's test suite MUST name, in a test title, every
+requirement that the declaration of the mechanism running the suite
+speaks for.
+Falsifier: that declaration speaks for a requirement that no test
+title names.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[PKG-026] The declaration of the mechanism that runs Cairn's test
+suite MUST list every repository path the tests read.
 Falsifier: a test reads a repository file that the declaration's
 inputs do not cover.
-Status: Agreed 2026-09-15
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D13, E1): the texts named the node-test file inside a
+specification whose scope is every commitment, so a renamed
+declaration would have stranded both. The coverage test scans the
+suite for `../` string literals and relative imports, which is every
+read the suite makes today; it cannot see a read made by a spawned
+process, and the declaration lists what those processes read.
 
 [PKG-027] The package lint MUST match a vendor-naming step across a
 wrapped paragraph.
@@ -287,6 +304,13 @@ specification checker from the checkout the command resolves to.
 Falsifier: `cairn lint docs/spec` fails in a project where the
 command is on the path.
 Status: Agreed 2026-09-15
+
+The checker's own code runs from Cairn's checkout, outside a
+consumer's repository: like the kernel, it is outside any footprint a
+consumer can declare, and a change to it does not stale a consumer's
+lint evidence (audit-2 B7). In this repository the spec-lint
+declaration lists the checker, the shared parser, and the skills
+directory whose names it reads.
 
 [PKG-029] The specification skills MUST name the checker through the
 cairn command.

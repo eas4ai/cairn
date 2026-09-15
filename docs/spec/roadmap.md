@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: evidence-names-the-kernel-that-wrote-it
+Current: one-receipt-per-run
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -320,3 +320,12 @@ evidence record carries the kernel's digest, a record from another kernel
 is stale with the reason named, and the working agreement says the kernel
 is upgraded at Done.
 [Commitment](../commitments/evidence-names-the-kernel-that-wrote-it.md).
+
+## One receipt per run
+
+Specified on the developer's ok to escalation loop-091-3, 2026-09-14.
+Delivers LOOP-097 and LOOP-098: one receipt per mechanism run with a
+result line per requirement, read in execution order beside every
+receipt written before. Revisits LOOP-040, LOOP-041, LOOP-070, and
+LOOP-075 by name only; their text stands.
+[Commitment](../commitments/one-receipt-per-run.md).

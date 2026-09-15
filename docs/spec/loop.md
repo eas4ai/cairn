@@ -1093,3 +1093,42 @@ Status: Agreed 2026-09-14
 A commitment starts and finishes on one referee. The digest makes the
 rule observable: records inside one commitment carry one kernel digest,
 and a second digest names the upgrade that broke the rule.
+
+## One receipt per run
+
+Specified on the developer's ok to escalation loop-091-3, 2026-09-14.
+Every check wrote one receipt per requirement the mechanism spoke for,
+so a check on this repository wrote about 140 files and two days of
+the loop wrote several thousand, all carrying the same command, exit,
+digests, and output path. The cost was in every commit the developer
+reviewed. The shape that removes it: one receipt per mechanism run, the
+run's facts once, and one result line per requirement inside it.
+
+A run receipt lives under .cairn/evidence/runs/ with the receipt
+filename format, beside its output, standard error, and inputs detail
+files. Its result lines carry, for each requirement the mechanism
+speaks for, the result, its source, the requirement's digest, the
+requirement's own sequence, and the digest of that requirement's prior
+receipts, so the execution-order rules of LOOP-070 hold per requirement
+exactly as before. A receipt written per requirement before this rule
+stays where it is, unchanged, and remains part of that requirement's
+history (LOOP-025). Nothing migrates.
+
+[LOOP-097] The loop MUST record one receipt per mechanism run, carrying
+the run's facts once and one result line per requirement the mechanism
+speaks for.
+Falsifier: one run writes more than one receipt, or a run receipt lacks
+a result line for a requirement its mechanism speaks for, or names its
+output more than once.
+Status: Agreed 2026-09-14
+
+[LOOP-098] The loop MUST read a requirement's history from run receipts
+and from receipts written per requirement before this rule, in
+execution order.
+Falsifier: a requirement's history omits a result held by a run
+receipt or by an earlier per-requirement receipt, or orders them other
+than by their sequences.
+Status: Agreed 2026-09-14
+
+A kernel from before this rule cannot see run receipts, so a project
+that upgrades does not downgrade inside a commitment (LOOP-096).

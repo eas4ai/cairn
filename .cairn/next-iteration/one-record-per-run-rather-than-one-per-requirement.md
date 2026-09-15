@@ -2,6 +2,7 @@
 
 Surfaced from: LOOP-041
 Changes: LOOP-041
+Promoted to: one-receipt-per-run (2026-09-14, on the developer's ok to escalation loop-091-3 and confirmation by exception)
 Moved: 2026-09-14 from the backlog under the-loop-continues-past-done; it changes the evidence record format
 Captured: 2026-09-11T22:35:08.220Z
 

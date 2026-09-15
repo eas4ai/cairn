@@ -1,6 +1,7 @@
 commitment: the-contract-says-what-the-kernel-does
 commit: e82c583
 examined:
+  - The build at 74c15a1 and the repair at e82c583: the working agreement and its template, CLAUDE.md, the marker parsing in bin/spec.mjs, the marker check in wake, the lint's marker finding, the escalate writer, the six stamped Status lines, and the five test additions.
   - node-test against the revised DEC-016 and LOOP-026, pkg-lint against the revised PKG-004, and spec-lint against the revised SPEC-002, each read beside the tests or lint code that speaks for it.
 findings: []
 
@@ -50,3 +51,47 @@ itself: the revised SPEC-002 falsifier wrapped onto a line beginning
 with "Status:", which the parser took as the block's status; repaired
 at e82c583 by reading the last Status: line of a block, with a test. No
 code changed during these reviews.
+
+## Commitment review at 640d24c, 2026-09-15
+
+Every requirement has current passing evidence: DEC-016, LOOP-026,
+PKG-004, SPEC-002, LOOP-101, LOOP-028, LOOP-036, and the inherited
+package set. The suite is 392 passing, both lints clean, the kernel at
+1405 of 1500 lines.
+
+Attacked:
+
+- The LOOP-101 test reads action verbs from the kernel source with one
+  regular expression over `action: ` followed by a quote. An action
+  built from a variable or a template that starts with an expression
+  escapes it; today every action string starts with its verb, and the
+  test asserts at least twelve verbs so a regex that matched nothing
+  would fail rather than pass vacuously.
+- The six deference markers changed only Status lines, which the
+  requirement digest excludes, so no mechanism review was demanded for
+  them and none was due; wake confirmed by naming only the four
+  revised requirements.
+- The promotions map now holds a kind and a slug; the wake message and
+  the lint message both name the kind, and the LOOP-088 test still
+  matches "by promotion" while the new test matches "by deference".
+- The parser's last-Status-line rule changes nothing for LOOP-024,
+  whose two lines both say Agreed, and is what let the loop refuse the
+  commitment file when the wrapped falsifier hid the real status: the
+  loop found the trap before this review did.
+- Escalation records written before this commitment keep their
+  Status: open line; nothing reads it, and the LOOP-028 test feeds one
+  back through wake.
+- The repository's CLAUDE.md lost its restatement of the merge and
+  scope rules; the same paragraph now lives in the agreement's agent
+  section, byte-identical in the template, which the skills test
+  requires.
+- findLast is available from Node 18, the oldest version the
+  operations pass ran the kernel on.
+
+Records: the decision is Judged and decided by the developer, so it
+waits in no queue; the audit plan's Direction section records the
+ruling this commitment carries out.
+
+Self-audit against the production rules: the changes the commitment
+lists, one parser repair the loop demanded, five tests added and one
+narrowed; every check reported here ran and passed. No open finding.

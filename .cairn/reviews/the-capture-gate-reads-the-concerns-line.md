@@ -1,5 +1,5 @@
 commitment: the-capture-gate-reads-the-concerns-line
-commit: ac8566c
+commit: cc579c6
 examined:
   - captureVerdict's new condition, limited to items with a Changes: line, and the LOOP-090 route end to end in tests/continuation.test.mjs, red before the change and green after.
   - the second audit, docs/audit/2026-09-15-audit-2.md, against the gate this commitment built and the LOOP-114 gate it shares a route with: findings A1 and A2.
@@ -44,3 +44,5 @@ starts after activation (audit-2 B1); it would be raised after the
 wake that asks for it, so the case does not arise. No open finding.
 
 Refreshed at ac8566c: the audit report notes the resolution; no code changed.
+
+Refreshed at cc579c6: the audit report withdraws C7 on the developer's ruling; no code changed.

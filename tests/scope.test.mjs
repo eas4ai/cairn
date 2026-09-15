@@ -76,7 +76,7 @@ test("a requirement in a Draft spec file is not Agreed", () => {
 
  test("working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036)", () => {
   const root = repo(); green(root);
-  for (const path of ["AGENTS.md", "CLAUDE.md"]) writeFileSync(join(root, path), "# agreement\n");
+  writeFileSync(join(root, "AGENTS.md"), "# agreement\n"); writeFileSync(join(root, "CLAUDE.md"), "@AGENTS.md\n");   // an include file is one whose whole content is @AGENTS.md (LOOP-122)
   writeFileSync(join(root, ".gitignore"), ".cairn/in-progress\ntarget/\n"); commit(root); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/);
 });

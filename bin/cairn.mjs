@@ -136,26 +136,33 @@ const revisionVerdict = (req, m, digest, reason) => ({ verdict: "Resolvable", ac
 // mechanisms' declared inputs plus Cairn's own records.
 function scopeHistory(root, slug) {
   const roadmap = "docs/spec/roadmap.md";
-  const commits = git(root, "log", "--first-parent", "--format=%H", "--", roadmap).stdout.trim().split("\n").filter(Boolean);
-  let began = null;
-  for (const commit of commits) {
+  const commits = git(root, "log", "--first-parent", "--format=%H %P", "--", roadmap).stdout.trim().split("\n").filter(Boolean).map((l) => l.split(" "));
+  let began = null, base = null;
+  for (const [commit, parent] of commits) {
     const show = git(root, "show", `${commit}:./${roadmap}`);
     if (show.status !== 0 || fields(show.stdout).Current !== slug) break;
-    began = commit;
+    began = commit; base = parent ?? commit;   // the footprint and the contract comparison start at the activation commit's parent, so that commit is inside both (LOOP-116, LOOP-120); a root activation has none
   }
   if (!began) return { began, commits: "", line: [] };
-  const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${began}..HEAD`);
-  const line = git(root, "rev-list", "--first-parent", `${began}..HEAD`);
+  const ownCommits = git(root, "log", "--first-parent", "--no-merges", "--format=%H", `${base}..HEAD`);
+  const line = git(root, "rev-list", "--first-parent", `${base}..HEAD`);
   if (ownCommits.error || ownCommits.status !== 0 || line.error || line.status !== 0) throw new Error("cannot read the commitment's Git history");
-  return { began, commits: ownCommits.stdout, line: line.stdout.trim().split("\n").filter(Boolean) };
+  return { began, base, commits: ownCommits.stdout, line: line.stdout.trim().split("\n").filter(Boolean) };
+}
+// The working agreement's include files: the root files whose whole content is @AGENTS.md, known by blob id, so one listing finds them (LOOP-122).
+const INCLUDE = new Set(["@AGENTS.md", "@AGENTS.md\n", "@AGENTS.md\r\n"].flatMap((s) => ["sha1", "sha256"].map((h) => createHash(h).update(`blob ${Buffer.byteLength(s)}\0${s}`).digest("hex"))));
+function includeFiles(root, rev, names = ["."]) {
+  const r = git(root, "ls-tree", "-z", rev, "--", ...names);
+  return r.status !== 0 ? [] : r.stdout.split("\0").filter(Boolean).map((e) => e.split("\t")).filter(([meta]) => INCLUDE.has(meta.split(" ")[2])).map(([, name]) => name);
 }
 function breaches(root, slug, mechs, requirements) {
   const history = scopeHistory(root, slug);
   const changed = changedPaths(root, history.commits);
   const inputs = [...new Set(requirements.flatMap((r) => mechs.byReq.get(r) ?? []).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
   const covered = new Set(inputs.length ? changedPaths(root, history.commits, inputs) : []);
-  // Cairn's own records, and nothing else under docs/, are outside the footprint (LOOP-035, LOOP-117).
-  const record = (f) => f.startsWith(".cairn/") || /^docs\/(?:spec|commitments|decisions)\//.test(f) || ["docs/recon.md", "AGENTS.md", "CLAUDE.md", ".gitignore"].includes(f);
+  // Cairn's own records, the agreement's include files, and nothing else under docs/, are outside the footprint (LOOP-035, LOOP-117, LOOP-122).
+  const roots = changed.filter((f) => !f.includes("/")), includes = new Set(roots.length ? includeFiles(root, "HEAD", roots) : []);
+  const record = (f) => f.startsWith(".cairn/") || /^docs\/(?:spec|commitments|decisions)\//.test(f) || ["docs/recon.md", "AGENTS.md", ".gitignore"].includes(f) || includes.has(f);
   const paths = changed.filter((f) => !record(f) && !covered.has(f));
   const acknowledged = paths.length ? acknowledgedScope(root, slug, history) : new Set();
   return paths.filter((f) => !acknowledged.has(f)).sort();
@@ -268,14 +275,13 @@ function promotedContractVerdict(root, c, ctx, agreed) {
   if (!c.promoted) return null;
   const history = scopeHistory(root, c.slug);
   if (!history.began) return null;
-  // The tree before activation, so the activation commit is inside the comparison (LOOP-116); a root activation has none.
-  const before = git(root, "rev-parse", "--verify", `${history.began}^{commit}`).status === 0 && git(root, "rev-parse", "--verify", `${history.began}^`).status === 0 ? `${history.began}^` : history.began;
-  const past = pastRequirements(root, before, ctx);
-  const changed = [...agreed].filter((id) => past.get(id)?.digest && ctx.requirements.get(id)?.digest && past.get(id).digest !== ctx.requirements.get(id).digest).sort();
-  const was = git(root, "rev-parse", `${before}:./AGENTS.md`), now = git(root, "rev-parse", "HEAD:./AGENTS.md");
-  if (now.status === 0 && (was.status !== 0 || was.stdout !== now.stdout)) changed.push("AGENTS.md");
-  // The escalation that covers the change names every changed requirement on its Concerns line (LOOP-114).
-  const ids = changed.map((id) => id === "AGENTS.md" ? "LOOP-036" : id);
+  const before = history.base, past = pastRequirements(root, before, ctx);
+  // A requirement Agreed at activation whose text changed, or that is Draft or gone at HEAD (LOOP-121).
+  const changed = [...requirementSet(root, before).agreed].filter((id) => !agreed.has(id) || (past.get(id)?.digest && ctx.requirements.get(id)?.digest && past.get(id).digest !== ctx.requirements.get(id).digest)).sort();
+  // The working agreement and each include file it had at activation (LOOP-122); an escalation covers the change when its Concerns line names every changed requirement, LOOP-036 for the agreement (LOOP-114).
+  const blob = (rev, f) => { const r = git(root, "rev-parse", "--verify", "-q", `${rev}:./${f}`); return r.status === 0 ? r.stdout : null; };
+  for (const f of ["AGENTS.md", ...includeFiles(root, before)]) if (blob(before, f) !== blob("HEAD", f)) changed.push(f);
+  const ids = [...new Set(changed.map((id) => /^[A-Z]+-\d+$/.test(id) ? id : "LOOP-036"))];
   if (!changed.length || ownEscalations(root, history).some((e) => { const named = (e.Concerns ?? "").split(/[\s,]+/); return ids.every((id) => named.includes(id)); })) return null;
   return { verdict: "Resolvable", action: `escalate ${c.slug}`, why: `a promoted commitment changed ${changed.join(", ")} since it began at ${history.began.slice(0, 7)}; a change to an Agreed requirement, its falsifier, or the working agreement is the developer's: move the item to next-iteration with the reason and raise one escalation with --concerns ${ids.join(",")}, and do not build it under the promotion's record (LOOP-089, LOOP-090, LOOP-114)` };
 }
@@ -839,7 +845,10 @@ function wakeVerdict(root) {
   // A decision marker, by promotion or by deference, resolves to its record (LOOP-088, SPEC-002).
   const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r).slug}.md`)));
   if (marked) { const { kind, slug } = promotions.get(marked); return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by ${kind} ${slug} and docs/decisions/${slug}.md does not exist; record the decision or restore the developer's confirmation (LOOP-088, SPEC-002)` }; }
-  if (c.promoted && !decisions(root).some((d) => d.Promotes === c.promoted)) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ carries Promotes: ${c.promoted}; record the promotion with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-115)` };
+  const promo = c.promoted ? decisions(root).filter((d) => d.Promotes === c.promoted) : [];
+  if (c.promoted && !promo.length) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ carries Promotes: ${c.promoted}; record the promotion with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-115)` };
+  // A reversed promotion: every record that promoted the item is superseded (LOOP-123).
+  if (promo.length && promo.every((d) => "Superseded by" in d)) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted}, and ${promo[0].slug}, the decision that promoted it, is superseded by ${promo[0]["Superseded by"]}: the promotion was reversed; return the item to the backlog and move the roadmap's Current: line off this commitment, or record the promotion again with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-123)` };
   // A commitment specified from a next-iteration item stamps the item, so wake stops counting it as waiting (SPEC-027).
   const unstamped = (c.specified ?? "").split(/[\s,]+/).filter(Boolean).find((s) => { const p = join(root, ".cairn", "next-iteration", `${s}.md`); return existsSync(p) && !("Promoted to" in fields(read(p))); });
   if (unstamped) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${unstamped}.md`, why: `docs/commitments/${c.slug}.md is specified from it and it carries no Promoted to: line; add the line Promoted to: ${c.slug} (SPEC-027)` };

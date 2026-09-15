@@ -184,6 +184,11 @@ or ask. An ok starts a specification phase for that item, in which you
 confirm its falsifier; the agent moves the roadmap's Current: line when
 the phase ends.
 
+The kernel is upgraded at Done, never inside a commitment; a commitment
+starts and finishes on one referee. Every evidence record names the
+kernel that wrote it, and a record from another kernel is stale, so an
+upgrade re-runs each mechanism once.
+
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own
 commits; reverting a change does not erase a footprint breach. Declare a

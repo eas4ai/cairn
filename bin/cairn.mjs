@@ -69,6 +69,8 @@ const list = (dir) => (existsSync(dir) ? readdirSync(dir).filter((n) => !n.start
 const rel = (root, p) => relative(root, p).split("\\").join("/");
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const sha = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
+// The kernel that writes a record: the two files that decide verdicts and write (LOOP-023, LOOP-095).
+const KERNEL_DIGEST = sha(["cairn.mjs", "spec.mjs"].map((f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8")).join("\n"));
 const git = (root, ...args) => spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: Infinity });
 const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD"); return r.status === 0 ? r.stdout.trim() : null; };
 
@@ -713,6 +715,7 @@ function assess(root, req, mechs, ctx) {
     if (orderError) reasons.push(orderError);
     if (revision.changed) reasons.push(revision.reason);
     if (latest.mechanism_digest !== m.digest) reasons.push("the mechanism changed");
+    if (latest.kernel_digest !== KERNEL_DIGEST) reasons.push("the kernel changed");
     if (inputsChanged) reasons.push("a declared input changed");
     reasons.push(...retentionReasons(root, latest.commit, ctx));
     const damaged = evidenceError(root, latest, ctx.outputs);
@@ -1009,7 +1012,7 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
   writeFileSync(details, JSON.stringify({ version: 1, entries: before.details }) + "\n", { flag: "wx" });
   const exit = r.signal ? `signal ${r.signal}` : r.status ?? -1, lines = r.lines;
   const rec = [
-    `mechanism: ${m.name}`, `commit: ${before.head}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`,
+    `mechanism: ${m.name}`, `commit: ${before.head}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`, `kernel_digest: ${KERNEL_DIGEST}`,
     `inputs_detail: ${rel(root, details)}`,
     `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${fileDigest(output)}`, `output: ${rel(root, output)}`, `stderr_output: ${rel(root, stderrOutput)}`, `stderr_digest: ${fileDigest(stderrOutput)}`,
     `signal: ${r.signal ?? "none"}`, `execution_error: ${JSON.stringify(r.error ? { code: r.error.code ?? null, message: r.error.message } : null)}`,

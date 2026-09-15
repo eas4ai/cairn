@@ -316,9 +316,12 @@ findings continue to require resolution before Done.
 ### Why passing checks sometimes need to run again
 
 Cairn checks the requirement and falsifier, mechanism declaration, declared
-inputs, receipt history, and captured output when deciding whether evidence
-is still current. Input identity includes contents, executable mode, and
-file kind. An unrelated commit alone does not make evidence stale.
+inputs, receipt history, captured output, and the kernel that wrote the
+record when deciding whether evidence is still current. Input identity
+includes contents, executable mode, and file kind. An unrelated commit alone
+does not make evidence stale. A record written by another kernel, or by one
+that did not yet name itself, is stale with the reason "the kernel changed",
+so an upgrade re-runs each mechanism once.
 
 An applicable approval to keep out-of-scope work adds a freshness condition:
 the check and commitment review must come from commits containing that

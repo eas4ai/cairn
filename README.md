@@ -240,6 +240,11 @@ their spec file's header. A `PKG` prefix alone no longer makes them global.
 Evidence and output files belong in Git, and `ask` now keeps an escalation
 open for a reply.
 
+Every evidence record names the kernel that wrote it. The first wake under
+an upgraded kernel re-runs each mechanism once, because earlier records name
+no kernel or another one. Upgrade the kernel at Done, never inside a
+commitment: a commitment starts and finishes on one referee.
+
 ## Find your way around
 
 | Read this | When you need it |

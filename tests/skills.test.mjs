@@ -86,3 +86,6 @@ test("the working agreement names the hooks as optional and the install skill re
   has(INSTALL, ".codex/hooks.json", "Codex hooks path");
   lacks(INSTALL, "link.sh", "the link script is retired");
 });
+test("the working agreement says the kernel is upgraded at Done, never inside a commitment (LOOP-096)", () => {
+  has(TEMPLATE, "The kernel is upgraded at Done, never inside a commitment; a commitment starts and finishes on one referee", "LOOP-096");
+});

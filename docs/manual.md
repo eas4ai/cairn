@@ -43,7 +43,9 @@ Describe an outcome, not a list of implementation steps. For example:
 > to be able to reopen a draft and continue writing.
 
 For a new project, ask the agent to use `new-project`. For existing software,
-ask it to use `existing-project`. The existing-project skill instructs the
+ask it to use `existing-project`. For a project already under Cairn whose
+loop reports Done, ask it to use `next-iteration`, which starts from the
+agreed specification instead of reading the whole codebase again. The existing-project skill instructs the
 agent to inspect the code first and cite what it finds. A description of
 what the code currently does is marked **Observed**. It becomes an agreement
 about what the code should do only after you confirm it.
@@ -462,8 +464,8 @@ continues. That requirement's Status line reads `Agreed <date> by
 promotion <decision>`, so one search lists every requirement you did not
 confirm yourself. When the backlog is empty, the loop reports Done and
 stops, and wake says how many ideas wait in next-iteration. Those are the
-next feature specification: open it with the project skills, as for a new
-project or a new feature, when you choose. Requirements intended
+next feature specification: open it with the next-iteration skill when
+you choose. Requirements intended
 to apply to every commitment are inherited only from files whose header
 contains `Scope: every commitment`; only their Agreed blocks are included.
 
@@ -665,11 +667,11 @@ return 0 on success; that does not mean the commitment is Done.
 ### Using the skills CLI
 
 The [Vercel skills CLI](https://github.com/vercel-labs/skills) installs
-Cairn's three skills and their supporting files. It requires npm/npx and
+Cairn's four skills and their supporting files. It requires npm/npx and
 access to GitHub. From your project's root, install them for Codex:
 
 ```sh
-npx skills add eas4ai/cairn --skill install-cairn new-project existing-project --agent codex
+npx skills add eas4ai/cairn --skill install-cairn new-project existing-project next-iteration --agent codex
 ```
 
 Add `--global` to make them available across your projects. Change the
@@ -684,6 +686,7 @@ non-interactive installation.
 | `install-cairn` | Install and verify the Cairn executable, or repair a missing command. |
 | `new-project` | Agree on requirements for software you have not built yet. |
 | `existing-project` | Understand an existing codebase and prepare a piece of work. |
+| `next-iteration` | Specify the next commitment of a project already under Cairn, from its agreed specification. |
 
 After installing the skills, tell your agent:
 
@@ -713,7 +716,7 @@ A `git pull --ff-only` in a clean Cairn checkout updates the executable.
 Refresh skills managed by the skills CLI separately:
 
 ```sh
-npx skills update install-cairn new-project existing-project
+npx skills update install-cairn new-project existing-project next-iteration
 ```
 
 ## Upgrading an existing Cairn project
@@ -759,7 +762,7 @@ answer, or act as a permission system for the coding agent.
 
 | Behavior explained here | Implementation or instruction | Executable examples |
 |---|---|---|
-| Starting a project and confirming behavior | [new-project](../skills/new-project/SKILL.md), [existing-project](../skills/existing-project/SKILL.md) | [Worked example](walkthrough.md) |
+| Starting a project and confirming behavior | [new-project](../skills/new-project/SKILL.md), [existing-project](../skills/existing-project/SKILL.md), [next-iteration](../skills/next-iteration/SKILL.md) | [Worked example](walkthrough.md) |
 | Verdicts, review requirements, and Done | `wakeVerdict()` in [the CLI](../bin/cairn.mjs), [working agreement](../AGENTS.md) | [Wake tests](../tests/wake.test.mjs) |
 | Turns for `ask`, explanations, and final answers | `answer()` and `escalationTurn()` in [the CLI](../bin/cairn.mjs) | [Escalation tests](../tests/escalate.test.mjs) |
 | Check selection, reporting, and saved output | `check()` and `capture()` in [the CLI](../bin/cairn.mjs) | [Reporting tests](../tests/reporting-mode.test.mjs), [output tests](../tests/output.test.mjs) |

@@ -48,6 +48,12 @@ Three more:
 
 ## Stage 0 -- Recon before questions
 
+When the project already runs under Cairn and `cairn wake` says Done,
+the work is a later commitment: switch to /next-iteration, which starts
+from the specification instead of a recon. This skill adopts a codebase
+that Cairn has not specified, or one whose spec set has drifted from
+the code.
+
 Path B first: read the spec set before the code -- glossary.md,
 overview.md, every domain spec, roadmap.md, the current commitment,
 docs/decisions/, .cairn/backlog/, and .cairn/next-iteration/. The glossary's terms are your

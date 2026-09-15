@@ -176,9 +176,9 @@ record with the cause named.
 The next commitment is the loop's while the backlog holds items. Read
 promotions in the review queue; supersede one to reverse it. Ideas that
 would change the contract wait in next-iteration; the loop never works
-them. A waiting item starts a new loop the way a new project or a new
-feature does: run new-project or existing-project as for one, and that
-specification phase ends by naming the next commitment.
+them. A waiting item starts a new loop: run next-iteration, which starts
+from the specification instead of adopting the codebase again, and
+that phase ends by naming the next commitment.
 
 The kernel is upgraded at Done, never inside a commitment; a commitment
 starts and finishes on one referee. Every evidence record names the

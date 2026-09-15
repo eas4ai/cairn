@@ -82,7 +82,7 @@ function currentCommitment(root) {
   if (!existsSync(cp)) return { repair: rel(root, p), why: `Current: names ${slug}, and docs/commitments/${slug}.md does not exist` };
   const f = fields(read(cp)), reqs = (f["Requirements"] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (reqs.length === 0) return { repair: rel(root, cp), why: "no Requirements: line names what the commitment includes" };
-  return { slug, requirements: reqs, promoted: f["Promoted from"] || null };
+  return { slug, requirements: reqs, promoted: f["Promoted from"] || null, specified: f["Specified from"] || null };
 }
 
 // The kernel and lint read the same blocks and status defaults.
@@ -792,6 +792,9 @@ function wakeVerdict(root) {
   const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r)}.md`)));
   if (marked) return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by promotion ${promotions.get(marked)} and docs/decisions/${promotions.get(marked)}.md does not exist; record the promotion decision or restore the developer's confirmation (LOOP-088)` };
   if (c.promoted && !recordTexts(root, "docs", "decisions").some((t) => t.includes(c.promoted))) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ names it; record the promotion decision (LOOP-088)` };
+  // A commitment specified from a next-iteration item stamps the item, so wake stops counting it as waiting (SPEC-027).
+  const unstamped = (c.specified ?? "").split(/[\s,]+/).filter(Boolean).find((s) => { const p = join(root, ".cairn", "next-iteration", `${s}.md`); return existsSync(p) && !("Promoted to" in fields(read(p))); });
+  if (unstamped) return { verdict: "Resolvable", action: `repair .cairn/next-iteration/${unstamped}.md`, why: `docs/commitments/${c.slug}.md is specified from it and it carries no Promoted to: line; add the line Promoted to: ${c.slug} (SPEC-027)` };
   fold(c, inherited);
   const invalid = c.requirements.map((r) => mechs.byName.get(mechs.byReq.get(r))).find((m) => m && modeError(m));
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };

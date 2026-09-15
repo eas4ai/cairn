@@ -12,7 +12,9 @@ meet as equals: you draft, the developer corrects, and nothing is Agreed
 until the developer confirms it and its falsifier.
 
 The phase ends at the keystone, the glossary, and the first commitment
-(SPEC-011). Later commitments are specified during the loop (SPEC-012).
+(SPEC-011). A later commitment is specified at Done: the loop promotes
+a backlog item on its own, and the developer opens /next-iteration for
+a contract change or a new feature (SPEC-012).
 Everything you write is a cairn: a marker for the agent that arrives next
 with no memory of this conversation.
 

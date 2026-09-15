@@ -19,9 +19,10 @@ only in a conversation that the next agent may never see.
 
 Cairn has two parts:
 
-- **Project skills** help your agent learn an existing codebase or plan a new
-  project with you. They produce written requirements, ways to check them,
-  and one selected piece of work.
+- **Project skills** help your agent learn an existing codebase, plan a new
+  project with you, or open the next iteration of a project already under
+  Cairn. They produce written requirements, ways to check them, and one
+  selected piece of work.
 - **A command-line tool** reads those files, runs the declared checks when
   asked, records their results, and reports the next action.
 
@@ -68,7 +69,7 @@ pauses, or supervises your agent. [Mermaid source](docs/diagrams/work-loop.mmd).
 |---|---|---|
 | `Resolvable` | There is a named action the agent can take. This is normal progress, not a general error. | The agent. |
 | `Escalate` | A recorded question awaits your answer. | You. |
-| `Done` | The required checks are current and passing, the review has no open findings, and the backlog holds nothing to promote. | You: open the next specification when you choose. |
+| `Done` | The required checks are current and passing, the review has no open findings, and the backlog holds nothing to promote. | You: run next-iteration when you choose. |
 
 Done does not mean the whole product is finished, deployed, or guaranteed
 correct. It means the selected commitment meets Cairn's recorded conditions.
@@ -78,8 +79,8 @@ that fits inside the agreed specification goes to the backlog, and the agent
 promotes it into the next commitment on its own, recording the decision for
 your review. An idea that would change an agreed requirement or the working
 agreement goes to next-iteration and waits there for the next feature
-specification, which you open with the project skills as for a new project
-or a new feature; the loop never works it. Neither is a place to park
+specification, which you open with the next-iteration skill; the loop
+never works it. Neither is a place to park
 unfinished work: an in-scope problem the agent cannot solve becomes a
 question to you, not a note.
 
@@ -91,7 +92,7 @@ Install Cairn's skills with the
 [Vercel skills CLI](https://github.com/vercel-labs/skills), using npm/npx:
 
 ```sh
-npx skills add eas4ai/cairn --skill install-cairn new-project existing-project --agent codex --global
+npx skills add eas4ai/cairn --skill install-cairn new-project existing-project next-iteration --agent codex --global
 ```
 
 Use `--agent claude-code` for Claude Code. For Muse and other agents
@@ -168,8 +169,8 @@ The link points into this checkout, so keep it in place. There is no
 ## Start with your project
 
 Open your project's repository in your coding agent. The exact way to select
-a skill depends on the agent application; the skill names are `new-project`
-and `existing-project`.
+a skill depends on the agent application; the skill names are `new-project`,
+`existing-project`, and `next-iteration`.
 
 For new software, you can say:
 
@@ -180,6 +181,11 @@ For a codebase that already exists:
 
 > Use the existing-project skill. Read the code before making claims about
 > it. Explain what you found, then help me prepare [describe the change].
+
+For a project already under Cairn, once the loop reports Done:
+
+> Use the next-iteration skill. Specify [the waiting item or the feature]
+> as the next commitment.
 
 The agent should explain requirements in terms you understand and propose
 observable failures that would show they are not met. Cairn calls one of

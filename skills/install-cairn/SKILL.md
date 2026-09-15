@@ -73,10 +73,12 @@ Cairn is installed and whether a new terminal or agent session is needed
 to pick up PATH. If verification fails, name the actual failure.
 
 When installation is complete, point the user to `new-project` for new
-software or `existing-project` for an existing codebase. Installation alone
-does not authorize adopting a project, writing AGENTS.md, or creating specs.
+software, `existing-project` for an existing codebase, or
+`next-iteration` for a project already under Cairn whose loop reports
+Done. Installation alone does not authorize adopting a project, writing
+AGENTS.md, or creating specs.
 
 For updates, the checkout and skills are separate: `git pull --ff-only`
 updates a clean Cairn checkout, and the link and hooks follow it; `npx
-skills update install-cairn new-project existing-project` refreshes
-skills installed with that CLI.
+skills update install-cairn new-project existing-project next-iteration`
+refreshes skills installed with that CLI.

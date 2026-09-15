@@ -1005,8 +1005,8 @@ one evening. The developer ruled that next-iteration is the next
 feature specification: the loop never pulls from it, and Done is the
 end of the loop's authority. A waiting item starts a new loop the way a
 new project or a new feature does: the developer opens a specification
-phase with the project skills, and that phase ends by naming the next
-commitment. Wake may say how many items wait, as information.
+phase with the next-iteration skill (SPEC-026), and that phase ends by
+naming the next commitment. Wake may say how many items wait, as information.
 
 When both the backlog and next-iteration are empty, Done means what it
 meant before: every requirement is met, and the agent stops. The

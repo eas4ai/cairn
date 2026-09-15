@@ -1,5 +1,5 @@
 commitment: the-gates-bind-to-the-commitment
-commit: 790f738
+commit: 783f1f2
 examined:
   - mechanism review, LOOP-090 revised: tests/continuation.test.mjs "the LOOP-090 gate reads the Concerns line" (LOOP-114) and "an escalation raised before the promoted commitment began does not silence the LOOP-090 gate" observe the revised falsifier: the violating example is an escalation naming R-001 raised under an earlier commitment, and the corrected case is one raised inside; both ran red on the old kernel at c356a46 and green after. No mismatch.
   - mechanism review, LOOP-092 revised: tests/continuation.test.mjs "a capture from one of the commitment's own requirements needs Outside because", "the LOOP-090 route needs one escalation" (LOOP-119) and "an escalation raised before the commitment began does not silence the capture gate" observe the revised falsifier for the file-naming and the Concerns-naming escalation, inside and before the commitment. No mismatch.
@@ -33,3 +33,5 @@ resolved as its own work.
 
 Resolved as its own work; 431 tests pass, both lints clean, the
 kernel at 1491 of 1500 lines. No open finding.
+
+Refreshed at 783f1f2: the plan table and this record changed; no code changed.

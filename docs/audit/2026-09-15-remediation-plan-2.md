@@ -69,6 +69,20 @@ verification are both committed.
    before activation (found by commitment 1's review). Documents: D3,
    D4, D6, D7, D9, D11, D12, E4, E5 noted. Closes B6,
    B9, D1, D3 to D12, E4, E5.
+6. The verifiers' findings are closed: what two independent
+   verifications of commitments 1 to 5 reproduced against 4889e11.
+   Kernel: a fenced Current: example after the real line selected
+   the commitment (A14 residue, LOOP-104); an input spelled `..`
+   from a nested project was not refused, and the check named the
+   path from the Git toplevel (A4 residue, LOOP-126, new LOOP-132);
+   a --root that is not a directory was blamed on the checker (A10
+   residue, PKG-028). Hook: a link to a directory named cairn.mjs was
+   kept and the hook judged silently with its own kernel (C5
+   residue, PKG-034). Lints and texts: the kernel count was one line
+   high per file (PKG-004); the PKG-022 falsifier named an
+   unreachable case; the PKG-026 rationale claimed the scan sees
+   every read; the manual's table lacked record, declare and resolve
+   (D6 residue); rows E1 and F1 below said closed for partial fixes.
 
 Not remediated, with the reason in the audit: F7 (robustness nits by
 the slug rule), the LOOP-113 collision test (verified by hand, too
@@ -112,10 +126,10 @@ committed under the named commit.
 | B7 | 4 | 038e748 | closed |
 | B8 | 4 | 038e748 | closed |
 | D13 | 4 | 038e748 | closed |
-| E1 | 4 | 038e748 | closed |
+| E1 | 4 | 038e748 | partial: the scan sees `../` literals in a `new URL`, an import, or the flat, raw and here helpers; a read spelled another way is unseen (PKG-026 rationale corrected in 6) |
 | E2 | 4 | 038e748 | closed |
 | E3 | 4 | 038e748 | closed |
-| F1 | 4 | 038e748 | closed |
+| F1 | 4 | 038e748 | partial: `/foo/g`, `/a.b/` and `~two` are still flagged; SPEC-028 names the metachar set, and a literal with none reads as a path by design |
 | F2 | 4 | 038e748 | closed |
 | F3 | 4 | 038e748 | closed |
 | F4 | 4 | 038e748 | closed |
@@ -139,3 +153,11 @@ committed under the named commit.
 | E5 | 5 | 9649512 | closed |
 | C7 | withdrawn | d18ece7 | closed |
 | F7 | not remediated | | by the slug rule |
+| A14 residue (fenced Current: after the line) | 6 | | open |
+| A4 residue (`..` from a nested project; toplevel path in the message) | 6 | | open |
+| A10 residue (--root not a directory blamed on the checker) | 6 | | open |
+| C5 residue (link to a directory kept, silent fallback) | 6 | | open |
+| PKG-004 count (one high per file) | 6 | | open |
+| PKG-022 falsifier (unreachable case) | 6 | | open |
+| PKG-026 rationale (false claim) | 6 | | open |
+| D6 residue (record, declare, resolve rows) | 6 | | open |

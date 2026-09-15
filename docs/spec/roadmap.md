@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-documents-say-what-the-code-does
+Current: the-verifiers-findings-are-closed
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -483,3 +483,12 @@ remediation's ruling; corrects the working agreement, the manual, the
 README, the walkthrough, the install skill, the glossary and this
 roadmap where they said what the code no longer does.
 [Commitment](../commitments/the-documents-say-what-the-code-does.md).
+
+## The verifiers' findings are closed
+
+Requested by the developer on 2026-09-15 after the second audit, the
+sixth remediation commitment: what two independent verifications of
+the five commitments found. Revises LOOP-104, LOOP-126, PKG-022 and
+PKG-034; adds LOOP-132; corrects the PKG-004 and PKG-026 rationales,
+the manual's Get unstuck table, and the plan's Result table.
+[Commitment](../commitments/the-verifiers-findings-are-closed.md).

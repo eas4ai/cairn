@@ -1252,9 +1252,11 @@ words joined by hyphens, as the commands write them; a mechanism
 declaration is a regular file whose name carries no extension.
 
 [LOOP-104] When the roadmap carries more than one Current: line, the
-loop MUST name the roadmap as a repair.
+loop MUST name the roadmap as a repair. The loop MUST read the
+Current: line outside fenced examples.
 Falsifier: a roadmap with two Current: lines selects a commitment
-silently.
+silently, or a fenced example after the Current: line names the
+commitment.
 Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
 [LOOP-105] The loop MUST refuse a declaration that repeats a
@@ -1470,9 +1472,12 @@ Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-dev
 
 [LOOP-126] The loop MUST name a declaration as the repair when one
 of its inputs matches a tracked path under .cairn/evidence/, or when
-a check under it changed only paths under .cairn/evidence/.
-Falsifier: a declaration with input `.cairn/*` or `*` ends a check by
-asking to commit .cairn/evidence/.
+a check under it changed only paths under .cairn/evidence/. An input
+MUST be resolved against the project root before that test, so `..`
+below the Git toplevel covers the evidence directory.
+Falsifier: a declaration with input `.cairn/*`, `*`, or `..` from a
+project below the Git toplevel ends a check by asking to commit
+.cairn/evidence/.
 Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
 
 [LOOP-127] The loop MUST name an unreadable record directory as a
@@ -1513,3 +1518,20 @@ inside a fenced example (LOOP-104), a Status: word taken from wrapped
 prose after the block's own line (SPEC-018), the check message that
 never mentioned the write-ahead record (LOOP-110), and the DEC-016
 message that counted records where the rule counts attempts.
+
+[LOOP-132] The loop MUST name an uncommitted declared input relative
+to the project root.
+Falsifier: in a project below the Git toplevel, the record or commit
+action names the path from the Git toplevel.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Agreed 2026-09-15 on the developer's direction after the independent
+verification of the second remediation (A4). Git status prints paths
+from the toplevel; every other path the loop prints is relative to
+the project root, and the agent acts on the path as printed. The same
+commitment repairs, under their own requirements, a fenced Current:
+example after the real line (LOOP-104), an input spelled `..` from a
+nested project (LOOP-126), the lint's message for a --root that is
+not a directory (PKG-028), the command link to a directory
+(PKG-034), the kernel line count (PKG-004), and the PKG-022 and
+PKG-026 texts.

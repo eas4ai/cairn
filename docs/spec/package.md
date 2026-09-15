@@ -50,7 +50,9 @@ lines; the two remediations added the gates the audits required, and
 at 1496 lines the hooks could not take the lines PKG-033 to PKG-036
 need. The ceiling moves once, to 1600, by the superseding decision
 the-complexity-ceiling-is-1600-lines, queued for the developer's
-review; the count is still the ceiling's purpose.
+review; the count is still the ceiling's purpose. The count is the
+sum of each file's lines; a file's final newline ends its last line
+and starts none.
 
 Revised 2026-09-15 on the developer's direction after the audit. The
 first text covered every shipped run-time file, which the lint never
@@ -224,11 +226,14 @@ Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired
 line on standard error for that error.
 Falsifier: a hook exits nonzero or prints a stack trace when its
 input is not an object, when the link's directory is a regular file,
-or when the kernel cannot be found.
+or when git cannot run.
 Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
 
 Revised 2026-09-15 on the developer's direction after the second
-audit (D10): one obligation per sentence.
+audit (D10): one obligation per sentence. The falsifier's third case
+was a kernel that cannot be found, which PKG-033 makes unreachable:
+the hook falls back to its own kernel. A missing git is the reachable
+case, and its test exists.
 
 A link that resolves to nothing is a missing link under PKG-019: the
 session-start hook replaces it and says so. A link to another checkout
@@ -283,9 +288,10 @@ Revised 2026-09-15 on the developer's direction after the second
 audit (D13, E1): the texts named the node-test file inside a
 specification whose scope is every commitment, so a renamed
 declaration would have stranded both. The coverage test scans the
-suite for `../` string literals and relative imports, which is every
-read the suite makes today; it cannot see a read made by a spawned
-process, and the declaration lists what those processes read.
+suite for `../` literals in a `new URL`, an import, or the flat, raw
+and here helpers; a read spelled another way, such as a path joined
+from a constant, or a read made by a spawned process, is not seen,
+and the declaration lists what those reads cover.
 
 [PKG-027] The package lint MUST match a vendor-naming step across a
 wrapped paragraph.
@@ -358,8 +364,9 @@ prints no line naming the wrapper.
 Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
 
 [PKG-034] The session-start hook MUST replace the command link only
-when its target does not exist.
-Falsifier: a link to an existing wrapper or file is replaced.
+when its target does not resolve to a regular file.
+Falsifier: a link to an existing wrapper or file is replaced, or a
+link to a directory is kept.
 Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
 
 [PKG-035] A hook MUST find the project in cwd or the nearest ancestor

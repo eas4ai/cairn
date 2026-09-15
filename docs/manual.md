@@ -496,6 +496,9 @@ silently changing what you agreed to build.
 | The directory is not a Cairn repository or Git working tree. | Open your project root. A plain directory needs Git and the project files prepared through a project skill. |
 | `repair` names a mechanism. | Inspect missing fields, unmatched inputs, unsupported submodules, reporting mode, a repeated identifier, or an input that covers Cairn's own evidence. Repair the declaration before rerunning. |
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
+| `record` names a path. | A declared input has uncommitted changes and no `.cairn/in-progress` record names the action. Ask the agent to write the record for the work under way, or to commit the change. |
+| `declare` names a requirement. | No mechanism speaks for it yet. Ask the agent to write a declaration naming the command, every path it reads, and the requirement. |
+| `resolve` names a commitment. | Its review holds an open finding. Ask the agent to fix it as its own work and mark it resolved in the review. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
 | `scope` names a file. | Read the complete path list below it. Correct an incomplete declaration when justified, request explicit approval to keep exact correct work, or restore accidental work and request acknowledgment as described below. |

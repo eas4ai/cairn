@@ -12,4 +12,4 @@ The 2026-09-15 audit reproduced records that make the kernel exit with a JavaScr
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 8a1ac76d6615f4a2a126e320d03145460cd0f03f The kernel refuses bad records and leaves no trap

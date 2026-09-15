@@ -1406,7 +1406,7 @@ Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-dev
 
 [LOOP-122] The loop MUST exempt from the footprint every root file
 whose whole content is `@AGENTS.md`, the working agreement's include
-files, and MUST compare each of them in the LOOP-089 gate as it
+files. The loop MUST compare each of them in the LOOP-089 gate as it
 compares the working agreement.
 Falsifier: a promoted commitment changes CLAUDE.md and wake reaches
 Done, or a commitment adds a one-line GEMINI.md that includes the

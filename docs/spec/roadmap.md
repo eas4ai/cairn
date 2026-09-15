@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: consumers-can-run-the-lint-and-open-the-skills
+Current: record-writing-commands-run-only-in-a-cairn-repository
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -418,3 +418,11 @@ skills by name and stating versions and platforms, the deferral scan
 over the human documents; and the stale sentences the audit listed,
 corrected in place.
 [Commitment](../commitments/consumers-can-run-the-lint-and-open-the-skills.md).
+
+## Record-writing commands run only in a Cairn repository
+
+Promoted from the backlog by the agent on 2026-09-15 under LOOP-087,
+from the audit's finding A11. Delivers LOOP-118: decide, escalate,
+answer, backlog, supersede and reversals refuse to run outside a Cairn
+repository with the message wake and check give.
+[Commitment](../commitments/record-writing-commands-run-only-in-a-cairn-repository.md).

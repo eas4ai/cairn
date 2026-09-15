@@ -1,7 +1,8 @@
 // Bad records are repairs, and no state traps the loop (LOOP-102 to LOOP-113).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync, chmodSync, readFileSync, unlinkSync } from "node:fs";
+import { mkdirSync, writeFileSync, chmodSync, readFileSync, unlinkSync, mkdtempSync, readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { repo, cairn, git, commit, head, review, passing, fromFile, records, CLI } from "./helpers.mjs";
@@ -129,4 +130,14 @@ test("a shallow clone names history to fetch, not a decision to build (LOOP-113)
   assert.equal(git(root, "clone", "-q", "--depth", "1", `file://${root}`, clone).status, 0);
   const r = spawnSync("node", [CLI, "wake"], { cwd: clone, encoding: "utf8" });
   assert.doesNotMatch(r.stdout, /^Resolvable: build/); assert.match(r.stdout, /shallow/); assert.match(r.stdout, /LOOP-113/);
+});
+
+test("record-writing commands refuse to run outside a Cairn repository and write nothing (LOOP-118, LOOP-046)", () => {
+  const plain = mkdtempSync(join(tmpdir(), "not-cairn-"));
+  const fields = ["--title", "T", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x"];
+  for (const args of [["decide", ...fields], ["escalate", "--concerns", "R-001", "--question", "q", "--recommend", "r", "--because", "b", "--if-wrong", "w", "--instead", "i"], ["answer", "q", "ok"], ["backlog", "--title", "T", "--body", "b"], ["supersede", "old", "--cause", "the premise was false", ...fields], ["reversals"]]) {
+    const r = cairn(plain, ...args);
+    assert.equal(r.status, 3, args[0] + ": " + r.stdout + r.stderr); assert.match(r.stderr, /not a Cairn repository/, args[0]);
+  }
+  assert.deepEqual(readdirSync(plain), []);
 });

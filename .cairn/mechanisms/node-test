@@ -190,6 +190,7 @@ requirements:
   - PKG-030
   - PKG-031
   - PKG-032
+  - LOOP-118
 reviewed:
   - LOOP-035 sha256:ae47c483f002f00bdc035e4001f9d799bd702aed08c9e38e6ac77082be162b23
   - LOOP-024 sha256:60e41fd9bd95b487c08ad685d17b27df6c3cf302de3d57cd886c1dd2fac82d4c

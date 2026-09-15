@@ -1344,3 +1344,16 @@ Status: Agreed 2026-09-15
 
 LOOP-035 said records; the kernel exempted every path under docs/. A
 project whose deliverables live there had no footprint over them.
+
+## Record-writing commands run only in a Cairn repository
+
+[LOOP-118] The loop MUST refuse a record-writing command outside a
+Cairn repository with the message wake and check give.
+Falsifier: decide, escalate, answer, backlog, supersede, or reversals
+in a directory with no docs/spec/roadmap.md or no Git working tree
+writes a file or exits with a raw error.
+Status: Agreed 2026-09-15 by promotion promote-the-record-writing-commands-repository-check
+
+Promoted 2026-09-15 under LOOP-087 from the audit's finding A11: decide
+exited with a raw ENOENT and backlog created .cairn/backlog/ in any
+directory. Help and lint read no records and keep working anywhere.

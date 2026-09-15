@@ -12,4 +12,4 @@ The second audit of 2026-09-15 (docs/audit/2026-09-15-audit-2.md) found 57 defec
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 8e200f6366442bb00edf0bc6868cc5411f40ca38 Activate the-gates-bind-to-the-commitment: LOOP-120 to LOOP-123, LOOP-090 and LOOP-092 revised

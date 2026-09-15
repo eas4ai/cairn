@@ -109,19 +109,19 @@ committed under the named commit.
 | C4 | 3 | a1c9240 | closed |
 | C5 | 3 | a1c9240 | closed |
 | C6 | 3 | a1c9240 | closed |
-| B7 | 4 | | open |
-| B8 | 4 | | open |
-| D13 | 4 | | open |
-| E1 | 4 | | open |
-| E2 | 4 | | open |
-| E3 | 4 | | open |
-| F1 | 4 | | open |
-| F2 | 4 | | open |
-| F3 | 4 | | open |
-| F4 | 4 | | open |
-| F5 | 4 | | open |
-| F6 | 4 | | open |
-| D10 PKG-004 | 4 | | open |
+| B7 | 4 | 038e748 | closed |
+| B8 | 4 | 038e748 | closed |
+| D13 | 4 | 038e748 | closed |
+| E1 | 4 | 038e748 | closed |
+| E2 | 4 | 038e748 | closed |
+| E3 | 4 | 038e748 | closed |
+| F1 | 4 | 038e748 | closed |
+| F2 | 4 | 038e748 | closed |
+| F3 | 4 | 038e748 | closed |
+| F4 | 4 | 038e748 | closed |
+| F5 | 4 | 038e748 | closed |
+| F6 | 4 | 038e748 | closed |
+| D10 PKG-004 | 4 | 038e748 | closed |
 | B6 | 5 | | open |
 | B9 | 5 | | open |
 | D1 | 5 | | open |

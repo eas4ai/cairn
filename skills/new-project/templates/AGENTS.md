@@ -59,10 +59,10 @@ an explanation; it does not authorize implementation.
 
 When wake says `promote`, the commitment is complete and the backlog
 holds an item. Choose the item by judgment. Record the promotion with
-`cairn decide` at Judged or Consequential, naming the item, the
-requirement you draft from it, and that requirement's falsifier. Write
-the requirement into the specification with `Status: Agreed <date> by
-promotion <decision slug>`, write docs/commitments/<slug>.md with a
+`cairn decide --promotes <item>` at Judged or Consequential, naming
+the requirement you draft from it and that requirement's falsifier.
+Write the requirement into the specification with `Status: Agreed
+<date> by promotion <decision slug>`, write docs/commitments/<slug>.md with a
 `Promoted from:` line naming the item, add the roadmap section, move
 the roadmap's Current: line, and stamp the item `Promoted to: <slug>`.
 Commit, then wake. A promoted commitment must not change an Agreed

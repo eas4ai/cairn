@@ -58,7 +58,7 @@ for (const seed of [7, 42, 913])
         } else result = cairn(r, "check");
         assert.match(result.stdout, /recorded .*: (pass|fail)/, `seed=${seed}: ${trace.join(" -> ")}\n${result.stdout}${result.stderr}`);
         model.runs.push(model.value); model.damaged = false; rememberOutput(); commit(r);
-      } else if (event === "unrelated") { writeFileSync(join(r, "docs/note.md"), String(trace.length)); commit(r); }
+      } else if (event === "unrelated") { writeFileSync(join(r, "docs/recon.md"), String(trace.length)); commit(r); }
       else if (event === "damage") { writeFileSync(outputPath, "damaged"); model.damaged = true; }
       else if (event === "restore-output") { writeFileSync(outputPath, outputBytes); model.damaged = false; }
       else {

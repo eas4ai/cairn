@@ -12,7 +12,8 @@ import { repo as base, cairn, commit, review, fromFile } from "./helpers.mjs";
 
 const HOOK = fileURLToPath(new URL("../bin/hook.mjs", import.meta.url));
 const KERNEL = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
-const hook = (mode, cwd, env = {}, event = {}) => spawnSync(process.execPath, [HOOK, mode], { cwd, encoding: "utf8", input: JSON.stringify({ cwd, hook_event_name: mode, ...event }), env: { ...process.env, ...env } });
+// A scratch HOME by default: the real one may link a different checkout, and the hooks judge with the linked kernel (PKG-021).
+const hook = (mode, cwd, env = {}, event = {}) => spawnSync(process.execPath, [HOOK, mode], { cwd, encoding: "utf8", input: JSON.stringify({ cwd, hook_event_name: mode, ...event }), env: { ...process.env, HOME: mkdtempSync(join(tmpdir(), "cairn-home-")), ...env } });
 const repo = () => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002") });
 const escalate = (root) => cairn(root, "escalate", "--concerns", "R-001", "--question", "q", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
 
@@ -49,13 +50,14 @@ test("the session-start hook links the command once and prints the verdict in a 
   assert.equal(readlinkSync(join(home, ".local/bin/cairn")), KERNEL, "the link is kept");
 });
 
-test("the session-start hook prints no verdict outside a Cairn repository and leaves an existing link alone (PKG-019)", () => {
-  const home = mkdtempSync(join(tmpdir(), "cairn-home-")), plain = mkdtempSync(join(tmpdir(), "not-cairn-"));
-  spawnSync("mkdir", ["-p", join(home, ".local/bin")]); spawnSync("ln", ["-s", "/elsewhere/cairn", join(home, ".local/bin/cairn")]);
+test("the session-start hook prints no verdict outside a Cairn repository and leaves an existing link that resolves alone (PKG-019)", () => {
+  const home = mkdtempSync(join(tmpdir(), "cairn-home-")), plain = mkdtempSync(join(tmpdir(), "not-cairn-")), elsewhere = join(mkdtempSync(join(tmpdir(), "elsewhere-")), "cairn.mjs");
+  writeFileSync(elsewhere, "// another kernel\n");
+  spawnSync("mkdir", ["-p", join(home, ".local/bin")]); spawnSync("ln", ["-s", elsewhere, join(home, ".local/bin/cairn")]);
   const r = hook("session-start", plain, { HOME: home });
   assert.equal(r.status, 0, r.stderr);
-  assert.doesNotMatch(r.stdout, /Resolvable|Done|Escalate|linked/);
-  assert.equal(readlinkSync(join(home, ".local/bin/cairn")), "/elsewhere/cairn");
+  assert.doesNotMatch(r.stdout, /Resolvable|Done|Escalate|linked /);
+  assert.equal(readlinkSync(join(home, ".local/bin/cairn")), elsewhere);
   assert.ok(lstatSync(join(home, ".local/bin/cairn")).isSymbolicLink());
 });
 

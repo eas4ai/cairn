@@ -4,7 +4,7 @@ Status: Agreed 2026-09-04. Not normative.
 
 Order lives here. Filenames carry meaning, never sequence.
 
-Current: two-mechanisms-can-prove-one-requirement
+Current: the-contract-says-what-the-kernel-does
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -357,3 +357,14 @@ when each passes, and delivers LOOP-099 and LOOP-100: a named check
 runs every mechanism that speaks for the requirement, and attempts
 count within one mechanism's records.
 [Commitment](../commitments/two-mechanisms-can-prove-one-requirement.md).
+
+## The contract says what the kernel does
+
+Requested by the developer on 2026-09-15 after the audit
+(docs/audit/2026-09-15-audit.md), the first of five remediation
+commitments (docs/audit/2026-09-15-remediation-plan.md). Revises
+DEC-016, LOOP-026, PKG-004 and SPEC-002 to say what the kernel does,
+adds LOOP-101 so the working agreement names a move for every action
+wake prints, stamps the six deferred requirements, and stops the
+kernel writing a derivable status on escalations (LOOP-028).
+[Commitment](../commitments/the-contract-says-what-the-kernel-does.md).

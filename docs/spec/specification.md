@@ -18,11 +18,23 @@ Falsifier: a file declaring a requirement prefix contains no requirement.
 ## Agreement
 
 [SPEC-002] The agent MUST NOT record a requirement as Agreed before the
-developer confirms its falsifier or a promotion decision under LOOP-088
-names it.
-Falsifier: a requirement carries an Agreed marker, no confirmed
-falsifier, and no promotion decision in its Status: line.
-Status: Agreed 2026-09-14
+developer confirms its falsifier, a promotion decision under LOOP-088
+names it, or a recorded deference by the developer covers it.
+Falsifier: a requirement carries an Agreed marker with no confirmed
+falsifier and neither a promotion nor a deference decision in its
+Status: line.
+Status: Agreed 2026-09-15
+
+Revised 2026-09-15 on the developer's direction after the audit. A
+deference is the developer's recorded ruling, in their own words, that
+the agent's recommendation stands for a named scope of work unless
+review changes it substantively. A requirement agreed that way carries
+`Status: Agreed <date> by deference <decision slug>`, where the
+decision is the record of the phase that drafted it and quotes the
+ruling. The kernel and the spec lint resolve the marker as they do
+`by promotion`, so one search for `by ` lists every requirement the
+developer did not read line by line. The six requirements agreed on
+2026-09-14 under such a ruling carry the marker.
 
 [SPEC-013] The agent MUST NOT record a requirement as Agreed unless it
 can name a mechanism that could observe the falsifier.
@@ -31,7 +43,12 @@ evidence for or against it.
 
 A requirement whose falsifier no mechanism can observe cannot produce
 evidence. Find that defect while writing the requirement, before the
-developer agrees to it.
+developer agrees to it. A requirement about the agent's conduct in a
+conversation, SPEC-003 through SPEC-017, is observed two ways: the
+skill text that instructs the conduct, read by a test, and the review
+of each phase, which records what the agent did. That pair is the
+mechanism such a requirement names. Stated 2026-09-15 on the
+developer's direction after the audit.
 
 [SPEC-003] The agent MUST state its understanding in its own words
 before it writes an artifact.
@@ -141,7 +158,7 @@ roadmap to be specified before work starts.
 Falsifier: a documented step tells the developer that every commitment
 must be specified before implementation begins, or that a later
 commitment needs the codebase adopted again.
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference cairn-ships-a-next-iteration-skill-for-the-phase-between-loops
 
 Revised 2026-09-14. The first text said "during the loop". The loop
 now stops at Done (LOOP-091): a bounded item is promoted there by the
@@ -260,7 +277,7 @@ codebase.
 Falsifier: no shipped skill starts from an Agreed specification and
 ends by naming the next commitment, or the one that does requires a
 recon report or Observed specification text before it can end.
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference cairn-ships-a-next-iteration-skill-for-the-phase-between-loops
 
 [SPEC-027] When the phase between loops writes a next-iteration item
 into the specification, the agent MUST stamp the item with a
@@ -268,7 +285,7 @@ Promoted to: line naming the commitment that carries it.
 Falsifier: a commitment file carries a Specified from: line naming a
 next-iteration item with no Promoted to: line, and wake names an
 action other than repairing the item.
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference cairn-ships-a-next-iteration-skill-for-the-phase-between-loops
 
 The commitment file's Specified from: line names each next-iteration
 item it carries, the way Promoted from: names a backlog item

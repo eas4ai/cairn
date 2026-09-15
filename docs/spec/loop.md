@@ -196,13 +196,23 @@ Falsifier: an escalation exists only in a session transcript.
 recommendation, the cost of being wrong, and one alternative.
 Falsifier: an escalation reaches the developer with no recommendation.
 
-[LOOP-026] An escalation MUST consist of exactly these fields, in this
-order, each on one line: the question, the recommendation, the reason,
-the cost of being wrong, one alternative, and the reply options.
-Falsifier: an escalation reaches the developer with a field missing, a
-field spanning more than one line, or a field not in this list.
+[LOOP-026] The block of an escalation that the developer reads MUST
+consist of exactly these fields, in this order, each on one line: the
+question, the recommendation, the reason, the cost of being wrong,
+one alternative, and the reply options.
+Falsifier: an escalation reaches the developer with one of those
+fields missing, spanning more than one line, or out of order, or with
+another field inside that block.
+Status: Agreed 2026-09-15
 
-    DECISION (n of m)
+Revised 2026-09-15 on the developer's direction after the audit. The
+record lines after the block are not part of it: Concerns (LOOP-053),
+Raised and Raised after (LOOP-070), the Scope lines (LOOP-083),
+Malformed (LOOP-013), and the Answer and Reply turns (LOOP-048). The
+first text said the whole file was exactly six fields, and every
+escalation Cairn wrote met that falsifier.
+
+    DECISION
 
     Question:   <what is being decided, in consequence terms>
     Recommend:  <the option>
@@ -499,7 +509,7 @@ current passing evidence.
 Falsifier: two declarations claim one requirement, one has current
 passing evidence, the other has failing, stale, unverified, or no
 evidence, and wake does not name the requirement.
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference two-mechanisms-may-prove-one-requirement-and-each-must-pass
 
 Revised 2026-09-14. The first text refused a requirement two
 mechanisms spoke for, naming both, because last-wins was silent and
@@ -1164,17 +1174,32 @@ check and the attempt count do with a second mechanism.
 mechanism that speaks for it.
 Falsifier: `cairn check R-001` with two mechanisms speaking for R-001
 records evidence from only one of them.
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference two-mechanisms-may-prove-one-requirement-and-each-must-pass
 
 [LOOP-100] The loop MUST count a requirement's attempts within the
 records of one mechanism.
 Falsifier: one mechanism fails at three distinct inputs digests while
 another mechanism speaking for the same requirement passes between
 those failures, and wake names no escalation (DEC-016).
-Status: Agreed 2026-09-14
+Status: Agreed 2026-09-14 by deference two-mechanisms-may-prove-one-requirement-and-each-must-pass
 
 A pass from the other mechanism is not new passing evidence for the
 failing one: its streak runs back through its own records to its own
 last pass (DEC-017), and its first record is its baseline (DEC-018).
 Counting across mechanisms would let the passing one reset the count
 on every check, and the loop would spin where DEC-016 says stop.
+
+## Every action has a move
+
+Specified 2026-09-15 on the developer's direction after the audit,
+which found that wake prints fourteen distinct actions and the
+working agreement gave a move for nine.
+
+[LOOP-101] The working agreement MUST state a move for every action
+the wake can name.
+Falsifier: the kernel prints an action verb that the working
+agreement does not name.
+Status: Agreed 2026-09-15
+
+The verbs are read from the kernel's own source by the test that
+speaks for this requirement, so a new action without a move fails it.

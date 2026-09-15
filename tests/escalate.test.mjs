@@ -20,7 +20,7 @@ test("escalate writes the six-line format followed by its facts, and wake presen
   assert.equal(lines[0], "DECISION");
   for (const k of ["Question:   Store sessions where?", "Recommend:  SQLite", "Because:    No infrastructure.",
                    "If wrong:   One migration, an hour.", "Instead:    Postgres, if ops prefer it.", "Reply: ok | instead | ask",
-                   "Concerns: R-001", "Status: open", "Raised: "]) assert.ok(t.includes(k), k);
+                   "Concerns: R-001", "Raised: "]) assert.ok(t.includes(k), k);
   const w = cairn(root, "wake");
   assert.equal(w.status, 2); assert.match(w.stdout, /^Escalate: present r-001/);
 });
@@ -128,4 +128,14 @@ test("fresh closed answers accompany only concerned requirements until new evide
   assert.match(after, /^Resolvable: implement R-001/); assert.doesNotMatch(after, /answered r-002-r-001/);
   const other = repo(); esc(other, "--concerns", "R-0010"); cairn(other, "answer", "r-0010", "ok");
   assert.doesNotMatch(cairn(other, "wake").stdout, /answered r-0010/);
+});
+
+test("a raised escalation carries no derivable status line, and an old record with one still parses (LOOP-028)", () => {
+  const root = repo();
+  esc(root);
+  const t = readFileSync(file(root), "utf8");
+  assert.doesNotMatch(t, /^Status:/m);
+  assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
+  writeFileSync(file(root), t.replace("Concerns:", "Status: open\nConcerns:"));
+  assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
 });

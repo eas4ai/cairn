@@ -117,3 +117,20 @@ test("every document that names the project skills names next-iteration beside t
   has(TEMPLATE, "run next-iteration", "the working agreement names the developer's move");
   lacks(TEMPLATE, "run new-project or existing-project as for one", "the old route is gone");
 });
+
+// Every action wake can name has a move in the working agreement (LOOP-101).
+test("the working agreement states a move for every action the kernel can name (LOOP-101)", () => {
+  const verbs = new Set([...raw("../bin/cairn.mjs").matchAll(/action: [`"]([a-z]+)/g)].map((m) => m[1]));
+  assert.ok(verbs.size >= 12, `found only ${[...verbs].join(", ")}`);
+  for (const v of verbs) assert.ok(new RegExp("`" + v + "( <|`| )").test(raw("../skills/new-project/templates/AGENTS.md")), `no move for ${v}`);
+});
+test("the working agreement states both record formats and the two flags the moves need (LOOP-036)", () => {
+  has(TEMPLATE, "command: <shell command>", "the declaration format");
+  has(TEMPLATE, "reviewed: - <REQ> sha256:<digest>", "the reviewed list");
+  has(TEMPLATE, "findings: - open: <defect> - resolved: <defect, and how>", "the review format");
+  has(TEMPLATE, "`findings:` may be an empty list, never absent", "LOOP-086");
+  has(TEMPLATE, "--level Blocking", "LOOP-013 route");
+  has(TEMPLATE, "--outside", "LOOP-092 flag");
+  has(TEMPLATE, "declare | repair | promote | resolve", "the in-progress action list");
+  assert.equal(raw("../CLAUDE.md").trim(), "@AGENTS.md", "CLAUDE.md is a pure include");
+});

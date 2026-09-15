@@ -150,3 +150,15 @@ test("a commitment specified from a next-iteration item needs the item stamped b
   green(root);
   assert.match(wake(root), /^Done: first/);
 });
+
+test("a by deference marker resolves to a decision record like a promotion marker (SPEC-002, LOOP-088)", () => {
+  const three = { "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-002, R-003\n", ".cairn/mechanisms/m": fromFile("R-001", "R-002", "R-003") };
+  let root = repo({ "docs/spec/test.md": SPEC3("Status: Agreed 2026-09-15 by deference no-such-decision\n"), ...three });
+  const out = wake(root);
+  assert.match(out, /^Resolvable: repair docs\/spec\/test\.md/); assert.match(out, /R-003 is Agreed by deference no-such-decision/); assert.match(out, /SPEC-002/);
+  root = repo({ "docs/spec/test.md": SPEC3("Status: Agreed 2026-09-15 by deference promote-some-item\n"), ...three });
+  decided(root);
+  assert.match(wake(root), /^Resolvable: run R-001/);
+  const r = lint(join(root, "docs/spec"));
+  assert.equal(r.status, 0, r.stdout);
+});

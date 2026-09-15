@@ -39,10 +39,16 @@ can observe. An independent review said so before the spec was
 cemented, and it was cemented anyway. A command, a record kind, and a
 directory are what a concept is when it has entered the code.
 
-[PKG-004] The files Cairn ships and executes at run time, excluding
-tests and excluding specification text, MUST NOT exceed 1500 lines in
-total.
-Falsifier: that line count exceeds 1500.
+[PKG-004] The kernel, the files under bin/ that Cairn executes at run
+time, MUST NOT exceed 1500 lines in total.
+Falsifier: the line count of the files under bin/ exceeds 1500.
+Status: Agreed 2026-09-15
+
+Revised 2026-09-15 on the developer's direction after the audit. The
+first text covered every shipped run-time file, which the lint never
+counted, and the two lint scripts under scripts/ would have pushed the
+count past the ceiling; the rationale below already said the ceiling
+measures the kernel.
 
 [PKG-009] Cairn MUST NOT move run-time logic into test files to stay
 under the ceiling.

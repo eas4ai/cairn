@@ -52,8 +52,16 @@ Falsifier: the loop pauses for a decision it classified Consequential.
 [DEC-016] When three consecutive attempts at a requirement produce no
 new passing evidence, the agent MUST classify the next decision about
 it Blocking.
-Falsifier: a requirement's evidence history shows four or more
-consecutive failing records with no escalation between them.
+Falsifier: a requirement's evidence history shows a fourth attempt,
+as DEC-017 and DEC-018 count attempts, with no escalation raised
+since the third.
+Status: Agreed 2026-09-15
+
+Revised 2026-09-15 on the developer's direction after the audit. The
+first falsifier counted failing records; DEC-017 and DEC-018 count
+attempts by inputs digest after a baseline, and the kernel does the
+same, so four failing records at two digests were two attempts and
+the falsifier said the kernel was wrong.
 
 Repair is bounded or it is a spin. This trigger was agreed in the
 design conversation and never reached the specification; Proof-or-Stop

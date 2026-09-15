@@ -65,7 +65,9 @@ verification are both committed.
    `Status: Agreed 2026-09-15` lines carry `by deference audit-found-
    contract-defects-are-repaired-on-the-developer-s-direction` (D1),
    with overview.md and the next-iteration skill naming the marker.
-   Documents: D3, D4, D6, D7, D9, D11, D12, E4, E5 noted. Closes B6,
+   The agreement's scope paragraph says restoration is to the tree
+   before activation (found by commitment 1's review). Documents: D3,
+   D4, D6, D7, D9, D11, D12, E4, E5 noted. Closes B6,
    B9, D1, D3 to D12, E4, E5.
 
 Not remediated, with the reason in the audit: F7 (robustness nits by
@@ -81,11 +83,11 @@ committed under the named commit.
 | Finding | Commitment | Commit | State |
 |---|---|---|---|
 | A1, A2 | the-capture-gate-reads-the-concerns-line | c356a46 | closed |
-| B1 | 1 | | open |
-| B2 | 1 | | open |
-| B3 kernel | 1 | | open |
-| B4 | 1 | | open |
-| D2 | 1 | | open |
+| B1 | 1 | 5074d62 | closed |
+| B2 | 1 | 5074d62 | closed |
+| B3 kernel | 1 | 5074d62 | closed |
+| B4 | 1 | 5074d62 | closed |
+| D2 | 1 | 8e200f6 | closed |
 | A3 | 2 | | open |
 | A4 | 2 | | open |
 | A5 | 2 | | open |
@@ -128,7 +130,7 @@ committed under the named commit.
 | D5 | 5 | | open |
 | D6 | 5 | | open |
 | D7 | 5 | | open |
-| D8 | before commitment 1 | | open |
+| D8 | before commitment 1 | ec1c335 | closed |
 | D9 | 5 | | open |
 | D10 text | 5 | | open |
 | D11 | 5 | | open |

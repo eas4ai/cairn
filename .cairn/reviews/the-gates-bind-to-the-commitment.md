@@ -1,5 +1,5 @@
 commitment: the-gates-bind-to-the-commitment
-commit: dfd021a
+commit: 790f738
 examined:
   - mechanism review, LOOP-090 revised: tests/continuation.test.mjs "the LOOP-090 gate reads the Concerns line" (LOOP-114) and "an escalation raised before the promoted commitment began does not silence the LOOP-090 gate" observe the revised falsifier: the violating example is an escalation naming R-001 raised under an earlier commitment, and the corrected case is one raised inside; both ran red on the old kernel at c356a46 and green after. No mismatch.
   - mechanism review, LOOP-092 revised: tests/continuation.test.mjs "a capture from one of the commitment's own requirements needs Outside because", "the LOOP-090 route needs one escalation" (LOOP-119) and "an escalation raised before the commitment began does not silence the capture gate" observe the revised falsifier for the file-naming and the Concerns-naming escalation, inside and before the commitment. No mismatch.
@@ -9,7 +9,7 @@ examined:
   - LOOP-123: two promotion records for one item pass when either stands; a reversal record carries no Promotes line, so it cannot satisfy the check by itself.
   - the restore route of a scope escalation: changedScope compares the snapshot's activation commit with HEAD, so a path the activation commit itself added reads as restored while it is still in the tree; with LOOP-120 the footprint now sees that path, and the restore check must compare against the tree before activation.
 findings:
-  - open: a breaching path added by the activation commit passes the restore check of a scope escalation unchanged, because changedScope diffs from the activation commit rather than its parent; the acknowledgment then covers a path that was never restored.
+  - resolved: a breaching path added by the activation commit passed the restore check of a scope escalation unchanged; changedScope now diffs from the activation commit's parent (ac1bad8), the refusal says "the tree before activation commit", and a test in tests/continuation.test.mjs raises the scope escalation with the stray path present (refused) and after its removal (accepted), red on the old kernel. The working agreement's sentence "restore the breaching paths to the commitment activation tree" is corrected under commitment 5 (D-list).
 
 ## Mechanism reviews at 46deeeb, 2026-09-15
 
@@ -28,3 +28,8 @@ Attacked as listed under examined. One finding: the scope
 escalation's restore check still measures from the activation commit,
 which LOOP-120 moved inside the footprint. Recorded as open, to be
 resolved as its own work.
+
+## Review at 790f738, 2026-09-15
+
+Resolved as its own work; 431 tests pass, both lints clean, the
+kernel at 1491 of 1500 lines. No open finding.

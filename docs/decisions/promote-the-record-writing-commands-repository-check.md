@@ -13,4 +13,4 @@ Promotes .cairn/backlog/record-writing-commands-refuse-to-run-outside-a-cairn-re
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 097daa3b9fa0d699f436dc7e50ee19b80291ae2b Record-writing commands run only in a Cairn repository

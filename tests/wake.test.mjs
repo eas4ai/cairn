@@ -30,17 +30,17 @@ test("an answered escalation is not open", () => {
 });
 
 test("step 3: a decision with no realized-by is built, first by name", () => {
-  const root = repo({ "docs/decisions/b.md": "# B\n\nLevel: Judged\n\n## Realized by\n\n(none yet)\n",
-                        "docs/decisions/a.md": "# A\n\nLevel: Judged\n\n## Realized by\n\n- abc1234  did it\n",
-                        "docs/decisions/c.md": "# C\n\nLevel: Judged\n\n## Realized by\n" });
-  writeFileSync(join(root, "docs/decisions/a.md"), `# A\n\n## Realized by\n\n- ${head(root)} init\n`);
+  const root = repo({ "docs/decisions/b.md": "# B\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n(none yet)\n",
+                        "docs/decisions/a.md": "# A\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- abc1234  did it\n",
+                        "docs/decisions/c.md": "# C\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n" });
+  writeFileSync(join(root, "docs/decisions/a.md"), `# A\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${head(root)} init\n`);
   const r = wake(root);
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: build docs\/decisions\/b\.md/);
 });
 
 test("a superseded decision with no realized-by is not work", () => {
-  const r = wake(repo({ "docs/decisions/old.md": "# Old\n\nLevel: Judged\nSuperseded by: new\n\n## Realized by\n", ".cairn/mechanisms/t": passing("R-001", "R-002") }));
+  const r = wake(repo({ "docs/decisions/old.md": "# Old\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nSuperseded by: new\n\n## Realized by\n", ".cairn/mechanisms/t": passing("R-001", "R-002") }));
   assert.match(r.stdout, /^Resolvable: run R-001/);
 });
 

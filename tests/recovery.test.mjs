@@ -58,10 +58,10 @@ test("an agent action based behind a clean HEAD appears committed (LOOP-027)", (
 test("realization needs a real commit and a subject (DEC-006)", () => {
   const root = setup(), path = join(root, "docs/decisions/d.md");
   for (const line of [head(root), "abcdef1 invented"]) {
-    writeFileSync(path, `# D\n\n## Realized by\n\n- ${line}\n`);
+    writeFileSync(path, `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${line}\n`);
     assert.match(cairn(root, "wake").stdout, /build docs\/decisions\/d.md[\s\S]*commit.*subject/);
   }
-  writeFileSync(path, `# D\n\n## Realized by\n\n- ${head(root)} init\n`);
+  writeFileSync(path, `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${head(root)} init\n`);
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/);
 });
 

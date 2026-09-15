@@ -39,7 +39,9 @@ below. `review <slug>`: the completion review, below.
 `resolved:` in the review. `build <decision>`: build what the record
 says, then add `- <sha> <subject>` under its Realized by.
 `repair <path>`: fix the named record as the reason says, and nothing
-else. `commit <path>`: commit the declared input.
+else. `commit <path>`: commit the declared input. `record <path>`: a
+declared input has uncommitted changes and no record names the action;
+write the in-progress record below, or commit.
 `reconcile <action>`: finish or abandon the recorded action, below.
 `scope <path>`: the scope paragraph, below. `escalate <REQ>`: raise
 the escalation the reason asks for. `escalate <path>`: add an

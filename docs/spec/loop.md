@@ -1226,8 +1226,9 @@ the verdict or makes wake exit with an error.
 Status: Agreed 2026-09-15
 
 Decisions, escalations, backlog items and next-iteration items are
-the `.md` files of their directories; a mechanism declaration is a
-regular file whose name does not end in `.md`.
+the `.md` files of their directories whose names are slugs, lowercase
+words joined by hyphens, as the commands write them; a mechanism
+declaration is a regular file whose name carries no extension.
 
 [LOOP-104] When the roadmap carries more than one Current: line, the
 loop MUST name the roadmap as a repair.

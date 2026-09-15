@@ -53,7 +53,8 @@ test("a requirement whose evidence outlives its mechanism is named declare, not 
   const root = repo({ ".cairn/mechanisms/m": fromFile("R-001", "R-002") });
   cairn(root, "check");
   writeFileSync(join(root, "src/exit"), "1\n"); commit(root, "fail"); cairn(root, "check");
-  writeFileSync(join(root, ".cairn/mechanisms/m"), fromFile("R-002")); commit(root, "m speaks only for R-002");
+  writeFileSync(join(root, ".cairn/mechanisms/m"), fromFile("R-002")); writeFileSync(join(root, "src/exit"), "0\n"); commit(root, "m speaks only for R-002, and passes");
+  cairn(root, "check");
   const r = wake(root);
   assert.match(r.stdout, /^Resolvable: declare R-001/, r.stdout);
 });

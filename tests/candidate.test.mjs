@@ -85,7 +85,8 @@ test("LOOP-064: current and historical input ordering agrees for Unicode filenam
   assert.equal(r.status, 0, r.stdout + r.stderr);
 });
 
-for (const hidden of ["content", "mode"]) test(`LOOP-063: Git status hiding ${hidden} changes cannot certify an uncommitted candidate`, () => {
+// The mode variant left with LOOP-111: under core.filemode false the index mode is the identity, so a chmod is not a change Git hides.
+for (const hidden of ["content"]) test(`LOOP-063: Git status hiding ${hidden} changes cannot certify an uncommitted candidate`, () => {
   const root = repo({ ".cairn/mechanisms/m": mechanism("node -e 0") });
   if (hidden === "content") {
     assert.equal(git(root, "update-index", "--assume-unchanged", "src/exit").status, 0);

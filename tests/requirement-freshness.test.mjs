@@ -76,7 +76,7 @@ test("tightened response limit cannot reuse the old passing check", () => {
   cairn(root, "check"); review(root); commit(root);
   writeFileSync(join(root, "docs/spec/test.md"), spec(100)); commit(root);
   assert.match(cairn(root, "check").stdout, /review mechanism R-001/);
-  writeFileSync(join(root, "src/check.mjs"), check(100)); acknowledge(root);
+  writeFileSync(join(root, "src/check.mjs"), check(100)); commit(root); acknowledge(root);
   assert.match(cairn(root, "check").stdout, /Resolvable: implement R-001/);
   writeFileSync(join(root, "src/elapsed"), "50"); commit(root); cairn(root, "check"); review(root);
   assert.equal(cairn(root, "wake").status, 0);

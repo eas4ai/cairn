@@ -68,7 +68,7 @@ test("LOOP-077: changed selection compares the old and new input sets", (t) => {
 
 test("LOOP-077: raw CRLF changes remain visible when Git-clean content agrees", (t) => {
   const r = setup(t, { ".gitattributes": "src/* text eol=lf\n" });
-  writeFileSync(join(r, "src/other"), "x\r\n");
+  writeFileSync(join(r, "src/other"), "x\r\n"); commit(r);
   assert.equal(git(r, "diff", "--quiet", "--", "src/other").status, 0);
   assert.match(changed(r), /content-changed: "src\/other"/);
 });

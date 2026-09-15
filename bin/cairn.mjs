@@ -848,8 +848,9 @@ function wakeVerdict(root) {
   // A decision marker, by promotion or by deference, resolves to its record (LOOP-088, SPEC-002).
   const marked = c.requirements.find((r) => promotions.has(r) && !existsSync(join(root, "docs", "decisions", `${promotions.get(r).slug}.md`)));
   if (marked) { const { kind, slug } = promotions.get(marked); return { verdict: "Resolvable", action: `repair ${texts.get(marked).path}`, why: `${marked} is Agreed by ${kind} ${slug} and docs/decisions/${slug}.md does not exist; record the decision or restore the developer's confirmation (LOOP-088, SPEC-002)` }; }
-  const promo = c.promoted ? decisions(root).filter((d) => d.Promotes && item(d.Promotes) === c.promoted) : [];
-  if (c.promoted && !promo.length) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted} and no decision record under docs/decisions/ carries Promotes: ${c.promoted}; record the promotion with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-115)` };
+  // A promotion is a Consequential record, so the developer reviews it in the queue (LOOP-088).
+  const named = c.promoted ? decisions(root).filter((d) => d.Promotes && item(d.Promotes) === c.promoted) : [], promo = named.filter((d) => d.Level === "Consequential");
+  if (c.promoted && !promo.length) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: named.length ? `Promoted from: ${c.promoted}, and ${named[0].slug} records the promotion at ${named[0].Level}; a promotion is Consequential, so the developer reviews it: record it again with cairn decide --promotes ${c.promoted} --level Consequential (LOOP-088)` : `Promoted from: ${c.promoted} and no decision record under docs/decisions/ carries Promotes: ${c.promoted}; record the promotion with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-115)` };
   // A reversed promotion: every record that promoted the item is superseded (LOOP-123).
   if (promo.length && promo.every((d) => "Superseded by" in d)) return { verdict: "Resolvable", action: `repair docs/commitments/${c.slug}.md`, why: `Promoted from: ${c.promoted}, and ${promo[0].slug}, the decision that promoted it, is superseded by ${promo[0]["Superseded by"]}: the promotion was reversed; return the item to the backlog and move the roadmap's Current: line off this commitment, or record the promotion again with cairn decide --promotes ${c.promoted} (LOOP-088, LOOP-123)` };
   // A commitment specified from a next-iteration item stamps the item, so wake stops counting it as waiting (SPEC-027).
@@ -1144,6 +1145,7 @@ function decide(root, o) {
   if (o.supersedes && !CAUSES.includes(o.cause ?? "")) return usage(`decide: --supersedes needs --cause, one of: ${CAUSES.join("; ")}`);
   const slug = slugify(o.title);
   if (!slug) return usage("decide: the title has no letters or digits to name the record (LOOP-128)");
+  if (o.promotes && o.level !== "Consequential") return usage(`decide: a promotion is recorded at Consequential, so the developer reviews it in the queue, not at ${o.level} (LOOP-088)`);
   const path = join(root, "docs", "decisions", `${slug}.md`);
   if (existsSync(path)) return usage(`decide: ${rel(root, path)} exists; supersede it rather than overwrite it`);
   const oldPath = o.supersedes ? join(root, "docs", "decisions", `${o.supersedes}.md`) : null;

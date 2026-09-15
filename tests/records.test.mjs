@@ -24,7 +24,8 @@ test("Concerns, Rests on, and Promoted from written as lists read as the flat fo
   writeFileSync(join(root, ".cairn/escalations/r-001.md"), "Concerns:\n  - R-001\nRaised: 2026-09-15T00:00:00.000Z\nAnswered: 2026-09-15T01:00:00.000Z\n\nDECISION\nQuestion: q\nAnswer: ok\n"); commit(root, "list-form Concerns, answered");
   r = wake(root); assert.equal(r.status, 1, r.stdout + r.stderr); assert.match(r.stdout, /^Resolvable: run R-001/); assert.match(r.stdout, /answered r-001: ok/);
   root = repo({ "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001, R-002\nPromoted from:\n  - some-item\n" });
-  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), decision(root, "Rests on: R-001", "Promotes: some-item\n")); commit(root, "promotion");
+  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), decision(root, "Rests on: R-001", "Promotes: some-item\n").replace("Level: Judged", "Level: Consequential"));
+  mkdirSync(join(root, ".cairn/queue"), { recursive: true }); writeFileSync(join(root, ".cairn/queue/promote-some-item"), "docs/decisions/promote-some-item.md\n"); commit(root, "promotion");
   r = wake(root); assert.doesNotMatch(r.stdout, /repair docs\/commitments/, r.stdout); assert.match(r.stdout, /^Resolvable: run R-001/);
 });
 
@@ -35,7 +36,7 @@ test("an item named by filename, path, or backticked slug resolves like the slug
     assert.match(r.stdout, /^Resolvable: repair \.cairn\/next-iteration\/foo\.md/, `${form}: ${r.stdout}`); assert.match(r.stdout, /SPEC-027/);
   }
   const root = repo({ ".cairn/backlog/some-item.md": "# Some item\n\nSurfaced from: R-001\n\nbody\n", "docs/commitments/first.md": PROMOTED });
-  const r = cairn(root, "decide", "--title", "Promote it", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", ".cairn/backlog/some-item.md");
+  const r = cairn(root, "decide", "--title", "Promote it", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", ".cairn/backlog/some-item.md");
   assert.equal(r.status, 0, r.stderr);
   assert.match(readFileSync(join(root, "docs/decisions/promote-it.md"), "utf8"), /^Promotes: some-item$/m);
   appendFileSync(join(root, "docs/decisions/promote-it.md"), `- ${head(root)} init\n`); commit(root, "recorded");

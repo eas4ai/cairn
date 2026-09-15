@@ -20,7 +20,8 @@ const SPEC3 = (status) => `# Test\n\nStatus: Agreed 2026-09-04\nPrefix: R\n\n[R-
 const PROMOTED = "# First\n\nSlug: first\nRequirements: R-001, R-002\nPromoted from: some-item\n";
 // A realized decision record that names the promoted item.
 const decided = (root, slug = "promote-some-item") => {
-  writeFileSync(join(root, "docs/decisions", `${slug}.md`), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nPromotes: some-item\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nPromote .cairn/backlog/some-item.md as R-003.\n\n## Realized by\n\n- ${head(root)} init\n`);
+  writeFileSync(join(root, "docs/decisions", `${slug}.md`), `# Promote some item\n\nLevel: Consequential\nDecided by: agent\nPromotes: some-item\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nPromote .cairn/backlog/some-item.md as R-003.\n\n## Realized by\n\n- ${head(root)} init\n`);
+  mkdirSync(join(root, ".cairn/queue"), { recursive: true }); writeFileSync(join(root, ".cairn/queue", slug), `docs/decisions/${slug}.md\n`);   // a promotion is Consequential and queued (LOOP-088, LOOP-131)
   commit(root, "decision");
 };
 const escalate = (root, concerns, question) => {
@@ -175,10 +176,12 @@ test("the LOOP-090 gate reads the Concerns line, not the slug as a substring (LO
 
 test("the LOOP-088 check reads the Promotes line, and decide --promotes writes it (LOOP-115)", () => {
   const root = repo({ "docs/commitments/first.md": PROMOTED });
-  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nWe considered some-item.\n\n## Realized by\n\n- ${head(root)} init\n`); commit(root, "prose only");
+  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), `# Promote some item\n\nLevel: Consequential\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Decision\n\nWe considered some-item.\n\n## Realized by\n\n- ${head(root)} init\n`); commit(root, "prose only");
   let out = wake(root);
   assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/); assert.match(out, /Promotes/); assert.match(out, /LOOP-115/);
-  const r = cairn(root, "decide", "--title", "Promote it properly", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", "some-item");
+  let r = cairn(root, "decide", "--title", "Promote it properly", "--level", "Judged", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", "some-item");
+  assert.equal(r.status, 3, r.stdout); assert.match(r.stderr, /Consequential.*LOOP-088/, "a promotion below Consequential is refused");
+  r = cairn(root, "decide", "--title", "Promote it properly", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", "some-item");
   assert.equal(r.status, 0, r.stderr);
   assert.match(readFileSync(join(root, "docs/decisions/promote-it-properly.md"), "utf8"), /^Promotes: some-item$/m);
   appendFileSync(join(root, "docs/decisions/promote-it-properly.md"), `- ${head(root)} init\n`); commit(root, "recorded");
@@ -293,4 +296,11 @@ test("the loop works against exactly one commitment: the current one (LOOP-019)"
   assert.match(wake(root), /^Done: zero/, "first, with no review, is not judged");
   writeFileSync(join(root, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n"); writeFileSync(join(root, "docs/commitments/first.md"), "# First\n\nSlug: first\nRequirements: R-001, R-002\n"); commit(root, "activate first");
   assert.match(wake(root), /^Resolvable: review first/, "now first is judged and zero is not");
+});
+
+test("a promotion recorded below Consequential is a repair naming the level, since the developer never sees it in the queue (LOOP-088)", () => {
+  const root = repo({ "docs/commitments/first.md": PROMOTED });
+  writeFileSync(join(root, "docs/decisions/promote-some-item.md"), `# Promote some item\n\nLevel: Judged\nDecided by: agent\nPromotes: some-item\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${head(root)} init\n`); commit(root, "judged promotion");
+  const out = wake(root);
+  assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/, out); assert.match(out, /Judged/); assert.match(out, /Consequential/); assert.match(out, /LOOP-088/);
 });

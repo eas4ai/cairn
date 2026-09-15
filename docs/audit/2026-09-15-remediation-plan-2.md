@@ -153,11 +153,11 @@ committed under the named commit.
 | E5 | 5 | 9649512 | closed |
 | C7 | withdrawn | d18ece7 | closed |
 | F7 | not remediated | | by the slug rule |
-| A14 residue (fenced Current: after the line) | 6 | | open |
-| A4 residue (`..` from a nested project; toplevel path in the message) | 6 | | open |
-| A10 residue (--root not a directory blamed on the checker) | 6 | | open |
-| C5 residue (link to a directory kept, silent fallback) | 6 | | open |
-| PKG-004 count (one high per file) | 6 | | open |
-| PKG-022 falsifier (unreachable case) | 6 | | open |
-| PKG-026 rationale (false claim) | 6 | | open |
-| D6 residue (record, declare, resolve rows) | 6 | | open |
+| A14 residue (fenced Current: after the line) | 6 | 1d0b743 | closed |
+| A4 residue (`..` from a nested project; toplevel path in the message) | 6 | 1d0b743 | closed |
+| A10 residue (--root not a directory blamed on the checker) | 6 | 1d0b743 | closed |
+| C5 residue (link to a directory kept, silent fallback) | 6 | 1d0b743 | closed |
+| PKG-004 count (one high per file) | 6 | 1d0b743 | closed |
+| PKG-022 falsifier (unreachable case) | 6 | a48acdb | closed |
+| PKG-026 rationale (false claim) | 6 | a48acdb | closed |
+| D6 residue (record, declare, resolve rows) | 6 | a48acdb | closed |

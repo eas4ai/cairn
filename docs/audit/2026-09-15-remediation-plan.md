@@ -353,5 +353,34 @@ LOOP-114 through LOOP-117), this-repository-declares-and-lints-what-
 it-reads (SPEC-028, SPEC-029, PKG-023 through PKG-027), and
 consumers-can-run-the-lint-and-open-the-skills (PKG-028 through
 PKG-032). Two findings the packages did not carry, A11 and the
-capture-gate half of B10, are captured to the backlog for promotion.
-The items under "Left as designed" stand.
+capture-gate half of B10, were captured to the backlog and promoted
+the same day: record-writing-commands-run-only-in-a-cairn-repository
+(LOOP-118) and the-capture-gate-reads-the-concerns-line (LOOP-119),
+both Done. The items under "Left as designed" stand, and B12 belongs
+with them (R3 places it there).
+
+Correction, 2026-09-15, after the second audit (docs/audit/2026-09-15-
+audit-2.md, D8). The sentence "the recommendations above are applied
+as decided" overstated what was built. Six statements in the packages
+above describe work no commit realized:
+
+- package 2: "wake says so once when a directory holds one": not
+  built; the record readers ignore other files silently.
+- package 3: "the hook accepts a roadmap in a subdirectory of the
+  toplevel by walking up from cwd": not built; the hooks recognize a
+  roadmap at the Git toplevel only.
+- package 4: prose promotion records "read as before for one
+  release, with a repair hint": not built; the LOOP-088 check reads
+  the Promotes: line only, and the repair says to record it.
+- package 7: the pkg-lint listing of .cairn/ "noted in the
+  declaration as a known read": not built; the declaration carries no
+  note.
+- package 10: "new-project Stage 4 writes that declaration": not
+  built; the skill says to run `cairn lint docs/spec` and writes no
+  declaration.
+- package 14: `record <REQ>`: built as `record <path>`.
+
+The first four are carried by the second remediation plan
+(docs/audit/2026-09-15-remediation-plan-2.md); the fifth is left out,
+since a consumer's declaration is the consumer's; the sixth is a
+wording difference.

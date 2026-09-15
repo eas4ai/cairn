@@ -12,4 +12,4 @@ The kernel mapped each requirement to one mechanism, last-wins, and LOOP-056 mad
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 882e9d8e91bd462193962f71f545c101d4fa0180 Two mechanisms can prove one requirement

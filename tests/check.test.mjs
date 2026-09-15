@@ -8,7 +8,7 @@ import { repo as base, cairn, commit, head, records, review, fromFile, failing, 
 
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
 
-test("check refuses a dirty declared input and names it; a dirty undeclared file does not block", () => {
+test("check refuses a dirty declared input and names it; a dirty undeclared file does not block (LOOP-030)", () => {
   const root = repo();
   writeFileSync(join(root, "unrelated.txt"), "changed\n");
   let r = cairn(root, "check");
@@ -33,7 +33,7 @@ test("check writes one receipt per run carrying the full record and a result lin
   assert.equal(readdirSync(join(root, ".cairn/evidence/runs")).filter((n) => /^\d{8}T\d{9}Z(?:-\d+)?$/.test(n)).length, 1);
 });
 
-test("a nonzero exit records fail, and the receipt keeps the exit code", () => {
+test("a nonzero exit records fail, and the receipt keeps the exit code (LOOP-034)", () => {
   const root = repo();
   writeFileSync(join(root, "src/exit"), "3\n"); commit(root);
   const r = cairn(root, "check");
@@ -43,13 +43,13 @@ test("a nonzero exit records fail, and the receipt keeps the exit code", () => {
   assert.match(r.stdout, /^Resolvable: implement R-001/m);
 });
 
-test("two checks write two records; nothing is overwritten or deleted", () => {
+test("two checks write two records; nothing is overwritten or deleted (LOOP-025)", () => {
   const root = repo();
   cairn(root, "check"); cairn(root, "check");
   assert.equal(records(root, "R-001").length, 2);
 });
 
-test("a commit changing a declared input makes evidence stale; an undeclared one does not", () => {
+test("a commit changing a declared input makes evidence stale; an undeclared one does not (LOOP-007)", () => {
   const root = repo();
   cairn(root, "check"); review(root);
   assert.match(cairn(root, "wake").stdout, /^Done: first/);
@@ -61,7 +61,7 @@ test("a commit changing a declared input makes evidence stale; an undeclared one
   assert.match(r.stdout, /stale/);
 });
 
-test("a regression is named before a requirement that never passed", () => {
+test("a regression is named before a requirement that never passed (LOOP-031)", () => {
   const root = repo();
   // R-001 and R-002 share a mechanism; give R-002 its own that always fails and never passed.
   writeFileSync(join(root, ".cairn/mechanisms/m"), fromFile("R-001"));
@@ -93,7 +93,7 @@ test("three attempts with no escalation since: wake says escalate, not a fourth 
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/, "an escalation since the run is honored");
 });
 
-test("the review gate: no review, stale review, open finding, then Done", () => {
+test("the review gate: no review, stale review, open finding, then Done (LOOP-020, LOOP-033)", () => {
   const root = repo();
   cairn(root, "check");
   let r = cairn(root, "wake");
@@ -115,7 +115,7 @@ test("the review gate: no review, stale review, open finding, then Done", () => 
   assert.match(r.stdout, /^Resolvable: review first/, "then the review, because a declared input changed since it");
 });
 
-test("Done is refused while any requirement lacks current passing evidence", () => {
+test("Done is refused while any requirement lacks current passing evidence (LOOP-017)", () => {
   const root = repo();
   review(root);
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/);
@@ -127,7 +127,7 @@ test("check names a requested requirement that no mechanism claims", () => {
   assert.match(r.stdout, /skipped R-999: no mechanism claims it/);
 });
 
-test("check writes and clears an in-progress record around the run", () => {
+test("check writes and clears an in-progress record around the run (LOOP-021)", () => {
   const root = repo();
   cairn(root, "check");
   assert.ok(!existsSync(join(root, ".cairn/in-progress")), "cleared after a completed run");

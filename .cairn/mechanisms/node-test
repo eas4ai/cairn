@@ -8,6 +8,8 @@ inputs:
   - CLAUDE.md
   - README.md
   - docs/walkthrough.md
+  - docs/manual.md
+  - .cairn/mechanisms/node-test
 requirements:
   - LOOP-036
   - LOOP-001

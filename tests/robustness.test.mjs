@@ -28,7 +28,7 @@ test("a subdirectory or a README in a record directory changes nothing (LOOP-103
   assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /^Done: first/);
 });
 
-test("two Current: lines are a roadmap repair (LOOP-104)", () => {
+test("two Current: lines are a roadmap repair (LOOP-019, LOOP-104)", () => {
   const root = setup({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: first\nCurrent: second\n" });
   const r = wake(root);
   assert.match(r.stdout, /^Resolvable: repair docs\/spec\/roadmap\.md/); assert.match(r.stdout, /LOOP-104/);
@@ -88,7 +88,7 @@ test("a decision record missing a header field or naming a missing predecessor i
   assert.match(wake(root).stdout, /^Resolvable: run R-001/);
 });
 
-test("a dirty declared input with no in-progress record is named record ahead of run (LOOP-110)", () => {
+test("a dirty declared input with no in-progress record is named record ahead of run (LOOP-022, LOOP-110)", () => {
   const root = setup();
   writeFileSync(join(root, "src/other"), "edited\n");
   let r = wake(root);

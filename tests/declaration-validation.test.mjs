@@ -15,7 +15,7 @@ const invalid = {
   "missing requirements": base.replace(/requirements:[\s\S]+/, ""),
   "bad identifier": base.replace("R-001", "../../elsewhere"),
 };
-for (const [name, declaration] of Object.entries(invalid)) test(`LOOP-067: ${name} names a declaration repair before execution`, () => {
+for (const [name, declaration] of Object.entries(invalid)) test(`LOOP-006, LOOP-067: ${name} names a declaration repair before execution`, () => {
   const root = repo({ ".cairn/mechanisms/m": declaration });
   for (const command of ["wake", "check"]) {
     const r = cairn(root, command);

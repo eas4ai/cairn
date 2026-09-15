@@ -9,7 +9,7 @@ const NEW = flat("../skills/new-project/SKILL.md");
 const EXISTING = flat("../skills/existing-project/SKILL.md");
 const BOTH = NEW + " " + EXISTING;
 const has = (text, s, why) => assert.ok(text.includes(s), `${why}: missing "${s}"`);
-const lacks = (text, s, why) => assert.ok(!text.includes(s), `${why}: still contains "${s}"`); test("the over-asking rule is gone from both skills (SPEC-005, SPEC-006)", () => { lacks(BOTH, "one question per message", "SPEC-005"); lacks(BOTH, "never silently resolve", "SPEC-005"); has(NEW, "resolve it and state the reading", "SPEC-005/007"); has(NEW, "Ask the developer only when the answer is a preference, a priority, or a fact outside the repository", "SPEC-006");
+const lacks = (text, s, why) => assert.ok(!text.includes(s), `${why}: still contains "${s}"`); test("the over-asking rule is gone from both skills (SPEC-005, SPEC-006, SPEC-007)", () => { lacks(BOTH, "one question per message", "SPEC-005"); lacks(BOTH, "never silently resolve", "SPEC-005"); has(NEW, "resolve it and state the reading", "SPEC-005/007"); has(NEW, "Ask the developer only when the answer is a preference, a priority, or a fact outside the repository", "SPEC-006");
 }); test("a decision during the phase is recorded (DEC-003)", () => has(NEW, "is recorded with `cairn decide`", "DEC-003 in the phase"));
 
 test("understanding is restated before writing (SPEC-003)", () => has(NEW, "State your understanding in your own words before writing any artifact", "SPEC-003")); test("falsifiers are proposed as one set and confirmed by exception (SPEC-004)", () => { has(NEW, "Propose the falsifiers for a whole domain as one set", "SPEC-004"); has(NEW, "correct only the wrong ones", "SPEC-004"); has(EXISTING, "propose the section's falsifiers as one set", "SPEC-004 on Path A/B");
@@ -39,7 +39,7 @@ test("this repository runs by the file it ships", () => {
   assert.equal(raw("../AGENTS.md"), raw("../skills/new-project/templates/AGENTS.md"), "AGENTS.md is the template byte for byte");
   assert.match(raw("../CLAUDE.md"), /AGENTS\.md/, "the other name includes it");
 });
-test("both skills write the working agreement without naming a vendor's file (LOOP-036, PKG-006)", () => {
+test("both skills write the working agreement without naming a vendor's file (LOOP-002, LOOP-036, PKG-006)", () => {
   has(NEW, "copying templates/AGENTS.md", "new-project writes it");
   has(EXISTING, "the working agreement, AGENTS.md", "existing-project writes or verifies it");
   has(EXISTING, "append the template after a blank line and keep the rest", "a consumer's own AGENTS.md survives");
@@ -134,4 +134,8 @@ test("the working agreement states both record formats and the two flags the mov
   has(TEMPLATE, "--outside", "LOOP-092 flag");
   has(TEMPLATE, "declare | repair | promote | resolve", "the in-progress action list");
   assert.equal(raw("../CLAUDE.md").trim(), "@AGENTS.md", "CLAUDE.md is a pure include");
+});
+test("the skills demonstrate a safe violating example and preserve recon findings (SPEC-022, SPEC-023)", () => {
+  has(NEW, "demonstrate that it catches a safe example of the stated violation", "SPEC-022");
+  has(EXISTING, "carry each unresolved finding forward with its evidence", "SPEC-023");
 });

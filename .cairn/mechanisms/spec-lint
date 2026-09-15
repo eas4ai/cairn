@@ -3,6 +3,7 @@ inputs:
   - docs/spec/
   - scripts/spec-lint.mjs
   - bin/spec.mjs
+  - docs/decisions/
 requirements:
   - SPEC-001
   - SPEC-002

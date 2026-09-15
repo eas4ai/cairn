@@ -7,7 +7,7 @@ import { repo, cairn, commit, records, review, entry } from "./helpers.mjs";
 const declaration = (command, mode = "per-requirement") => `command: ${command}\n${mode === null ? "" : `results: ${mode}\n`}inputs:\n  - src/\nrequirements:\n  - R-001\n  - R-002\n`;
 const record = (root, req) => { const e = entry(root, req); return `result: ${e.result}\nsource: ${e.source}\nexit: ${e.exit}\nexecution_error: ${e.execution_error}\nstderr_output: ${e.stderr_output}\n`; };
 
-for (const exit of [0, 1]) test(`explicit reporting with no lines and exit ${exit} establishes no requirement verdicts`, () => {
+for (const exit of [0, 1]) test(`explicit reporting with no lines and exit ${exit} establishes no requirement verdicts (LOOP-061)`, () => {
   const root = repo({ ".cairn/mechanisms/m": declaration(`node -e "process.exit(${exit})"`) });
   cairn(root, "check"); review(root);
   for (const req of ["R-001", "R-002"]) {
@@ -17,7 +17,7 @@ for (const exit of [0, 1]) test(`explicit reporting with no lines and exit ${exi
   assert.notEqual(cairn(root, "wake").status, 0);
 });
 
-test("a reporter that cannot start keeps execution diagnostics without blaming requirements", () => {
+test("a reporter that cannot start keeps execution diagnostics without blaming requirements (LOOP-062)", () => {
   const root = repo({ ".cairn/mechanisms/m": declaration("./missing-reporter") });
   cairn(root, "check");
   assert.match(record(root, "R-001"), /result: unverified/);

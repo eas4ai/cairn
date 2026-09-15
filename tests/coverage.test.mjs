@@ -21,7 +21,8 @@ test("every repository path the tests read is a declared input of node-test (PKG
   const inputs = section("inputs");
   const covered = (p) => inputs.some((i) => i.endsWith("/") ? p.startsWith(i) : p === i);
   const read = new Set();
-  for (const [, text] of tests) for (const m of text.matchAll(/["'`]\.\.\/([^"'`$]+)["'`]/g)) read.add(m[1]);
+  // Repository reads: a URL built from import.meta.url, or the skills tests' flat/raw/here helpers.
+  for (const [, text] of tests) for (const m of text.matchAll(/(?:new URL\(|\b(?:flat|raw|here)\()\s*["'`]\.\.\/([^"'`$]+)["'`]/g)) read.add(m[1]);
   const undeclared = [...read].filter((p) => !covered(p)).sort();
   assert.deepEqual(undeclared, [], `read by a test and declared by no input: ${undeclared.join(", ")}`);
 });

@@ -20,7 +20,7 @@ test("backlog writes the item; a second with the same title is refused, never ov
   assert.ok(readFileSync(join(root, ".cairn/backlog/sessions-in-sqlite.md"), "utf8").includes("Because."));
 });
 
-test("a commit inside the footprint: check runs; outside it: check names the path and does not run (LOOP-035)", () => {
+test("a commit inside the footprint: check runs; outside it: check names the path and does not run (LOOP-015, LOOP-035)", () => {
   const root = repo();
   writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root);
   let r = cairn(root, "check");

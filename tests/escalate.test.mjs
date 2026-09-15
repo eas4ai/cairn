@@ -11,7 +11,7 @@ const base = ["--concerns", "R-001", "--question", "Store sessions where?", "--r
 const esc = (root, ...extra) => cairn(root, "escalate", ...base, ...extra);
 const file = (root) => join(root, ".cairn/escalations/r-001.md");
 
-test("escalate writes the six-line format followed by its facts, and wake presents it", () => {
+test("escalate writes the six-line format followed by its facts, and wake presents it (LOOP-010, LOOP-026)", () => {
   const root = repo();
   const r = esc(root);
   assert.equal(r.status, 0, r.stderr);
@@ -25,7 +25,7 @@ test("escalate writes the six-line format followed by its facts, and wake presen
   assert.equal(w.status, 2); assert.match(w.stdout, /^Escalate: present r-001/);
 });
 
-test("a missing or multi-line field is refused with the field named, and nothing is written", () => {
+test("a missing or multi-line field is refused with the field named, and nothing is written (LOOP-012)", () => {
   const root = repo();
   let r = cairn(root, "escalate", ...base.filter((x, i) => !(base[i - 1] === "--instead" || x === "--instead")));
   assert.equal(r.status, 3); assert.match(r.stderr, /instead/); assert.ok(!existsSync(file(root)));
@@ -33,7 +33,7 @@ test("a missing or multi-line field is refused with the field named, and nothing
   assert.equal(r.status, 3); assert.match(r.stderr, /because/); assert.ok(!existsSync(file(root)));
 });
 
-test("a Blocking escalation that fails the format is written anyway, naming the malformed field (LOOP-014)", () => {
+test("a Blocking escalation that fails the format is written anyway, naming the malformed field (LOOP-013)", () => {
   const root = repo();
   const r = esc(root, "--because", "two\nlines", "--level", "Blocking");
   assert.equal(r.status, 0, r.stderr);
@@ -41,7 +41,7 @@ test("a Blocking escalation that fails the format is written anyway, naming the 
   assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
 });
 
-test("a --level other than Blocking is refused rather than silently losing the bypass", () => {
+test("a --level other than Blocking is refused rather than silently losing the bypass (DEC-002)", () => {
   const root = repo();
   const r = esc(root, "--level", "Blokcing");
   assert.equal(r.status, 3); assert.match(r.stderr, /Blokcing/); assert.ok(!existsSync(file(root)));
@@ -72,7 +72,7 @@ test("answer to an unknown escalation is refused", () => {
   assert.equal(r.status, 3);
 });
 
-test("a stranger resumes from the file alone: question and answer are both in it (LOOP-013)", () => {
+test("a stranger resumes from the file alone: question and answer are both in it (LOOP-014)", () => {
   const root = repo();
   esc(root); cairn(root, "answer", "r-001", "ask why not both?");
   const t = readFileSync(file(root), "utf8");

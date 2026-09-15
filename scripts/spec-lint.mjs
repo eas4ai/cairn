@@ -14,7 +14,10 @@ import { parseSpec } from "../bin/spec.mjs";
 const dir = process.argv[2] ?? "docs/spec";
 const findings = [];
 const KEYWORD = /\bMUST NOT\b|\bMUST\b|\bMAY\b/g;
-const strip = (s) => s.replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ");
+// A mention leaves a placeholder word, so a backticked actor still counts as one (PKG-010, SPEC-028).
+const strip = (s) => s.replace(/`[^`]*`/g, " x ").replace(/"[^"]*"/g, " x ");
+// A skill's slash name is not a path; the names come from the checkout this lint runs from.
+const SKILLS = existsSync(new URL("../skills", import.meta.url)) ? readdirSync(new URL("../skills", import.meta.url)).map((n) => `/${n}`) : [];
 const definitions = new Map(), prefixes = new Set(), references = [];
 
 for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
@@ -46,10 +49,11 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
 
   for (const [i, line] of raw.split(/\r?\n/).entries()) {
     if (hostLines.has(i)) continue;
-    const local = line.replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s<>"'`]+/gi, " ");
-    for (const m of local.matchAll(/(?:^|[\s`"'(=<\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/)[^\s`"'<>),;]*)/g)) {
+    // A file URL and a drive path are host paths (SPEC-029); a regex literal is not a path (SPEC-028).
+    const local = line.replace(/\b(?!file:)[a-z][a-z0-9+.-]*:\/\/[^\s<>"'`]+/gi, " ");
+    for (const m of local.matchAll(/(?:^|[\s`"'(=<\[])((?:~(?:[a-zA-Z_][a-zA-Z0-9_-]*|\/)|\/|[A-Za-z]:\\|file:\/\/)[^\s`"'<>),;]*)/g)) {
       const path = m[1].replace(/[.!?:]+$/, "");
-      if (path === "/" || ["/new-project", "/existing-project"].includes(path)) continue;
+      if (path === "/" || SKILLS.includes(path) || (/^[/~]/.test(path) && /[\^$*|?\\]/.test(path))) continue;
       if (hostPaths.some((host) => path === host || path.startsWith(host === "/" ? "/" : host + "/"))) continue;
       findings.push(`${name}:${i + 1}: absolute path ${path}; cite a repository-relative path or declare software behavior in Host paths: (SPEC-019)`);
     }

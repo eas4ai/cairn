@@ -65,7 +65,7 @@ test("realization needs a real commit and a subject (DEC-006)", () => {
   assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/);
 });
 
-test("1500 binary inputs digest identically at the review commit in under a second (LOOP-024, LOOP-032)", () => {
+test("1500 binary inputs digest identically at the review commit in under a second (LOOP-024)", () => {
   const root = setup({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("src/other", "src/many/") });
   mkdirSync(join(root, "src/many"));
   for (let i = 0; i < 1500; i++) writeFileSync(join(root, `src/many/${i}`), Buffer.from([0, i % 256, 10, 255]));

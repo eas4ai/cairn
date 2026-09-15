@@ -14,7 +14,8 @@ const f = [];
 const read = (p) => readFileSync(join(root, p), "utf8");
 const readIfPresent = (p) => (existsSync(join(root, p)) ? read(p) : null);
 const tracked = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).stdout.split("\0").filter(Boolean);
-const text = (p) => /\.(md|mjs|js|json|sh|yaml|yml|txt)$/.test(p) || /(^|\/)[^./]+$/.test(p) && !/^reference\//.test(p);
+// Shipped text: records under .cairn/ are a project's, not the package's (PKG-008, PKG-024).
+const text = (p) => !p.startsWith(".cairn/") && (/\.(md|mjs|js|json|sh|yaml|yml|txt)$/.test(p) || /(^|\/)[^./]+$/.test(p) && !/^reference\//.test(p));
 const present = tracked.filter((p) => existsSync(join(root, p)));
 const kernel = present.filter((p) => p.startsWith("bin/") && p.endsWith(".mjs")).map((p) => read(p)).join("\n");
 const decisions = present.filter((p) => p.startsWith("docs/decisions/")).map((p) => read(p)).join("\n");
@@ -36,8 +37,11 @@ if (spawnSync("git", ["check-ignore", "--no-index", ".cairn/evidence/probe"], { 
 // fresh clone that inherits one is blocked by a stranger's interruption.
 if (tracked.includes(".cairn/in-progress")) f.push("PKG-002: .cairn/in-progress is tracked; it is a claim about one working tree, not state a clone should inherit");
 
-// PKG-003: every command, record kind, and .cairn/ directory is named by a decision
-for (const m of kernel.matchAll(/^\/\/\s+cairn (\w[\w-]*)/gm)) if (!decisions.includes(`cairn ${m[1]}`) && !decisions.includes(`\`${m[1]}\``)) f.push(`PKG-003: command ${m[1]} is named by no tracked decision record`);
+// PKG-003: every command the kernel's help lists, every record kind, and every .cairn/ directory is named by a decision (PKG-023)
+const help = existsSync(join(root, "bin/cairn.mjs")) ? spawnSync("node", ["bin/cairn.mjs", "--help"], { cwd: root, encoding: "utf8" }).stdout ?? "" : "";
+const commands = new Set([...(help.split(/^Commands:[ \t]*$/m)[1]?.split(/^Examples:/m)[0] ?? "").matchAll(/^  ([a-z]+)\b/gm)].map((m) => m[1]));
+for (const m of kernel.matchAll(/^\/\/\s+cairn (\w[\w-]*)/gm)) commands.add(m[1]);
+for (const cmd of commands) if (!decisions.includes(`cairn ${cmd}`) && !decisions.includes(`\`${cmd}\``)) f.push(`PKG-003: command ${cmd} is named by no tracked decision record`);
 if (existsSync(join(root, ".cairn"))) for (const d of readdirSync(join(root, ".cairn"), { withFileTypes: true })) if (d.isDirectory() && !decisions.includes(`.cairn/${d.name}`) && !decisions.includes(d.name)) f.push(`PKG-003: .cairn/${d.name} is named by no tracked decision record`);
 for (const p of present.filter((p) => p.startsWith("docs/commitments/"))) {
   const t = read(p), i = t.indexOf("## Formats");
@@ -56,9 +60,14 @@ for (const p of present.filter((p) => p.startsWith("docs/commitments/"))) {
 const lines = kernel.split("\n").length;
 if (lines > 1500) f.push(`PKG-004: kernel is ${lines} lines`);
 
-// PKG-006: no skill step names one vendor's product as the way to do it
-for (const p of present.filter((p) => p.startsWith("skills/"))) for (const [i, line] of read(p).split("\n").entries())
-  if (/\b(run|use|invoke|open|type)\b[^.]*\b(claude code|codex cli|cursor|windsurf|copilot)\b/i.test(line)) f.push(`PKG-006: ${p}:${i + 1} instructs a step by naming a vendor's product`);
+// PKG-006: no skill step names one vendor's product as the way to do it; a paragraph is one unit (PKG-027)
+for (const p of present.filter((p) => p.startsWith("skills/"))) {
+  const lines = read(p).split("\n");
+  for (let start = 0, i = 0; i <= lines.length; i++) if (i === lines.length || lines[i].trim() === "") {
+    if (/\b(run|use|invoke|open|type)\b[^.]*\b(claude code|codex cli|cursor|windsurf|copilot)\b/i.test(lines.slice(start, i).join(" "))) f.push(`PKG-006: ${p}:${start + 1} instructs a step by naming a vendor's product`);
+    start = i + 1;
+  }
+}
 
 // PKG-008: ASCII in every tracked text file
 for (const p of present.filter(text)) { const t = read(p); const m = /[^\x00-\x7F]/.exec(t); if (m) f.push(`PKG-008: ${p} contains a non-ASCII character at offset ${m.index}`); }

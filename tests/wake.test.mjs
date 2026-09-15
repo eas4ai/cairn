@@ -29,7 +29,7 @@ test("an answered escalation is not open", () => {
   assert.equal(wake(root).status, 0);
 });
 
-test("step 3: a decision with no realized-by is built, first by name", () => {
+test("step 3: a decision with no realized-by is built, first by name (DEC-007)", () => {
   const root = repo({ "docs/decisions/b.md": "# B\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n(none yet)\n",
                         "docs/decisions/a.md": "# A\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- abc1234  did it\n",
                         "docs/decisions/c.md": "# C\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n" });
@@ -44,7 +44,7 @@ test("a superseded decision with no realized-by is not work", () => {
   assert.match(r.stdout, /^Resolvable: run R-001/);
 });
 
-test("step 6: a mechanism that has never run is run, not implemented", () => {
+test("step 6: a mechanism that has never run is run, not implemented (LOOP-008)", () => {
   const r = wake(repo({ ".cairn/mechanisms/t": passing("R-001", "R-002") }));
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: run R-001/);
@@ -65,13 +65,13 @@ test("step 6 before step 7: failing evidence outranks a missing mechanism", () =
   assert.match(wake(root).stdout, /^Resolvable: implement R-002/);
 });
 
-test("step 7: a requirement with no mechanism is declared", () => {
+test("step 7: a requirement with no mechanism is declared (LOOP-006)", () => {
   const r = wake(repo({}));
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: declare R-001/);
 });
 
-test("step 10: every requirement current and passing, review clean, is Done", () => {
+test("step 10: every requirement current and passing, review clean, is Done (LOOP-004)", () => {
   const root = repo({ ".cairn/mechanisms/t": passing("R-001", "R-002") });
   cairn(root, "check"); review(root);
   const r = wake(root);
@@ -79,19 +79,19 @@ test("step 10: every requirement current and passing, review clean, is Done", ()
   assert.match(r.stdout, /^Done: first/);
 });
 
-test("malformed roadmap is Resolvable, not fatal", () => {
+test("malformed roadmap is Resolvable, not fatal (LOOP-005)", () => {
   const r = wake(repo({ "docs/spec/roadmap.md": "# Roadmap\n\nno current line\n" }));
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: repair docs\/spec\/roadmap\.md/);
 });
 
-test("a commitment naming no requirements is Resolvable", () => {
+test("a commitment naming no requirements is Resolvable (LOOP-018)", () => {
   const r = wake(repo({ "docs/commitments/first.md": "# First\n\nSlug: first\n" }));
   assert.equal(r.status, 1);
   assert.match(r.stdout, /^Resolvable: repair docs\/commitments\/first\.md/);
 });
 
-test("the primary test: two wakes on the same checkout give the same action", () => {
+test("the primary test: two wakes on the same checkout give the same action (LOOP-001, LOOP-003)", () => {
   const root = repo({ "docs/decisions/z.md": "# Z\n\nLevel: Judged\n\n## Realized by\n", ".cairn/mechanisms/t": passing("R-001", "R-002") });
   const a = wake(root), b = wake(root);
   assert.equal(a.stdout, b.stdout);

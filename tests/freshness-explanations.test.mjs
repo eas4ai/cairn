@@ -28,7 +28,7 @@ function detailPath(r) {
   return join(r, name);
 }
 
-test("LOOP-076/079: stale inputs identify the receipt and the check to run", (t) => {
+test("LOOP-076, LOOP-079: stale inputs identify the receipt and the check to run", (t) => {
   const r = setup(t), old = receipt(r).slice(r.length + 1);
   writeFileSync(join(r, "src/other"), "edited\n"); commit(r);
   const output = changed(r);
@@ -105,7 +105,7 @@ test("LOOP-077: receipts from one run share details and do not store source cont
 });
 
 for (const mode of ["legacy", "invalid-field", "missing", "invalid-json", "mismatched", "duplicate", "unsafe-path", "directory", "symlink"])
-  test(`LOOP-078/080: ${mode} optional detail limits explanation without changing standing`, (t) => {
+  test(`LOOP-078, LOOP-080: ${mode} optional detail limits explanation without changing standing`, (t) => {
     const r = setup(t);
     if (mode === "legacy") editReceipt(r, (s) => s.replace(/^inputs_detail:.*\n/m, ""));
     else if (mode === "invalid-field") editReceipt(r, (s) => s.replace(/^inputs_detail:.*$/m, "inputs_detail:\n  - invalid"));
@@ -147,7 +147,7 @@ test("LOOP-078: unavailable old requirement text is not claimed as a proven chan
   assert.ok(!output.includes("the requirement or falsifier changed"), output);
 });
 
-test("LOOP-076/079: changed requirements identify evidence and retain review-before-check guidance", (t) => {
+test("LOOP-076, LOOP-079: changed requirements identify evidence and retain review-before-check guidance", (t) => {
   const r = setup(t), old = receipt(r).slice(r.length + 1), p = join(r, "docs/spec/test.md");
   writeFileSync(p, readFileSync(p, "utf8").replace("The thing MUST work.", "The thing MUST work offline.")); commit(r);
   const output = cairn(r, "wake").stdout;

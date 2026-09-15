@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { repo as project } from "./helpers.mjs";
 
 const CLI = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
 function repo() {
@@ -18,7 +19,7 @@ const base = ["--title", "Sessions live in SQLite", "--decided-by", "agent", "--
               "--wrong-if", "we need cross-process access", "--body", "Because it is there."];
 const decide = (root, ...extra) => spawnSync("node", [CLI, "decide", ...base, ...extra], { cwd: root, encoding: "utf8" });
 
-test("writes a record with every required field and an empty realized-by", () => {
+test("writes a record with every required field and an empty realized-by (DEC-001, DEC-005)", () => {
   const root = repo();
   const r = decide(root, "--level", "Judged");
   assert.equal(r.status, 0, r.stderr);
@@ -31,7 +32,7 @@ test("writes a record with every required field and an empty realized-by", () =>
   assert.equal(readdirSync(join(root, ".cairn/queue")).length, 0);
 });
 
-test("a Consequential decision is queued for review", () => {
+test("a Consequential decision is queued for review (DEC-004, DEC-013)", () => {
   const root = repo();
   assert.equal(decide(root, "--level", "Consequential").status, 0);
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
@@ -83,8 +84,12 @@ test("an existing record is not overwritten", () => {
 });
 
 test("a queued decision stays queued; nothing but the developer removes it (DEC-014)", () => {
-  const root = repo();
+  const root = project();
   decide(root, "--level", "Consequential");
-  spawnSync("node", [CLI, "wake"], { cwd: root, encoding: "utf8" });
+  assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
+  for (const command of ["wake", "check"]) {
+    const r = spawnSync("node", [CLI, command], { cwd: root, encoding: "utf8" });
+    assert.notEqual(r.status, 3, r.stderr);
+  }
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
 });

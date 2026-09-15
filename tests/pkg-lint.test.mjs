@@ -1,5 +1,5 @@
-// The package lint against fixtures realizing each falsifier, and against
-// this repository. Fixtures are git repositories, because the lint reads
+// The package lint against fixtures realizing each falsifier; the pkg-lint
+// mechanism runs it against this repository. Fixtures are git repositories, because the lint reads
 // the tracked set.
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -10,7 +10,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const LINT = fileURLToPath(new URL("../scripts/pkg-lint.mjs", import.meta.url));
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const git = (root, ...a) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd: root, encoding: "utf8" });
 const lint = (root) => spawnSync("node", [LINT, root], { encoding: "utf8" });
 
@@ -43,7 +42,6 @@ test("PKG-013: deferral language, but not in code, quotes, or a rule", () => {
   const ok = lint(repo({ "docs/spec/s.md": '# S\n\nStatus: Agreed\n\n    v1 is a code sample\n\nNothing is "postponed".\n\n[S-001] The agent MUST NOT name a later version.\nFalsifier: it does.\n' }));
   assert.equal(ok.status, 0, ok.stdout);
 });
-test("this repository passes the package lint", () => { const r = lint(ROOT); assert.equal(r.status, 0, r.stdout); });
 
 test("a tracked path deleted from the working tree is skipped, not a crash", () => {
   const root = repo({ "docs/gone.md": "# gone\n" });
@@ -73,7 +71,7 @@ test("PKG-003 reads the kernel's commands from its help output (PKG-023)", () =>
 });
 
 test("the ASCII scan covers shipped files, not records under .cairn/ (PKG-024)", () => {
-  const root = repo({ ".cairn/evidence/runs/20260915T120000000Z-1": "mechanism: m\ncommand: caf\u00e9\n" });
+  const root = repo({ ".cairn/queue/20260915T120000000Z-1": "mechanism: m\ncommand: caf\u00e9\n" });
   const r = lint(root);
   assert.equal(r.status, 0, r.stdout);
 });

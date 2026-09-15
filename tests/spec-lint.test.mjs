@@ -9,7 +9,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const LINT = fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url));
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const lint = (dir) => spawnSync("node", [LINT, dir], { encoding: "utf8" });
 function fixture(text) { const d = mkdtempSync(join(tmpdir(), "lint-")); writeFileSync(join(d, "x.md"), text); return d; }
 const AGREED = "# X\n\nStatus: Agreed 2026-09-04\nPrefix: X\n\n";
@@ -51,10 +50,6 @@ test("a keyword in backticks or quotes is a mention, not an obligation", () => {
   assert.equal(r.status, 0, r.stdout);
 });
 
-test("this repository's own specification passes the lint", () => {
-  const r = lint(join(ROOT, "docs", "spec"));
-  assert.equal(r.status, 0, r.stdout);
-});
 
 test("duplicate identifiers are rejected within a file and across files (SPEC-020)", () => {
   const block = "[X-001] The service MUST reject an empty request.\nFalsifier: An empty request succeeds.\n";
@@ -146,12 +141,12 @@ test("an Agreed block whose only keyword is MAY needs a falsifier like any other
   assert.equal(r.status, 0, r.stdout);
 });
 
-test("the path scan treats backticked and quoted text as mentions and flags drive paths and file URLs (SPEC-028, SPEC-029)", () => {
+test("a regex literal is not a path, a drive path and a file URL are, and a skill's slash name is allowed (SPEC-028, SPEC-029)", () => {
   const dir = mkdtempSync(join(tmpdir(), "cairn-spec-"));
-  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST reject a name matching `/^\\s*$/` and show \"/help\".\nFalsifier: it accepts one.\n\n[A-002] The app MUST read C:\\Users\\alex\\config.toml and file:///tmp/secret.\nFalsifier: it does not.\n\nThe developer opens /next-iteration at Done.\n");
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Agreed 2026-09-04\nPrefix: A\n\n[A-001] The app MUST reject a name matching `/^\\s*$/` or `/(a|b)?c/`.\nFalsifier: it accepts one.\n\n[A-002] The app MUST read C:\\Users\\alex\\config.toml and file:///tmp/secret.\nFalsifier: it does not.\n\nThe developer opens /next-iteration at Done.\n");
   const r = lint(dir);
   assert.equal(r.status, 1, r.stdout);
-  assert.doesNotMatch(r.stdout, /\/\^\\s|\/help|\/next-iteration/, r.stdout);
+  assert.doesNotMatch(r.stdout, /\/\^\\s|\/\(a|\/next-iteration/, r.stdout);
   assert.match(r.stdout, /C:\\Users/); assert.match(r.stdout, /file:\/\/\/tmp\/secret/);
 });
 

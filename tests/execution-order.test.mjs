@@ -55,7 +55,7 @@ test("LOOP-070: imported branch receipts stale a later sequence until a new chec
   assert.equal(at(root, "2026-09-06T10:00:00.000Z").status, 0, "the new run incorporates both histories despite an older timestamp");
 });
 
-test("LOOP-070: legacy receipts need one ordered check and remain byte-for-byte unchanged", () => {
+test("LOOP-070, LOOP-098: legacy receipts need one ordered check and remain byte-for-byte unchanged", () => {
   const root = setup(); cairn(root, "check"); review(root); commit(root);
   legacyize(root);
   const names = records(root, "R-001");

@@ -304,11 +304,17 @@ the fourth remediation commitment. The checker's path scan ran over
 raw lines, so a regex literal in backticks was an absolute path, and
 it stripped every scheme before matching, so a file URL passed.
 
-[SPEC-028] The specification checker MUST exclude backticked and
-quoted text from its host path scan.
+[SPEC-028] The specification checker MUST NOT report a slash-led
+token that carries a regular expression metacharacter as a host path.
 Falsifier: a backticked regex literal beginning with a slash is
 reported as an absolute path.
 Status: Agreed 2026-09-15
+
+Revised 2026-09-15, the same day: the first text excluded every
+backticked and quoted token, which SPEC-024 forbids, since a host
+path the software needs is written in backticks and must be a finding
+until the file declares it. The false positive the audit found is the
+regex literal, and that is what the rule now names.
 
 [SPEC-029] The specification checker MUST report a Windows drive
 path or a file URL as a host path.
@@ -317,5 +323,6 @@ outside backticks and quotes, passes the check.
 Status: Agreed 2026-09-15
 
 A skill's slash name is not a path; the checker reads the names under
-skills/ in the checkout it runs from. A mention keeps a placeholder
-word, so a backticked actor still counts as one (PKG-010).
+skills/ in the checkout it runs from. In the obligation checks, a
+mention keeps a placeholder word, so a backticked actor still counts
+as one (PKG-010).

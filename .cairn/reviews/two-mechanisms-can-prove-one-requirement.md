@@ -1,7 +1,8 @@
 commitment: two-mechanisms-can-prove-one-requirement
-commit: 25df31c
+commit: e37136b
 examined:
   - node-test against the revised LOOP-056: the three tests in tests/two-mechanisms.test.mjs, the LOOP-044 test that lost its duplicate-owner half, and the red and green runs of the suite around the implementation commit.
+  - The audit report docs/audit/2026-09-15-audit.md added at caa0ee1: a report only, no shipped file changed; pkg-lint ran on it and passed.
   - The manual paragraph added at 25a595b, against LOOP-056 and LOOP-099 and against the kernel's check and --stale selection.
   - The build at 882e9d8: mechanisms, declarationError, breaches, the mode check, assess and standing, ownRecords, the wake loop over flattened standings, runChecks under --stale and with named requirements, runMechanism's revision gate, and the manual's section on one command checking several requirements.
 findings:
@@ -104,3 +105,13 @@ per-mechanism streak; the paragraph claims nothing the code does not
 do. pkg-lint ran again on the changed manual and passed; node-test and
 spec-lint evidence is current, since their inputs did not change. No
 code changed during this review. No open finding.
+
+## Review at e37136b, 2026-09-15
+
+The only change since 25df31c inside a declared input is the audit
+report under docs/audit/, which pkg-lint reads for PKG-008 and PKG-013
+and passed. It changes no code, no skill, no specification text, and
+no record; the audit's findings are recorded there and captured
+nowhere, by the developer's request for a report. Evidence for every
+requirement is current. No code changed during this review. No open
+finding.

@@ -15,3 +15,4 @@ requirements:
 reviewed:
   - SPEC-019 sha256:778ef8d17a61dd0ae0cab4b0c87569267462e9dfab79810eb91f392cedb1b8bc
   - SPEC-002 sha256:16dea5b72caa3a2efd87d5307abd422fcfc0a16cf09586b6df35ce7f23d7c72a
+  - SPEC-002 sha256:fe6c53439a3ca0b4f2b1129cccebf9d845114b9d30e28f37ac1fcbffa7f6256c

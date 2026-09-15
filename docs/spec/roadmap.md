@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: records-in-every-shape
+Current: the-hooks-find-the-kernel-and-the-project
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -453,3 +453,12 @@ second remediation commitment. Delivers LOOP-124 through LOOP-131
 and repairs eight behaviors under their existing requirements: every
 record shape is read or named, no state exits raw or traps the loop.
 [Commitment](../commitments/records-in-every-shape.md).
+
+## The hooks find the kernel and the project
+
+Requested by the developer on 2026-09-15 after the second audit, the
+third remediation commitment. Delivers PKG-033 through PKG-036 and
+revises PKG-004: the hooks judge with the command the agent runs, keep
+a link whose target exists, find a project below the toplevel, report
+a kernel that prints no verdict, and the ceiling is 1600 lines.
+[Commitment](../commitments/the-hooks-find-the-kernel-and-the-project.md).

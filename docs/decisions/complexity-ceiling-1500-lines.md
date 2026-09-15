@@ -1,5 +1,7 @@
 # The complexity ceiling is 1500 lines
 
+Superseded by: the-complexity-ceiling-is-1600-lines
+
 Level: Consequential
 Decided by: agent
 Rests on: PKG-003, which requires a named failure behind every concept

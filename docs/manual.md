@@ -283,8 +283,16 @@ make this distinction, and the logs let you inspect it.
 ### One command can check several requirements
 
 A mechanism can declare several requirements. Running `cairn check APP-001`
-selects its mechanism and records results for every requirement that
-mechanism declares. It does not isolate one assertion inside the command.
+selects its mechanisms and records results for every requirement each
+of them declares. It does not isolate one assertion inside the command.
+
+The mirror case also holds: several mechanisms can declare one
+requirement, such as a fast targeted test and a slow whole-program run
+that both prove it. The requirement is met only when each of them has a
+current passing result. `cairn check APP-001` runs all of them, wake
+names the one whose result needs action, and `cairn check --stale` runs
+only the one whose own result is missing or stale. Three failures of one
+mechanism reach you as an escalation even when the other keeps passing.
 
 For a command that reports individual results, the declaration should use
 `results: per-requirement`. Then an omitted result stays unverified, even if

@@ -1,6 +1,7 @@
 commitment: consumers-can-run-the-lint-and-open-the-skills
-commit: f6ca65d
+commit: 694919a
 examined:
+  - The audit report's Remediation section and the plan's Result section, added after the commitment closed: records only, read by pkg-lint, which passed on them; the two backlog captures beside them.
   - The build: the lint command and Node check in bin/cairn.mjs, the header and help lines, the three skills' checker sentences and the existing-project instruction-file advice, the README passages, the manual passages, the walkthrough blocks and prose, the spec prose in loop.md, specification.md, glossary.md and overview.md, the roadmap note and four pointers, the recon resolution section, the removal of docs/spec/draft.md, and the package lint's deferral scope.
   - The seven new tests red at 5622005 and green after the implementation; the walkthrough run block by block to find why its evidence commits never ran.
 findings: []
@@ -51,3 +52,10 @@ Self-audit against the production rules: the deliverables the
 commitment lists; one walkthrough shape corrected after the test
 showed the first placement never ran; every check reported here ran
 and passed. No open finding.
+
+## Review at 694919a, 2026-09-15
+
+Since f6ca65d the only declared-input changes are the two audit
+documents' closing sections and two backlog captures; pkg-lint ran on
+them and passed, and the other evidence is current. No code changed.
+No open finding.

@@ -1357,3 +1357,21 @@ Status: Agreed 2026-09-15 by promotion promote-the-record-writing-commands-repos
 Promoted 2026-09-15 under LOOP-087 from the audit's finding A11: decide
 exited with a raw ENOENT and backlog created .cairn/backlog/ in any
 directory. Help and lint read no records and keep working anywhere.
+
+## The capture gate reads the Concerns line
+
+[LOOP-119] When a next-iteration item's Changes: line names a
+requirement of the current commitment, the loop MUST accept an
+escalation whose Concerns line names that requirement as the
+escalation LOOP-092 requires.
+Falsifier: a next-iteration item moved under LOOP-090, with the one
+escalation LOOP-114 asks for and no Outside because: line, is named by
+wake as a capture to escalate.
+Status: Agreed 2026-09-15 by promotion promote-the-capture-gate-s-reading-of-the-loop-090-escalation
+
+Promoted 2026-09-15 under LOOP-087 from the audit's finding B10. The
+LOOP-090 route needed the escalation's prose to contain the item's
+path; now the Concerns line that LOOP-114 already requires is enough,
+and the route needs exactly one escalation. A backlog capture names no
+changed requirement and keeps its Outside because: line or its own
+escalation.

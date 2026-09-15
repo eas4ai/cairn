@@ -195,3 +195,15 @@ test("the activation commit of a promoted commitment is inside the LOOP-089 comp
   const out = wake(root);
   assert.match(out, /^Resolvable: escalate first\n/, out); assert.match(out, /R-001/);
 });
+
+test("the LOOP-090 route needs one escalation: its Concerns line covers the moved item too (LOOP-119, LOOP-092, LOOP-114)", () => {
+  const root = repo({ "docs/commitments/first.md": PROMOTED }); decided(root); green(root);
+  writeFileSync(join(root, "docs/spec/test.md"), readFileSync(join(root, "docs/spec/test.md"), "utf8").replace("The thing MUST work.", "The thing MUST work well.")); commit(root, "revise R-001");
+  cairn(root, "backlog", "--next-iteration", "--changes", "R-001", "--title", "R-001 must change", "--body", "Found while building first."); commit(root, "move the item");
+  assert.match(wake(root), /^Resolvable: escalate (\.cairn\/next-iteration\/r-001-must-change\.md|first)/);
+  escalate(root, "R-001", "R-001 must change for first."); commit(root, "the one escalation");
+  assert.match(wake(root), /^Escalate: present r-001/);
+  cairn(root, "answer", "r-001", "ok"); commit(root, "answered");
+  const out = wake(root);
+  assert.doesNotMatch(out, /escalate \.cairn\/next-iteration/, out); assert.doesNotMatch(out, /escalate first/, out);
+});

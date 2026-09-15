@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: record-writing-commands-run-only-in-a-cairn-repository
+Current: the-capture-gate-reads-the-concerns-line
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -426,3 +426,11 @@ from the audit's finding A11. Delivers LOOP-118: decide, escalate,
 answer, backlog, supersede and reversals refuse to run outside a Cairn
 repository with the message wake and check give.
 [Commitment](../commitments/record-writing-commands-run-only-in-a-cairn-repository.md).
+
+## The capture gate reads the Concerns line
+
+Promoted from the backlog by the agent on 2026-09-15 under LOOP-087,
+from the audit's finding B10. Delivers LOOP-119: the one escalation the
+LOOP-090 route raises also satisfies the capture gate for the moved
+item, through its Concerns line.
+[Commitment](../commitments/the-capture-gate-reads-the-concerns-line.md).

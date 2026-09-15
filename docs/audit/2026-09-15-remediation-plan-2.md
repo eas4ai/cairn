@@ -103,12 +103,12 @@ committed under the named commit.
 | A15 | 2 | a840208 | closed |
 | B5 | 2 | a840208 | closed |
 | B10 | 2 | a840208 | closed |
-| C1 | 3 | | open |
-| C2 | 3 | | open |
-| C3 | 3 | | open |
-| C4 | 3 | | open |
-| C5 | 3 | | open |
-| C6 | 3 | | open |
+| C1 | 3 | a1c9240 | closed |
+| C2 | 3 | a1c9240 | closed |
+| C3 | 3 | a1c9240 | closed |
+| C4 | 3 | a1c9240 | closed |
+| C5 | 3 | a1c9240 | closed |
+| C6 | 3 | a1c9240 | closed |
 | B7 | 4 | | open |
 | B8 | 4 | | open |
 | D13 | 4 | | open |

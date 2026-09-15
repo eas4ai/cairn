@@ -21,8 +21,8 @@ Falsifier: a file declaring a requirement prefix contains no requirement.
 developer confirms its falsifier, a promotion decision under LOOP-088
 names it, or a recorded deference by the developer covers it.
 Falsifier: a requirement carries an Agreed marker with no confirmed
-falsifier and neither a promotion nor a deference decision in its
-Status: line.
+falsifier and neither a promotion nor a deference decision on its
+status line.
 Status: Agreed 2026-09-15
 
 Revised 2026-09-15 on the developer's direction after the audit. A

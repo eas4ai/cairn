@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { parseSpec } from "../bin/spec.mjs";
 import { repo, cairn, passing, review } from "./helpers.mjs";
 
 const LINT = new URL("../scripts/spec-lint.mjs", import.meta.url).pathname;
@@ -60,4 +63,11 @@ test("Scope inside a requirement or fenced example does not declare inheritance 
     const root = repo({ "docs/spec/extra.md": text, ".cairn/mechanisms/m": passing("R-001", "R-002") });
     cairn(root, "check"); review(root); assert.equal(cairn(root, "wake").status, 0);
   }
+});
+
+test("a falsifier wrapped onto a line beginning with Status: does not become the block's status (SPEC-018)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "cairn-spec-"));
+  writeFileSync(join(dir, "a.md"), "# A\n\nStatus: Draft\nPrefix: A\n\n[A-001] The tool MUST work.\nFalsifier: a record carries no confirmed falsifier on its\nStatus: line.\nStatus: Agreed 2026-09-15\n");
+  const block = parseSpec(readFileSync(join(dir, "a.md"), "utf8")).blocks[0];
+  assert.equal(block.status, "Agreed");
 });

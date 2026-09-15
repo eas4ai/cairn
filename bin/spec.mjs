@@ -25,7 +25,7 @@ export function parseSpec(text) {
     if (!m) continue;
     const start = i, body = [m[2]];
     while (i + 1 < lines.length && lines[i + 1].trim() && !/^(?:\[[A-Z]+-\d+\]|#)/.test(lines[i + 1])) body.push(lines[++i]);
-    const ownStatus = body.find((line) => /^Status:/.test(line));
+    const ownStatus = body.findLast((line) => /^Status:/.test(line));   // the block's own status is its last Status: line; wrapped prose may start a line with the word
     // A decision marker: Agreed by promotion (LOOP-088) or by deference (SPEC-002), naming the record.
     const marker = ownStatus === undefined ? null : /\bby (promotion|deference)[ \t]+(\S+)/.exec(ownStatus);
     blocks.push({ id: m[1], line: start + 1, body,

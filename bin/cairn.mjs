@@ -1359,17 +1359,18 @@ async function main() {
   if (Number(process.versions.node.split(".")[0]) < 18) return usage(`Cairn needs Node 18 or newer; this is ${process.versions.node}`);
   const root = ROOT = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;
+  // The checker is a script beside this kernel; the command reaches it from any project (PKG-028).
+  if (cmd === "lint") return spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }).status ?? 3;
+  if (!["wake", "check", "decide", "escalate", "answer", "backlog", "supersede", "reversals"].includes(cmd)) return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals|lint> [--root DIR]");
+  // Every command that reads or writes a record needs the repository (LOOP-046, LOOP-118).
+  if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md); run from the project root or pass --root DIR`);
+  if (git(root, "rev-parse", "--show-toplevel").status !== 0) return usage(`${root} is not a Cairn repository (no Git working tree); every command but help and lint requires Git (LOOP-046)`);
   if (cmd === "decide") return decide(root, a.values);
   if (cmd === "escalate") return escalate(root, a.values);
   if (cmd === "answer") return answer(root, rest[0], rest.slice(1).join(" "));
   if (cmd === "backlog") return backlog(root, a.values);
   if (cmd === "supersede") return rest[0] ? decide(root, { ...a.values, supersedes: rest[0] }) : usage("usage: cairn supersede <old-slug> --cause C ...decide fields");
   if (cmd === "reversals") return reversals(root);
-  // The checker is a script beside this kernel; the command reaches it from any project (PKG-028).
-  if (cmd === "lint") return spawnSync(process.execPath, [fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url)), rest[0] ?? "docs/spec"], { cwd: root, stdio: "inherit" }).status ?? 3;
-  if (cmd !== "wake" && cmd !== "check") return usage("usage: cairn <wake|check|decide|escalate|answer|backlog|supersede|reversals|lint> [--root DIR]");
-  if (!existsSync(join(root, "docs", "spec", "roadmap.md"))) return usage(`${root} is not a Cairn repository (no docs/spec/roadmap.md); run from the project root or pass --root DIR`);
-  if (git(root, "rev-parse", "--show-toplevel").status !== 0) return usage(`${root} is not a Git working tree; wake and check require Git (LOOP-046)`);
   if (cmd === "check") return a.values.stale && rest.length ? usage("check: --stale selects by evidence; do not name requirements with it (LOOP-094)") : check(root, rest, !!a.values.stale);
   const w = wake(root);
   process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`);

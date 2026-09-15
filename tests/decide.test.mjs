@@ -3,18 +3,14 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as project } from "./helpers.mjs";
 
 const CLI = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
-function repo() {
-  const root = mkdtempSync(join(tmpdir(), "cairn-"));
-  mkdirSync(join(root, "docs/decisions"), { recursive: true });
-  mkdirSync(join(root, ".cairn/queue"), { recursive: true });
-  return root;
-}
+// A Cairn repository: the commands refuse to run outside one (LOOP-118).
+const repo = () => project();
 const base = ["--title", "Sessions live in SQLite", "--decided-by", "agent", "--rests-on", "PKG-001",
               "--wrong-if", "we need cross-process access", "--body", "Because it is there."];
 const decide = (root, ...extra) => spawnSync("node", [CLI, "decide", ...base, ...extra], { cwd: root, encoding: "utf8" });
@@ -39,8 +35,8 @@ test("a Consequential decision is queued for review (DEC-004, DEC-013)", () => {
 });
 
 test("a Consequential decision is queued even when .cairn/queue does not exist yet", () => {
-  const root = mkdtempSync(join(tmpdir(), "cairn-"));
-  mkdirSync(join(root, "docs/decisions"), { recursive: true });
+  const root = project();
+  rmSync(join(root, ".cairn/queue"), { recursive: true, force: true });
   const r = decide(root, "--level", "Consequential");
   assert.equal(r.status, 0, r.stderr);
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));

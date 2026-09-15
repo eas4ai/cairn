@@ -12,4 +12,4 @@ The 2026-09-15 audit found that node-test's declaration omits files its tests re
 
 ## Realized by
 
-(none yet: recorded, not built)
+- d4ef93fc38ddc2f7ae0cafc6a1af55b948b87cff This repository declares and lints what it reads

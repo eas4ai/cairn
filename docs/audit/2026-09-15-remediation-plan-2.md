@@ -88,21 +88,21 @@ committed under the named commit.
 | B3 kernel | 1 | 5074d62 | closed |
 | B4 | 1 | 5074d62 | closed |
 | D2 | 1 | 8e200f6 | closed |
-| A3 | 2 | | open |
-| A4 | 2 | | open |
-| A5 | 2 | | open |
-| A6 | 2 | | open |
-| A7 | 2 | | open |
-| A8 | 2 | | open |
-| A9 | 2 | | open |
-| A10, D12 lint | 2 | | open |
-| A11 | 2 | | open |
-| A12 | 2 | | open |
-| A13 | 2 | | open |
-| A14 | 2 | | open |
-| A15 | 2 | | open |
-| B5 | 2 | | open |
-| B10 | 2 | | open |
+| A3 | 2 | a840208 | closed |
+| A4 | 2 | a840208 | closed |
+| A5 | 2 | a840208 | closed |
+| A6 | 2 | a840208 | closed |
+| A7 | 2 | a840208 | closed |
+| A8 | 2 | a840208 | closed |
+| A9 | 2 | a840208 | closed |
+| A10, D12 lint | 2 | a840208 | closed |
+| A11 | 2 | a840208 | closed |
+| A12 | 2 | a840208 | closed |
+| A13 | 2 | a840208 | closed |
+| A14 | 2 | a840208 | closed |
+| A15 | 2 | a840208 | closed |
+| B5 | 2 | a840208 | closed |
+| B10 | 2 | a840208 | closed |
 | C1 | 3 | | open |
 | C2 | 3 | | open |
 | C3 | 3 | | open |

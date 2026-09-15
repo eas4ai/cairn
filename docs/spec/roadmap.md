@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-capture-gate-reads-the-concerns-line
+Current: the-gates-bind-to-the-commitment
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -434,3 +434,14 @@ from the audit's finding B10. Delivers LOOP-119: the one escalation the
 LOOP-090 route raises also satisfies the capture gate for the moved
 item, through its Concerns line.
 [Commitment](../commitments/the-capture-gate-reads-the-concerns-line.md).
+
+## The gates bind to the commitment
+
+Requested by the developer on 2026-09-15 after the second audit
+(docs/audit/2026-09-15-audit-2.md), the first of five remediation
+commitments. Delivers LOOP-120 through LOOP-123 and revises the
+LOOP-090 and LOOP-092 falsifiers: the footprint includes the
+activation commit, a demoted or removed requirement is a contract
+change, the include files are observable and compared, and a reversed
+promotion is seen.
+[Commitment](../commitments/the-gates-bind-to-the-commitment.md).

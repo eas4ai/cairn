@@ -1004,8 +1004,14 @@ the agent MUST escalate before building it. The agent MUST record the
 item under next-iteration with the reason.
 Falsifier: a commit inside a promoted commitment's footprint changes an
 Agreed requirement's digest or the working agreement file, and no
-escalation names that commitment.
-Status: Agreed 2026-09-14
+escalation raised inside that commitment names every changed
+requirement on its Concerns line.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D2): the falsifier said "names that commitment", the reading
+LOOP-114 replaced with the Concerns line, and it did not say the
+escalation must be the commitment's own.
 
 Source review sometimes shows that a bounded item was not bounded. The
 route is the same as any other Blocking discovery: stop, write it down,
@@ -1047,8 +1053,15 @@ problem.
 Falsifier: a file added under .cairn/backlog/ or .cairn/next-iteration/
 by a commit inside the commitment's footprint names a requirement of
 that commitment on its Surfaced from: or Changes: line, carries no
-Outside because: line, and no escalation names the file.
-Status: Agreed 2026-09-14
+Outside because: line, and no escalation raised inside the commitment
+names the file or, for a next-iteration item, the requirement its
+Changes: line names on its Concerns line.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Revised 2026-09-15 on the developer's direction after the second
+audit (D2): the falsifier said "no escalation names the file", the
+reading LOOP-119 extended, and it did not say the escalation must be
+the commitment's own.
 
 The Outside because: line is the agent's stated reason that the idea is
 not the commitment's work. No mechanism judges the reason. The line
@@ -1375,3 +1388,42 @@ path; now the Concerns line that LOOP-114 already requires is enough,
 and the route needs exactly one escalation. A backlog capture names no
 changed requirement and keeps its Outside because: line or its own
 escalation.
+
+## The gates bind to the commitment
+
+[LOOP-120] The scope footprint MUST include the commit that activated
+the commitment when that commit has a parent.
+Falsifier: a path the activation commit adds or changes that is
+neither a record nor a declared input is never named as a breach.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-121] The loop MUST treat a requirement that was Agreed at the
+commitment's activation and is Draft or absent at HEAD as a change
+under LOOP-089.
+Falsifier: a promoted commitment sets an Agreed requirement's status
+to Draft, or deletes its block, and wake reaches Done.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-122] The loop MUST exempt from the footprint every root file
+whose whole content is `@AGENTS.md`, the working agreement's include
+files, and MUST compare each of them in the LOOP-089 gate as it
+compares the working agreement.
+Falsifier: a promoted commitment changes CLAUDE.md and wake reaches
+Done, or a commitment adds a one-line GEMINI.md that includes the
+agreement and wake names it as a breach.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+[LOOP-123] The LOOP-088 check MUST NOT count a superseded promotion
+record, and the repair it names says the promotion was reversed.
+Falsifier: after the record that promoted the current commitment is
+superseded, wake reaches Done.
+Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+
+Agreed 2026-09-15 on the developer's direction after the second audit
+(B1 to B4). LOOP-116 moved the contract comparison to the parent of
+the activation commit while the footprint still began after it; the
+gate compared only requirements Agreed at HEAD, so demoting one
+escaped it; "its include file" in LOOP-117 named nothing observable,
+and the kernel exempted CLAUDE.md without comparing it; a superseded
+promotion still satisfied LOOP-088, so the reversal the working
+agreement offers the developer had no effect.

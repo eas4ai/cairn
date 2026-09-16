@@ -417,3 +417,28 @@ hooks/hooks.json, and both substitute the plugin root variable in a
 hook command; Codex reads .codex-plugin/plugin.json first when it
 exists. The install skill keeps the skills-CLI path, with its
 checkout, for a harness without a marketplace.
+
+[PKG-039] Cairn MUST print its version, the version in package.json,
+on `cairn --version`, without a repository.
+Falsifier: `cairn --version` prints a version other than
+package.json's, exits nonzero, or needs a repository.
+Status: Agreed 2026-09-15 by deference releases-are-versioned-on-the-developer-s-direction
+
+[PKG-040] A release MUST be one commit that sets one version in
+package.json and the plugin manifests and carries that version's
+changelog entry, tagged v<version>. The release script MUST refuse a
+dirty tree, a version that is not a semantic-version increase, a
+missing changelog entry, an existing tag, or a loop that is not at
+Done.
+Falsifier: the script commits with the version differing across those
+files or without the changelog entry, leaves the tag off, or proceeds
+on a dirty tree, a lower version, a taken tag, or a verdict other than
+Done.
+Status: Agreed 2026-09-15 by deference releases-are-versioned-on-the-developer-s-direction
+
+Agreed 2026-09-15 on the developer's direction. A marketplace
+refreshes a plugin only when its version changes, so the version is
+the release; one script keeps the four files agreeing, and the tag
+and the changelog entry make a release findable from Git alone. The
+version files are declared inputs, so their evidence goes stale at
+the release commit, and the loop's next check and review record it.

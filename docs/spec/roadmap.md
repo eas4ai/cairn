@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-plugin-installs-from-a-marketplace
+Current: releases-are-versioned
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -501,3 +501,11 @@ skills and the hooks in one install. Adds PKG-037 and PKG-038; ships
 the manifest, the marketplace listing and the hooks file; the README,
 the manual and the install skill say so.
 [Commitment](../commitments/the-plugin-installs-from-a-marketplace.md).
+
+## Releases are versioned
+
+Requested by the developer on 2026-09-15 after the plugin install: one
+version source that the kernel prints, a changelog, and a release
+script that cuts one tagged commit at Done. Adds PKG-039 and PKG-040;
+the first tagged release follows.
+[Commitment](../commitments/releases-are-versioned.md).

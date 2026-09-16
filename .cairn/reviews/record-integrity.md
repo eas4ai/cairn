@@ -13,7 +13,14 @@ examined:
   - the writer and the reader share one placeholder string, UNBUILT, so decide cannot change what it writes without changing what the wake looks for. The line pattern tolerates leading and trailing whitespace and nothing else.
   - the build action now says the resolving entry replaces the placeholder rather than sitting under it, and cites DEC-006 and DEC-021; the manual says the same where it already discussed the Realized by section. The test helper realize() does what the wake asks, so the fixtures stop reproducing the defect.
   - the package: 471 tests run with none failing, spec-lint clean, pkg-lint clean at 1557 kernel lines against the 1600 ceiling.
-findings: []
+  - a second pass after the first review, reading the diff against main rather than the commitment: three defects the first pass missed and three cleanups, below.
+findings:
+  - open: decider() calls trim() on the raw field, and fields() yields an array when Decided by: is written as a list, so cairn reversals crashes on a shape main tallied (reproduced: exit 3, "trim is not a function").
+  - open: the realization of record-integrity-on-the-developer-s-direction replaced every occurrence of the placeholder string, so the Decision body now says decide writes the 72743f9 commit line under Realized by; the sentence that explains why DEC-021 exists is false.
+  - open: a superseded record is skipped before its Realized by section is read, so the placeholder above a resolving entry passes validation there; DEC-021's falsifier names no exemption and a reversal is never deleted (DEC-010).
+  - open: tests/helpers.mjs realize() replaces the first occurrence of the placeholder anywhere in the file, the same hazard that corrupted the record above; it should anchor to the Realized by section, and the placeholder literal should be one exported constant rather than three spellings.
+  - open: the help text still reads --decided-by NAME and lists Levels but not deciders, so it documents a shape decide now refuses.
+  - open: decide() re-implements the trim and lowercase that decider() already does, so the write and read normalizers can drift; they already differ on internal whitespace.
 
 ## Commitment review at 52921b0, 2026-09-16
 

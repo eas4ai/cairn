@@ -12,4 +12,4 @@ On 2026-09-15 the developer said, in conversation, that the way to install Cairn
 
 ## Realized by
 
-(none yet: recorded, not built)
+- d09b0811e0cbb78efba516eba12b0b34d65850fb Build: the plugin manifest, marketplace listing and hooks file; one install puts the command, the skills and the hooks in place (PKG-037, PKG-038)

@@ -55,6 +55,8 @@ test("a release is one commit setting one version in the four files, with the ch
 test("the release script refuses a bad version, no increase, a dirty tree, a missing entry, a taken tag, a disagreeing file, and a loop not at Done, each in one line with nothing written (PKG-040)", () => {
   const root = fixture();
   refused(root, /usage/, "1.2"); refused(root, /usage/, "0.2.0", "extra"); refused(root, /usage/);
+  const sub = spawnSync(process.execPath, [RELEASE, "0.2.0"], { cwd: join(root, "src"), encoding: "utf8" });
+  assert.equal(sub.status, 3, sub.stderr); assert.equal(sub.stderr.trim().split("\n").length, 1, sub.stderr); assert.match(sub.stderr, /cannot read package\.json .*run from the checkout root/);
   refused(root, /not an increase/, "0.1.0"); refused(root, /not an increase/, "0.0.9");
   writeFileSync(join(root, "src/other"), "changed\n"); refused(root, /dirty.*src\/other/, "0.2.0"); git(root, "checkout", "--", "src/other");
   refused(root, /no entry "## 0\.3\.0/, "0.3.0");

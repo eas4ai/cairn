@@ -104,7 +104,9 @@ codex plugin add cairn@cairn
 ```
 
 Both harnesses register the hooks from the plugin's `hooks/hooks.json`;
-nothing goes into your settings by hand. At your next session start
+nothing goes into your settings by hand. If you registered the hooks
+yourself before, from the snippet below, remove those entries: two
+registrations print two verdicts and refuse a stop twice. At your next session start
 the hook links `$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs`,
 says so, and inside a Cairn project prints the wake verdict; from then
 on a stop is refused while the verdict is Resolvable. Make sure

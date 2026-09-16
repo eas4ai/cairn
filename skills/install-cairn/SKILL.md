@@ -17,7 +17,9 @@ A harness with a plugin marketplace installed Cairn as a plugin: the
 plugin root, the directory two levels above this SKILL.md, holds
 `bin/cairn.mjs` and `bin/hook.mjs`, and the harness registered both
 hooks from the plugin's `hooks/hooks.json`. There is nothing to clone
-and nothing to merge into settings. The session-start hook links
+and nothing to merge into settings; hook entries written by hand from
+the snippet below, if any, are removed, since two registrations run
+the hooks twice. The session-start hook links
 `$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs` at session
 start; when the link is missing, run `node <plugin root>/bin/hook.mjs
 session-start` once. Then verify PATH and `cairn --help` as below. A

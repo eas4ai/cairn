@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-verifiers-findings-are-closed
+Current: the-plugin-installs-from-a-marketplace
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -492,3 +492,12 @@ the five commitments found. Revises LOOP-104, LOOP-126, PKG-022 and
 PKG-034; adds LOOP-132; corrects the PKG-004 and PKG-026 rationales,
 the manual's Get unstuck table, and the plan's Result table.
 [Commitment](../commitments/the-verifiers-findings-are-closed.md).
+
+## The plugin installs from a marketplace
+
+Requested by the developer on 2026-09-15: Cairn installs as a plugin
+from a marketplace, in Claude Code and in Codex, with the command, the
+skills and the hooks in one install. Adds PKG-037 and PKG-038; ships
+the manifest, the marketplace listing and the hooks file; the README,
+the manual and the install skill say so.
+[Commitment](../commitments/the-plugin-installs-from-a-marketplace.md).

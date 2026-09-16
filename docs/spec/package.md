@@ -201,9 +201,10 @@ Status: Agreed 2026-09-14
 
 The harness caps consecutive blocks, so the stop hook keeps no counter.
 Cairn's own loop bounds real work: three attempts escalate (DEC-016),
-and an escalation lets the agent stop. The install skill registers both
-hooks once, for the harnesses the README documents; the link script is
-retired, since the session-start hook is the install.
+and an escalation lets the agent stop. The plugin's hooks file registers
+both hooks when Cairn is installed from a marketplace (PKG-038); the
+install skill registers them for a harness without one; the link
+script is retired, since the session-start hook is the install.
 
 ## The hook and the command share one referee
 
@@ -389,3 +390,30 @@ toplevel only; a failed link creation skipped the verdict; a kernel
 that crashed left the stop hook silent and session-start printing the
 trace; a missing git was silent. The same commitment repairs the
 skipped verdict under PKG-019 and the missing git under PKG-022.
+
+[PKG-037] Cairn MUST ship a plugin manifest and a marketplace listing
+at the repository root, so a harness with a plugin marketplace
+installs the command, the skills and the hooks from the repository
+alone.
+Falsifier: `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`
+or `.codex-plugin/plugin.json` is missing, disagrees with the others
+or with package.json on the name or version, or names a path the
+repository does not hold.
+Status: Agreed 2026-09-15 by deference the-plugin-installs-from-a-marketplace-on-the-developer-s-direction
+
+[PKG-038] The plugin's hooks file MUST register the session-start and
+stop hooks against the plugin's own hook.mjs through the plugin root
+variable.
+Falsifier: hooks/hooks.json lacks either event, or its commands, run
+with the plugin root set to a copy of bin/ elsewhere, fail to print
+the verdict at session start or to refuse a stop while wake says
+Resolvable.
+Status: Agreed 2026-09-15 by deference the-plugin-installs-from-a-marketplace-on-the-developer-s-direction
+
+Agreed 2026-09-15 on the developer's direction: Cairn is installed
+from a plugin marketplace, in Claude Code and in Codex. Both harnesses
+read the manifest under .claude-plugin/, the skills under skills/ and
+hooks/hooks.json, and both substitute the plugin root variable in a
+hook command; Codex reads .codex-plugin/plugin.json first when it
+exists. The install skill keeps the skills-CLI path, with its
+checkout, for a harness without a marketplace.

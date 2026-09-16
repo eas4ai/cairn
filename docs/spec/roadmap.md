@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: releases-are-versioned
+Current: record-integrity
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -509,3 +509,13 @@ version source that the kernel prints, a changelog, and a release
 script that cuts one tagged commit at Done. Adds PKG-039 and PKG-040;
 the first tagged release follows.
 [Commitment](../commitments/releases-are-versioned.md).
+
+## Record integrity
+
+Requested by the developer on 2026-09-16, after an audit of three
+downstream projects found the records themselves drifting: seven
+spellings of three deciders in one project, and three decisions in
+another that read as unbuilt above the commits that built them. Adds
+DEC-020 and DEC-021; existing records are not rewritten, and the
+report makes their drift visible rather than hiding it.
+[Commitment](../commitments/record-integrity.md).

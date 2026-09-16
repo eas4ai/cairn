@@ -8,6 +8,7 @@ inputs:
   - .gitignore
   - README.md
   - assets/cover.jpg
+  - assets/notation.png
   - AGENTS.md
   - CLAUDE.md
   - tests/

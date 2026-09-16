@@ -74,6 +74,34 @@ pauses, or supervises your agent. [Mermaid source](docs/diagrams/work-loop.mmd).
 Done does not mean the whole product is finished, deployed, or guaranteed
 correct. It means the selected commitment meets Cairn's recorded conditions.
 
+### The verdict in notation
+
+![met, complete, open, unrealized and current, defined in notation](assets/notation.png)
+
+The same, in plain characters:
+
+```
+met(r)         :=  for all m in mech(r): current(m, r) and pass(m, r)
+complete(c)    :=  for all r in reqs(c): met(r), and no d in dec(c) is unrealized(d)
+open(e)        :=  answer(e) is empty
+unrealized(d)  :=  commit(d) is empty
+current(m, r)  :=  ev.inputs = H(inputs(m) at HEAD)
+                   and ev.decl = H(decl(m))
+                   and ev.req = H(text(r))
+```
+
+Here r is a requirement and mech(r) the mechanisms declared for it; c
+is a commitment, reqs(c) its requirements and dec(c) the decision
+records it names; e is an escalation and d a decision record; ev is
+the latest evidence record of m for r; H is a content digest;
+inputs(m) at HEAD are the declared inputs as committed, decl(m) the
+declaration, and text(r) the requirement's text. The kernel adds three
+things the notation leaves out: ev also names the digest of the kernel
+that wrote it, so a record from another kernel is not current; an
+`ask` answer leaves an escalation open, since only `ok` or `instead`
+closes it; and Done further needs a review with no open finding, no
+open escalation, no scope breach, and no backlog item to promote.
+
 Ideas the agent captures during the work go to one of two places. An idea
 that fits inside the agreed specification goes to the backlog, and the agent
 promotes it into the next commitment on its own, recording the decision for

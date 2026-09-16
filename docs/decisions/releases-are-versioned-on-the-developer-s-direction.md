@@ -12,4 +12,4 @@ On 2026-09-15 the developer asked, in conversation, for a versioning system and 
 
 ## Realized by
 
-(none yet: recorded, not built)
+- b644f076ea13e8b214f5bea947b647df8b15544f Build: cairn --version, the changelog, and the release script that cuts one tagged commit at Done (PKG-039, PKG-040)

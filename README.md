@@ -266,6 +266,8 @@ prevent an agent from ignoring the agreement.
 This documentation describes the source in this checkout. If your command
 points at a different checkout, its behavior may differ. Before adopting
 these rules, read the [upgrade guide](docs/manual.md#upgrading-an-existing-cairn-project).
+`cairn --version` prints the version you run; releases and the version
+policy are in [docs/releasing.md](docs/releasing.md) and CHANGELOG.md.
 
 In particular, global requirements now need `Scope: every commitment` in
 their spec file's header. A `PKG` prefix alone no longer makes them global.

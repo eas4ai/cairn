@@ -79,6 +79,7 @@ const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 const item = (s) => String(s).trim().replace(/^`|`$/g, "").replace(/^\.cairn\/(?:backlog|next-iteration)\//, "").replace(/\.md$/, "");
 const sha = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
 // The kernel that writes a record: the two files that decide verdicts and write (LOOP-023, LOOP-095).
+const version = () => JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;   // one version source, read only when asked (PKG-039)
 const KERNEL_DIGEST = sha(["cairn.mjs", "spec.mjs"].map((f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8")).join("\n"));
 const git = (root, ...args) => spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: Infinity });
 const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD"); return r.status === 0 ? r.stdout.trim() : null; };
@@ -1305,9 +1306,11 @@ function help() {
 
 Usage: cairn <command> [options]
        cairn --help | -h
+       cairn --version
 
 Global options:
   --help, -h   Print this help without running a command. No repository needed.
+  --version    Print the version and exit. No repository needed.
   --root DIR   Use DIR as the project root (default: current directory).
   --           Treat the remaining arguments as literal text, not options.
 
@@ -1380,12 +1383,13 @@ async function main() {
   let a;
   try {
     a = parseArgs({ args: process.argv.slice(2), allowPositionals: true, strict: true, options: {
-      help: { type: "boolean", short: "h" }, scope: { type: "boolean" }, keep: { type: "boolean" },
+      help: { type: "boolean", short: "h" }, version: { type: "boolean" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
       from: { type: "string" }, stale: { type: "boolean" }, promotes: { type: "string" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   if (a.values.help) return help();
+  if (a.values.version) { try { process.stdout.write(`cairn ${version()}\n`); return 0; } catch (e) { return usage(`cannot read the version beside the kernel: ${e.message}`); } }
   if (Number(process.versions.node.split(".")[0]) < 18) return usage(`Cairn needs Node 18 or newer; this is ${process.versions.node}`);
   const root = ROOT = a.values.root ?? process.cwd();
   const [cmd, ...rest] = a.positionals;

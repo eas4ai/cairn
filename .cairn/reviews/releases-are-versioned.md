@@ -1,5 +1,5 @@
 commitment: releases-are-versioned
-commit: f8b9bf6
+commit: f129935
 examined:
   - cairn --version: prints the package.json version and exits 0 outside a repository and ahead of a command, and the help lists it; the read happens only when asked, so a kernel copied without package.json, as the hooks and plugin tests do with bin/, still wakes and judges; --version there is one line and exit 3.
   - the release script's refusals, each reproduced in the fixture tests: a malformed or extra argument, a version that is not an increase, a missing changelog entry, an existing tag, a version file that disagrees, a dirty tree including the changelog, and a loop not at Done; each is one line, exit 3, and leaves HEAD, the tags and the working tree as they were.
@@ -9,10 +9,15 @@ examined:
   - the kernel is 1514 of 1600 lines after the four lines this adds.
   - attack: the script run from a subdirectory of the checkout, where package.json is not in cwd; the read throws, printing a stack trace with exit 1 instead of one line and exit 3. Recorded as the open finding below.
 findings:
-  - open: scripts/release.mjs run from a directory without package.json or CHANGELOG.md prints a stack trace and exits 1 instead of refusing in one line (PKG-040).
+  - resolved: scripts/release.mjs run from a directory without package.json or CHANGELOG.md printed a stack trace and exited 1; every file read now refuses in one line naming the file and the directory (6e327ea), with a test from a subdirectory.
 
 ## Commitment review at f8b9bf6, 2026-09-15
 
 PKG-039, PKG-040 and the rest have current passing evidence; 460
 tests pass, both lints clean. Attacked as listed under examined. One
 open finding, resolved as its own work below.
+
+## Commitment review at f129935, 2026-09-15
+
+The resolution changed the script and its test; node-test and pkg-lint
+rerun and passing. No open finding.

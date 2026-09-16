@@ -74,3 +74,30 @@ test("a record resting on prose alone is in the domain unspecified, and so is th
   const r = cairn(root, "decide", "--title", "Prose", "--level", "Judged", "--rests-on", "common practice", ...fields);
   assert.equal(r.status, 3); assert.match(r.stderr, /unspecified/);
 });
+
+test("the decider tally normalizes case and whitespace, and names a value outside the vocabulary (DEC-020, DEC-011)", () => {
+  const root = repo();
+  // Records as an older kernel, or another project, left them: three spellings for two deciders.
+  const written = (slug, by, rests) => writeFileSync(join(root, "docs/decisions", `${slug}.md`),
+    `# ${slug}\n\nLevel: Judged\nDecided by: ${by}\nRests on: ${rests}\nWould be wrong if: x\nSuperseded by: ${slug}-2\n\n## Realized by\n\n- abc1234  did it\n`);
+  const replacement = (slug, rests) => writeFileSync(join(root, "docs/decisions", `${slug}-2.md`),
+    `# ${slug}-2\n\nLevel: Judged\nDecided by: agent\nSupersedes: ${slug}\nCause: the premise was false\nRests on: ${rests}\nWould be wrong if: x\n\n## Realized by\n\n- abc1234  did it\n`);
+  for (const [slug, by, rests] of [["one", "Agent", "R-001"], ["two", "  agent  ", "R-001"], ["three", "Codex", "R-002"]]) {
+    written(slug, by, rests); replacement(slug, rests);
+  }
+  const r = cairn(root, "reversals");
+  assert.equal(r.status, 0, r.stderr);
+  // Agent and "  agent  " are one decider; Codex is named, not dropped and not guessed.
+  assert.match(r.stdout, /by decider: agent 2, unrecognized: Codex 1$/m, r.stdout);
+});
+
+test("a record with no Decided by line is tallied as unrecorded, not as a vocabulary value", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/nameless.md"),
+    "# Nameless\n\nLevel: Judged\nRests on: R-001\nWould be wrong if: x\nSuperseded by: nameless-2\n\n## Realized by\n\n- abc1234  did it\n");
+  writeFileSync(join(root, "docs/decisions/nameless-2.md"),
+    "# Nameless 2\n\nLevel: Judged\nDecided by: agent\nSupersedes: nameless\nCause: the premise was false\nRests on: R-001\nWould be wrong if: x\n\n## Realized by\n\n- abc1234  did it\n");
+  const r = cairn(root, "reversals");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /by decider: unrecorded 1$/m, r.stdout);
+});

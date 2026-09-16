@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { writeFileSync, readFileSync, existsSync, mkdirSync, appendFileSync, mkdtempSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { repo as base, cairn, commit, review, fromFile, head } from "./helpers.mjs";
+import { repo as base, cairn, commit, review, fromFile, head, realize } from "./helpers.mjs";
 
 const LINT = fileURLToPath(new URL("../scripts/spec-lint.mjs", import.meta.url));
 const lint = (dir) => spawnSync("node", [LINT, dir], { encoding: "utf8" });
@@ -184,7 +184,7 @@ test("the LOOP-088 check reads the Promotes line, and decide --promotes writes i
   r = cairn(root, "decide", "--title", "Promote it properly", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", "some-item");
   assert.equal(r.status, 0, r.stderr);
   assert.match(readFileSync(join(root, "docs/decisions/promote-it-properly.md"), "utf8"), /^Promotes: some-item$/m);
-  appendFileSync(join(root, "docs/decisions/promote-it-properly.md"), `- ${head(root)} init\n`); commit(root, "recorded");
+  realize(root, "promote-it-properly"); commit(root, "recorded");
   assert.doesNotMatch(wake(root), /repair docs\/commitments/);
 });
 
@@ -275,7 +275,7 @@ test("a superseded promotion no longer satisfies the LOOP-088 check, and the rep
   assert.match(wake(root), /^Done: first/);
   const r = cairn(root, "supersede", "promote-some-item", "--cause", "it was wrong when it was made", "--title", "Reverse the promotion", "--level", "Judged", "--decided-by", "developer", "--rests-on", "R-001", "--wrong-if", "never", "--body", "The item was not bounded.");
   assert.equal(r.status, 0, r.stderr);
-  appendFileSync(join(root, "docs/decisions/reverse-the-promotion.md"), `- ${head(root)} init\n`); commit(root, "reversed");
+  realize(root, "reverse-the-promotion"); commit(root, "reversed");
   const out = wake(root);
   assert.match(out, /^Resolvable: repair docs\/commitments\/first\.md/, out); assert.match(out, /reversed/); assert.match(out, /LOOP-123/);
 });

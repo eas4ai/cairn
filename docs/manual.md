@@ -262,7 +262,10 @@ attention, but it is not a request for permission that has stopped the work.
 Decision and review metadata belongs in the record's header. Put prose and
 examples in the body; their quoted fields do not change whether a decision
 is built or a finding is open. A realizing commit belongs in the actual
-`Realized by` section, outside a code example. CLI metadata values stay on
+`Realized by` section, outside a code example, and it replaces the
+`(none yet: recorded, not built)` line rather than following it: a record
+that states both says the decision was never built above the commits that
+built it, and the wake names that as a repair (DEC-021). CLI metadata values stay on
 one line; use `--body` for multiline decision text.
 
 ## Understand checks and their results

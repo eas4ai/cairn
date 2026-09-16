@@ -211,3 +211,27 @@ test("a shallow clone that cannot resolve its entries is still told to fetch, no
   assert.doesNotMatch(r.stdout, /placeholder/, r.stdout);
   rmSync(shallow, { recursive: true, force: true });
 });
+
+test("the placeholder quoted in a fenced example does not make a built record a repair (DEC-021)", () => {
+  const root = repo();
+  const quoted = "# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n## Decision\n\nA record that has not been built reads:\n\n```\n## Realized by\n\n" + UNBUILT + "\n```\n\n## Realized by\n\n- " + head(root) + " init\n";
+  writeFileSync(join(root, "docs/decisions/d.md"), quoted);
+  commit(root, "a record whose body quotes the placeholder");
+  const r = wake(root);
+  assert.doesNotMatch(r.stdout, /docs\/decisions\/d\.md/, r.stdout);
+  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
+});
+
+test("supersede takes the same decider vocabulary as decide (DEC-020)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/old.md"), "# Old\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: x\n\n## Realized by\n\n- abc1234 did it\n");
+  const supersede = (by) => cairn(root, "supersede", "old", "--title", "New", "--level", "Judged", "--decided-by", by,
+    "--rests-on", "R-001", "--wrong-if", "w", "--body", "b", "--cause", "the premise was false");
+  let r = supersede("Codex");
+  assert.equal(r.status, 3, r.stdout); assert.match(r.stderr, /DEC-020/);
+  assert.equal(existsSync(join(root, "docs/decisions/new.md")), false, "nothing was written");
+  assert.doesNotMatch(readFileSync(join(root, "docs/decisions/old.md"), "utf8"), /Superseded by/, "the old record was not stamped");
+  r = supersede("Joint");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(readFileSync(join(root, "docs/decisions/new.md"), "utf8"), /^Decided by: joint$/m);
+});

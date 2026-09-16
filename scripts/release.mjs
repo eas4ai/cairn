@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = process.cwd(), KERNEL = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
-const FILES = ["package.json", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json"];
+const FILES = ["package.json", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json", ".muse-plugin/plugin.json"];
 const refuse = (why) => { process.stderr.write(`release: ${why}\n`); process.exit(3); };
 const git = (...a) => { const r = spawnSync("git", a, { cwd: root, encoding: "utf8" }); if (r.error || r.status !== 0) refuse(`git ${a[0]} failed: ${(r.stderr || r.error?.message || "").trim().split("\n")[0]}`); return r.stdout; };
 const parse = (v) => { const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v ?? ""); return m && m.slice(1).map(Number); };

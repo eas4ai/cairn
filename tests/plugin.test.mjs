@@ -12,10 +12,18 @@ import { repo as base, fromFile } from "./helpers.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const json = (p) => JSON.parse(readFileSync(here(p), "utf8"));
-const claude = json("../.claude-plugin/plugin.json"), market = json("../.claude-plugin/marketplace.json"), codex = json("../.codex-plugin/plugin.json"), pkg = json("../package.json"), hooks = json("../hooks/hooks.json");
+const claude = json("../.claude-plugin/plugin.json"), market = json("../.claude-plugin/marketplace.json"), codex = json("../.codex-plugin/plugin.json"), pkg = json("../package.json"), hooks = json("../hooks/hooks.json"), muse = json("../.muse-plugin/plugin.json");
 
 test("the manifests, the listing and package.json agree on the name and version, and name paths the repository holds (PKG-037)", () => {
   for (const m of [claude, codex, pkg]) { assert.equal(m.name, "cairn"); assert.equal(m.version, pkg.version); assert.ok(m.description, "a description"); }
+  assert.equal(muse.name, "cairn"); assert.equal(muse.version, pkg.version); assert.ok(muse.description, "a description");
+  assert.deepEqual(muse.capabilities.skills.map((s) => s.id).sort(), ["existing-project", "install-cairn", "new-project", "next-iteration"], "the Muse manifest carries the four skills");
+  for (const s of muse.capabilities.skills) assert.ok(existsSync(here(`../${s.path}`)), `${s.id} names a skill the repository holds`);
+  assert.deepEqual(muse.capabilities.hooks.map((h) => h.event).sort(), ["SessionStart", "Stop"], "the Muse manifest carries the two hooks");
+  for (const h of muse.capabilities.hooks) {
+    assert.ok(h.command[0] === "node" && existsSync(here(`../${h.command[1]}`)), `${h.id} names a hook entry the repository holds`);
+    for (const other of muse.capabilities.hooks) if (other !== h) assert.notEqual(other.command[1], h.command[1], "Muse forbids two hooks sharing one source file");
+  }
   assert.equal(market.name, "cairn"); assert.equal(market.plugins.length, 1);
   const listed = market.plugins[0];
   assert.equal(listed.name, "cairn"); assert.equal(listed.source, "./", "the repository root is the plugin"); assert.equal(listed.version, pkg.version);

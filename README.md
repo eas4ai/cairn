@@ -86,10 +86,14 @@ question to you, not a note.
 
 ## Install
 
+Cairn is a plugin. One install brings the command, the four skills and
+the two hooks. Have Node 18 or newer and Git 2.5 or newer available.
+Cairn runs on Linux and macOS; Windows is not supported, since the hooks
+use symbolic links and HOME.
+
 ### Install the plugin
 
-Cairn is a plugin: one install brings the command, the four skills and
-the two hooks. In Claude Code, add the marketplace and install it:
+In Claude Code:
 
 ```
 /plugin marketplace add eas4ai/cairn
@@ -103,21 +107,32 @@ codex plugin marketplace add eas4ai/cairn
 codex plugin add cairn@cairn
 ```
 
-Both harnesses register the hooks from the plugin's `hooks/hooks.json`;
-nothing goes into your settings by hand. If you registered the hooks
-yourself before, from the snippet below, remove those entries: two
-registrations print two verdicts and refuse a stop twice. At your next session start
-the hook links `$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs`,
-says so, and inside a Cairn project prints the wake verdict; from then
-on a stop is refused while the verdict is Resolvable. Make sure
-`$HOME/.local/bin` is on your `PATH`, then check `cairn --help`. After
-a plugin update, check the path `cairn --help` resolves to: if the link
-still points at the old version, remove it and start a session, and
-the hook links the new one.
+That is the install. The harness registers the two hooks from the
+plugin's `hooks/hooks.json`. At your next session start the hook links
+`$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs` and says so;
+inside a Cairn project it prints the wake verdict, and from then on a
+stop is refused while the verdict is Resolvable, up to the harness's cap
+on consecutive refusals. Make sure `$HOME/.local/bin` is on your `PATH`:
 
-### Start with your agent through the skills CLI
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+cairn --help
+```
 
-Without a plugin marketplace, install Cairn's skills with the
+`cairn --help` lists commands, options, and examples; it works outside a
+project and changes nothing. Updates come through the marketplace; after
+one, check the path `cairn --help` resolves to, and if the link still
+points at the old version, remove it and start a session. If you once
+registered the hooks by hand, from the snippet under "Install from a
+checkout", remove those entries: two registrations print two verdicts
+and refuse a stop twice.
+
+Then open your project and continue at
+[Start with your project](#start-with-your-project).
+
+### Other agents: the skills CLI
+
+An agent without a plugin marketplace gets the skills through the
 [Vercel skills CLI](https://github.com/vercel-labs/skills), using npm/npx:
 
 ```sh
@@ -129,25 +144,20 @@ without a dedicated entry, use `--agent universal`, which installs into
 `$HOME/.agents/skills`, the cross-vendor directory Muse reads. Omit
 `--global` to install only in the project where you run the command.
 Preview the available skills with `npx skills add eas4ai/cairn --list`.
-
-Then tell your agent:
+The skills carry instructions and templates, not the command. Tell your
+agent:
 
 > Use install-cairn to install the Cairn command and verify that it works.
 
-The skills install provides instructions and templates. The `install-cairn`
-skill guides the agent through setting up the executable. Once it works,
-use `new-project` or `existing-project` to begin. See the manual for
+The skill clones a checkout, links the command and registers the hooks
+as the next section describes. See the manual for
 [skill installation and updates](docs/manual.md#using-the-skills-cli).
 
 ### Install from a checkout
 
-If you prefer to set things up yourself, use this method instead of the
-skills CLI.
-
-Have Node 18 or newer and Git 2.5 or newer available. Cairn runs on Linux
-and macOS; Windows is not supported, since the hooks use symbolic links
-and HOME. Run these commands in the directory where you want to keep the
-Cairn checkout:
+The by-hand path, for a harness without a marketplace or for working on
+Cairn itself. Run these commands in the directory where you want to
+keep the Cairn checkout:
 
 ```sh
 git clone https://github.com/eas4ai/cairn.git
@@ -156,31 +166,11 @@ node cairn/bin/hook.mjs session-start
 
 The second command links `$HOME/.local/bin/cairn` to the checkout's
 `bin/cairn.mjs` when nothing is there or the link's target is gone; any
-other file or link stays. The hooks judge with the `cairn` on your PATH,
-then with that link, then with their own checkout, and say which. It is the same hook that runs at
-every session start once registered, so inside a Cairn project it also
-prints the wake verdict.
-
-Make sure `$HOME/.local/bin` is on your `PATH`. If it is not, add this to
-your shell's startup file, then open a new terminal:
-
-```sh
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Check that the command can be found:
-
-```sh
-command -v cairn
-cairn --help
-```
-
-`cairn --help` (or `cairn -h`) lists commands, options, and examples.
-It works outside a project and does not run any checks or change records.
-
-Then register the two hooks with your agent, once. For Claude Code, merge
-this into `$HOME/.claude/settings.json`; for Codex, write it to
-`$HOME/.codex/hooks.json`. `<checkout>` is the absolute path of the clone:
+other file or link stays. Put `$HOME/.local/bin` on your `PATH` as above
+and check `cairn --help`. Then register the two hooks with your agent,
+once. For Claude Code, merge this into `$HOME/.claude/settings.json`;
+for Codex, write it to `$HOME/.codex/hooks.json`. `<checkout>` is the
+absolute path of the clone:
 
 ```json
 { "hooks": {
@@ -188,16 +178,16 @@ this into `$HOME/.claude/settings.json`; for Codex, write it to
   "Stop":         [{ "hooks": [{ "type": "command", "command": "node <checkout>/bin/hook.mjs stop" }] }] } }
 ```
 
-From then on every session starts from the wake verdict, and a stop is
-refused while the verdict is Resolvable, up to the harness's cap on
-consecutive refusals. The hooks are optional: the
+The hooks judge with the `cairn` on your PATH, then with that link,
+then with their own checkout, and say which. They are optional: the
 working agreement in AGENTS.md is the path an agent takes without them.
-Skills come with the plugin, go into your agent's skill directory through
-the skills CLI above, or are linked from `skills/` by you. See the
+Skills come with the plugin, go into your agent's skill directory
+through the skills CLI, or are linked from `skills/` by you. See the
 [installation details](docs/manual.md#installation-details) for removal
 and updates.
 
-The link points into this checkout, so keep it in place. There is no
+The link points into the plugin or checkout it was made from, so keep
+that in place. There is no
 `cairn init` command: the project skills help the agent prepare your project.
 
 ## Start with your project

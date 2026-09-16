@@ -1,0 +1,18 @@
+{
+  "name": "cairn",
+  "version": "0.2.0",
+  "description": "The referee for agent-led software development: reads the repository, names the next action.",
+  "author": { "name": "eas4ai" },
+  "homepage": "https://github.com/eas4ai/cairn",
+  "repository": "https://github.com/eas4ai/cairn",
+  "license": "UNLICENSED",
+  "keywords": ["agent", "specification", "requirements", "review", "hooks"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Cairn",
+    "shortDescription": "The referee for agent-led software development",
+    "longDescription": "Cairn reads the repository and names the agent's next action. The specification is the contract, the roadmap names the current commitment, and evidence recorded by declared checks decides when a commitment is done. The plugin carries the command, the four skills and the two hooks: the wake verdict at session start, and a refused stop while the verdict is Resolvable.",
+    "developerName": "eas4ai",
+    "category": "Productivity"
+  }
+}

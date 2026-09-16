@@ -11,6 +11,9 @@ inputs:
   - AGENTS.md
   - CLAUDE.md
   - tests/
+  - .claude-plugin/
+  - .codex-plugin/
+  - hooks/
 requirements:
   - PKG-001
   - PKG-002

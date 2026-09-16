@@ -86,9 +86,36 @@ question to you, not a note.
 
 ## Install
 
-### Start with your agent
+### Install the plugin
 
-Install Cairn's skills with the
+Cairn is a plugin: one install brings the command, the four skills and
+the two hooks. In Claude Code, add the marketplace and install it:
+
+```
+/plugin marketplace add eas4ai/cairn
+/plugin install cairn@cairn
+```
+
+In Codex:
+
+```sh
+codex plugin marketplace add eas4ai/cairn
+codex plugin add cairn@cairn
+```
+
+Both harnesses register the hooks from the plugin's `hooks/hooks.json`;
+nothing goes into your settings by hand. At your next session start
+the hook links `$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs`,
+says so, and inside a Cairn project prints the wake verdict; from then
+on a stop is refused while the verdict is Resolvable. Make sure
+`$HOME/.local/bin` is on your `PATH`, then check `cairn --help`. After
+a plugin update, check the path `cairn --help` resolves to: if the link
+still points at the old version, remove it and start a session, and
+the hook links the new one.
+
+### Start with your agent through the skills CLI
+
+Without a plugin marketplace, install Cairn's skills with the
 [Vercel skills CLI](https://github.com/vercel-labs/skills), using npm/npx:
 
 ```sh
@@ -163,8 +190,8 @@ From then on every session starts from the wake verdict, and a stop is
 refused while the verdict is Resolvable, up to the harness's cap on
 consecutive refusals. The hooks are optional: the
 working agreement in AGENTS.md is the path an agent takes without them.
-Skills go into your agent's skill directory through the skills CLI above,
-or by linking each folder under `skills/` yourself. See the
+Skills come with the plugin, go into your agent's skill directory through
+the skills CLI above, or are linked from `skills/` by you. See the
 [installation details](docs/manual.md#installation-details) for removal
 and updates.
 

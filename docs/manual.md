@@ -637,6 +637,12 @@ memorize. Cairn normally prints the relevant label in its next action.
 
 ## Installation details
 
+The [plugin installation](../README.md#install-the-plugin) registers both
+hooks from the plugin's `hooks/hooks.json`, so nothing is merged into your
+settings; the session-start hook links `$HOME/.local/bin/cairn` to the
+plugin's `bin/cairn.mjs` at the next session start. The rest of this
+section describes the two installs without a marketplace.
+
 The [checkout installation](../README.md#install-from-a-checkout) uses the
 session-start hook, `node <checkout>/bin/hook.mjs session-start`. On its
 first run it links `$HOME/.local/bin/cairn` to the checkout's `bin/cairn.mjs`.
@@ -659,8 +665,8 @@ lets the agent stop. Both harnesses cap how many times in a row a stop can
 be refused. The hooks are optional: the working agreement is the path an
 agent takes without them.
 
-Skills live in your agent's skill directory. The skills CLI below puts them
-there; from a checkout, link each folder under `skills/` into that directory
+Skills live in your agent's skill directory. The plugin carries them; the
+skills CLI below puts them there; from a checkout, link each folder under `skills/` into that directory
 yourself. Muse reads `$HOME/.agents/skills`. Its project rules file is
 `AGENTS.md`, the working agreement the project skills write.
 

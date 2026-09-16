@@ -5,9 +5,24 @@ description: Install or repair the Cairn command after its agent skills have bee
 
 # Install Cairn
 
-Install the executable and verify that the agent can run it. Installing
-these skills provides instructions and templates; it does not install the
-`cairn` command. This workflow uses Node, Git, and a Bash-compatible shell.
+Install the executable and verify that the agent can run it. Installed
+through the skills CLI, these skills provide instructions and templates
+and do not install the `cairn` command; installed as a plugin, the
+command comes with them. This workflow uses Node, Git, and a
+Bash-compatible shell.
+
+## When Cairn came as a plugin
+
+A harness with a plugin marketplace installed Cairn as a plugin: the
+plugin root, the directory two levels above this SKILL.md, holds
+`bin/cairn.mjs` and `bin/hook.mjs`, and the harness registered both
+hooks from the plugin's `hooks/hooks.json`. There is nothing to clone
+and nothing to merge into settings. The session-start hook links
+`$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs` at session
+start; when the link is missing, run `node <plugin root>/bin/hook.mjs
+session-start` once. Then verify PATH and `cairn --help` as below. A
+plugin updates through its marketplace; the link follows once it is
+removed or its target is gone.
 
 ## Check what is already installed
 

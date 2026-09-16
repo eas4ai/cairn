@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/hook.mjs\" session-start" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/hook.mjs\" stop" }] }]
+  }
+}

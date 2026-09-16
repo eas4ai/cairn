@@ -1,5 +1,5 @@
 commitment: the-verifiers-findings-are-closed
-commit: 6d83fe7
+commit: b4960bc
 examined:
   - mechanism review, LOOP-104 revised (the Current: line is read outside fences): tests/records.test.mjs observes a fenced example before the real line only. Violating example, a fenced `Current: other` after `Current: first`, reproduced in a scratch project: the kernel names a repair for `other` with the closing fence appended, because currentCommitment reads the raw text. Mismatch, recorded as the open finding below.
   - mechanism review, LOOP-126 revised (an input is resolved against the project root): tests/records.test.mjs observes `.cairn/*` and `*` at the toplevel. Violating example, input `..` in a project at packages/app, reproduced in a scratch project: the first check ends with `commit packages/app/.cairn/evidence/` (LOOP-063), and the covers test compares the spelling, not the resolved path. Mismatch, recorded as the open finding below.
@@ -11,6 +11,7 @@ examined:
   - completion review, the hook: the stop hook still falls back to its own kernel when the link resolves to no file, as PKG-033 says; session-start now replaces such a link and says so. The verifier's other observation, that session-start links this checkout while another cairn is on PATH, is what PKG-019 requires, and the judge line names the other kernel.
   - completion review, the lints: pkg-lint reports 1510 lines, which is wc -l over bin/; spec-lint still flags a regex literal with no metacharacter and a ~user path, as SPEC-028 defines, and the plan's F1 row says so.
   - the review examined the code without changing it; the attacks ran in scratch projects and homes outside the repository.
+  - re-examined at b4960bc: the only change since 6d83fe7 is the .gitignore line docs/video/, added on the developer's direction; PKG-002's lint restricts .cairn/ lines and evidence only, the pkg-lint evidence was rerun and passes, and no code changed.
 findings:
   - resolved: a fenced Current: example after the real line selected the commitment (LOOP-104); currentCommitment reads the roadmap without fences (1d0b743), and the test covers a fence before and after the line.
   - resolved: an input spelled `..` from a project below the Git toplevel was not refused, and the check's message named .cairn/evidence/ from the Git toplevel (LOOP-126, LOOP-132); the covers test resolves each input against the root, and dirtyInputs maps Git's paths to the root (1d0b743), with a test for each.
@@ -30,3 +31,8 @@ PKG-026, PKG-028, PKG-034, PKG-019, PKG-033 and PKG-036 have current
 passing evidence; 454 tests pass, both lints clean, the kernel at
 1510 of 1600 lines. Attacked as listed under examined. No open
 finding.
+
+## Commitment review at b4960bc, 2026-09-15
+
+One ignore line added since 6d83fe7; pkg-lint rerun and passing. No
+open finding.

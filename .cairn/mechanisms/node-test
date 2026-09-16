@@ -12,6 +12,7 @@ inputs:
   - .cairn/mechanisms/node-test
   - .claude-plugin/
   - .codex-plugin/
+  - .muse-plugin/
   - hooks/
   - package.json
   - CHANGELOG.md

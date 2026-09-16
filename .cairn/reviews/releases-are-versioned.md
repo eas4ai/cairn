@@ -1,5 +1,5 @@
 commitment: releases-are-versioned
-commit: c7f0474
+commit: 0be0d8f
 examined:
   - cairn --version: prints the package.json version and exits 0 outside a repository and ahead of a command, and the help lists it; the read happens only when asked, so a kernel copied without package.json, as the hooks and plugin tests do with bin/, still wakes and judges; --version there is one line and exit 3.
   - the release script's refusals, each reproduced in the fixture tests: a malformed or extra argument, a version that is not an increase, a missing changelog entry, an existing tag, a version file that disagrees, a dirty tree including the changelog, and a loop not at Done; each is one line, exit 3, and leaves HEAD, the tags and the working tree as they were.
@@ -7,6 +7,7 @@ examined:
   - the changelog entry is committed before the release, not carried into the release commit: the changelog is a declared input, so an uncommitted entry makes wake ask for a record and the script refuse; the guide says so.
   - the real changelog has an entry for package.json's version, pinned by a test, so a bump without an entry fails the suite as well as the script.
   - the kernel is 1514 of 1600 lines after the four lines this adds.
+  - re-examined at 0be0d8f: the README gained the verdict in notation (4736c39), the developer's image with a plain-character transcription and a legend that names what the notation leaves out; assets/notation.png is declared beside the cover image; no code changed.
   - re-examined at c7f0474: the release 0.3.0 was cut by the script as one commit tagged v0.3.0; the version files changed and nothing else; cairn --version prints 0.3.0; node-test and pkg-lint rerun and pass.
   - attack: the script run from a subdirectory of the checkout, where package.json is not in cwd; the read throws, printing a stack trace with exit 1 instead of one line and exit 3. Recorded as the open finding below.
 findings:
@@ -27,3 +28,8 @@ rerun and passing. No open finding.
 
 Release 0.3.0 cut; the version files are the only change since the
 last review. No open finding.
+
+## Commitment review at 0be0d8f, 2026-09-16
+
+The README notation section is the only change; node-test and pkg-lint
+rerun and passing. No open finding.

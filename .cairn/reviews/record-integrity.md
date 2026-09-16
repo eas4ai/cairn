@@ -1,5 +1,5 @@
 commitment: record-integrity
-commit: 52921b0
+commit: 0b9582a
 examined:
   - the decider vocabulary at the point of writing: each of developer, agent and joint is accepted and stored lowercase; Developer, AGENT, Joint and a padded "  agent  " normalize to the same three; Codex, Shawn, "Shawn and Codex", agents, dev and a whitespace-only value are each a usage error naming all three and DEC-020, with nothing written to docs/decisions/. An empty --decided-by is still the missing-field error, not the vocabulary one, so the two diagnostics do not collide.
   - supersede reaches decide, so it takes the same vocabulary. Attacked: cairn supersede --decided-by Codex exits 3, writes no new record, and leaves the old record unstamped, so a refused decider cannot half-apply a reversal. --decided-by Joint stores joint.
@@ -15,12 +15,12 @@ examined:
   - the package: 471 tests run with none failing, spec-lint clean, pkg-lint clean at 1557 kernel lines against the 1600 ceiling.
   - a second pass after the first review, reading the diff against main rather than the commitment: three defects the first pass missed and three cleanups, below.
 findings:
-  - open: decider() calls trim() on the raw field, and fields() yields an array when Decided by: is written as a list, so cairn reversals crashes on a shape main tallied (reproduced: exit 3, "trim is not a function").
-  - open: the realization of record-integrity-on-the-developer-s-direction replaced every occurrence of the placeholder string, so the Decision body now says decide writes the 72743f9 commit line under Realized by; the sentence that explains why DEC-021 exists is false.
-  - open: a superseded record is skipped before its Realized by section is read, so the placeholder above a resolving entry passes validation there; DEC-021's falsifier names no exemption and a reversal is never deleted (DEC-010).
-  - open: tests/helpers.mjs realize() replaces the first occurrence of the placeholder anywhere in the file, the same hazard that corrupted the record above; it should anchor to the Realized by section, and the placeholder literal should be one exported constant rather than three spellings.
-  - open: the help text still reads --decided-by NAME and lists Levels but not deciders, so it documents a shape decide now refuses.
-  - open: decide() re-implements the trim and lowercase that decider() already does, so the write and read normalizers can drift; they already differ on internal whitespace.
+  - resolved: decider() calls trim() on the raw field, and fields() yields an array when Decided by: is written as a list, so cairn reversals crashes on a shape main tallied (reproduced: exit 3, "trim is not a function"). Resolved: decider() reads the field through asList and joins it, so a list-shaped Decided by tallies as the flat form does; tested (0b9582a)
+  - resolved: the realization of record-integrity-on-the-developer-s-direction replaced every occurrence of the placeholder string, so the Decision body now says decide writes the 72743f9 commit line under Realized by; the sentence that explains why DEC-021 exists is false. Resolved: the body sentence is restored to quote the placeholder; only the Realized by line names the commit (0b9582a)
+  - resolved: a superseded record is skipped before its Realized by section is read, so the placeholder above a resolving entry passes validation there; DEC-021's falsifier names no exemption and a reversal is never deleted (DEC-010). Resolved: the section and its entries are read before the Superseded by skip, and a built record with the placeholder is a repair whether or not it was reversed; an unbuilt superseded record is still never named build; tested (0b9582a)
+  - resolved: tests/helpers.mjs realize() replaces the first occurrence of the placeholder anywhere in the file, the same hazard that corrupted the record above; it should anchor to the Realized by section, and the placeholder literal should be one exported constant rather than three spellings. Resolved: realize() slices from the Realized by heading and replaces only there; UNBUILT is exported from helpers and records.test.mjs uses it; tested with a body that quotes the placeholder (0b9582a)
+  - resolved: the help text still reads --decided-by NAME and lists Levels but not deciders, so it documents a shape decide now refuses. Resolved: the help reads --decided-by WHO and lists Deciders beside Levels, both interpolated from the constants (0b9582a)
+  - resolved: decide() re-implements the trim and lowercase that decider() already does, so the write and read normalizers can drift; they already differ on internal whitespace. Resolved: decide writes const who = decider(...), the same normalizer the tally reads with (0b9582a)
 
 ## Commitment review at 52921b0, 2026-09-16
 
@@ -43,3 +43,15 @@ spellings until someone changes them by hand, and the report names them
 as unrecognized until then.
 
 No open finding.
+
+## Commitment review at 0b9582a, 2026-09-17
+
+The second pass read the diff against main rather than against the
+commitment, and that is where the first pass went wrong: it attacked
+the new behavior and never asked what old behavior the change removed.
+The list-shaped Decided by is exactly that, a shape main handled and
+the new normalizer dropped. The over-replaced record body is a defect
+in how the record was realized, not in the kernel, and the helper that
+was written the same evening carried the same hazard. All six are
+resolved as one piece of work above, each with a test where a test can
+hold it. No open finding.

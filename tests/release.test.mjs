@@ -26,8 +26,8 @@ test("cairn --version prints the package.json version outside a repository, and 
 const manifest = (v) => `{ "name": "cairn", "version": "${v}" }\n`;
 const fixture = () => {
   const root = base({
-    ".cairn/mechanisms/m": passing("R-001", "R-002").replace("  - src/other", "  - src/other\n  - package.json\n  - .claude-plugin/\n  - .codex-plugin/\n  - CHANGELOG.md"),
-    "package.json": manifest("0.1.0"), ".claude-plugin/plugin.json": manifest("0.1.0"), ".codex-plugin/plugin.json": manifest("0.1.0"),
+    ".cairn/mechanisms/m": passing("R-001", "R-002").replace("  - src/other", "  - src/other\n  - package.json\n  - .claude-plugin/\n  - .codex-plugin/\n  - .muse-plugin/\n  - CHANGELOG.md"),
+    "package.json": manifest("0.1.0"), ".claude-plugin/plugin.json": manifest("0.1.0"), ".codex-plugin/plugin.json": manifest("0.1.0"), ".muse-plugin/plugin.json": manifest("0.1.0"),
     ".claude-plugin/marketplace.json": `{ "name": "cairn", "plugins": [{ "name": "cairn", "source": "./", "version": "0.1.0" }] }\n`,
     "CHANGELOG.md": "# Changelog\n\n## 0.2.0 - 2026-09-15\n\n- The second version.\n\n## 0.1.0 - 2026-09-04\n\n- The first.\n",
   });
@@ -40,11 +40,11 @@ const release = (root, ...a) => spawnSync(process.execPath, [RELEASE, ...a], { c
 const state = (root) => git(root, "rev-parse", "HEAD").stdout + git(root, "tag", "-l").stdout + git(root, "status", "--porcelain", "--untracked-files=no").stdout;
 const refused = (root, why, ...a) => { const before = state(root); const r = release(root, ...a); assert.equal(r.status, 3, r.stdout + r.stderr); assert.equal(r.stderr.trim().split("\n").length, 1, r.stderr); assert.match(r.stderr, why); assert.equal(state(root), before, "nothing committed, tagged or written"); };
 
-test("a release is one commit setting one version in the four files, with the changelog entry, tagged v<version> (PKG-040)", () => {
+test("a release is one commit setting one version in the five files, with the changelog entry, tagged v<version> (PKG-040)", () => {
   const root = fixture();
   const r = release(root, "0.2.0");
   assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /^release: 0\.2\.0 committed as [0-9a-f]+ and tagged v0\.2\.0$/m);
-  for (const f of ["package.json", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json"]) assert.match(readFileSync(join(root, f), "utf8"), /"version": "0\.2\.0"/, f);
+  for (const f of ["package.json", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json", ".muse-plugin/plugin.json"]) assert.match(readFileSync(join(root, f), "utf8"), /"version": "0\.2\.0"/, f);
   assert.equal(git(root, "log", "-1", "--format=%s").stdout.trim(), "Release 0.2.0");
   assert.equal(git(root, "cat-file", "-t", "v0.2.0").stdout.trim(), "tag", "an annotated tag");
   assert.match(git(root, "tag", "-l", "-n1", "v0.2.0").stdout, /0\.2\.0 - 2026-09-15/, "the entry is the tag message");

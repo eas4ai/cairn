@@ -135,8 +135,25 @@ codex plugin marketplace add eas4ai/cairn
 codex plugin add cairn@cairn
 ```
 
-That is the install. The harness registers the two hooks from the
-plugin's `hooks/hooks.json`. At your next session start the hook links
+In Muse, install the checkout as a local bundle, where `<checkout>` is
+the absolute path of the clone:
+
+```sh
+muse plugins install <checkout>
+muse plugins list
+```
+
+`muse plugins validate <checkout>` checks the same bundle without
+installing it. To refresh the installed bundle, run
+`muse plugins update cairn`. On a checkout whose tracked
+`.cairn/evidence` history holds many thousands of files, install from
+a copy without that directory; for more information, see
+[installation details](docs/manual.md#installation-details).
+
+That is the install. Claude Code and Codex register the two hooks from
+the plugin's `hooks/hooks.json`; Muse reads its two hook entries from
+the plugin's `.muse-plugin/plugin.json`, one entry file per hook under
+`bin/hooks/`. At your next session start the hook links
 `$HOME/.local/bin/cairn` to the plugin's `bin/cairn.mjs` and says so;
 inside a Cairn project it prints the wake verdict, and from then on a
 stop is refused while the verdict is Resolvable, up to the harness's cap
@@ -148,8 +165,9 @@ cairn --help
 ```
 
 `cairn --help` lists commands, options, and examples; it works outside a
-project and changes nothing. Updates come through the marketplace; after
-one, check the path `cairn --help` resolves to, and if the link still
+project and changes nothing. Updates come through the marketplace, or in
+Muse from the checkout with `muse plugins update cairn`; after
+updating, check the path `cairn --help` resolves to, and if the link still
 points at the old version, remove it and start a session. If you once
 registered the hooks by hand, from the snippet under "Install from a
 checkout", remove those entries: two registrations print two verdicts

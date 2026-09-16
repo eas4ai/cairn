@@ -16,7 +16,12 @@ Bash-compatible shell.
 A harness with a plugin marketplace installed Cairn as a plugin: the
 plugin root, the directory two levels above this SKILL.md, holds
 `bin/cairn.mjs` and `bin/hook.mjs`, and the harness registered both
-hooks from the plugin's `hooks/hooks.json`. There is nothing to clone
+hooks from the plugin's `hooks/hooks.json`. In Muse the same bundle is
+described by `.muse-plugin/plugin.json`: install it with `muse plugins
+install <plugin root>`, or check it without installing with `muse
+plugins validate <plugin root>`. Its two hook entries run one entry
+file each under `bin/hooks/`, both delegating to `bin/hook.mjs`.
+There is nothing to clone
 and nothing to merge into settings; hook entries written by hand from
 the snippet below, if any, are removed, since two registrations run
 the hooks twice. The session-start hook links

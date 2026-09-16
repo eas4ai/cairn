@@ -2,9 +2,9 @@
 
 A release is one tagged commit. Every file a marketplace reads carries
 the same version, the changelog says what changed, and `cairn
---version` prints it. The version lives in package.json; the three
-plugin manifests under .claude-plugin/ and .codex-plugin/ mirror it,
-and a test keeps them equal.
+--version` prints it. The version lives in package.json; the four
+plugin manifests under .claude-plugin/, .codex-plugin/ and .muse-plugin/
+mirror it, and a test keeps them equal.
 
 ## Cut a release
 
@@ -17,7 +17,7 @@ and a test keeps them equal.
    refuses, in one line and with nothing written, a dirty tree, a
    version that is not an increase, a missing changelog entry, an
    existing tag, a version file that disagrees, or a loop not at
-   Done. Then it sets the version in the four files, commits
+   Done. Then it sets the version in the five files, commits
    `Release X.Y.Z`, and tags `vX.Y.Z` with the entry as the message.
 4. The version files are declared inputs, so their evidence is stale
    at the release commit. Run `cairn check --stale`, record the

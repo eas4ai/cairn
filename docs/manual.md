@@ -640,8 +640,16 @@ memorize. Cairn normally prints the relevant label in its next action.
 The [plugin installation](../README.md#install-the-plugin) registers both
 hooks from the plugin's `hooks/hooks.json`, so nothing is merged into your
 settings; the session-start hook links `$HOME/.local/bin/cairn` to the
-plugin's `bin/cairn.mjs` at the next session start. The rest of this
-section describes the two installs without a marketplace.
+plugin's `bin/cairn.mjs` at the next session start. In Muse, install
+the same bundle from a checkout with `muse plugins install <checkout>`
+and check it without installing with `muse plugins validate
+<checkout>`; its two hook entries live in `.muse-plugin/plugin.json`.
+Muse inventories the whole checkout during validation, and that step
+fails on a checkout whose tracked `.cairn/evidence` history holds many
+thousands of files. When validation reports `Agent Definition
+inventory derivation failed closed`, install from a copy without that
+directory. The project's own evidence stays in Git regardless.
+The rest of this section describes the two installs without a marketplace.
 
 The [checkout installation](../README.md#install-from-a-checkout) uses the
 session-start hook, `node <checkout>/bin/hook.mjs session-start`. On its

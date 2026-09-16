@@ -101,3 +101,14 @@ test("a record with no Decided by line is tallied as unrecorded, not as a vocabu
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /by decider: unrecorded 1$/m, r.stdout);
 });
+
+test("Decided by written as a list tallies like the flat form, and does not crash the report (LOOP-124, DEC-020)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/listed.md"),
+    "# Listed\n\nLevel: Judged\nDecided by:\n  - Agent\nRests on: R-001\nWould be wrong if: x\nSuperseded by: listed-2\n\n## Realized by\n\n- abc1234  did it\n");
+  writeFileSync(join(root, "docs/decisions/listed-2.md"),
+    "# Listed 2\n\nLevel: Judged\nDecided by: agent\nSupersedes: listed\nCause: the premise was false\nRests on: R-001\nWould be wrong if: x\n\n## Realized by\n\n- abc1234  did it\n");
+  const r = cairn(root, "reversals");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /by decider: agent 1$/m, r.stdout);
+});

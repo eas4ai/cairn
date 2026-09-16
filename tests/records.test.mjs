@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { writeFileSync, readFileSync, existsSync, mkdirSync, chmodSync, appendFileSync, unlinkSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { repo as base, cairn, commit, review, fromFile, passing, head, git, records, CLI, realize } from "./helpers.mjs";
+import { repo as base, cairn, commit, review, fromFile, passing, head, git, records, CLI, realize, UNBUILT } from "./helpers.mjs";
 import { parseSpec } from "../bin/spec.mjs";
 
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
@@ -159,7 +159,6 @@ test("a Status: word is taken only from a line that carries one, never from wrap
 
 // --- the unbuilt placeholder above a resolving commit (DEC-021) ---
 
-const UNBUILT = "(none yet: recorded, not built)";
 // A decision record whose Realized by section is exactly what is passed.
 const realized = (body) => `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n## Decision\n\nx\n\n## Realized by\n\n${body}\n`;
 
@@ -234,4 +233,29 @@ test("supersede takes the same decider vocabulary as decide (DEC-020)", () => {
   r = supersede("Joint");
   assert.equal(r.status, 0, r.stderr);
   assert.match(readFileSync(join(root, "docs/decisions/new.md"), "utf8"), /^Decided by: joint$/m);
+});
+
+test("a superseded record is held to the same line: its placeholder above a resolving entry is a repair (DEC-021, DEC-010)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(`${UNBUILT}\n\n- ${head(root)} init`).replace("History: none\n", "History: none\nSuperseded by: e\n"));
+  writeFileSync(join(root, "docs/decisions/e.md"), realized(`- ${head(root)} init`).replace("History: none\n", "History: none\nSupersedes: d\nCause: the premise was false\n"));
+  commit(root, "a reversed record still says it was never built");
+  const r = wake(root);
+  assert.match(r.stdout, /^Resolvable: repair docs\/decisions\/d\.md/, r.stdout); assert.match(r.stdout, /DEC-021/);
+  // Once repaired, a superseded record with no resolving entry is still skipped, never named build.
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(UNBUILT).replace("History: none\n", "History: none\nSuperseded by: e\n"));
+  commit(root, "repaired, and unbuilt");
+  assert.doesNotMatch(wake(root).stdout, /docs\/decisions\/d\.md/);
+});
+
+test("realize() touches only the Realized by section; a body that quotes the placeholder keeps it", () => {
+  const root = repo();
+  const body = `## Decision\n\nUntil built, the section reads ${UNBUILT}.\n\n## Realized by\n\n${UNBUILT}\n`;
+  writeFileSync(join(root, "docs/decisions/d.md"), `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n${body}`);
+  realize(root, "d", "built");
+  const t = readFileSync(join(root, "docs/decisions/d.md"), "utf8");
+  assert.ok(t.includes(`the section reads ${UNBUILT}.`), "the body sentence is untouched");
+  assert.match(t, /## Realized by\n\n- [0-9a-f]+ built\n$/, t);
+  commit(root, "built");
+  assert.doesNotMatch(wake(root).stdout, /docs\/decisions\/d\.md/);
 });

@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-stop-hook-holds-without-trapping
+Current: unpushed-commits-carry-no-ai-attribution-when-forbidden
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -612,3 +612,47 @@ progress only where the developer sees it and the next wake asks why.
 Revises PKG-018, PKG-021 and PKG-033; adds PKG-043, PKG-044 and
 LOOP-139.
 [Commitment](../commitments/the-stop-hook-holds-without-trapping.md).
+
+## Unpushed commits carry no AI attribution when forbidden
+
+Specified on 2026-09-17 in the next-iteration phase, one of five fixes
+to what made the loop a frustration. A project that forbids AI
+attribution learns of an attribution line before the commit leaves the
+machine: the wake names rewording it, and the release script refuses it.
+Covers PKG-045.
+[Commitment](../commitments/unpushed-commits-carry-no-ai-attribution-when-forbidden.md).
+
+## Check asks mechanism reviews only for the commitment
+
+Specified on 2026-09-17 in the next-iteration phase, one of five fixes
+to what made the loop a frustration. A requirement revised outside the
+current commitment no longer stops check; its mechanism review waits for
+the commitment that includes it. Covers LOOP-059.
+[Commitment](../commitments/check-asks-mechanism-reviews-only-for-the-commitment.md).
+
+## Documents and the changelog cost one check
+
+Specified on 2026-09-17 in the next-iteration phase, one of five fixes
+to what made the loop a frustration. A release costs one check and one
+review, and a documentation-only change does not reopen a review. Covers
+PKG-040, LOOP-141.
+[Commitment](../commitments/documents-and-the-changelog-cost-one-check.md).
+
+## Defects are fixed without a promotion
+
+Specified on 2026-09-17 in the next-iteration phase, one of five fixes
+to what made the loop a frustration. A defect that an Agreed requirement
+already forbids is captured as a defect item and fixed with a failing
+test, a fix, a check and a review, without a promotion decision, a new
+requirement, a commitment file or a roadmap section. Covers LOOP-087,
+LOOP-140.
+[Commitment](../commitments/defects-are-fixed-without-a-promotion.md).
+
+## Reviews carry an independent report
+
+Specified on 2026-09-17 in the next-iteration phase, one of five fixes
+to what made the loop a frustration. No commitment is Done on the
+builder's review alone: an independent report, written by a reviewer
+without the build's context, sits beside the review, and every finding
+it raises is carried. Covers LOOP-020.
+[Commitment](../commitments/reviews-carry-an-independent-report.md).

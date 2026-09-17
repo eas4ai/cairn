@@ -319,9 +319,22 @@ one.
 
 [LOOP-020] Before the agent reports a commitment complete, the agent
 MUST examine the work for defects. The agent MUST record what it
-examined.
+examined. The review MUST carry an independent report, written by a
+reviewer given the commitment, its requirement texts and its commit
+range and none of the build's context, at the review's commit. Every
+finding in that report MUST appear in the review as open or resolved.
 Falsifier: a commitment reports complete and no record names what the
-review examined.
+review examined; or it reports complete with no
+.cairn/reviews/<slug>.independent.md at the review's commit, or with a
+finding in that report that the review does not carry.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The first text asked only for the agent's
+own review, and the agent that built the work graded it. The kernel
+checks that the independent report exists, names the review's commit,
+and that its findings are carried; it cannot prove the reviewer had
+none of the build's context. The working agreement says how to start
+one.
 
 [LOOP-032] The agent MUST NOT change code during a review.
 Falsifier: the working tree differs between the start and the end of a
@@ -594,18 +607,25 @@ not part of that digest. Old receipts use the text at their recorded
 commit; unavailable text cannot establish freshness. A commitment review
 is also stale when a requirement it covers changed since its commit.
 
-[LOOP-059] Before recording evidence for revised requirement text, the
-loop MUST require a recorded review of the mechanism against that text.
+[LOOP-059] Before evidence for revised requirement text counts toward
+the current commitment, the loop MUST require a recorded review of the
+mechanism against that text. Check MUST NOT demand that review for a
+requirement outside the current commitment and its inherited
+requirements.
 Falsifier: rerunning the old 500 ms check records new passing evidence
-for the 100 ms requirement without a mechanism review.
+that counts for the 100 ms requirement in the current commitment
+without a mechanism review; or check refuses to run a mechanism
+because a requirement no current commitment includes was revised.
+Status: Agreed 2026-09-17
 
-The agent examines the check without changing code and records its
-findings in the commitment's existing review file. It fixes a mismatch
-as a separate implementation action, then verifies the correction. It adds
-`ID sha256:...` to the mechanism declaration's reviewed list, using the
-digest wake prints. This records the agent's judgment, not proof of its
-understanding. The declaration and specification are committed before
-check. A first check with no prior evidence needs no revision marker.
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The first text said "Before recording
+evidence for revised requirement text, the loop MUST require a
+recorded review", and check applied it to every requirement a
+mechanism speaks for. A specification phase that revised requirements
+no commitment includes then forced their mechanism reviews at once,
+before anything was built to review. The wake still names the review
+before a commitment that includes the requirement can use its
+evidence, because the reviewed digest is missing.
 
 [LOOP-060] The loop MUST digest a declared input identically at a commit
 and in the tree whatever its size.
@@ -985,10 +1005,15 @@ Promoted to: line.
 
 [LOOP-087] When every requirement in the current commitment is met and
 the backlog holds an item with no Promoted to: line, the loop MUST name
-promotion as the next action rather than Done.
+promotion as the next action rather than Done. A defect item with no
+Fixed by: line MUST be named before any promotion.
 Falsifier: the commitment is complete, a backlog item carries no
-Promoted to: line, and wake prints Done.
-Status: Agreed 2026-09-14
+Promoted to: line, and wake prints Done; or a defect item carries no
+Fixed by: line and wake names promote.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase: defects come first, and a defect is fixed,
+not promoted (LOOP-140).
 
 [LOOP-088] The agent MUST promote a backlog item by a decision record at
 Consequential that names the item, the requirement it drafts, and that
@@ -1700,3 +1725,36 @@ Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in 
 without progress (PKG-043); the record makes that stop the next
 session's first business, in the agent's own words, committed where
 the developer reads the history.
+
+[LOOP-140] A defect item MUST name an Agreed requirement whose text
+already forbids the defect. The wake MUST name fixing a defect item
+with no Fixed by: line. A defect item MUST count as fixed only when
+its Fixed by: commit changes no Agreed requirement and the named
+requirement has passing evidence at or after that commit.
+Falsifier: a defect item whose Fixed by: commit changes an Agreed
+requirement's digest counts as fixed; or one counts as fixed while the
+named requirement's latest evidence predates the commit or fails; or
+wake names Done with an unfixed defect item.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. Fixing a regex in the release script
+took a promotion decision, a new requirement, a commitment file, a
+roadmap section and a stamp, while its value was the failing test and
+the review. A defect against text that already forbids it needs the
+test and the review, not a new contract; a fix that must change the
+contract is a promotion or a next-iteration item as before.
+
+[LOOP-141] A review MUST be stale when a declared input of the
+commitment's mechanisms changed since the commit the review examined,
+unless every changed input is listed under documents: in its
+declaration.
+Falsifier: a change to a declared input no documents: list names
+leaves the review current; or a change only to listed documents makes
+it stale.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The kernel enforced review freshness
+under LOOP-032's number with no text of its own. A changelog line or a
+manual paragraph that a test reads still makes that test's evidence
+stale; it no longer sends the agent back to re-examine a review whose
+code did not change.

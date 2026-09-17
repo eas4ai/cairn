@@ -457,21 +457,21 @@ Status: Agreed 2026-09-15 by deference releases-are-versioned-on-the-developer-s
 [PKG-040] A release MUST be one commit that sets one version in
 package.json and the plugin manifests and carries that version's
 changelog entry, tagged v<version>. The release script MUST refuse a
-dirty tree, a version that is not a semantic-version increase, a
-missing changelog entry, an existing tag, or a loop that is not at
-Done.
+tree dirty in any file but CHANGELOG.md, a version that is not a
+semantic-version increase, a missing changelog entry, an existing tag,
+or a loop that is not at Done. An uncommitted CHANGELOG.md MUST be
+committed in the release commit.
 Falsifier: the script commits with the version differing across those
 files or without the changelog entry, leaves the tag off, or proceeds
-on a dirty tree, a lower version, a taken tag, or a verdict other than
-Done.
-Status: Agreed 2026-09-15 by deference releases-are-versioned-on-the-developer-s-direction
+on a tree dirty in another file, a lower version, a taken tag, or a
+verdict other than Done; or it refuses a tree dirty only in
+CHANGELOG.md, or leaves that change out of the release commit.
+Status: Agreed 2026-09-17
 
-Agreed 2026-09-15 on the developer's direction. A marketplace
-refreshes a plugin only when its version changes, so the version is
-the release; one script keeps the four files agreeing, and the tag
-and the changelog entry make a release findable from Git alone. The
-version files are declared inputs, so their evidence goes stale at
-the release commit, and the loop's next check and review record it.
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The first text refused any dirty tree, so
+the changelog entry was its own commit, and every release paid two
+full checks and two reviews: one for the entry, one for the version
+files. Folded into the release commit, the entry costs nothing extra.
 
 [PKG-041] A hook MUST name the failure it met. When the working
 directory on standard input does not exist, the line MUST say so and
@@ -538,3 +538,26 @@ the harness shows the developer why, and the next wake asks the agent
 to explain it before any other work (LOOP-139). The count lives in the
 Git directory, which a fresh clone lacks and the next stop rebuilds
 (PKG-002); the stop record is a Cairn record and is committed.
+
+## Attribution a project forbids
+
+[PKG-045] When .cairn/policy carries attribution: forbidden, the wake
+MUST name rewording, ahead of every action but waiting for a live
+check, a commit on no remote-tracking branch whose message carries an
+AI attribution line. The release script MUST refuse such a commit. An
+AI attribution line is a Co-Authored-By trailer naming Claude,
+Anthropic, Codex, OpenAI, Copilot or Gemini, a Claude-Session trailer,
+or a Generated with line naming one of them.
+Falsifier: with the policy set, an unpushed commit carries
+Co-Authored-By: Claude and the wake names another action, or the
+release script cuts a release; or without the policy, or with the
+commit already on a remote-tracking branch, the wake names reword.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. On 2026-09-17 twenty-three commits
+carrying Co-Authored-By and Claude-Session trailers reached a public
+repository without the developer's approval, and nothing in the loop
+could have said so: Cairn checked the tree, never the messages. The
+policy is opt-in because a consumer may want attribution. Only commits
+not yet on a remote-tracking branch are named, because rewording those
+rewrites nothing anyone else holds.

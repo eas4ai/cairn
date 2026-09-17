@@ -35,6 +35,10 @@ against exactly one commitment at a time.
 **Decision record.** The durable record of a decision, what it rests on,
 who made it, what would make it wrong, and which commits realized it.
 
+**Defect item.** A backlog item captured with --defect that names an
+Agreed requirement whose text already forbids the defect; it is fixed by
+a failing test and the change that passes it, not promoted (LOOP-140).
+
 **Deference.** The developer's recorded ruling, in their own words,
 that the agent's recommendation stands for a named scope of work
 unless review changes it substantively. A requirement agreed that
@@ -55,6 +59,11 @@ or by the promotion or deference decision that names it.
 
 **Freshness.** Whether evidence still describes the current requirement,
 its falsifier, and the code checked against them.
+
+**Independent report.** The review of a commitment written by a reviewer
+given only the commitment, its requirement texts and its commit range,
+kept as .cairn/reviews/<slug>.independent.md; its findings are carried
+into the review (LOOP-020).
 
 **Jev mode.** The mode, set by JEV_ENGINE=1, in which each autonomous
 decision is judged by Jev before it is accepted (AUTO-001, AUTO-014).

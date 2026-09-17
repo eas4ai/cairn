@@ -45,7 +45,10 @@ write the in-progress record below, or commit.
 `reconcile <action>`: finish or abandon the recorded action, below.
 `explain <path>`: the stop hook let you stop after three refusals with
 no progress; add an Explanation: line saying why you stopped, and
-commit it.
+commit it. `reword <sha>`: the project forbids AI attribution; rewrite
+that unpushed commit's message without the attribution lines, then
+wake. `fix <item>`: a defect item; write a test that fails, make it
+pass, commit, check, and add `Fixed by: <sha>` to the item.
 `scope <path>`: the scope paragraph, below. `escalate <REQ>`: raise
 the escalation the reason asks for. `escalate <path>`: add an
 `Outside because:` line to the captured file, or escalate with the
@@ -93,6 +96,8 @@ A mechanism declaration is `.cairn/mechanisms/<name>`:
     cwd: <directory it runs in; omit for the project root>
     inputs:
       - <path or directory it reads>
+    documents:
+      - <an input that is documentation only>
     requirements:
       - <REQ>
     results: per-requirement
@@ -174,6 +179,8 @@ falsifier, or this file goes to `cairn backlog --next-iteration
 A backlog item enters a commitment by a recorded promotion at Done. A
 next-iteration item enters only when the developer writes it into the
 specification.
+A defect that an Agreed requirement's text already forbids goes to
+`cairn backlog --defect --title ... --body ... --from <REQ>`.
 A report, audit or review you did not write is not work under way:
 read it, capture each finding the same way, to next-iteration only
 when its fix would change Agreed text, and commit the report with the
@@ -190,6 +197,12 @@ Review before Done. When every requirement passes, examine the work for
 what the mechanisms would miss, record what you attacked and what you
 found in `.cairn/reviews/<slug>.md`, and change no code while you look.
 A finding is resolved as its own work, after the review is recorded.
+Before the review is complete, start a reviewer with none of your
+context, such as a fresh subagent or session, give it only the
+commitment file, its requirement texts and the commit range, and ask
+it for defects. Keep its report verbatim in
+.cairn/reviews/<slug>.independent.md with the review's commit: line,
+and carry each of its findings into your review as open or resolved.
 
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own

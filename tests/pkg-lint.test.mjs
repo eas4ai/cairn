@@ -34,8 +34,8 @@ test("PKG-003: a command, a directory, or a record kind no decision names", () =
 });
 test("PKG-004: a kernel over 1900 lines, counting every file under bin/ as wc -l does; exactly 1900 passes", () => {
   finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1900) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1900) }, "PKG-004");
-  let r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1599) })); assert.equal(r.status, 0, r.stdout);
-  r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(799), "bin/y.mjs": "1;\n".repeat(800) })); assert.equal(r.status, 0, r.stdout);
+  let r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1899) })); assert.equal(r.status, 0, r.stdout);
+  r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(949), "bin/y.mjs": "1;\n".repeat(950) })); assert.equal(r.status, 0, r.stdout);
 });
 test("PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)", () => {
   finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006");

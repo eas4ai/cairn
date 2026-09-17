@@ -14,6 +14,7 @@ inputs:
   - tests/
   - .claude-plugin/
   - .codex-plugin/
+  - .muse-plugin/
   - hooks/
   - CHANGELOG.md
 requirements:

@@ -7,6 +7,29 @@ record shape or document meaning; a minor adds or revises
 requirements, verdicts or record shapes and still reads earlier
 records; a major changes what earlier records mean.
 
+## 0.5.0 - 2026-09-17
+
+- A file Git does not track is no longer a change under way: a draft,
+  report or image dropped under a declared folder does not make the
+  wake name `record`, so it cannot hold a session at the stop hook.
+  `cairn check` still refuses to record evidence while one sits in a
+  declared input, and now says it can go in `.gitignore` (LOOP-110).
+- The stop hook gives way once it has refused: when the harness reports
+  that the stop was already blocked (`stop_hook_active`), the hook
+  prints the verdict and lets the agent stop (PKG-018).
+- `cairn check --stale` holds back a mechanism whose requirement has
+  three attempts and no escalation since, and names the requirement to
+  escalate, instead of recording a fourth attempt (LOOP-094, DEC-016).
+- The working agreement says a report, audit or review the agent did
+  not write is not work under way: its findings are captured to the
+  backlog, or to next-iteration when the fix would change Agreed text,
+  and the report is committed with them (LOOP-138). Copy the template's
+  new sentence into a project's AGENTS.md when it is next written.
+
+Upgrading: nothing is rewritten. The kernel changed, so every mechanism
+re-runs once, and a revised requirement asks for its mechanism review
+before its next check (LOOP-059).
+
 ## 0.4.0 - 2026-09-17
 
 - `cairn decide --decided-by` takes `developer`, `agent` or `joint`,

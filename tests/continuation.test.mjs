@@ -293,7 +293,7 @@ test("the restore route measures from the tree before activation, so a path the 
 test("the loop works against exactly one commitment: the current one (LOOP-019)", () => {
   const root = repo(EARLIER); cairn(root, "check");
   writeFileSync(join(root, ".cairn/reviews/zero.md"), `commitment: zero\ncommit: ${head(root)}\nexamined:\n  - x\nfindings: []\n`);
-  writeFileSync(join(root, ".cairn/reviews/zero.independent.md"), `commitment: zero\ncommit: ${head(root)}\nreviewer: a fresh reviewer\nexamined:\n  - x\nfindings: []\n`); commit(root, "zero reviewed");
+  writeFileSync(join(root, ".cairn/reviews/zero.independent.md"), `commitment: zero\ncommit: ${head(root)}\nreviewer: a fresh reviewer\nexamined:\n  - x at ${head(root)}\nfindings: []\n`); commit(root, "zero reviewed");
   assert.match(wake(root), /^Done: zero/, "first, with no review, is not judged");
   writeFileSync(join(root, "docs/spec/roadmap.md"), "# Roadmap\n\nCurrent: first\n"); writeFileSync(join(root, "docs/commitments/first.md"), "# First\n\nSlug: first\nRequirements: R-001, R-002\n"); commit(root, "activate first");
   assert.match(wake(root), /^Resolvable: review first/, "now first is judged and zero is not");

@@ -118,8 +118,8 @@ git add .cairn/evidence
 git commit -qm 'Record the passing check'
 printf 'commitment: reject-empty-names\ncommit: %s\nexamined:\n  - empty-name failure before the fix and success after it\n  - ordinary-name acceptance; spaces and non-string values are outside this agreement\nfindings: []\n' \
   "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.md
-printf 'commitment: reject-empty-names\ncommit: %s\nreviewer: a fresh subagent given the commitment, APP-001 and the commit range\nexamined:\n  - the test against the falsifier\nfindings: []\n' \
-  "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.independent.md
+printf 'commitment: reject-empty-names\ncommit: %s\nreviewer: a fresh subagent given the commitment, APP-001 and the commit range\nexamined:\n  - the test against the falsifier at %s\nfindings: []\n' \
+  "$(git rev-parse HEAD)" "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.independent.md
 git add .cairn/reviews
 git commit -qm 'Review empty-name behavior'
 cairn wake

@@ -128,6 +128,7 @@ findings:
   - resolved: When the report is missing or not carried, the action named is "review <slug>", the same action as a stale review. A developer reading the refusal cannot tell from the action alone that the builder's review is fine and only the independent report needs work. This comes from reading the code; it is a wording issue, not a wrong verdict. Resolved: a malformed report is named repair on the report itself; a missing or uncarried one says the review is current and only the report needs work (17185e73)
   - resolved: The Done message still says "the review at <commit> is clean" and does not mention the independent report, so the success message does not show that LOOP-020's new condition was checked. This comes from reading the code. Resolved: Done now says the review and its independent report are clean (17185e73)
   - resolved: tests/independent.test.mjs covers only well-formed reports. None of the cases above is tested (missing or misplaced findings, uncommitted report, prefix or wrapped findings, bad commit value, other commitment, open: prefix). Resolved: tests/independent.test.mjs gains a case for each finding above, and failed on the kernel before this fix (17185e73)
+  - resolved: a margin rule directly under a field line was joined to that field as a continuation, so a record with --- under its commit: line had an unreadable commit and was refused with LOOP-058, which names neither the line nor the cause; found while resolving the two above and resolved at 1fa3d06b: the header parser skips a rule and keeps reading the fields below it.
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -267,7 +268,6 @@ All six are resolved in 0c0fd5f1, each with a test that fails on the kernel
 before it. The suite is 517 tests, all passing, and the six legacy
 reviews the reader refuses are refused for the reasons they carried
 before this commitment.
-  - resolved: a margin rule directly under a field line was joined to that field as a continuation, so a record with --- under its commit: line had an unreadable commit and was refused with LOOP-058, which names neither the line nor the cause; found while resolving the two above and resolved at 1fa3d06b: the header parser skips a rule and keeps reading the fields below it.
 
 ## Review at 09abf7f7, 2026-09-17
 

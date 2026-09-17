@@ -30,12 +30,14 @@ if (at < 0) refuse(`CHANGELOG.md has no entry "## ${next} - <date>"; write what 
 const entry = log.slice(at, log.indexOf("\n## ", at + 1) < 0 ? undefined : log.indexOf("\n## ", at + 1)).trim();
 if (git("tag", "-l", `v${next}`).trim()) refuse(`tag v${next} exists`);
 const texts = FILES.map((f) => [f, read(f)]);
-for (const [f, t] of texts) if (t.split(`"version": "${current}"`).length !== 2) refuse(`${f} does not carry "version": "${current}" exactly once`);
+// The version field in any JSON spacing, so a compact manifest is read like a pretty one (PKG-042).
+const field = () => new RegExp(`"version"\\s*:\\s*"${current.replace(/\./g, "\\.")}"`, "g");
+for (const [f, t] of texts) if ((t.match(field()) ?? []).length !== 1) refuse(`${f} does not carry "version": "${current}" exactly once`);
 const dirty = git("status", "--porcelain", "--untracked-files=no").split("\n").filter(Boolean);
 if (dirty.length) refuse(`the tree is dirty: ${dirty.map((l) => l.slice(3)).join(", ")}; commit or stash before a release`);
 const w = spawnSync(process.execPath, [KERNEL, "wake", "--root", root], { encoding: "utf8" });
 if (!/^Done: /.test(w.stdout ?? "")) refuse(`the loop is not at Done: ${(w.stdout || w.stderr || "").trim().split("\n")[0]}`);
-for (const [f, t] of texts) writeFileSync(join(root, f), t.replace(`"version": "${current}"`, `"version": "${next}"`));
+for (const [f, t] of texts) writeFileSync(join(root, f), t.replace(field(), (m) => m.replace(`"${current}"`, `"${next}"`)));   // only the quoted version changes
 git("add", "--", ...FILES);
 git("commit", "-q", "-m", `Release ${next}`);
 git("tag", "-a", `v${next}`, "-m", entry.replace(/^## /, ""));   // git drops lines that start with # from a tag message

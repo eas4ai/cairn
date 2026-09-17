@@ -69,3 +69,17 @@ test("the release script refuses a bad version, no increase, a dirty tree, a mis
   const r = release(root, "0.3.0"); assert.equal(r.status, 0, r.stderr + r.stdout);
   assert.equal(git(root, "status", "--porcelain", "--untracked-files=no").stdout, ""); assert.equal(git(root, "cat-file", "-t", "v0.3.0").stdout.trim(), "tag");
 });
+
+test("a version file written as compact JSON is released, and nothing else in any version file changes (PKG-042)", () => {
+  const root = fixture();
+  const compact = (v) => `{"name":"cairn","capabilities":{"skills":[]},"version":"${v}"}\n`;
+  writeFileSync(join(root, ".muse-plugin/plugin.json"), compact("0.1.0")); commit(root, "the Muse manifest, compact");
+  cairn(root, "check"); review(root); commit(root, "green again");
+  assert.match(cairn(root, "wake").stdout, /^Done: /);
+  const r = release(root, "0.2.0");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.equal(readFileSync(join(root, ".muse-plugin/plugin.json"), "utf8"), compact("0.2.0"), "compact stays compact");
+  for (const f of ["package.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"]) assert.equal(readFileSync(join(root, f), "utf8"), manifest("0.2.0"), f);
+  assert.equal(readFileSync(join(root, ".claude-plugin/marketplace.json"), "utf8"), `{ "name": "cairn", "plugins": [{ "name": "cairn", "source": "./", "version": "0.2.0" }] }\n`);
+  assert.equal(git(root, "tag", "-l", "v0.2.0").stdout.trim(), "v0.2.0");
+});

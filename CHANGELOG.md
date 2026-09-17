@@ -44,6 +44,8 @@ records; a major changes what earlier records mean.
     and still reports an ambiguous identifier (DEC-023).
   - A git that cannot be started is one line on stderr and exit 3 from
     every command, never a verdict or a receipt (LOOP-137).
+- The release script reads a version field in any JSON spacing, so a
+  compact manifest no longer blocks a release (PKG-042).
 
 Upgrading a repository that already holds records: existing records are
 never rewritten, and nothing is lost. Two things change on the first

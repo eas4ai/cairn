@@ -215,6 +215,7 @@ requirements:
   - PKG-035
   - PKG-036
   - LOOP-132
+  - LOOP-133
   - PKG-037
   - PKG-038
   - PKG-039

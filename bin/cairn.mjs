@@ -786,7 +786,7 @@ function evidenceError(root, receipt, outputs) {
   }
   return null;
 }
-// The review is not the builder's alone: an independent report, committed, for this commitment, naming the review's commit, every finding carried by its number (LOOP-020).
+// The review is not the builder's alone: an independent report, committed, for this commitment, naming the review's commit, every finding carried by its commit and number (LOOP-020).
 function independentGap(root, slug, rv) {
   const name = `.cairn/reviews/${slug}.independent.md`, own = `.cairn/reviews/${slug}.md`;
   const committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
@@ -802,21 +802,24 @@ function independentGap(root, slug, rv) {
   if (commitOf(f.commit) !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
   const examined = asList(f.examined).filter((x) => x !== "[]").map(String);
   if (!examined.length) return repair(`${name} needs a nonempty examined: list`);
-  // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot (LOOP-020).
-  if (!examined.some((x) => x.toLowerCase().includes(at.slice(0, 7)))) return again(`${name} does not name commit ${at.slice(0, 7)} in its examined: list, so it was not written for this review`);
+  // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
+  if (!text.replace(/^commit:[^\n]*\n/m, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   if (f.findings !== "[]" && !Array.isArray(f.findings)) return repair(`${name} needs findings: as a list of one-line entries, or findings: [], above any heading`);
   const block = (text.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean);   // the findings list, up to a blank or other unindented line
   if (block.some((l) => !/^\s*-\s/.test(l))) return repair(`${name} has a finding that wraps onto a second line; keep each finding on one line`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
   const report = f.findings === "[]" ? [] : f.findings.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
-  // Each finding n is carried by the one review line that cites (independent n) and nothing else, and begins with its words (LOOP-020).
-  const lines = asList(recordFields(committed(own) ?? "").findings).map(String), cite = /\(independent (\d+)\)/gi;
+  // Each finding n is carried by the one review line that cites (independent <report commit> n) and nothing else, and begins with its words (LOOP-020).
+  const reviewText = committed(own) ?? "", short = at.slice(0, 7), mark = (n) => `(independent ${short} ${n})`;
+  if (((reviewText.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean)).some((l) => !/^\s*-\s/.test(l))) return { verdict: "Resolvable", action: `repair ${own}`, why: "a review finding wraps onto a second line, which loses its citation; keep each finding on one line (LOOP-020)" };
+  const lines = asList(recordFields(reviewText).findings).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi;
+  const pairs = (l) => new Set([...l.matchAll(cite)].map((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}`));
   for (const [i, words] of report.entries()) {
-    const n = i + 1, hits = lines.filter((l) => [...l.matchAll(cite)].some((m) => Number(m[1]) === n));
+    const n = i + 1, hits = lines.filter((l) => pairs(l).has(`${short} ${n}`));
     const body = hits.length === 1 ? norm(hits[0].replace(cite, "")).toLowerCase() : "", stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
-    const why = hits.length === 0 ? "no review line cites it" : hits.length > 1 ? `${hits.length} review lines cite it` : [...hits[0].matchAll(cite)].length > 1 ? "its review line cites another finding too" : !body.startsWith(stem) ? "its review line does not begin with its words" : null;
-    if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> (independent n) or resolved: <its words>, and how (independent n) (LOOP-020)` };
+    const why = hits.length === 0 ? `no review line cites ${mark(n)}` : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : pairs(hits[0]).size > 1 ? "its review line cites another finding too" : !body.startsWith(stem) ? "its review line does not begin with its words" : null;
+    if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> ${mark("n")} or resolved: <its words>, and how ${mark("n")} (LOOP-020)` };
   }
   return null;
 }

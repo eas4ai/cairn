@@ -202,11 +202,13 @@ context, such as a fresh subagent or session, give it only the
 commitment file, its requirement texts and the commit range, and ask
 it for defects. Keep its report verbatim in
 .cairn/reviews/<slug>.independent.md with the review's commit: line,
-commit it. The report names the commit it examined. Carry its finding
-number n into your review on its own line as
-`open: <its words> (independent n)` or
-`resolved: <its words>, and how (independent n)`. A review redone at a
-later commit needs a new report there; never edit a report to fit.
+commit it. Ask the reviewer to name the commit it examined in its
+examined: list. Carry its finding number n into your review on its own
+line as `open: <its words> (independent <commit> n)` or
+`resolved: <its words>, and how (independent <commit> n)`, where
+<commit> is the first seven characters of the report's commit. A review
+redone at a later commit needs a new report there; never edit a report
+to fit.
 
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own

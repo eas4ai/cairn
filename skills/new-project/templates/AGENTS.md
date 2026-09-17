@@ -121,8 +121,8 @@ above the first heading:
 `findings:` are the entries that follow them. An `examined:` list ends
 at `findings:`; a `findings:` list ends at the first heading or the
 record's end. An entry is a bullet or a number, one per line; a line
-indented under an entry joins it, and so does a bullet nested beneath it
-unless that bullet reads as a finding of its own. Blank lines between
+indented under an entry joins it, and so does a bullet nested beneath it,
+unless it reads as a finding of its own. Blank lines between
 entries are nothing. Every other line inside a list is named by the loop
 rather than read past. Prose goes after a heading, where a finding never
 belongs: a bullet under a heading is read as prose unless it reads as a

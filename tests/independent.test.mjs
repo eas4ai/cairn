@@ -179,7 +179,7 @@ test("a line the reader cannot read is named whenever an entry follows it, in th
   assert.match(write(own(carry(1, "one")), report("  - one\ntwo lost its dash\n")), repairsReport, "an unindented line that lost its dash is named");
   assert.match(write(own(carry(1, "one") + "  - open: a defect\nStatus: in progress\n"), report("  - one\n")), /^Resolvable: resolve first/, "a real open finding is still read");
   assert.match(write(own(carry(1, "one reproduced in a clone")), report("  - one\n    - reproduced in a clone\n")), /^Done: /, "a nested detail still joins its entry");
-  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), /^Done: /, "a report that declares findings: [] is taken at its word and its body read as prose, the stated limit; a findings: line with no entries above such a list is still named");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings: []\n`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), /^Done: /, "a report that declares findings: [] is taken at its word and its body read as prose, the stated limit; a findings: line with no entries above such a list is still named");
   assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n\n## Findings\n\n1. one is broken\n`), repairsReport, "a report that names findings: and lists none above a heading list is named");
 });
 
@@ -237,4 +237,23 @@ test("a record that declares findings: [] keeps a bulleted body as prose, as thi
   const body = "\n## Attacked\n\n- the empty-name case before the fix and after it\n- 1500 declared inputs, timed\n";
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${body}`), /^Done: /, "both records declare no findings and carry a bulleted body");
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a findings: line with no entries and a list below it is still named");
+});
+
+test("a field name in another case never ends a list in silence, a record with its fields out of order is told to reorder them, and a citation names only a finding the report made (LOOP-086, LOOP-020, LOOP-108)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const rep = (findings) => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  // A capital field name inside a list is a line the loop cannot read, never a boundary: an open finding under it must not vanish.
+  for (const cap of ["Findings:", "FINDINGS:"])
+    assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x at ${at}\n${cap}\n  - open: a real defect that nobody resolved\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*examined: holds a line the loop cannot read as an entry/, cap);
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the reader at ${at}\nFindings: none yet\n  - the gate, which I also examined\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*and the entries after it are unread/, "a capital field name no longer truncates examined: in silence");
+  // Fields out of order: the repair names the order, which is the only thing that fixes the record.
+  assert.match(write(`commitment: first\ncommit: ${at}\nfindings:\n${carry(1, "one")}examined:\n  - x\n`, rep("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*write examined: above findings:, both above the first heading/, "the review's fields out of order");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${carry(1, "one")}`, `commitment: first\ncommit: ${at}\nreviewer: r\nfindings:\n  - one\nexamined:\n  - x at ${at}\n`), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*write examined: above findings:, both above the first heading/, "the report's fields out of order");
+  // A citation is a claim the reviewer made that finding: a number the report does not have is named.
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${carry(1, "one")}  - resolved: a defect I found myself, fixed (independent ${s} 7)\n`, rep("  - one\n")), /^Resolvable: review first\n.*the review cites \(independent [0-9a-f]{7} 7\), and the report holds 1 finding/, "a citation beyond the report's findings");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${carry(1, "one")}  - open: a defect I found myself\n`, rep("  - one\n")), /^Resolvable: resolve first/, "and my own finding with no citation is read as mine");
 });

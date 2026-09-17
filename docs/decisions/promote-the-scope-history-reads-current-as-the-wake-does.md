@@ -13,4 +13,4 @@ Promotes .cairn/backlog/the-scope-history-reads-the-roadmap-s-current-line-with-
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 60e1ee96d231105bf97bf3936924392b60d510ca The footprint's walk reads Current: through one fence-stripping reader shared with the wake (LOOP-134)

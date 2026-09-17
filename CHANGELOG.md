@@ -21,6 +21,29 @@ records; a major changes what earlier records mean.
   unchanged, and a shallow clone still gets its own repair.
 - Cairn installs in Muse from `.muse-plugin/plugin.json`, with one hook
   entry file per hook under `bin/hooks/`.
+- Eight kernel defects found by a code review of the kernel, each a
+  new requirement with its own test:
+  - A field line that carries a value followed by `- item` lines keeps
+    the value as the first item instead of dropping it (LOOP-133).
+  - The footprint's walk through roadmap history reads `Current:`
+    through the same fence-stripping reader the wake uses, so a fenced
+    example never moves where the commitment began (LOOP-134).
+  - While an escalation waits for the agent's reply to an `ask`, an
+    answer shaped as the developer's (`ok`, `instead`, `ask`, any case)
+    is refused instead of being stored as the agent's reply (LOOP-135).
+  - The hooks name a working directory that does not exist or is not a
+    directory, a Muse hook entry whose shared hook cannot start prints
+    one line and exits 0, and the walk to the Git toplevel ends by
+    construction when the toplevel is `/` (PKG-041).
+  - `cairn supersede` accepts only a record slug that exists under
+    docs/decisions/ and refuses a record already superseded (DEC-022).
+  - Evidence receipts record the full commit identifier; receipts with
+    the short form are still read (LOOP-136).
+  - The wake resolves every `Realized by` entry through one `git
+    cat-file --batch-check` call instead of one process per entry,
+    and still reports an ambiguous identifier (DEC-023).
+  - A git that cannot be started is one line on stderr and exit 3 from
+    every command, never a verdict or a receipt (LOOP-137).
 
 Upgrading a repository that already holds records: existing records are
 never rewritten, and nothing is lost. Two things change on the first

@@ -1184,7 +1184,7 @@ function decide(root, o) {
   if (o.supersedes && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(o.supersedes)) return usage("decide: --supersedes names a record by its slug: lowercase letters, digits and hyphens (DEC-022)");
   const oldPath = o.supersedes ? join(root, "docs", "decisions", `${o.supersedes}.md`) : null;
   if (oldPath && !existsSync(oldPath)) return usage(`decide: --supersedes names ${o.supersedes}, and no such record exists`);
-  const already = oldPath && fields(read(oldPath))["Superseded by"];
+  const already = oldPath && recordFields(withoutFences(read(oldPath)).join("\n"))["Superseded by"];   // read as the wake reads it: header fields, fences stripped
   if (already) return usage(`decide: ${o.supersedes} is already superseded by ${already}; supersede that record instead, so the chain keeps one link per record (DEC-010, DEC-022)`);
   // DEC-012: in a domain that has seen reversals, the record says what the history changed.
   const ids = [...o["rests-on"].matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);

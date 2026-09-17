@@ -59,6 +59,10 @@ test("a record already superseded cannot be superseded again: one Superseded by 
   assert.equal(r.status, 3, r.stdout + r.stderr); assert.match(r.stderr, /already superseded by new-one/); assert.match(r.stderr, /DEC-022/);
   assert.equal(readFileSync(join(root, "docs/decisions/old-one.md"), "utf8"), stamped, "the old record keeps its one line");
   assert.equal(existsSync(join(root, "docs/decisions/newer-one.md")), false, "nothing written");
+  // A record that only quotes the stamp inside a fenced example is live, as the wake reads it.
+  writeFileSync(join(root, "docs/decisions/quoted.md"), "# Quoted\n\nLevel: Judged\nDecided by: developer\nRests on: R-002\nWould be wrong if: x\n\n## Decision\n\nA stamp looks like this:\n\n```\nSuperseded by: some-other\n```\n\n## Realized by\n\n- abc1234  did it\n");
+  r = cairn(root, "supersede", "quoted", "--title", "Quoted again", "--level", "Judged", "--rests-on", "R-002", "--cause", "the premise was false", "--history", "one reversal", ...fields);
+  assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(readFileSync(join(root, "docs/decisions/quoted.md"), "utf8"), /^# Quoted\n\nSuperseded by: quoted-again\n/);
 });
 
 test("reversals reports counts by decider, cause, and domain (DEC-011)", () => {

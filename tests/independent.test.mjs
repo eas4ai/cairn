@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { repo as base, cairn, commit, review, fromFile, head } from "./helpers.mjs";
+import { repo as base, cairn, commit, git, review, fromFile, head } from "./helpers.mjs";
 
 const repo = () => { const root = base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002") }); cairn(root, "check"); return root; };
 const wake = (root) => cairn(root, "wake").stdout;
@@ -179,7 +179,7 @@ test("a line the reader cannot read is named whenever an entry follows it, in th
   assert.match(write(own(carry(1, "one")), report("  - one\ntwo lost its dash\n")), repairsReport, "an unindented line that lost its dash is named");
   assert.match(write(own(carry(1, "one") + "  - open: a defect\nStatus: in progress\n"), report("  - one\n")), /^Resolvable: resolve first/, "a real open finding is still read");
   assert.match(write(own(carry(1, "one reproduced in a clone")), report("  - one\n    - reproduced in a clone\n")), /^Done: /, "a nested detail still joins its entry");
-  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings: []\n`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*holds findings under a heading/, "a report that declares findings: [] and lists findings under a findings-titled heading is named, since that shape lost them in silence");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings: []\n`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading/, "a report that declares findings: [] and lists findings under a findings-titled heading is named, since that shape lost them in silence");
   assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n\n## Findings\n\n1. one is broken\n`), repairsReport, "a report that names findings: and lists none above a heading list is named");
 });
 
@@ -210,7 +210,7 @@ test("a field name repeated inside a list is named, the report's findings under 
   for (const repeated of ["Examined: also the tests", "Commitment: first", "Commit: 1234567 is what I read"])
     assert.match(write(own(carry(1, "one") + `${repeated}\n  - open: a real defect\n`), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry/, repeated);
   assert.match(write(own(carry(1, "one")), report(`  - one\nFindings: two\n  - two is broken\n`)), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*cannot read as an entry/, "the same in a report");
-  assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Findings\n\n- two is broken\n"), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*holds findings under a heading/, "a findings-titled heading may not hold a list beside a read list either");
+  assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Findings\n\n- two is broken\n"), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading/, "a findings-titled heading may not hold a list beside a read list either");
   assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Notes\n\nI also read the walkthrough.\n"), /^Done: /, "prose under another heading is prose");
   assert.match(write(own(carry(1, "one")), report("  - one\ntwo lost its dash\n")), /give a finding its own - entry, put a heading above prose/, "the repair offers both fixes");
 });
@@ -228,8 +228,8 @@ test("a Reviewer: line inside a list is named, and an honest record with a findi
   assert.match(write(own(carry(1, "one")), report("  - one\n", "\n## How I reproduced this\n\n- a scratch clone\n- a stub API\n")), /^Done: /, "and the same in a report");
   assert.match(write(own(carry(1, "one"), "\n## Open\n\n- open: a defect still unfixed\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a finding-shaped bullet under a heading is still named");
   // A report's findings carry no prefix, so a heading that names findings may not hold a list: that shape lost real findings in silence.
-  assert.match(write(own(carry(1, "one")), report("  - one\n", "\n## Findings in full\n\n- wake exits 3 on an empty report\n- the message names the wrong file\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*holds findings under a heading/, "a report's further findings under a findings-titled heading are named, not read past");
-  assert.match(write(own(carry(1, "one"), "\n## More findings\n\n- the reader drops a wrapped entry\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "and the same in the review, whatever the bullets look like");
+  assert.match(write(own(carry(1, "one")), report("  - one\n", "\n## Findings in full\n\n- wake exits 3 on an empty report\n- the message names the wrong file\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading/, "a report's further findings under a findings-titled heading are named, not read past");
+  assert.match(write(own(carry(1, "one"), "\n## More findings\n\n- the reader drops a wrapped entry\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*names findings and holds content the loop does not read/, "and the same in the review, whatever the bullets look like");
 });
 
 test("a record that declares findings: [] keeps a bulleted body as prose, as this repository's own reviews are written (LOOP-086, LOOP-020)", () => {
@@ -239,7 +239,7 @@ test("a record that declares findings: [] keeps a bulleted body as prose, as thi
   const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
   const body = "\n## Attacked\n\n- the empty-name case before the fix and after it\n- 1500 declared inputs, timed\n";
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${body}`), /^Done: /, "both records declare no findings and carry a bulleted body");
-  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a findings: line with no entries and a list below it is still named");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*names no entries above a list the loop does not read/, "a findings: line with no entries and a list below it is still named");
 });
 
 test("a field name in another case never ends a list in silence, a record with its fields out of order is told to reorder them, and a citation names only a finding the report made (LOOP-086, LOOP-020, LOOP-108)", () => {
@@ -374,8 +374,8 @@ test("an underline makes a heading of the line above it unless that line is an e
     assert.match(write(`commitment: first\n${line}\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*spells commit: another way; write each field name in lower case, with no space before the colon/, line);
   assert.match(write(ownClean(), `commitment: first\nCommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*spells commit: another way/, "and the report is repaired, not discarded");
   // The findings-titled repair names retitling, so notes are not turned into findings.
-  assert.match(write(ownClean(`\n## Findings\n\n- what I tried first\n`), clean()), /retitle a heading that names findings, reword a note that begins open: or resolved:, and put an example inside a fence/, "the review's repair offers retitling");
-  assert.match(write(ownClean(), clean(`\n## Findings in full\n\n- what I tried first\n`)), /retitle a heading that names findings, reword a note that begins open: or resolved:, and put an example inside a fence/, "and the report's repair does too");
+  assert.match(write(ownClean(`\n## Findings\n\n- what I tried first\n`), clean()), /retitle that heading if its lines are notes/, "the review's repair offers retitling");
+  assert.match(write(ownClean(), clean(`\n## Findings in full\n\n- what I tried first\n`)), /retitle that heading if its lines are notes/, "and the report's repair does too");
 });
 
 test("an underlined heading that names findings holds no list either, an unterminated fence hides nothing, a spelling is judged at the margin, and a report short of one header line is repaired (LOOP-020, LOOP-086, LOOP-108)", () => {
@@ -387,8 +387,8 @@ test("an underlined heading that names findings holds no list either, an untermi
   const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
   const fence = "```";
   // A heading that names findings holds no list, written either way.
-  assert.match(write(ownClean(), clean("\nFindings\n--------\n\n- the wake accepts a review whose commit line is empty\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*holds findings under a heading/, "an underlined findings heading in the report");
-  assert.match(write(ownClean("\nFindings\n--------\n\n- one I never listed\n"), clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "and in the review");
+  assert.match(write(ownClean(), clean("\nFindings\n--------\n\n- the wake accepts a review whose commit line is empty\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading/, "an underlined findings heading in the report");
+  assert.match(write(ownClean("\nFindings\n--------\n\n- one I never listed\n"), clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*names findings and holds content the loop does not read/, "and in the review");
   // An unterminated fence hides nothing below it.
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: one, fixed (independent ${s} 1)\n${fence}\n  - open: a real defect nobody has resolved\n`, clean("").replace("findings: []", "findings:\n  - one")), /^Resolvable: (?:resolve first|repair)/, "an open finding below an unterminated fence is not lost");
   assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the wake does something wrong\n${fence}\n  - the wake accepts a review whose commit line is empty\n`), /^Resolvable: /, "and a report's second finding below one is not lost");
@@ -399,4 +399,26 @@ test("an underlined heading that names findings holds no list either, an untermi
   const short = write(ownClean(), `commit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`);
   assert.match(short, /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*carries no commitment: line.*add "commitment: first" above its fields/, "a report missing only its commitment: line");
   assert.doesNotMatch(short, /start a new reviewer/, "and it is not discarded");
+});
+
+test("a heading that names findings holds no content of any shape, its own section decides, and a report the wrong commit wrote is replaced before any repair (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  // A table row and a paragraph can each carry a finding, so a findings-naming heading holds nothing.
+  assert.match(write(ownClean(), clean("\n## Findings\n\n| what | where |\n|---|---|\n| the gate accepts an empty commit line | the wake |\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading "Findings"/, "a table under a findings-titled heading");
+  assert.match(write(ownClean(), clean("\n## Findings\n\nThe gate accepts a review whose commit line is empty.\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*has content under the heading "Findings"/, "a paragraph under a findings-titled heading");
+  // Each heading is read against its own section, not against every bullet in the record.
+  assert.match(write(ownClean(), clean("\n## What else I read\n\n- the tests\n- the walkthrough\n")), /^Done: /, "bullets under a heading that does not name findings");
+  assert.match(write(ownClean(), clean("\n## What else I read\n\n- the tests\n\n## Findings I could not place\n\nNothing I could not place.\n")), /has content under the heading "Findings I could not place"/, "and a findings-naming heading is judged on its own section");
+  // A findings: line that declares nothing is told the form that declares none.
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n\n## Attacked\n\n- the reader\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*names no entries above a list the loop does not read; write findings: \[\] when there are none/, "a bare findings: line above a list");
+  // A report at another commit is replaced, even when it is also short of its commitment: line.
+  const older = git(root, "rev-parse", "HEAD~1").stdout.trim();
+  const said = write(ownClean(), `commit: ${older}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`);
+  assert.match(said, /^Resolvable: review first\n.*they must name the same commit/, "a report at an older commit, also short of its commitment: line");
+  assert.doesNotMatch(said, /carries no commitment: line/, "and it is replaced rather than edited first");
 });

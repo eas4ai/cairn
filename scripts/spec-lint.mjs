@@ -24,6 +24,14 @@ const definitions = new Map(), prefixes = new Set(), references = [];
 for (const name of readdirSync(dir).filter((n) => n.endsWith(".md")).sort()) {
   const path = join(dir, name), raw = readFileSync(path, "utf8"), spec = parseSpec(raw), { lines, prefix } = spec, text = lines.join("\n");
   const ids = [...text.matchAll(/^\[([A-Z]+-\d+)\]/gm)].map((m) => m[1]);
+  // A fence the file never closes leaves its example in the text, where the parser reads it as specification.
+  let fence = null;
+  for (const [i, line] of raw.split(/\r?\n/).entries()) {
+    const mark = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence) { if (new RegExp(`^ {0,3}${fence.mark[0]}{${fence.mark.length},}\\s*$`).test(line)) fence = null; continue; }
+    if (mark) fence = { mark: mark[1], line: i + 1 };
+  }
+  if (fence) findings.push(`${name}:${fence.line}: a fenced example is never closed, so the parser reads what follows as specification`);
   if (prefix && ids.length === 0) findings.push(`${name}: declares Prefix: ${prefix} and holds no requirement (SPEC-001)`);
   if (prefix) prefixes.add(prefix);
   const hostPaths = [], hostLines = new Set();

@@ -813,7 +813,7 @@ function independentGap(root, slug, rv) {
   const early = { examined: listOf(text, "examined"), findings: listOf(text, "findings") };   // what the lists hold, to say which field the record is short of
   const wanted = ["commitment", "commit", "examined", "findings"].filter((k) => k === "examined" ? !early.examined.entries.length : k === "findings" ? early.findings.missing : f[k] === undefined);
   const hidden = wanted.filter((k) => says(k, whole) && !says(k, top));   // named in the record, but below its first heading
-  const blocked = wanted.filter((k) => says(k, top));   // in the header, yet unread
+  const blocked = ["commitment", "commit"].filter((k) => f[k] === undefined && says(k, top));   // a scalar field in the header, yet unread; the lists have their own messages
   const spelled = wanted.filter((k) => !says(k, top) && new RegExp(`^${k}[ \t]*:`, "im").test(top));
   if (hidden.length || blocked.length || spelled.length) {
     const all = fields(whole), named = String(all.commitment ?? "").trim(), mine = commitOf(all.commit);   // its identity, wherever the fields sit: a report for another commitment or commit is replaced, not repaired
@@ -824,8 +824,15 @@ function independentGap(root, slug, rv) {
       : `spells ${spelled.map((k) => `${k}:`).join(" and ")} another way`;
     return repair(`${name} ${why}`, spelled.length ? "write each field name in lower case, with no space before the colon, and change none of the reviewer's words" : "keep the record's fields at the top, each on its own line, put prose after a heading, and change none of the reviewer's words");
   }
-  // A header short of its commitment: line is repaired, not discarded: the line is the record's own, not the reviewer's words (LOOP-020).
-  if (f.commitment === undefined) return repair(`${name} carries no commitment: line`, `add "commitment: ${slug}" above its fields, and change none of the reviewer's words`);
+  // A header short of its commitment: line is repaired, not discarded: the line is
+  // the record's own, not the reviewer's words. A report for another commit is
+  // replaced first, so the repair is never asked for a record that is then thrown
+  // away (LOOP-020).
+  if (f.commitment === undefined) {
+    const mine = commitOf(f.commit);
+    if (mine && mine !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
+    return repair(`${name} carries no commitment: line`, `add "commitment: ${slug}" above its fields, and change none of the reviewer's words`);
+  }
   if (String(f.commitment ?? "").trim() !== slug && String(f.commitment ?? "").trim().startsWith(slug)) return repair(`${name} reads its commitment as ${displayPath(String(f.commitment).trim())}, because the line below it joined the field`, "keep each field on its own line, with prose after a heading, and change none of the reviewer's words");
   if (String(f.commitment ?? "").trim() !== slug) return again(`${name} names commitment ${f.commitment || "none"}, not ${slug}`);
   if (!commitOf(f.commit)) return again(`${name} names ${f.commit || "no commit"}, which is not a commit`);
@@ -838,7 +845,9 @@ function independentGap(root, slug, rv) {
   const list = listOf(text, "findings");
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
-    : list.heading ? "holds findings under a heading, where the loop does not read them; move them into the findings: list above the first heading. If those lines are notes, retitle a heading that names findings, reword a note that begins open: or resolved:, and put an example inside a fence"
+    : list.heading === "named" ? `has content under the heading ${displayPath(list.named)}, whose title names findings, where the loop does not read it; move any finding into the findings: list above the first heading, and retitle that heading if its lines are notes`
+    : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
+    : list.heading ? "holds findings under a heading, where the loop does not read them; move them into the findings: list above the first heading. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
   if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread, text) : null);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -914,15 +923,20 @@ function listOf(text, key) {
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim());
-  const lines = rest.split("\n");
-  // A heading's title, hashed or underlined: both name what the section holds (LOOP-086).
-  const titles = lines.flatMap((line, i) => {
-    const hashed = /^ {0,3}#{1,6}[ \t]*(.+)$/.exec(line);
-    if (hashed) return [hashed[1]];
-    return i + 1 < lines.length && SETEXT.test(lines[i + 1]) && line.trim() && !/^[ \t]/.test(line) && !ENTRY.test(line) ? [line.trim()] : [];
-  });
-  const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) || (!!below.length && titles.some((x) => /\bfindings?\b/i.test(x))) || (!entries.length && !empty && !!below.length);   // a finding-shaped entry under a heading, or the only list of a record that did not declare findings: []
-  return { entries, empty, value: empty ? null : value || null, dropped, heading, unread };
+  // The body's sections, each under its own heading, hashed or underlined: what a
+  // heading holds is read against that heading's own title, never another's (LOOP-086).
+  const lines = rest.split("\n"), sections = [];
+  for (let i = 0; i < lines.length; i++) {
+    const hashed = /^ {0,3}#{1,6}[ \t]*(.+)$/.exec(lines[i]);
+    const under = i + 1 < lines.length && SETEXT.test(lines[i + 1]) && lines[i].trim() && !/^[ \t]/.test(lines[i]) && !ENTRY.test(lines[i]);
+    if (hashed || under) { sections.push({ title: (hashed ? hashed[1] : lines[i]).trim(), body: [] }); if (under) i++; continue; }
+    if (sections.length) sections[sections.length - 1].body.push(lines[i]);
+  }
+  // A heading that names findings holds nothing: a bullet, a table row and a
+  // paragraph can each carry one, and the loop cannot tell them apart.
+  const named = sections.find((s) => /\bfindings?\b/i.test(s.title) && s.body.some((l) => l.trim()));
+  const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
+  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
@@ -950,7 +964,9 @@ function reviewOf(root, slug) {
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
     : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
-    : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, retitle a heading that names findings, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"
+    : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings and holds content the loop does not read; keep every finding in the header's list, and retitle that heading if its lines are notes (LOOP-086)`
+    : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"
+    : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${headerOf(withoutFences(text).join("\n")).length < text.trimEnd().length && /^(?:examined|findings):/m.test(text.slice(headerOf(withoutFences(text).join("\n")).length)) ? "; the fields sit under a heading and the header ends at the first heading, hashed or underlined" : ""} (LOOP-108)` } };
   const findings = fin.entries;

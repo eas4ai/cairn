@@ -159,3 +159,12 @@ test("a backticked or quoted actor still counts as one (PKG-010)", () => {
   const r = lint(dir);
   assert.equal(r.status, 0, r.stdout);
 });
+
+test("a fence the file never closes is named, since the parser then reads its example as specification", () => {
+  const fence = "```";
+  const bad = lint(fixture(AGREED + `[X-001] The agent MUST do this.\nFalsifier: it does not.\n\n${fence}\n[X-999] An example nobody closed.\nFalsifier: none.\n`));
+  assert.equal(bad.status, 1);
+  assert.match(bad.stdout, /a fenced example is never closed, so the parser reads what follows as specification/);
+  const good = lint(fixture(AGREED + `[X-001] The agent MUST do this.\nFalsifier: it does not.\n\n${fence}\n[X-999] An example, closed.\nFalsifier: none.\n${fence}\n`));
+  assert.equal(good.status, 0, good.stdout + good.stderr);
+});

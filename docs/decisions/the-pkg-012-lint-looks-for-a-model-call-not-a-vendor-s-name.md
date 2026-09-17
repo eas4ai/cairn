@@ -12,4 +12,4 @@ PKG-012 says Cairn MUST NOT call a model, and its falsifier is shipped code that
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 7c3b2bc2e873b2d1d2e04e2583e6b55cd00f0816 Attribution a project forbids is named for rewording before it leaves, the release commit carries an uncommitted changelog, and the PKG-012 lint looks for a model call

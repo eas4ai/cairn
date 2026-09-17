@@ -129,11 +129,12 @@ const pastRequirements = (root, commit, ctx) => {
   if (!ctx.past.has(commit)) ctx.past.set(commit, commit ? requirementTexts(root, commit) : new Map());
   return ctx.past.get(commit);
 };
-function requirementChange(root, req, m, latest, ctx) {
+function requirementChange(root, req, m, latest, ctx, h = []) {
   const now = ctx.requirements.get(req)?.digest;
   const before = latest?.requirement_digest ?? (latest ? pastRequirements(root, latest.commit, ctx).get(req)?.digest : null);
   const changed = !!latest && (!now || before !== now);
-  const needsReview = changed && !asList(m?.def.reviewed).includes(`${req} ${now}`);
+  const revisedEarlier = !!now && h.some((e) => e.requirement_digest && e.requirement_digest !== now);   // unreviewed however many runs follow the revision (LOOP-059)
+  const needsReview = (changed || revisedEarlier) && !asList(m?.def.reviewed).includes(`${req} ${now}`);
   const reason = !before ? "old requirement or falsifier text is unavailable" : !now ? "current requirement or falsifier text is unavailable" : "the requirement or falsifier changed";
   return { changed, needsReview, digest: now, reason };
 }
@@ -829,7 +830,7 @@ function standing(root, req, m, h, orderError, ctx) {
   // see a cause outside the repository; the agent can (DEC-019).
   const tail = h.slice(s).filter((e) => e.result === "fail").slice(-3);
   const stuck = !orderError && tail.length === 3 && tail.every((e) => e.inputs_digest === tail[0].inputs_digest) && !ctx.escalations.some((e) => concerns(e) && followsEvidence(e, "Raised", req, tail[0]));
-  const revision = requirementChange(root, req, m, latest, ctx);
+  const revision = requirementChange(root, req, m, latest, ctx, h);
   const inputsChanged = !!m && !!latest && latest.inputs_digest !== ctx.digests.get(name);
   let stale = null;
   if (m && latest) {
@@ -1105,7 +1106,7 @@ async function runChecks(root, only, stale = false) {
   for (const r of targets) { const ns = mechs.byReq.get(r) ?? []; if (ns.length) ns.forEach((n) => runs.add(n)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   for (const x of waiting) if (!runs.has(x.mech)) process.stdout.write(`skipped ${x.req}: latest evidence is ${x.latest.result} and not stale; implement, then check ${x.req} (LOOP-094)\n`);
   if (stale && !runs.size && !held.size) process.stdout.write(repairs ? `nothing ran: ${repairs} receipt(s) need repair first; see wake (LOOP-094)\n` : "nothing stale: every requirement with a mechanism has current evidence or waits on implementation (LOOP-094)\n");
-  const ctx = { requirements: requirementTexts(root), past: new Map() };
+  const ctx = { requirements: requirementTexts(root), past: new Map(), scope: new Set(c.requirements) };   // the revision gate reads only the commitment's requirements (LOOP-059)
   for (const name of runs) {
     const status = await runMechanism(root, mechs.byName.get(name), ctx, head, mechs);
     if (status !== null) return status;
@@ -1127,8 +1128,8 @@ async function runMechanism(root, m, ctx, head, mechs) {
     if (!ctx.requirements.get(req)?.digest) { process.stdout.write(`Resolvable: repair docs/spec/\n  ${req} needs exactly one requirement definition\n`); return 1; }
     const h = history(root, req), repair = historyRepair(h);
     if (repair) { process.stdout.write(`${repair.verdict}: ${repair.action}\n  ${repair.why}\n`); return 1; }
-    const revision = requirementChange(root, req, m, ownRecords(h, mechs.byReq.get(req) ?? [], name).at(-1), ctx);
-    if (revision.needsReview) { const w = revisionVerdict(req, name, revision.digest, revision.reason); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
+    const own = ownRecords(h, mechs.byReq.get(req) ?? [], name), revision = requirementChange(root, req, m, own.at(-1), ctx, own);
+    if (revision.needsReview && ctx.scope.has(req)) { const w = revisionVerdict(req, name, revision.digest, revision.reason); process.stdout.write(`${w.verdict}: ${w.action}\n  ${w.why}\n`); return 1; }
   }
   // The write-ahead record, unless the agent's own already covers this run.
   const ip = join(root, ".cairn", "in-progress"), mine = !existsSync(ip);

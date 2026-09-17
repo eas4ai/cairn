@@ -1,6 +1,7 @@
 commitment: the-stop-hook-holds-without-trapping
-commit: 9e0ab9a7
+commit: 3c87581c
 examined:
+  - re-examined at 3c87581c: the only declared input that changed is CHANGELOG.md, which adds the 0.6.0 entry describing this commitment and the autonomy specification; no code changed, every mechanism re-run and pass
   - completion review at 9e0ab9a7: every requirement passes on fresh evidence and the full suite passes at 494. Each of the five new or reversed tests failed on the hook and kernel at 0213b26 and passes now.
   - this morning's trap, rerun on this repository: the production command on PATH is cairn 0.5.0 at ~/workspace2/cairn, and its own wake here says "run PKG-018, the kernel changed", the staleness the old hook refused every stop on. The new hook with that command first on PATH judges with this checkout's bin/cairn.mjs, whose digest the receipts carry, and gives the checkout's real verdict. The probe's refusal count was removed afterwards.
   - a project below the Git toplevel, on a scratch repository: the count is written to the outer Git directory, no .git appears in the project, stops one to three are refused, and the fourth goes through with the systemMessage and a stop record under the project's .cairn/stops/.

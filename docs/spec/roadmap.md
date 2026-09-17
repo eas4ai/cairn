@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-scope-history-reads-current-as-the-wake-does
+Current: an-answer-shaped-as-the-developer-s-waits-for-the-agent-s-reply
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -535,3 +535,11 @@ roadmap history read Current: raw, so a fenced example that LOOP-104
 allows could start the footprint late and hide scope breaches. Adds
 LOOP-134; one reader serves the wake and the history.
 [Commitment](../commitments/the-scope-history-reads-current-as-the-wake-does.md).
+
+## An answer shaped as the developer's waits for the agent's reply
+
+Promoted on 2026-09-17 from the kernel review: while the agent owed a
+reply to an ask, any answer was stored as that reply, so a developer
+who refined the question had it presented back as the agent's
+explanation. Adds LOOP-135; the refusal names whose turn it is.
+[Commitment](../commitments/an-answer-shaped-as-the-developer-s-waits-for-the-agent-s-reply.md).

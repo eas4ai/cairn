@@ -1575,3 +1575,20 @@ and that point escaped the scope check (LOOP-035) and the contract
 comparison (LOOP-089, LOOP-090). Two lines in history are a repair the
 agent made in the next commit; counting the commit as inside keeps
 the footprint whole.
+
+[LOOP-135] While an escalation waits for the agent's reply to an
+`ask`, the loop MUST refuse an answer shaped as the developer's: `ok`,
+or `instead` or `ask` followed by text. The refusal MUST name whose
+turn it is, and nothing is written.
+Falsifier: during the agent's turn, `cairn answer <slug> ask B` writes
+a Reply: line, or the turn returns to the developer.
+Status: Agreed 2026-09-17 by promotion promote-an-answer-shaped-as-the-developer-s-waits-for-the-agent-s-reply
+
+Promoted 2026-09-17 from the kernel review's finding 3. One command
+serves both parties: the developer answers, and the agent replies to
+an ask with the same command (LOOP-049, LOOP-050). Before this, the
+turn alone chose the field, so a developer who refined a question
+before the agent replied had the refinement stored as the agent's
+Reply: and presented back as the explanation, and the first ask was
+never answered. An explanation that begins with one of the three words
+and a space is refused too; the agent rewords it.

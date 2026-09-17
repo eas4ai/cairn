@@ -92,7 +92,7 @@ test("a developer-shaped answer during the agent's turn is refused and writes no
   const root = repo();
   esc(root); cairn(root, "answer", "r-001", "ask why not both?");
   const before = readFileSync(file(root), "utf8");
-  for (const shaped of ["ask and what about C?", "ok", "instead use B"]) {
+  for (const shaped of ["ask and what about C?", "ok", "instead use B", "Ask B", "OK", "Instead use C"]) {   // the guard is case-blind; the developer's own turn is not
     const r = cairn(root, "answer", "r-001", shaped);
     assert.equal(r.status, 3, shaped + ": " + r.stdout + r.stderr); assert.match(r.stderr, /waits for the agent's reply/); assert.match(r.stderr, /LOOP-135/);
     assert.equal(readFileSync(file(root), "utf8"), before, "nothing written");

@@ -1285,9 +1285,8 @@ function answer(root, slug, reply) {
   const text = read(path), { turn } = escalationTurn(text);
   if (turn === "closed") return usage(`answer: ${slug} is already answered`);
   reply = reply.trim();
-  const shaped = /^(?:ok|(?:instead|ask) +\S.*)$/.test(reply);   // the developer's three forms
-  if (turn === "developer" && !shaped) return usage("answer: use ok | instead <what> | ask <question>");
-  if (turn === "agent" && shaped) return usage(`answer: ${slug} waits for the agent's reply to the ask; the developer's answer follows it, and an explanation does not begin with ok, instead or ask (LOOP-135)`);
+  if (turn === "developer" && !/^(?:ok|(?:instead|ask) +\S.*)$/.test(reply)) return usage("answer: use ok | instead <what> | ask <question>");
+  if (turn === "agent" && /^(?:ok|(?:instead|ask) +\S.*)$/i.test(reply)) return usage(`answer: ${slug} waits for the agent's reply to the ask; the developer's answer follows it, and an explanation does not begin with ok, instead or ask (LOOP-135)`);
   const field = turn === "agent" ? "Reply" : "Answer", date = turn === "agent" ? "Replied" : "Answered";
   let milestone = "";
   if (turn === "developer") {

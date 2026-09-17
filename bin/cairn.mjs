@@ -57,6 +57,7 @@ function recordFields(text) {
       titleAllowed = false;
       continue;
     }
+    if (/^ {0,3}(?:=+|-{2,})[ \t]*$/.test(line)) { continuation = false; continue; }   // a rule is never a field's value, and never ends the fields below it (LOOP-108)
     if (line.trim()) {
       if (!continuation && !FIELD_LINE.test(line)) break;
       titleAllowed = false;
@@ -825,7 +826,7 @@ function independentGap(root, slug, rv) {
     const anywhere = lines.some((l) => [...l.matchAll(cite)].some((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}` === key));
     // Its words first, so a citation the finding itself quotes is words; the carrying citation ends what follows them.
     const text = hits.length === 1 ? norm(hits[0]) : "", rest = text.toLowerCase().startsWith(stem) ? text.slice(stem.length) : null;
-    const why = !hits.length ? (anywhere ? `a review line cites ${mark(n)} but does not end with it; put the citation last on its line, and keep notes out of the findings list, since a line indented under a finding joins it` : `no review line cites ${mark(n)}`) : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : rest === null ? "its review line does not begin with its words" : pairs(rest).size > 1 ? "its review line cites another finding too" : null;
+    const why = !hits.length ? (anywhere ? `a review line cites ${mark(n)} but does not end with it; put the citation last on its line, and keep notes out of the findings list, since a line indented under a finding joins it` : `no review line cites ${mark(n)}`) : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : rest === null ? "its review line does not begin with its words" : [...pairs(rest)].filter((k) => k.startsWith(`${short} `)).length > 1 ? "its review line cites another finding of this report too" : null;
     if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> ${mark("n")} or resolved: <its words>, and how ${mark("n")}, with the citation last (LOOP-020)` };
   }
   // A citation is a claim that the reviewer reported it: a number the report does not have claims support it never gave (LOOP-020).
@@ -842,13 +843,13 @@ function independentGap(root, slug, rv) {
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/;   // a heading is hashed, or underlined with = or -- under its text
+const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, FIELD = /^[ \t]*[A-Za-z][A-Za-z0-9 _-]*:/;   // a heading is hashed, or underlined with = or -- under its own text, which a field line is not
 // The header: the record above its first heading, of either form (LOOP-108).
 function headerOf(whole) {
   const lines = whole.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (ATX.test(lines[i])) return lines.slice(0, i).join("\n");
-    if (i && SETEXT.test(lines[i]) && lines[i - 1].trim() && !ENTRY.test(lines[i - 1])) return lines.slice(0, i - 1).join("\n");
+    if (i && SETEXT.test(lines[i]) && lines[i - 1].trim() && !/^[ \t]/.test(lines[i - 1]) && !FIELD.test(lines[i - 1])) return lines.slice(0, i - 1).join("\n");   // its text sits at the margin, and a field line or a list's own line is not heading text
   }
   return whole;
 }
@@ -901,7 +902,7 @@ function reviewOf(root, slug) {
     : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
-  if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t][\s\S]*^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };
+  if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${headerOf(withoutFences(text).join("\n")).length < text.trimEnd().length && /^(?:examined|findings):/m.test(text.slice(headerOf(withoutFences(text).join("\n")).length)) ? "; the fields sit under a heading and the header ends at the first heading, hashed or underlined" : ""} (LOOP-108)` } };
   const findings = fin.entries;
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
   const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;

@@ -331,8 +331,9 @@ which reporting rule a shared check uses before interpreting a blanket result.
 
 In a review record, `findings:` introduces a list. Each item must be
 `open: <description>` for unresolved work or `resolved: <description>` for
-work already addressed. Descriptions must not be empty. Leave `findings:`
-empty when the review found no issues.
+work already addressed. Descriptions must not be empty. Write `findings: []`
+when the review found no issues; that form says there are none and leaves
+the record's other bullets, such as an attacked list, as prose.
 
 An unknown prefix such as `REM-002:` produces a repair verdict naming the
 review file and offending entry; it cannot count as a clean review. Preserve

@@ -55,7 +55,7 @@ test("each finding is carried by the one line citing its number and beginning wi
   assert.match(carried(["resolved: The parser drops wrapped lines, fixed in abc1234 (independent #1)"], ["The parser drops wrapped lines."]), /^Done: /, "a finding ending with a period");
   assert.match(carried(["resolved: a defect, unrelated walkthrough typo fixed"], ["a defect"]), /no review line cites/, "words alone never carry");
   assert.match(carried(["resolved: an unrelated typo, fixed (independent #1)"], ["a defect"]), /does not begin with its words/);
-  assert.match(carried(["resolved: the gate, fixed (independent #1) (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /finding 1 is not carried: its review line cites another finding too/);
+  assert.match(carried(["resolved: the gate, fixed (independent #1) (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /finding 1 is not carried: its review line cites another finding of this report too/);
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, again (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /finding 1 is not carried: 2 review lines cite \(independent [0-9a-f]{7} 1\)/);
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /^Done: /);
   const repairs = /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n/;
@@ -280,4 +280,26 @@ test("a citation of zero is a citation, a field ends a list however it is spaced
   assert.match(write(own(`  - resolved: one reproduced in a scratch clone, fixed (independent ${s} 1)\n`), rep("  - one\n\n    reproduced in a scratch clone\n")), /^Done: /, "the continuation joins across the blank line, and the joined words are carried");
   // A doubled commit: line cannot stand in for naming the commit the reviewer examined.
   assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\ncommit: ${at}\nreviewer: r\nexamined:\n  - the kernel\nfindings:\n  - one\n`), /^Resolvable: review first\n.*does not name commit [0-9a-f]{7} anywhere but its commit: line/, "a doubled commit: line is still only its commit: line");
+});
+
+test("a rule under a field line is not a heading, the hint names a heading of either form, and an earlier report's citation on a carrying line is history (LOOP-020, LOOP-108)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const rep = (findings, extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}${extra}`;
+  // A horizontal rule below a field is a rule, not that field's underline: the field is read, and the rule is named as the stray line it is.
+  for (const rule of ["---", "===", "--"]) {
+    const said = write(`commitment: first\ncommit: ${at}\nexamined:\n  - everything\nfindings: []\n${rule}\n\n## Notes\n\nI read the tests.\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []"));
+    assert.match(said, new RegExp(`cannot read as an entry: "${rule}"`), `a ${rule} rule below findings: is named`);
+    assert.doesNotMatch(said, /findings: is missing/, `a ${rule} rule below findings: does not hide the field`);
+  }
+  assert.match(write(`commitment: first\ncommit: ${at}\n---\nexamined:\n  - everything\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /^Done: /, "a rule between two fields ends no header");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - everything\n    and its boundary\n  ---\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /^Done: /, "an indented rule joins the entry above it, as any indented line does, instead of being read as a heading that drops the entry");
+  // The hint that the fields sit under a heading names an underlined heading too.
+  assert.match(write(`Review\n======\n\ncommitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /the fields sit under a heading and the header ends at the first heading, hashed or underlined/, "an underlined title above the fields");
+  // An earlier round's citation, at another commit, is not a second carry.
+  for (const line of [`  - resolved: the gate is wrong, fixed (independent aaaaaaa 3) (independent ${s} 1)\n`, `  - resolved: the gate is wrong, fixed (independent ${s} 1) (independent aaaaaaa 3)\n`])
+    assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${line}`, rep("  - the gate is wrong\n")), /^Done: /, "a citation of another report beside this one's");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n  - resolved: the gate is wrong, fixed (independent ${s} 1) (independent ${s} 2)\n  - resolved: and the reader, fixed (independent ${s} 2)\n`, rep("  - the gate is wrong\n  - and the reader\n")), /cites another finding of this report too/, "two citations of this report on one line is still a double carry");
 });

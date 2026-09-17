@@ -1,0 +1,2836 @@
+TAP version 13
+# Subtest: a Draft block overrides an Agreed file for both wake and check (SPEC-018)
+ok 1 - a Draft block overrides an Agreed file for both wake and check (SPEC-018)
+  ---
+  duration_ms: 284.947751
+  type: 'test'
+  ...
+# Subtest: an Agreed block overrides a Draft file in the kernel and lint (SPEC-018, SPEC-002)
+ok 2 - an Agreed block overrides a Draft file in the kernel and lint (SPEC-018, SPEC-002)
+  ---
+  duration_ms: 611.62398
+  type: 'test'
+  ...
+# Subtest: a block Status does not become the file default, including inside examples (SPEC-018)
+ok 3 - a block Status does not become the file default, including inside examples (SPEC-018)
+  ---
+  duration_ms: 598.553169
+  type: 'test'
+  ...
+# Subtest: block status without a value does not inherit Agreed by accident (SPEC-018)
+ok 4 - block status without a value does not inherit Agreed by accident (SPEC-018)
+  ---
+  duration_ms: 141.609328
+  type: 'test'
+  ...
+# Subtest: inheritance needs a file Scope and includes only Agreed blocks, regardless of prefix (PKG-015)
+ok 5 - inheritance needs a file Scope and includes only Agreed blocks, regardless of prefix (PKG-015)
+  ---
+  duration_ms: 1634.813297
+  type: 'test'
+  ...
+# Subtest: Scope inside a requirement or fenced example does not declare inheritance (PKG-015)
+ok 6 - Scope inside a requirement or fenced example does not declare inheritance (PKG-015)
+  ---
+  duration_ms: 850.293575
+  type: 'test'
+  ...
+# Subtest: a falsifier wrapped onto a line beginning with Status: does not become the block's status (SPEC-018)
+ok 7 - a falsifier wrapped onto a line beginning with Status: does not become the block's status (SPEC-018)
+  ---
+  duration_ms: 1.160216
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject input mutation during a check and retain diagnostics
+ok 8 - LOOP-063: reject input mutation during a check and retain diagnostics
+  ---
+  duration_ms: 456.983604
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject deletion mutation during a check and retain diagnostics
+ok 9 - LOOP-063: reject deletion mutation during a check and retain diagnostics
+  ---
+  duration_ms: 469.879673
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject addition mutation during a check and retain diagnostics
+ok 10 - LOOP-063: reject addition mutation during a check and retain diagnostics
+  ---
+  duration_ms: 456.307973
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject mode mutation during a check and retain diagnostics
+ok 11 - LOOP-063: reject mode mutation during a check and retain diagnostics
+  ---
+  duration_ms: 458.73369
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject specification mutation during a check and retain diagnostics
+ok 12 - LOOP-063: reject specification mutation during a check and retain diagnostics
+  ---
+  duration_ms: 466.705111
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject declaration mutation during a check and retain diagnostics
+ok 13 - LOOP-063: reject declaration mutation during a check and retain diagnostics
+  ---
+  duration_ms: 455.431625
+  type: 'test'
+  ...
+# Subtest: LOOP-063: reject commit mutation during a check and retain diagnostics
+ok 14 - LOOP-063: reject commit mutation during a check and retain diagnostics
+  ---
+  duration_ms: 507.244031
+  type: 'test'
+  ...
+# Subtest: LOOP-063: committed input mutation during execution cannot certify the replacement
+ok 15 - LOOP-063: committed input mutation during execution cannot certify the replacement
+  ---
+  duration_ms: 590.432574
+  type: 'test'
+  ...
+# Subtest: LOOP-064: removing executable permission makes passing evidence stale
+ok 16 - LOOP-064: removing executable permission makes passing evidence stale
+  ---
+  duration_ms: 757.369114
+  type: 'test'
+  ...
+# Subtest: LOOP-064: a mode-only change also invalidates the previous review after new evidence
+ok 17 - LOOP-064: a mode-only change also invalidates the previous review after new evidence
+  ---
+  duration_ms: 963.997471
+  type: 'test'
+  ...
+# Subtest: LOOP-064: changing a regular file into a link with identical identity bytes is stale
+ok 18 - LOOP-064: changing a regular file into a link with identical identity bytes is stale
+  ---
+  duration_ms: 1058.794175
+  type: 'test'
+  ...
+# Subtest: LOOP-063: an unchanged candidate still records a pass despite unrelated working-tree edits
+ok 19 - LOOP-063: an unchanged candidate still records a pass despite unrelated working-tree edits
+  ---
+  duration_ms: 300.256259
+  type: 'test'
+  ...
+# Subtest: LOOP-064: current and historical input ordering agrees for Unicode filenames
+ok 20 - LOOP-064: current and historical input ordering agrees for Unicode filenames
+  ---
+  duration_ms: 419.827124
+  type: 'test'
+  ...
+# Subtest: LOOP-063: Git status hiding content changes cannot certify an uncommitted candidate
+ok 21 - LOOP-063: Git status hiding content changes cannot certify an uncommitted candidate
+  ---
+  duration_ms: 224.232587
+  type: 'test'
+  ...
+# Subtest: LOOP-066: one check owns execution with a kernel action record
+ok 22 - LOOP-066: one check owns execution with a kernel action record
+  ---
+  duration_ms: 457.68837
+  type: 'test'
+  ...
+# Subtest: LOOP-066: one check owns execution with an agent action record
+ok 23 - LOOP-066: one check owns execution with an agent action record
+  ---
+  duration_ms: 442.703835
+  type: 'test'
+  ...
+# Subtest: LOOP-066: a live lock is named and never silently overwritten
+ok 24 - LOOP-066: a live lock is named and never silently overwritten
+  ---
+  duration_ms: 211.308835
+  type: 'test'
+  ...
+# Subtest: LOOP-066: a dead lock is named and never silently overwritten
+ok 25 - LOOP-066: a dead lock is named and never silently overwritten
+  ---
+  duration_ms: 211.145705
+  type: 'test'
+  ...
+# Subtest: LOOP-066: a incomplete lock is named and never silently overwritten
+ok 26 - LOOP-066: a incomplete lock is named and never silently overwritten
+  ---
+  duration_ms: 217.965152
+  type: 'test'
+  ...
+# Subtest: LOOP-066: an execution error releases the check lock for a corrected rerun
+ok 27 - LOOP-066: an execution error releases the check lock for a corrected rerun
+  ---
+  duration_ms: 428.717072
+  type: 'test'
+  ...
+# Subtest: LOOP-066: a live kernel action from an older Cairn also blocks execution
+ok 28 - LOOP-066: a live kernel action from an older Cairn also blocks execution
+  ---
+  duration_ms: 151.908922
+  type: 'test'
+  ...
+# Subtest: LOOP-066: separate Git worktrees can run checks independently
+ok 29 - LOOP-066: separate Git worktrees can run checks independently
+  ---
+  duration_ms: 468.158454
+  type: 'test'
+  ...
+# Subtest: after a green check --stale runs nothing; after one input changes it runs only that mechanism (LOOP-094)
+ok 30 - after a green check --stale runs nothing; after one input changes it runs only that mechanism (LOOP-094)
+  ---
+  duration_ms: 865.615698
+  type: 'test'
+  ...
+# Subtest: a mechanism speaking for two stale requirements runs once and refreshes both (LOOP-094, LOOP-040)
+ok 31 - a mechanism speaking for two stale requirements runs once and refreshes both (LOOP-094, LOOP-040)
+  ---
+  duration_ms: 604.631729
+  type: 'test'
+  ...
+# Subtest: a fresh failure and an unverified result are skipped with implement named (LOOP-094)
+ok 32 - a fresh failure and an unverified result are skipped with implement named (LOOP-094)
+  ---
+  duration_ms: 525.515343
+  type: 'test'
+  ...
+# Subtest: --stale with a requirement identifier is refused (LOOP-094)
+ok 33 - --stale with a requirement identifier is refused (LOOP-094)
+  ---
+  duration_ms: 136.577762
+  type: 'test'
+  ...
+# Subtest: check refuses a dirty declared input and names it; a dirty undeclared file does not block (LOOP-030)
+ok 34 - check refuses a dirty declared input and names it; a dirty undeclared file does not block (LOOP-030)
+  ---
+  duration_ms: 395.799783
+  type: 'test'
+  ...
+# Subtest: check writes one receipt per run carrying the full record and a result line per requirement (LOOP-097)
+ok 35 - check writes one receipt per run carrying the full record and a result line per requirement (LOOP-097)
+  ---
+  duration_ms: 292.068396
+  type: 'test'
+  ...
+# Subtest: a nonzero exit records fail, and the receipt keeps the exit code (LOOP-034)
+ok 36 - a nonzero exit records fail, and the receipt keeps the exit code (LOOP-034)
+  ---
+  duration_ms: 406.088689
+  type: 'test'
+  ...
+# Subtest: a pass after a fail keeps the failing record; nothing is overwritten or deleted (LOOP-025)
+ok 37 - a pass after a fail keeps the failing record; nothing is overwritten or deleted (LOOP-025)
+  ---
+  duration_ms: 693.902752
+  type: 'test'
+  ...
+# Subtest: a commit changing a declared input makes evidence stale; an undeclared one does not (LOOP-007)
+ok 38 - a commit changing a declared input makes evidence stale; an undeclared one does not (LOOP-007)
+  ---
+  duration_ms: 820.464113
+  type: 'test'
+  ...
+# Subtest: a regression is named before a requirement that never passed (LOOP-031)
+ok 39 - a regression is named before a requirement that never passed (LOOP-031)
+  ---
+  duration_ms: 1004.101263
+  type: 'test'
+  ...
+# Subtest: three attempts with no escalation since: wake says escalate, not a fourth (DEC-016, DEC-017, DEC-018)
+ok 40 - three attempts with no escalation since: wake says escalate, not a fourth (DEC-016, DEC-017, DEC-018)
+  ---
+  duration_ms: 2568.590764
+  type: 'test'
+  ...
+# Subtest: the review gate: no review, stale review, open finding, then Done (LOOP-020, LOOP-033)
+ok 41 - the review gate: no review, stale review, open finding, then Done (LOOP-020, LOOP-033)
+  ---
+  duration_ms: 1444.100425
+  type: 'test'
+  ...
+# Subtest: Done is refused while any requirement lacks current passing evidence (LOOP-017)
+ok 42 - Done is refused while any requirement lacks current passing evidence (LOOP-017)
+  ---
+  duration_ms: 174.512625
+  type: 'test'
+  ...
+# Subtest: check names a requested requirement that no mechanism claims
+ok 43 - check names a requested requirement that no mechanism claims
+  ---
+  duration_ms: 194.853504
+  type: 'test'
+  ...
+# Subtest: check writes the in-progress record before the run and clears it after (LOOP-021)
+ok 44 - check writes the in-progress record before the run and clears it after (LOOP-021)
+  ---
+  duration_ms: 306.167904
+  type: 'test'
+  ...
+# Subtest: a linked declared input digests the same at a commit and in the tree (LOOP-023, LOOP-024)
+ok 45 - a linked declared input digests the same at a commit and in the tree (LOOP-023, LOOP-024)
+  ---
+  duration_ms: 722.804763
+  type: 'test'
+  ...
+# Subtest: a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052)
+ok 46 - a result line is the mechanism's statement about one requirement; what it did not mention is unverified (LOOP-037, LOOP-052)
+  ---
+  duration_ms: 319.849093
+  type: 'test'
+  ...
+# Subtest: a mechanism that says nothing is read by its exit code for every requirement (LOOP-039)
+ok 47 - a mechanism that says nothing is read by its exit code for every requirement (LOOP-039)
+  ---
+  duration_ms: 303.879735
+  type: 'test'
+  ...
+# Subtest: unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018)
+ok 48 - unverified is not an attempt, and a return to an earlier failed digest counts once (DEC-017, DEC-018)
+  ---
+  duration_ms: 2591.586328
+  type: 'test'
+  ...
+# Subtest: a result line for a requirement the mechanism does not speak for is named and writes nothing (LOOP-038)
+ok 49 - a result line for a requirement the mechanism does not speak for is named and writes nothing (LOOP-038)
+  ---
+  duration_ms: 309.186719
+  type: 'test'
+  ...
+# Subtest: a result line inside ordinary output, or without the marker, does not count
+ok 50 - a result line inside ordinary output, or without the marker, does not count
+  ---
+  duration_ms: 292.177752
+  type: 'test'
+  ...
+# Subtest: a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040)
+ok 51 - a targeted check runs the named requirements' mechanisms and records every requirement they speak for (LOOP-040)
+  ---
+  duration_ms: 299.443221
+  type: 'test'
+  ...
+# Subtest: two result lines for one requirement: a fail on any line wins
+ok 52 - two result lines for one requirement: a fail on any line wins
+  ---
+  duration_ms: 296.940718
+  type: 'test'
+  ...
+# Subtest: three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053)
+ok 53 - three runs at one digest with no attempt since: the verdict stays implement and names DEC-019; an escalation naming it among others clears the hint (DEC-019, LOOP-053)
+  ---
+  duration_ms: 1365.016832
+  type: 'test'
+  ...
+# Subtest: a complete commitment with an unpromoted backlog item names promote, and a stamped item lets it reach Done (LOOP-087)
+ok 54 - a complete commitment with an unpromoted backlog item names promote, and a stamped item lets it reach Done (LOOP-087)
+  ---
+  duration_ms: 1011.355709
+  type: 'test'
+  ...
+# Subtest: an empty backlog with waiting next-iteration items is Done, with the count as information and no action on them (LOOP-091)
+ok 55 - an empty backlog with waiting next-iteration items is Done, with the count as information and no action on them (LOOP-091)
+  ---
+  duration_ms: 857.262207
+  type: 'test'
+  ...
+# Subtest: a promotion marker must resolve to a decision record (LOOP-088)
+ok 56 - a promotion marker must resolve to a decision record (LOOP-088)
+  ---
+  duration_ms: 422.958036
+  type: 'test'
+  ...
+# Subtest: a commitment promoted from an item needs a decision record naming the item (LOOP-088)
+ok 57 - a commitment promoted from an item needs a decision record naming the item (LOOP-088)
+  ---
+  duration_ms: 367.826072
+  type: 'test'
+  ...
+# Subtest: the spec lint reports a promotion marker with no decision record (LOOP-088)
+ok 58 - the spec lint reports a promotion marker with no decision record (LOOP-088)
+  ---
+  duration_ms: 93.585343
+  type: 'test'
+  ...
+# Subtest: a promoted commitment that changes an Agreed requirement or the working agreement is an escalation; an unpromoted one is not (LOOP-089, LOOP-090)
+ok 59 - a promoted commitment that changes an Agreed requirement or the working agreement is an escalation; an unpromoted one is not (LOOP-089, LOOP-090)
+  ---
+  duration_ms: 2284.105318
+  type: 'test'
+  ...
+# Subtest: a capture from one of the commitment's own requirements needs Outside because: or an escalation (LOOP-092)
+ok 60 - a capture from one of the commitment's own requirements needs Outside because: or an escalation (LOOP-092)
+  ---
+  duration_ms: 2565.927806
+  type: 'test'
+  ...
+# Subtest: a next-iteration item names what it would change, and the capture refuses one that does not (LOOP-093)
+ok 61 - a next-iteration item names what it would change, and the capture refuses one that does not (LOOP-093)
+  ---
+  duration_ms: 753.782182
+  type: 'test'
+  ...
+# Subtest: a commitment specified from a next-iteration item needs the item stamped before anything else (SPEC-027)
+ok 62 - a commitment specified from a next-iteration item needs the item stamped before anything else (SPEC-027)
+  ---
+  duration_ms: 939.306404
+  type: 'test'
+  ...
+# Subtest: a by deference marker resolves to a decision record like a promotion marker (SPEC-002, LOOP-088)
+ok 63 - a by deference marker resolves to a decision record like a promotion marker (SPEC-002, LOOP-088)
+  ---
+  duration_ms: 467.675672
+  type: 'test'
+  ...
+# Subtest: the LOOP-090 gate reads the Concerns line, not the slug as a substring (LOOP-114)
+ok 64 - the LOOP-090 gate reads the Concerns line, not the slug as a substring (LOOP-114)
+  ---
+  duration_ms: 1112.912386
+  type: 'test'
+  ...
+# Subtest: the LOOP-088 check reads the Promotes line, and decide --promotes writes it (LOOP-115)
+ok 65 - the LOOP-088 check reads the Promotes line, and decide --promotes writes it (LOOP-115)
+  ---
+  duration_ms: 539.523672
+  type: 'test'
+  ...
+# Subtest: the activation commit of a promoted commitment is inside the LOOP-089 comparison (LOOP-116)
+ok 66 - the activation commit of a promoted commitment is inside the LOOP-089 comparison (LOOP-116)
+  ---
+  duration_ms: 422.8712
+  type: 'test'
+  ...
+# Subtest: the LOOP-090 route needs one escalation: its Concerns line covers the moved item too (LOOP-119, LOOP-092, LOOP-114)
+ok 67 - the LOOP-090 route needs one escalation: its Concerns line covers the moved item too (LOOP-119, LOOP-092, LOOP-114)
+  ---
+  duration_ms: 1325.021575
+  type: 'test'
+  ...
+# Subtest: an escalation raised before the promoted commitment began does not silence the LOOP-090 gate (LOOP-114)
+ok 68 - an escalation raised before the promoted commitment began does not silence the LOOP-090 gate (LOOP-114)
+  ---
+  duration_ms: 866.504064
+  type: 'test'
+  ...
+# Subtest: an escalation raised before the commitment began does not silence the capture gate (LOOP-119)
+ok 69 - an escalation raised before the commitment began does not silence the capture gate (LOOP-119)
+  ---
+  duration_ms: 908.814128
+  type: 'test'
+  ...
+# Subtest: the activation commit is inside the scope footprint (LOOP-120)
+ok 70 - the activation commit is inside the scope footprint (LOOP-120)
+  ---
+  duration_ms: 355.927137
+  type: 'test'
+  ...
+# Subtest: a requirement Agreed at activation that is demoted or removed is a contract change (LOOP-121)
+ok 71 - a requirement Agreed at activation that is demoted or removed is a contract change (LOOP-121)
+  ---
+  duration_ms: 1091.218189
+  type: 'test'
+  ...
+# Subtest: the include files are the root files that hold @AGENTS.md: exempt from the footprint, compared by the gate (LOOP-122)
+ok 72 - the include files are the root files that hold @AGENTS.md: exempt from the footprint, compared by the gate (LOOP-122)
+  ---
+  duration_ms: 2084.598419
+  type: 'test'
+  ...
+# Subtest: a superseded promotion no longer satisfies the LOOP-088 check, and the repair says the promotion was reversed (LOOP-123)
+ok 73 - a superseded promotion no longer satisfies the LOOP-088 check, and the repair says the promotion was reversed (LOOP-123)
+  ---
+  duration_ms: 918.691821
+  type: 'test'
+  ...
+# Subtest: the restore route measures from the tree before activation, so a path the activation commit added must go (LOOP-120, LOOP-035)
+ok 74 - the restore route measures from the tree before activation, so a path the activation commit added must go (LOOP-120, LOOP-035)
+  ---
+  duration_ms: 523.669329
+  type: 'test'
+  ...
+# Subtest: the loop works against exactly one commitment: the current one (LOOP-019)
+ok 75 - the loop works against exactly one commitment: the current one (LOOP-019)
+  ---
+  duration_ms: 694.509233
+  type: 'test'
+  ...
+# Subtest: a promotion recorded below Consequential is a repair naming the level, since the developer never sees it in the queue (LOOP-088)
+ok 76 - a promotion recorded below Consequential is a repair naming the level, since the developer never sees it in the queue (LOOP-088)
+  ---
+  duration_ms: 232.556626
+  type: 'test'
+  ...
+# Subtest: every requirement the node-test declaration speaks for is named in a test title (PKG-025)
+ok 77 - every requirement the node-test declaration speaks for is named in a test title (PKG-025)
+  ---
+  duration_ms: 3.305823
+  type: 'test'
+  ...
+# Subtest: every repository path the tests read is a declared input of node-test (PKG-026)
+ok 78 - every repository path the tests read is a declared input of node-test (PKG-026)
+  ---
+  duration_ms: 1.024544
+  type: 'test'
+  ...
+# Subtest: writes a record with every required field and an empty realized-by (DEC-001, DEC-005)
+ok 79 - writes a record with every required field and an empty realized-by (DEC-001, DEC-005)
+  ---
+  duration_ms: 155.617167
+  type: 'test'
+  ...
+# Subtest: a Consequential decision is queued for review (DEC-013)
+ok 80 - a Consequential decision is queued for review (DEC-013)
+  ---
+  duration_ms: 136.994386
+  type: 'test'
+  ...
+# Subtest: a Consequential decision is queued even when .cairn/queue does not exist yet
+ok 81 - a Consequential decision is queued even when .cairn/queue does not exist yet
+  ---
+  duration_ms: 149.538112
+  type: 'test'
+  ...
+# Subtest: Routine is refused: routine decisions produce no record
+ok 82 - Routine is refused: routine decisions produce no record
+  ---
+  duration_ms: 150.808873
+  type: 'test'
+  ...
+# Subtest: a missing field is a usage error and nothing is written
+ok 83 - a missing field is a usage error and nothing is written
+  ---
+  duration_ms: 145.944456
+  type: 'test'
+  ...
+# Subtest: supersedes requires a classified cause, and the old record must exist
+ok 84 - supersedes requires a classified cause, and the old record must exist
+  ---
+  duration_ms: 255.784648
+  type: 'test'
+  ...
+# Subtest: an existing record is not overwritten
+ok 85 - an existing record is not overwritten
+  ---
+  duration_ms: 204.871719
+  type: 'test'
+  ...
+# Subtest: a queued decision stays queued; nothing but the developer removes it (DEC-014)
+ok 86 - a queued decision stays queued; nothing but the developer removes it (DEC-014)
+  ---
+  duration_ms: 300.307271
+  type: 'test'
+  ...
+# Subtest: each accepted decider is stored lowercase, whatever case it was typed in (DEC-020)
+ok 87 - each accepted decider is stored lowercase, whatever case it was typed in (DEC-020)
+  ---
+  duration_ms: 981.464353
+  type: 'test'
+  ...
+# Subtest: a decider outside the vocabulary is a usage error naming all three, and nothing is written (DEC-020)
+ok 88 - a decider outside the vocabulary is a usage error naming all three, and nothing is written (DEC-020)
+  ---
+  duration_ms: 856.745586
+  type: 'test'
+  ...
+# Subtest: an empty --decided-by is the missing-field error, not the vocabulary one
+ok 89 - an empty --decided-by is the missing-field error, not the vocabulary one
+  ---
+  duration_ms: 139.785999
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: missing inputs names a declaration repair before execution
+ok 90 - LOOP-006, LOOP-067: missing inputs names a declaration repair before execution
+  ---
+  duration_ms: 209.455583
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: empty inputs names a declaration repair before execution
+ok 91 - LOOP-006, LOOP-067: empty inputs names a declaration repair before execution
+  ---
+  duration_ms: 221.5939
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: missing command names a declaration repair before execution
+ok 92 - LOOP-006, LOOP-067: missing command names a declaration repair before execution
+  ---
+  duration_ms: 217.081021
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: list command names a declaration repair before execution
+ok 93 - LOOP-006, LOOP-067: list command names a declaration repair before execution
+  ---
+  duration_ms: 267.79242
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: empty command names a declaration repair before execution
+ok 94 - LOOP-006, LOOP-067: empty command names a declaration repair before execution
+  ---
+  duration_ms: 213.873063
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: missing requirements names a declaration repair before execution
+ok 95 - LOOP-006, LOOP-067: missing requirements names a declaration repair before execution
+  ---
+  duration_ms: 215.810723
+  type: 'test'
+  ...
+# Subtest: LOOP-006, LOOP-067: bad identifier names a declaration repair before execution
+ok 96 - LOOP-006, LOOP-067: bad identifier names a declaration repair before execution
+  ---
+  duration_ms: 227.729857
+  type: 'test'
+  ...
+# Subtest: LOOP-067: scalar one-item lists retain their existing meaning
+ok 97 - LOOP-067: scalar one-item lists retain their existing meaning
+  ---
+  duration_ms: 300.328718
+  type: 'test'
+  ...
+# Subtest: LOOP-068: a unpopulated gitlink is refused by name
+ok 98 - LOOP-068: a unpopulated gitlink is refused by name
+  ---
+  duration_ms: 340.819861
+  type: 'test'
+  ...
+# Subtest: LOOP-068: a populated gitlink is refused by name
+ok 99 - LOOP-068: a populated gitlink is refused by name
+  ---
+  duration_ms: 397.039141
+  type: 'test'
+  ...
+# Subtest: LOOP-069: identical selections across 100 mechanisms use at most 20 Git processes
+ok 100 - LOOP-069: identical selections across 100 mechanisms use at most 20 Git processes
+  ---
+  duration_ms: 188.929589
+  type: 'test'
+  ...
+# Subtest: escalate writes the six-line format followed by its facts, and wake presents it (LOOP-010, LOOP-026)
+ok 101 - escalate writes the six-line format followed by its facts, and wake presents it (LOOP-010, LOOP-026)
+  ---
+  duration_ms: 233.17554
+  type: 'test'
+  ...
+# Subtest: a missing or multi-line field is refused with the field named, and nothing is written (LOOP-012)
+ok 102 - a missing or multi-line field is refused with the field named, and nothing is written (LOOP-012)
+  ---
+  duration_ms: 202.528588
+  type: 'test'
+  ...
+# Subtest: a Blocking escalation that fails the format is written anyway, naming the malformed field (LOOP-013)
+ok 103 - a Blocking escalation that fails the format is written anyway, naming the malformed field (LOOP-013)
+  ---
+  duration_ms: 204.319779
+  type: 'test'
+  ...
+# Subtest: the loop stops for the developer only at Blocking: a recorded decision below it never yields Escalate, and the Blocking bypass must be spelled exactly (DEC-002)
+ok 104 - the loop stops for the developer only at Blocking: a recorded decision below it never yields Escalate, and the Blocking bypass must be spelled exactly (DEC-002)
+  ---
+  duration_ms: 385.989881
+  type: 'test'
+  ...
+# Subtest: a second escalation while one is open is refused (LOOP-011)
+ok 105 - a second escalation while one is open is refused (LOOP-011)
+  ---
+  duration_ms: 194.057582
+  type: 'test'
+  ...
+# Subtest: answer records the reply; wake no longer presents it; a second answer is refused
+ok 106 - answer records the reply; wake no longer presents it; a second answer is refused
+  ---
+  duration_ms: 343.091333
+  type: 'test'
+  ...
+# Subtest: answer to an unknown escalation is refused
+ok 107 - answer to an unknown escalation is refused
+  ---
+  duration_ms: 148.684408
+  type: 'test'
+  ...
+# Subtest: a stranger resumes from the file alone: question and answer are both in it (LOOP-014)
+ok 108 - a stranger resumes from the file alone: question and answer are both in it (LOOP-014)
+  ---
+  duration_ms: 197.990285
+  type: 'test'
+  ...
+# Subtest: after an answer, the same concern can be escalated again under a new name
+ok 109 - after an answer, the same concern can be escalated again under a new name
+  ---
+  duration_ms: 260.490663
+  type: 'test'
+  ...
+# Subtest: an escalation exists when its file does, committed or not (LOOP-009)
+ok 110 - an escalation exists when its file does, committed or not (LOOP-009)
+  ---
+  duration_ms: 149.863866
+  type: 'test'
+  ...
+# Subtest: developer answers require one of the three forms and cannot inject fields (LOOP-048)
+ok 111 - developer answers require one of the three forms and cannot inject fields (LOOP-048)
+  ---
+  duration_ms: 731.243475
+  type: 'test'
+  ...
+# Subtest: ask, agent explanation, another ask, and ok stay ordered in one file (LOOP-049, LOOP-050, LOOP-014)
+ok 112 - ask, agent explanation, another ask, and ok stay ordered in one file (LOOP-049, LOOP-050, LOOP-014)
+  ---
+  duration_ms: 937.736304
+  type: 'test'
+  ...
+# Subtest: fresh closed answers accompany only concerned requirements until new evidence (LOOP-051)
+ok 113 - fresh closed answers accompany only concerned requirements until new evidence (LOOP-051)
+  ---
+  duration_ms: 928.091842
+  type: 'test'
+  ...
+# Subtest: a raised escalation carries no derivable status line, and an old record with one still parses (LOOP-028)
+ok 114 - a raised escalation carries no derivable status line, and an old record with one still parses (LOOP-028)
+  ---
+  duration_ms: 261.674031
+  type: 'test'
+  ...
+# Subtest: LOOP-065: delete of output refuses Done and a new run recovers
+ok 115 - LOOP-065: delete of output refuses Done and a new run recovers
+  ---
+  duration_ms: 1085.970019
+  type: 'test'
+  ...
+# Subtest: LOOP-065: corrupt of output refuses Done and a new run recovers
+ok 116 - LOOP-065: corrupt of output refuses Done and a new run recovers
+  ---
+  duration_ms: 1095.486133
+  type: 'test'
+  ...
+# Subtest: LOOP-065: delete of stderr_output refuses Done and a new run recovers
+ok 117 - LOOP-065: delete of stderr_output refuses Done and a new run recovers
+  ---
+  duration_ms: 1095.036191
+  type: 'test'
+  ...
+# Subtest: LOOP-065: corrupt of stderr_output refuses Done and a new run recovers
+ok 118 - LOOP-065: corrupt of stderr_output refuses Done and a new run recovers
+  ---
+  duration_ms: 1076.25274
+  type: 'test'
+  ...
+# Subtest: LOOP-065: a receipt without output needs a new check
+ok 119 - LOOP-065: a receipt without output needs a new check
+  ---
+  duration_ms: 698.795847
+  type: 'test'
+  ...
+# Subtest: LOOP-065: a receipt without output_digest needs a new check
+ok 120 - LOOP-065: a receipt without output_digest needs a new check
+  ---
+  duration_ms: 705.60667
+  type: 'test'
+  ...
+# Subtest: LOOP-065: a receipt without stderr_output needs a new check
+ok 121 - LOOP-065: a receipt without stderr_output needs a new check
+  ---
+  duration_ms: 717.714861
+  type: 'test'
+  ...
+# Subtest: LOOP-065: a receipt without stderr_digest needs a new check
+ok 122 - LOOP-065: a receipt without stderr_digest needs a new check
+  ---
+  duration_ms: 707.577657
+  type: 'test'
+  ...
+# Subtest: LOOP-065: legacy unverifiable output is rerun without rewriting history
+ok 123 - LOOP-065: legacy unverifiable output is rerun without rewriting history
+  ---
+  duration_ms: 1106.460288
+  type: 'test'
+  ...
+# Subtest: a fresh record names the kernel that wrote it (LOOP-023)
+ok 124 - a fresh record names the kernel that wrote it (LOOP-023)
+  ---
+  duration_ms: 548.127089
+  type: 'test'
+  ...
+# Subtest: LOOP-095: a record from another kernel is stale with the kernel named, and a new check restores Done
+ok 125 - LOOP-095: a record from another kernel is stale with the kernel named, and a new check restores Done
+  ---
+  duration_ms: 1117.552757
+  type: 'test'
+  ...
+# Subtest: LOOP-095: a record from no kernel is stale with the kernel named, and a new check restores Done
+ok 126 - LOOP-095: a record from no kernel is stale with the kernel named, and a new check restores Done
+  ---
+  duration_ms: 1099.3239
+  type: 'test'
+  ...
+# Subtest: LOOP-070: a later failure is latest even when the clock moves backward
+ok 127 - LOOP-070: a later failure is latest even when the clock moves backward
+  ---
+  duration_ms: 845.151527
+  type: 'test'
+  ...
+# Subtest: LOOP-070: receipt collisions at one clock instant retain execution order beyond nine suffixes
+ok 128 - LOOP-070: receipt collisions at one clock instant retain execution order beyond nine suffixes
+  ---
+  duration_ms: 2805.923001
+  type: 'test'
+  ...
+# Subtest: LOOP-070: imported branch receipts stale a later sequence until a new check incorporates them
+ok 129 - LOOP-070: imported branch receipts stale a later sequence until a new check incorporates them
+  ---
+  duration_ms: 1563.288071
+  type: 'test'
+  ...
+# Subtest: LOOP-070, LOOP-098: legacy receipts need one ordered check, remain byte-for-byte unchanged, and precede the run receipt in the history
+ok 130 - LOOP-070, LOOP-098: legacy receipts need one ordered check, remain byte-for-byte unchanged, and precede the run receipt in the history
+  ---
+  duration_ms: 713.763401
+  type: 'test'
+  ...
+# Subtest: LOOP-070: edit of a prior receipt requires fresh evidence
+ok 131 - LOOP-070: edit of a prior receipt requires fresh evidence
+  ---
+  duration_ms: 794.166884
+  type: 'test'
+  ...
+# Subtest: LOOP-070: remove of a prior receipt requires fresh evidence
+ok 132 - LOOP-070: remove of a prior receipt requires fresh evidence
+  ---
+  duration_ms: 800.469221
+  type: 'test'
+  ...
+# Subtest: LOOP-075: supporting evidence file README.md does not become a receipt
+ok 133 - LOOP-075: supporting evidence file README.md does not become a receipt
+  ---
+  duration_ms: 763.071713
+  type: 'test'
+  ...
+# Subtest: LOOP-075: supporting evidence file notes.txt does not become a receipt
+ok 134 - LOOP-075: supporting evidence file notes.txt does not become a receipt
+  ---
+  duration_ms: 745.365578
+  type: 'test'
+  ...
+# Subtest: LOOP-075: supporting evidence file support does not become a receipt
+ok 135 - LOOP-075: supporting evidence file support does not become a receipt
+  ---
+  duration_ms: 751.119321
+  type: 'test'
+  ...
+# Subtest: LOOP-075: supporting evidence file .DS_Store does not become a receipt
+ok 136 - LOOP-075: supporting evidence file .DS_Store does not become a receipt
+  ---
+  duration_ms: 746.670625
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a malformed result line (result=success) names a repair before execution
+ok 137 - LOOP-075: a malformed result line (result=success) names a repair before execution
+  ---
+  duration_ms: 515.3364
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a malformed result line (sequence=NaN) names a repair before execution
+ok 138 - LOOP-075: a malformed result line (sequence=NaN) names a repair before execution
+  ---
+  duration_ms: 508.614681
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a malformed result line (sequence=9007199254740992) names a repair before execution
+ok 139 - LOOP-075: a malformed result line (sequence=9007199254740992) names a repair before execution
+  ---
+  duration_ms: 519.313746
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a malformed result line (history_digest=wrong) names a repair before execution
+ok 140 - LOOP-075: a malformed result line (history_digest=wrong) names a repair before execution
+  ---
+  duration_ms: 522.913476
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a malformed result line (tokens) names a repair before execution
+ok 141 - LOOP-075: a malformed result line (tokens) names a repair before execution
+  ---
+  duration_ms: 534.64552
+  type: 'test'
+  ...
+# Subtest: LOOP-075: a receipt-shaped directory is a named repair instead of an EISDIR crash
+ok 142 - LOOP-075: a receipt-shaped directory is a named repair instead of an EISDIR crash
+  ---
+  duration_ms: 479.851928
+  type: 'test'
+  ...
+# Subtest: LOOP-070: an earlier escalation cannot cover three new attempts after clock rollback
+ok 143 - LOOP-070: an earlier escalation cannot cover three new attempts after clock rollback
+  ---
+  duration_ms: 1927.561407
+  type: 'test'
+  ...
+# Subtest: LOOP-070: an answer becomes old after a later check even if that check's timestamp is earlier
+ok 144 - LOOP-070: an answer becomes old after a later check even if that check's timestamp is earlier
+  ---
+  duration_ms: 1012.814805
+  type: 'test'
+  ...
+# Subtest: LOOP-070: the newest answer wins between checks even when its clock timestamp is older
+ok 145 - LOOP-070: the newest answer wins between checks even when its clock timestamp is older
+  ---
+  duration_ms: 768.604215
+  type: 'test'
+  ...
+# Subtest: LOOP-070: legacy escalation dates cover old receipts but not three newer sequenced runs
+ok 146 - LOOP-070: legacy escalation dates cover old receipts but not three newer sequenced runs
+  ---
+  duration_ms: 1869.630435
+  type: 'test'
+  ...
+# Subtest: a PKG requirement the commitment does not name is declared, run, and gates Done (PKG-011)
+ok 147 - a PKG requirement the commitment does not name is declared, run, and gates Done (PKG-011)
+  ---
+  duration_ms: 1506.21914
+  type: 'test'
+  ...
+# Subtest: a PKG requirement in a Draft spec is not folded in
+ok 148 - a PKG requirement in a Draft spec is not folded in
+  ---
+  duration_ms: 427.918343
+  type: 'test'
+  ...
+# Subtest: LOOP-076, LOOP-079: stale inputs identify the receipt and the check to run
+ok 149 - LOOP-076, LOOP-079: stale inputs identify the receipt and the check to run
+  ---
+  duration_ms: 713.831634
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a content change using checked input identity
+ok 150 - LOOP-077: names a content change using checked input identity
+  ---
+  duration_ms: 703.894103
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a mode change using checked input identity
+ok 151 - LOOP-077: names a mode change using checked input identity
+  ---
+  duration_ms: 681.473405
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a kind change using checked input identity
+ok 152 - LOOP-077: names a kind change using checked input identity
+  ---
+  duration_ms: 693.299387
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a added change using checked input identity
+ok 153 - LOOP-077: names a added change using checked input identity
+  ---
+  duration_ms: 694.877974
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a removed change using checked input identity
+ok 154 - LOOP-077: names a removed change using checked input identity
+  ---
+  duration_ms: 719.980299
+  type: 'test'
+  ...
+# Subtest: LOOP-077: names a link-target change using checked input identity
+ok 155 - LOOP-077: names a link-target change using checked input identity
+  ---
+  duration_ms: 1112.495058
+  type: 'test'
+  ...
+# Subtest: LOOP-077: changed selection compares the old and new input sets
+ok 156 - LOOP-077: changed selection compares the old and new input sets
+  ---
+  duration_ms: 691.527829
+  type: 'test'
+  ...
+# Subtest: LOOP-077: raw CRLF changes remain visible when Git-clean content agrees
+ok 157 - LOOP-077: raw CRLF changes remain visible when Git-clean content agrees
+  ---
+  duration_ms: 671.428019
+  type: 'test'
+  ...
+# Subtest: LOOP-077: detail output is sorted, bounded, and reports the omitted count
+ok 158 - LOOP-077: detail output is sorted, bounded, and reports the omitted count
+  ---
+  duration_ms: 710.293925
+  type: 'test'
+  ...
+# Subtest: LOOP-077: filenames cannot inject lines or terminal controls into explanations
+ok 159 - LOOP-077: filenames cannot inject lines or terminal controls into explanations
+  ---
+  duration_ms: 690.603482
+  type: 'test'
+  ...
+# Subtest: LOOP-077: receipts from one run share details and do not store source contents
+ok 160 - LOOP-077: receipts from one run share details and do not store source contents
+  ---
+  duration_ms: 539.191276
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: legacy optional detail limits explanation without changing standing
+ok 161 - LOOP-078, LOOP-080: legacy optional detail limits explanation without changing standing
+  ---
+  duration_ms: 863.799347
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: invalid-field optional detail limits explanation without changing standing
+ok 162 - LOOP-078, LOOP-080: invalid-field optional detail limits explanation without changing standing
+  ---
+  duration_ms: 843.559152
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: missing optional detail limits explanation without changing standing
+ok 163 - LOOP-078, LOOP-080: missing optional detail limits explanation without changing standing
+  ---
+  duration_ms: 841.681358
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: invalid-json optional detail limits explanation without changing standing
+ok 164 - LOOP-078, LOOP-080: invalid-json optional detail limits explanation without changing standing
+  ---
+  duration_ms: 868.997571
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: mismatched optional detail limits explanation without changing standing
+ok 165 - LOOP-078, LOOP-080: mismatched optional detail limits explanation without changing standing
+  ---
+  duration_ms: 817.767396
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: duplicate optional detail limits explanation without changing standing
+ok 166 - LOOP-078, LOOP-080: duplicate optional detail limits explanation without changing standing
+  ---
+  duration_ms: 846.030434
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: unsafe-path optional detail limits explanation without changing standing
+ok 167 - LOOP-078, LOOP-080: unsafe-path optional detail limits explanation without changing standing
+  ---
+  duration_ms: 826.397108
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: directory optional detail limits explanation without changing standing
+ok 168 - LOOP-078, LOOP-080: directory optional detail limits explanation without changing standing
+  ---
+  duration_ms: 814.794435
+  type: 'test'
+  ...
+# Subtest: LOOP-078, LOOP-080: symlink optional detail limits explanation without changing standing
+ok 169 - LOOP-078, LOOP-080: symlink optional detail limits explanation without changing standing
+  ---
+  duration_ms: 842.95079
+  type: 'test'
+  ...
+# Subtest: LOOP-078: unavailable old requirement text is not claimed as a proven change
+ok 170 - LOOP-078: unavailable old requirement text is not claimed as a proven change
+  ---
+  duration_ms: 623.500659
+  type: 'test'
+  ...
+# Subtest: LOOP-076, LOOP-079: changed requirements identify evidence and retain review-before-check guidance
+ok 171 - LOOP-076, LOOP-079: changed requirements identify evidence and retain review-before-check guidance
+  ---
+  duration_ms: 716.615326
+  type: 'test'
+  ...
+# Subtest: LOOP-078: simultaneous input and output damage keep both reasons
+ok 172 - LOOP-078: simultaneous input and output damage keep both reasons
+  ---
+  duration_ms: 709.458341
+  type: 'test'
+  ...
+# Subtest: LOOP-080: deterministic freshness sequence seed=7
+ok 173 - LOOP-080: deterministic freshness sequence seed=7
+  ---
+  duration_ms: 10257.418106
+  type: 'test'
+  ...
+# Subtest: LOOP-080: deterministic freshness sequence seed=42
+ok 174 - LOOP-080: deterministic freshness sequence seed=42
+  ---
+  duration_ms: 9082.274283
+  type: 'test'
+  ...
+# Subtest: LOOP-080: deterministic freshness sequence seed=913
+ok 175 - LOOP-080: deterministic freshness sequence seed=913
+  ---
+  duration_ms: 8519.850817
+  type: 'test'
+  ...
+# Subtest: LOOP-080: agreement changes, mechanism review, checks, and completion review retain priority
+ok 176 - LOOP-080: agreement changes, mechanism review, checks, and completion review retain priority
+  ---
+  duration_ms: 2146.250504
+  type: 'test'
+  ...
+# Subtest: LOOP-080: imported receipt history demands a rerun without a false input explanation
+ok 177 - LOOP-080: imported receipt history demands a rerun without a false input explanation
+  ---
+  duration_ms: 2148.125884
+  type: 'test'
+  ...
+# Subtest: LOOP-073: clean CRLF input completes under attributes
+ok 178 - LOOP-073: clean CRLF input completes under attributes
+  ---
+  duration_ms: 547.081463
+  type: 'test'
+  ...
+# Subtest: LOOP-073: clean CRLF input completes under autocrlf
+ok 179 - LOOP-073: clean CRLF input completes under autocrlf
+  ---
+  duration_ms: 529.525273
+  type: 'test'
+  ...
+# Subtest: LOOP-073: raw line-ending mutation during a run is rejected even when Git still sees the same content
+ok 180 - LOOP-073: raw line-ending mutation during a run is rejected even when Git still sees the same content
+  ---
+  duration_ms: 276.567127
+  type: 'test'
+  ...
+# Subtest: LOOP-073: execution evidence changes when clean conversion preserves committed identity
+ok 181 - LOOP-073: execution evidence changes when clean conversion preserves committed identity
+  ---
+  duration_ms: 845.995933
+  type: 'test'
+  ...
+# Subtest: LOOP-073: Git clean filters use Git's conversion while retaining raw evidence identity
+ok 182 - LOOP-073: Git clean filters use Git's conversion while retaining raw evidence identity
+  ---
+  duration_ms: 591.327184
+  type: 'test'
+  ...
+# Subtest: LOOP-073: failure of a required Git filter cannot record evidence
+ok 183 - LOOP-073: failure of a required Git filter cannot record evidence
+  ---
+  duration_ms: 173.068438
+  type: 'test'
+  ...
+# Subtest: LOOP-073: a clean filter moving HEAD during ending validation prevents evidence
+ok 184 - LOOP-073: a clean filter moving HEAD during ending validation prevents evidence
+  ---
+  duration_ms: 467.469062
+  type: 'test'
+  ...
+# Subtest: LOOP-073: canonical Git identities handle links without reading their targets
+ok 185 - LOOP-073: canonical Git identities handle links without reading their targets
+  ---
+  duration_ms: 606.113116
+  type: 'test'
+  ...
+# Subtest: LOOP-073: Git conversion keeps raw Unicode and control-character input paths
+ok 186 - LOOP-073: Git conversion keeps raw Unicode and control-character input paths
+  ---
+  duration_ms: 510.613847
+  type: 'test'
+  ...
+# Subtest: LOOP-073: conversion and links work in a SHA-256 Git repository
+ok 187 - LOOP-073: conversion and links work in a SHA-256 Git repository
+  ---
+  duration_ms: 602.835894
+  type: 'test'
+  ...
+# Subtest: LOOP-074: historical specification filename "café.md" remains reviewable
+ok 188 - LOOP-074: historical specification filename "café.md" remains reviewable
+  ---
+  duration_ms: 596.62588
+  type: 'test'
+  ...
+# Subtest: LOOP-074: historical specification filename "spec\\ttab.md" remains reviewable
+ok 189 - LOOP-074: historical specification filename "spec\\ttab.md" remains reviewable
+  ---
+  duration_ms: 626.043578
+  type: 'test'
+  ...
+# Subtest: LOOP-074: historical specification filename "spec\\nline.md" remains reviewable
+ok 190 - LOOP-074: historical specification filename "spec\\nline.md" remains reviewable
+  ---
+  duration_ms: 611.502191
+  type: 'test'
+  ...
+# Subtest: help works outside a repository without running a command (PKG-017)
+ok 191 - help works outside a repository without running a command (PKG-017)
+  ---
+  duration_ms: 1043.547749
+  type: 'test'
+  ...
+# Subtest: help does not hide invalid options or consume literal arguments
+ok 192 - help does not hide invalid options or consume literal arguments
+  ---
+  duration_ms: 246.019919
+  type: 'test'
+  ...
+# Subtest: help lists the lint command (PKG-017)
+ok 193 - help lists the lint command (PKG-017)
+  ---
+  duration_ms: 53.061303
+  type: 'test'
+  ...
+# Subtest: the stop hook refuses a stop while wake says Resolvable, with the verdict as the reason (PKG-018)
+ok 194 - the stop hook refuses a stop while wake says Resolvable, with the verdict as the reason (PKG-018)
+  ---
+  duration_ms: 227.940964
+  type: 'test'
+  ...
+# Subtest: the stop hook allows a stop at Done, at Escalate, and outside a Cairn repository (PKG-018)
+ok 195 - the stop hook allows a stop at Done, at Escalate, and outside a Cairn repository (PKG-018)
+  ---
+  duration_ms: 1082.551127
+  type: 'test'
+  ...
+# Subtest: the session-start hook links the command once and prints the verdict in a Cairn repository (PKG-019, PKG-014, PKG-005)
+ok 196 - the session-start hook links the command once and prints the verdict in a Cairn repository (PKG-019, PKG-014, PKG-005)
+  ---
+  duration_ms: 460.664563
+  type: 'test'
+  ...
+# Subtest: the session-start hook prints no verdict outside a Cairn repository and leaves an existing link that resolves alone (PKG-019)
+ok 197 - the session-start hook prints no verdict outside a Cairn repository and leaves an existing link that resolves alone (PKG-019)
+  ---
+  duration_ms: 50.694428
+  type: 'test'
+  ...
+# Subtest: a checkout under a path with a space links a command that resolves, and its stop hook still blocks (PKG-019, PKG-021)
+ok 198 - a checkout under a path with a space links a command that resolves, and its stop hook still blocks (PKG-019, PKG-021)
+  ---
+  duration_ms: 421.978605
+  type: 'test'
+  ...
+# Subtest: the hooks run the kernel the command link resolves to, so hook and agent share one referee (PKG-021)
+ok 199 - the hooks run the kernel the command link resolves to, so hook and agent share one referee (PKG-021)
+  ---
+  duration_ms: 994.311575
+  type: 'test'
+  ...
+# Subtest: a dangling link is replaced and reported (PKG-019)
+ok 200 - a dangling link is replaced and reported (PKG-019)
+  ---
+  duration_ms: 226.963961
+  type: 'test'
+  ...
+# Subtest: errors exit 0 with one line on standard error and no stack trace (PKG-022)
+ok 201 - errors exit 0 with one line on standard error and no stack trace (PKG-022)
+  ---
+  duration_ms: 263.630264
+  type: 'test'
+  ...
+# Subtest: the hooks judge with the cairn on PATH, a wrapper included, and session-start names it (PKG-033)
+ok 202 - the hooks judge with the cairn on PATH, a wrapper included, and session-start names it (PKG-033)
+  ---
+  duration_ms: 1109.078689
+  type: 'test'
+  ...
+# Subtest: a link to a wrapper or file is kept; a dangling link or one to a directory is replaced (PKG-034)
+ok 203 - a link to a wrapper or file is kept; a dangling link or one to a directory is replaced (PKG-034)
+  ---
+  duration_ms: 509.433124
+  type: 'test'
+  ...
+# Subtest: a project below the Git toplevel gets the verdict and the stop refusal (PKG-035)
+ok 204 - a project below the Git toplevel gets the verdict and the stop refusal (PKG-035)
+  ---
+  duration_ms: 497.063955
+  type: 'test'
+  ...
+# Subtest: a kernel that prints no verdict is one stderr line: the stop is allowed and session-start prints no trace (PKG-036)
+ok 205 - a kernel that prints no verdict is one stderr line: the stop is allowed and session-start prints no trace (PKG-036)
+  ---
+  duration_ms: 256.329092
+  type: 'test'
+  ...
+# Subtest: a link that cannot be created is one stderr line, and the verdict still prints (PKG-019, PKG-022)
+ok 206 - a link that cannot be created is one stderr line, and the verdict still prints (PKG-019, PKG-022) # SKIP root writes everywhere
+  ---
+  duration_ms: 0.206917
+  type: 'test'
+  ...
+# Subtest: with git absent the hooks say so in one line and block nothing (PKG-022)
+ok 207 - with git absent the hooks say so in one line and block nothing (PKG-022)
+  ---
+  duration_ms: 180.616725
+  type: 'test'
+  ...
+# Subtest: cairn lint runs the checker over docs/spec by default and over a named directory (PKG-028)
+ok 208 - cairn lint runs the checker over docs/spec by default and over a named directory (PKG-028)
+  ---
+  duration_ms: 286.094125
+  type: 'test'
+  ...
+# Subtest: cairn lint names a missing directory in one line, takes one argument, and reports a bad root (PKG-028)
+ok 209 - cairn lint names a missing directory in one line, takes one argument, and reports a bad root (PKG-028)
+  ---
+  duration_ms: 299.742495
+  type: 'test'
+  ...
+# Subtest: three megabytes are retained exactly once with matching digests (LOOP-041, LOOP-042)
+ok 210 - three megabytes are retained exactly once with matching digests (LOOP-041, LOOP-042)
+  ---
+  duration_ms: 340.411283
+  type: 'test'
+  ...
+# Subtest: split stdout result lines survive a long non-result line; stderr is never a verdict
+ok 211 - split stdout result lines survive a long non-result line; stderr is never a verdict
+  ---
+  duration_ms: 351.078589
+  type: 'test'
+  ...
+# Subtest: signal termination is recorded and logs survive a clone (LOOP-043)
+ok 212 - signal termination is recorded and logs survive a clone (LOOP-043)
+  ---
+  duration_ms: 418.544055
+  type: 'test'
+  ...
+# Subtest: working agreements and ignore changes are Cairn records inside the footprint
+ok 213 - working agreements and ignore changes are Cairn records inside the footprint
+  ---
+  duration_ms: 410.753055
+  type: 'test'
+  ...
+# Subtest: a clean package passes
+ok 214 - a clean package passes
+  ---
+  duration_ms: 153.750891
+  type: 'test'
+  ...
+# Subtest: PKG-001: a dependency, or a service manifest
+ok 215 - PKG-001: a dependency, or a service manifest
+  ---
+  duration_ms: 274.017522
+  type: 'test'
+  ...
+# Subtest: PKG-002: ignoring evidence or other durable state, by directory or by extension
+ok 216 - PKG-002: ignoring evidence or other durable state, by directory or by extension
+  ---
+  duration_ms: 288.927076
+  type: 'test'
+  ...
+# Subtest: PKG-003: a command, a directory, or a record kind no decision names
+ok 217 - PKG-003: a command, a directory, or a record kind no decision names
+  ---
+  duration_ms: 440.493751
+  type: 'test'
+  ...
+# Subtest: PKG-004: a kernel over 1600 lines, counting every file under bin/ as wc -l does; exactly 1600 passes
+ok 218 - PKG-004: a kernel over 1600 lines, counting every file under bin/ as wc -l does; exactly 1600 passes
+  ---
+  duration_ms: 578.905973
+  type: 'test'
+  ...
+# Subtest: PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)
+ok 219 - PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)
+  ---
+  duration_ms: 597.768487
+  type: 'test'
+  ...
+# Subtest: PKG-008: a non-ASCII character in a tracked text file
+ok 220 - PKG-008: a non-ASCII character in a tracked text file
+  ---
+  duration_ms: 146.808241
+  type: 'test'
+  ...
+# Subtest: PKG-009: the kernel importing from tests
+ok 221 - PKG-009: the kernel importing from tests
+  ---
+  duration_ms: 140.57153
+  type: 'test'
+  ...
+# Subtest: PKG-012: a network call or a model vendor in the kernel
+ok 222 - PKG-012: a network call or a model vendor in the kernel
+  ---
+  duration_ms: 284.188819
+  type: 'test'
+  ...
+# Subtest: PKG-013: deferral language, but not in code, quotes, or a rule
+ok 223 - PKG-013: deferral language, but not in code, quotes, or a rule
+  ---
+  duration_ms: 987.316248
+  type: 'test'
+  ...
+# Subtest: a tracked path deleted from the working tree is skipped, not a crash
+ok 224 - a tracked path deleted from the working tree is skipped, not a crash
+  ---
+  duration_ms: 150.111173
+  type: 'test'
+  ...
+# Subtest: a sentence in a Formats section is not a record kind
+ok 225 - a sentence in a Formats section is not a record kind
+  ---
+  duration_ms: 143.029475
+  type: 'test'
+  ...
+# Subtest: a record kind named by its path alone is checked
+ok 226 - a record kind named by its path alone is checked
+  ---
+  duration_ms: 143.566686
+  type: 'test'
+  ...
+# Subtest: PKG-002: a tracked in-progress record
+ok 227 - PKG-002: a tracked in-progress record
+  ---
+  duration_ms: 152.477484
+  type: 'test'
+  ...
+# Subtest: PKG-002: ignoring evidence alone is a finding
+ok 228 - PKG-002: ignoring evidence alone is a finding
+  ---
+  duration_ms: 129.075245
+  type: 'test'
+  ...
+# Subtest: PKG-003 reads the kernel's commands from its help output (PKG-023)
+ok 229 - PKG-003 reads the kernel's commands from its help output (PKG-023)
+  ---
+  duration_ms: 172.366161
+  type: 'test'
+  ...
+# Subtest: the ASCII scan covers shipped files, not records under .cairn/ (PKG-024)
+ok 230 - the ASCII scan covers shipped files, not records under .cairn/ (PKG-024)
+  ---
+  duration_ms: 149.107699
+  type: 'test'
+  ...
+# Subtest: a vendor-naming step wrapped across lines is matched (PKG-006, PKG-027)
+ok 231 - a vendor-naming step wrapped across lines is matched (PKG-006, PKG-027)
+  ---
+  duration_ms: 178.972029
+  type: 'test'
+  ...
+# Subtest: PKG-013 scans the README, the manual, and the walkthrough (PKG-032)
+ok 232 - PKG-013 scans the README, the manual, and the walkthrough (PKG-032)
+  ---
+  duration_ms: 430.780742
+  type: 'test'
+  ...
+# Subtest: the manifests, the listing and package.json agree on the name and version, and name paths the repository holds (PKG-037)
+ok 233 - the manifests, the listing and package.json agree on the name and version, and name paths the repository holds (PKG-037)
+  ---
+  duration_ms: 3.180172
+  type: 'test'
+  ...
+# Subtest: the hooks file registers session-start and stop against the plugin's own hook.mjs through the plugin root variable (PKG-038)
+ok 234 - the hooks file registers session-start and stop against the plugin's own hook.mjs through the plugin root variable (PKG-038)
+  ---
+  duration_ms: 0.178044
+  type: 'test'
+  ...
+# Subtest: the registered commands print the verdict at session start, link the command into the plugin, and refuse a stop while wake says Resolvable (PKG-038, PKG-021)
+ok 235 - the registered commands print the verdict at session start, link the command into the plugin, and refuse a stop while wake says Resolvable (PKG-038, PKG-021)
+  ---
+  duration_ms: 368.832213
+  type: 'test'
+  ...
+# Subtest: LOOP-071: decision body metadata does not resolve unbuilt work: "Superseded by: example"
+ok 236 - LOOP-071: decision body metadata does not resolve unbuilt work: "Superseded by: example"
+  ---
+  duration_ms: 713.042259
+  type: 'test'
+  ...
+# Subtest: LOOP-071: decision body metadata does not resolve unbuilt work: "```text\\nSuperseded by: example\\n```"
+ok 237 - LOOP-071: decision body metadata does not resolve unbuilt work: "```text\\nSuperseded by: example\\n```"
+  ---
+  duration_ms: 720.136978
+  type: 'test'
+  ...
+# Subtest: LOOP-071: decision body metadata does not resolve unbuilt work: "~~~text\\nSuperseded by: example\\n~~~"
+ok 238 - LOOP-071: decision body metadata does not resolve unbuilt work: "~~~text\\nSuperseded by: example\\n~~~"
+  ---
+  duration_ms: 725.069847
+  type: 'test'
+  ...
+# Subtest: LOOP-071: a fenced realization example is not a resolving commit
+ok 239 - LOOP-071: a fenced realization example is not a resolving commit
+  ---
+  duration_ms: 634.728459
+  type: 'test'
+  ...
+# Subtest: LOOP-071: a fenced commit inside the realization section is not built
+ok 240 - LOOP-071: a fenced commit inside the realization section is not built
+  ---
+  duration_ms: 646.283297
+  type: 'test'
+  ...
+# Subtest: LOOP-071: \#\# Example cannot replace an open review finding
+ok 241 - LOOP-071: \#\# Example cannot replace an open review finding
+  ---
+  duration_ms: 662.501141
+  type: 'test'
+  ...
+# Subtest: LOOP-071: \# Example cannot replace an open review finding
+ok 242 - LOOP-071: \# Example cannot replace an open review finding
+  ---
+  duration_ms: 653.436279
+  type: 'test'
+  ...
+# Subtest: LOOP-071: \#\#\# Example cannot replace an open review finding
+ok 243 - LOOP-071: \#\#\# Example cannot replace an open review finding
+  ---
+  duration_ms: 647.70558
+  type: 'test'
+  ...
+# Subtest: LOOP-071:   \#\# Example cannot replace an open review finding
+ok 244 - LOOP-071:   \#\# Example cannot replace an open review finding
+  ---
+  duration_ms: 628.994399
+  type: 'test'
+  ...
+# Subtest: LOOP-071: Example paragraph. cannot replace an open review finding
+ok 245 - LOOP-071: Example paragraph. cannot replace an open review finding
+  ---
+  duration_ms: 669.982105
+  type: 'test'
+  ...
+# Subtest: LOOP-071: Example\\n------- cannot replace an open review finding
+ok 246 - LOOP-071: Example\\n------- cannot replace an open review finding
+  ---
+  duration_ms: 653.763208
+  type: 'test'
+  ...
+# Subtest: LOOP-071: fenced fields before a real review header are ignored
+ok 247 - LOOP-071: fenced fields before a real review header are ignored
+  ---
+  duration_ms: 647.57631
+  type: 'test'
+  ...
+# Subtest: LOOP-071: multiline decision --title cannot inject metadata
+ok 248 - LOOP-071: multiline decision --title cannot inject metadata
+  ---
+  duration_ms: 577.40303
+  type: 'test'
+  ...
+# Subtest: LOOP-071: multiline decision --decided-by cannot inject metadata
+ok 249 - LOOP-071: multiline decision --decided-by cannot inject metadata
+  ---
+  duration_ms: 579.656405
+  type: 'test'
+  ...
+# Subtest: LOOP-071: multiline decision --rests-on cannot inject metadata
+ok 250 - LOOP-071: multiline decision --rests-on cannot inject metadata
+  ---
+  duration_ms: 564.176283
+  type: 'test'
+  ...
+# Subtest: LOOP-071: multiline decision --wrong-if cannot inject metadata
+ok 251 - LOOP-071: multiline decision --wrong-if cannot inject metadata
+  ---
+  duration_ms: 568.442477
+  type: 'test'
+  ...
+# Subtest: LOOP-071: multiline decision --history cannot inject metadata
+ok 252 - LOOP-071: multiline decision --history cannot inject metadata
+  ---
+  duration_ms: 578.985981
+  type: 'test'
+  ...
+# Subtest: LOOP-072: malformed Blocking concerns stay open: "R-001\\nAnswer: ok"
+ok 253 - LOOP-072: malformed Blocking concerns stay open: "R-001\\nAnswer: ok"
+  ---
+  duration_ms: 217.662238
+  type: 'test'
+  ...
+# Subtest: LOOP-072: malformed Blocking concerns stay open: "R-001\\r\\nAnswer: ok"
+ok 254 - LOOP-072: malformed Blocking concerns stay open: "R-001\\r\\nAnswer: ok"
+  ---
+  duration_ms: 206.255486
+  type: 'test'
+  ...
+# Subtest: LOOP-072: malformed Blocking concerns stay open: "R-001\\rAnswer: ok"
+ok 255 - LOOP-072: malformed Blocking concerns stay open: "R-001\\rAnswer: ok"
+  ---
+  duration_ms: 203.126213
+  type: 'test'
+  ...
+# Subtest: LOOP-072: malformed Blocking concerns stay open: "R-001 Answer: ok"
+ok 256 - LOOP-072: malformed Blocking concerns stay open: "R-001 Answer: ok"
+  ---
+  duration_ms: 227.004907
+  type: 'test'
+  ...
+# Subtest: LOOP-072: malformed Blocking concerns stay open: "R-001 Answer: ok"
+ok 257 - LOOP-072: malformed Blocking concerns stay open: "R-001 Answer: ok"
+  ---
+  duration_ms: 222.488143
+  type: 'test'
+  ...
+# Subtest: LOOP-072: ordinary malformed concerns are refused: "R-001\\nR-002"
+ok 258 - LOOP-072: ordinary malformed concerns are refused: "R-001\\nR-002"
+  ---
+  duration_ms: 150.30473
+  type: 'test'
+  ...
+# Subtest: LOOP-072: ordinary malformed concerns are refused: "R-001, prose"
+ok 259 - LOOP-072: ordinary malformed concerns are refused: "R-001, prose"
+  ---
+  duration_ms: 145.763059
+  type: 'test'
+  ...
+# Subtest: LOOP-072: ordinary malformed concerns are refused: " "
+ok 260 - LOOP-072: ordinary malformed concerns are refused: " "
+  ---
+  duration_ms: 152.1995
+  type: 'test'
+  ...
+# Subtest: LOOP-072: a Blocking escalation without concerns is still presented
+ok 261 - LOOP-072: a Blocking escalation without concerns is still presented
+  ---
+  duration_ms: 215.532322
+  type: 'test'
+  ...
+# Subtest: LOOP-072: carriage returns in a Blocking question do not create answer records
+ok 262 - LOOP-072: carriage returns in a Blocking question do not create answer records
+  ---
+  duration_ms: 202.173088
+  type: 'test'
+  ...
+# Subtest: LOOP-072: explanation separator 8232 cannot close an escalation
+ok 263 - LOOP-072: explanation separator 8232 cannot close an escalation
+  ---
+  duration_ms: 337.302805
+  type: 'test'
+  ...
+# Subtest: LOOP-071: decision metadata refuses separator 8232
+ok 264 - LOOP-071: decision metadata refuses separator 8232
+  ---
+  duration_ms: 588.357365
+  type: 'test'
+  ...
+# Subtest: LOOP-072: explanation separator 8233 cannot close an escalation
+ok 265 - LOOP-072: explanation separator 8233 cannot close an escalation
+  ---
+  duration_ms: 315.388505
+  type: 'test'
+  ...
+# Subtest: LOOP-071: decision metadata refuses separator 8233
+ok 266 - LOOP-071: decision metadata refuses separator 8233
+  ---
+  duration_ms: 581.395279
+  type: 'test'
+  ...
+# Subtest: Concerns, Rests on, and Promoted from written as lists read as the flat form (LOOP-124)
+ok 267 - Concerns, Rests on, and Promoted from written as lists read as the flat form (LOOP-124)
+  ---
+  duration_ms: 861.730235
+  type: 'test'
+  ...
+# Subtest: an item named by filename, path, or backticked slug resolves like the slug (LOOP-125)
+ok 268 - an item named by filename, path, or backticked slug resolves like the slug (LOOP-125)
+  ---
+  duration_ms: 849.799509
+  type: 'test'
+  ...
+# Subtest: an input that covers Cairn's own output is named as the repair, before and after a check (LOOP-126, LOOP-105)
+ok 269 - an input that covers Cairn's own output is named as the repair, before and after a check (LOOP-126, LOOP-105)
+  ---
+  duration_ms: 805.253407
+  type: 'test'
+  ...
+# Subtest: an unreadable record directory is a repair, not an error exit (LOOP-127)
+ok 270 - an unreadable record directory is a repair, not an error exit (LOOP-127) # SKIP root reads everything
+  ---
+  duration_ms: 0.231841
+  type: 'test'
+  ...
+# Subtest: a title that slugifies to nothing is refused (LOOP-128)
+ok 271 - a title that slugifies to nothing is refused (LOOP-128)
+  ---
+  duration_ms: 198.950693
+  type: 'test'
+  ...
+# Subtest: examined: [] is an empty list (LOOP-129, LOOP-108)
+ok 272 - examined: [] is an empty list (LOOP-129, LOOP-108)
+  ---
+  duration_ms: 503.804034
+  type: 'test'
+  ...
+# Subtest: below the Git toplevel the restore check compares root-relative paths (LOOP-130, LOOP-035)
+ok 273 - below the Git toplevel the restore check compares root-relative paths (LOOP-130, LOOP-035)
+  ---
+  duration_ms: 614.744055
+  type: 'test'
+  ...
+# Subtest: below the Git toplevel an uncommitted declared input is named from the project root (LOOP-132, LOOP-030)
+ok 274 - below the Git toplevel an uncommitted declared input is named from the project root (LOOP-132, LOOP-030)
+  ---
+  duration_ms: 371.586485
+  type: 'test'
+  ...
+# Subtest: an input spelled .. from a project below the Git toplevel covers the evidence directory (LOOP-126, LOOP-105)
+ok 275 - an input spelled .. from a project below the Git toplevel covers the evidence directory (LOOP-126, LOOP-105)
+  ---
+  duration_ms: 254.267593
+  type: 'test'
+  ...
+# Subtest: a Consequential record this commitment added needs its queue entry committed (LOOP-131, DEC-004)
+ok 276 - a Consequential record this commitment added needs its queue entry committed (LOOP-131, DEC-004)
+  ---
+  duration_ms: 846.851523
+  type: 'test'
+  ...
+# Subtest: a mechanism that removes the check lock still gets its evidence, with no repair for the lock (LOOP-107)
+ok 277 - a mechanism that removes the check lock still gets its evidence, with no repair for the lock (LOOP-107)
+  ---
+  duration_ms: 298.801753
+  type: 'test'
+  ...
+# Subtest: a staged rename reads as its two paths, never as a bare origin token (LOOP-030, LOOP-110)
+ok 278 - a staged rename reads as its two paths, never as a bare origin token (LOOP-030, LOOP-110)
+  ---
+  duration_ms: 187.93435
+  type: 'test'
+  ...
+# Subtest: a Current: line inside a fenced example is neither a second Current: line nor the commitment, before or after the real line (LOOP-104)
+ok 279 - a Current: line inside a fenced example is neither a second Current: line nor the commitment, before or after the real line (LOOP-104)
+  ---
+  duration_ms: 367.544164
+  type: 'test'
+  ...
+# Subtest: a Status: word is taken only from a line that carries one, never from wrapped prose after it (SPEC-018)
+ok 280 - a Status: word is taken only from a line that carries one, never from wrapped prose after it (SPEC-018)
+  ---
+  duration_ms: 0.8887
+  type: 'test'
+  ...
+# Subtest: the placeholder left above a resolving entry is a repair naming the file (DEC-021)
+ok 281 - the placeholder left above a resolving entry is a repair naming the file (DEC-021)
+  ---
+  duration_ms: 729.188092
+  type: 'test'
+  ...
+# Subtest: the placeholder alone is a decision recorded and not yet built, unchanged (DEC-007)
+ok 282 - the placeholder alone is a decision recorded and not yet built, unchanged (DEC-007)
+  ---
+  duration_ms: 235.099346
+  type: 'test'
+  ...
+# Subtest: resolving entries with no placeholder are unchanged (DEC-006)
+ok 283 - resolving entries with no placeholder are unchanged (DEC-006)
+  ---
+  duration_ms: 296.616691
+  type: 'test'
+  ...
+# Subtest: a shallow clone that cannot resolve its entries is still told to fetch, not to edit (LOOP-113 keeps precedence)
+ok 284 - a shallow clone that cannot resolve its entries is still told to fetch, not to edit (LOOP-113 keeps precedence)
+  ---
+  duration_ms: 347.018181
+  type: 'test'
+  ...
+# Subtest: the placeholder quoted in a fenced example does not make a built record a repair (DEC-021)
+ok 285 - the placeholder quoted in a fenced example does not make a built record a repair (DEC-021)
+  ---
+  duration_ms: 296.198674
+  type: 'test'
+  ...
+# Subtest: supersede takes the same decider vocabulary as decide (DEC-020)
+ok 286 - supersede takes the same decider vocabulary as decide (DEC-020)
+  ---
+  duration_ms: 203.700589
+  type: 'test'
+  ...
+# Subtest: an unmatched input is refused before execution (LOOP-044)
+ok 287 - an unmatched input is refused before execution (LOOP-044)
+  ---
+  duration_ms: 226.697427
+  type: 'test'
+  ...
+# Subtest: an indexed input deleted on disk asks for a commit (LOOP-045)
+ok 288 - an indexed input deleted on disk asks for a commit (LOOP-045)
+  ---
+  duration_ms: 230.483465
+  type: 'test'
+  ...
+# Subtest: wake and check require a Git working tree (LOOP-046)
+ok 289 - wake and check require a Git working tree (LOOP-046)
+  ---
+  duration_ms: 215.356528
+  type: 'test'
+  ...
+# Subtest: recovery removes only dead kernel run records and identifies a live owner (LOOP-054, LOOP-055)
+ok 290 - recovery removes only dead kernel run records and identifies a live owner (LOOP-054, LOOP-055)
+  ---
+  duration_ms: 386.959972
+  type: 'test'
+  ...
+# Subtest: an agent action based behind a clean HEAD appears committed (LOOP-027)
+ok 291 - an agent action based behind a clean HEAD appears committed (LOOP-027)
+  ---
+  duration_ms: 330.401915
+  type: 'test'
+  ...
+# Subtest: realization needs a real commit and a subject (DEC-006)
+ok 292 - realization needs a real commit and a subject (DEC-006)
+  ---
+  duration_ms: 316.421241
+  type: 'test'
+  ...
+# Subtest: 1500 binary inputs digest identically at the review commit in under a second (LOOP-024)
+ok 293 - 1500 binary inputs digest identically at the review commit in under a second (LOOP-024)
+  ---
+  duration_ms: 1038.991128
+  type: 'test'
+  ...
+# Subtest: merged work is excluded but a later own commit is a breach (LOOP-047)
+ok 294 - merged work is excluded but a later own commit is a breach (LOOP-047)
+  ---
+  duration_ms: 531.292701
+  type: 'test'
+  ...
+# Subtest: exact Current tenure ignores prefix matches and earlier visits to the same slug (LOOP-035)
+ok 295 - exact Current tenure ignores prefix matches and earlier visits to the same slug (LOOP-035)
+  ---
+  duration_ms: 637.20612
+  type: 'test'
+  ...
+# Subtest: a kernel run records its supervising PID (LOOP-054)
+ok 296 - a kernel run records its supervising PID (LOOP-054)
+  ---
+  duration_ms: 301.952625
+  type: 'test'
+  ...
+# Subtest: a merged declared input still stales evidence (LOOP-047)
+ok 297 - a merged declared input still stales evidence (LOOP-047)
+  ---
+  duration_ms: 654.43239
+  type: 'test'
+  ...
+# Subtest: wildcard and magic pathspecs select the same historical inputs (LOOP-024, LOOP-032)
+ok 298 - wildcard and magic pathspecs select the same historical inputs (LOOP-024, LOOP-032)
+  ---
+  duration_ms: 2700.952296
+  type: 'test'
+  ...
+# Subtest: historical selection retains deleted files and excludes new ones (LOOP-024, LOOP-035)
+ok 299 - historical selection retains deleted files and excludes new ones (LOOP-024, LOOP-035)
+  ---
+  duration_ms: 2016.208157
+  type: 'test'
+  ...
+# Subtest: cairn --version prints the package.json version outside a repository, and help lists it (PKG-039)
+ok 300 - cairn --version prints the package.json version outside a repository, and help lists it (PKG-039)
+  ---
+  duration_ms: 172.567963
+  type: 'test'
+  ...
+# Subtest: a release is one commit setting one version in the five files, with the changelog entry, tagged v<version> (PKG-040)
+ok 301 - a release is one commit setting one version in the five files, with the changelog entry, tagged v<version> (PKG-040)
+  ---
+  duration_ms: 972.769322
+  type: 'test'
+  ...
+# Subtest: the release script refuses a bad version, no increase, a dirty tree, a missing entry, a taken tag, a disagreeing file, and a loop not at Done, each in one line with nothing written (PKG-040)
+ok 302 - the release script refuses a bad version, no increase, a dirty tree, a missing entry, a taken tag, a disagreeing file, and a loop not at Done, each in one line with nothing written (PKG-040)
+  ---
+  duration_ms: 2103.405366
+  type: 'test'
+  ...
+# Subtest: explicit reporting with no lines and exit 0 establishes no requirement verdicts (LOOP-061)
+ok 303 - explicit reporting with no lines and exit 0 establishes no requirement verdicts (LOOP-061)
+  ---
+  duration_ms: 382.974323
+  type: 'test'
+  ...
+# Subtest: explicit reporting with no lines and exit 1 establishes no requirement verdicts (LOOP-061)
+ok 304 - explicit reporting with no lines and exit 1 establishes no requirement verdicts (LOOP-061)
+  ---
+  duration_ms: 414.736075
+  type: 'test'
+  ...
+# Subtest: a reporter that cannot start keeps execution diagnostics without blaming requirements (LOOP-062)
+ok 305 - a reporter that cannot start keeps execution diagnostics without blaming requirements (LOOP-062)
+  ---
+  duration_ms: 295.89335
+  type: 'test'
+  ...
+# Subtest: large output cannot kill a reporter or invent a requirement verdict
+ok 306 - large output cannot kill a reporter or invent a requirement verdict
+  ---
+  duration_ms: 336.128795
+  type: 'test'
+  ...
+# Subtest: explicit mode ignores cairn: R-999: pass
+ok 307 - explicit mode ignores cairn: R-999: pass
+  ---
+  duration_ms: 308.203869
+  type: 'test'
+  ...
+# Subtest: explicit mode ignores cairn: R-001: unverified
+ok 308 - explicit mode ignores cairn: R-001: unverified
+  ---
+  duration_ms: 310.021439
+  type: 'test'
+  ...
+# Subtest: explicit mode ignores cairn: R-001: passed
+ok 309 - explicit mode ignores cairn: R-001: passed
+  ---
+  duration_ms: 553.335539
+  type: 'test'
+  ...
+# Subtest: explicit results survive nonzero exit and contradictory duplicates still fail
+ok 310 - explicit results survive nonzero exit and contradictory duplicates still fail
+  ---
+  duration_ms: 663.013338
+  type: 'test'
+  ...
+# Subtest: unverified results across changed inputs never become failed attempts
+ok 311 - unverified results across changed inputs never become failed attempts
+  ---
+  duration_ms: 1782.986028
+  type: 'test'
+  ...
+# Subtest: legacy exit 0 retains its interpretation
+ok 312 - legacy exit 0 retains its interpretation
+  ---
+  duration_ms: 311.627591
+  type: 'test'
+  ...
+# Subtest: legacy exit 1 retains its interpretation
+ok 313 - legacy exit 1 retains its interpretation
+  ---
+  duration_ms: 310.257699
+  type: 'test'
+  ...
+# Subtest: a misspelled reporting mode is refused before execution
+ok 314 - a misspelled reporting mode is refused before execution
+  ---
+  duration_ms: 213.136697
+  type: 'test'
+  ...
+# Subtest: changed requirement blocks unchecked reruns and makes the completion review stale (LOOP-058, LOOP-059)
+ok 315 - changed requirement blocks unchecked reruns and makes the completion review stale (LOOP-058, LOOP-059)
+  ---
+  duration_ms: 1633.020174
+  type: 'test'
+  ...
+# Subtest: falsifier changes need review; separate rationale and other requirements do not change a receipt
+ok 316 - falsifier changes need review; separate rationale and other requirements do not change a receipt
+  ---
+  duration_ms: 1268.828587
+  type: 'test'
+  ...
+# Subtest: legacy receipts recover requirement identity from their commit; unavailable history requires review
+ok 317 - legacy receipts recover requirement identity from their commit; unavailable history requires review
+  ---
+  duration_ms: 1087.94098
+  type: 'test'
+  ...
+# Subtest: check refuses uncommitted requirement text and mechanism review markers
+ok 318 - check refuses uncommitted requirement text and mechanism review markers
+  ---
+  duration_ms: 1095.624314
+  type: 'test'
+  ...
+# Subtest: tightened response limit cannot reuse the old passing check
+ok 319 - tightened response limit cannot reuse the old passing check
+  ---
+  duration_ms: 1936.78004
+  type: 'test'
+  ...
+# Subtest: a declared input over 1 MiB agrees at a commit and in the tree (LOOP-060)
+ok 320 - a declared input over 1 MiB agrees at a commit and in the tree (LOOP-060)
+  ---
+  duration_ms: 735.566139
+  type: 'test'
+  ...
+# Subtest: a failed Git blob read cannot be hashed as an empty blob
+ok 321 - a failed Git blob read cannot be hashed as an empty blob
+  ---
+  duration_ms: 548.370569
+  type: 'test'
+  ...
+# Subtest: Git listings over 1 MiB include the last declared input
+ok 322 - Git listings over 1 MiB include the last declared input
+  ---
+  duration_ms: 2362.858765
+  type: 'test'
+  ...
+# Subtest: requirement identity excludes fenced examples and status dates
+ok 323 - requirement identity excludes fenced examples and status dates
+  ---
+  duration_ms: 849.561976
+  type: 'test'
+  ...
+# Subtest: DemonCoder REM-002 and Status in progress cannot silently satisfy the review gate (LOOP-086)
+ok 324 - DemonCoder REM-002 and Status in progress cannot silently satisfy the review gate (LOOP-086)
+  ---
+  duration_ms: 834.157302
+  type: 'test'
+  ...
+# Subtest: valid open findings retain their behavior
+ok 325 - valid open findings retain their behavior
+  ---
+  duration_ms: 621.226329
+  type: 'test'
+  ...
+# Subtest: valid resolved findings retain their behavior
+ok 326 - valid resolved findings retain their behavior
+  ---
+  duration_ms: 640.271308
+  type: 'test'
+  ...
+# Subtest: valid empty findings retain their behavior
+ok 327 - valid empty findings retain their behavior
+  ---
+  duration_ms: 611.915637
+  type: 'test'
+  ...
+# Subtest: valid mixed valid findings retain their behavior
+ok 328 - valid mixed valid findings retain their behavior
+  ---
+  duration_ms: 594.336126
+  type: 'test'
+  ...
+# Subtest: malformed finding "open:" requires repair
+ok 329 - malformed finding "open:" requires repair
+  ---
+  duration_ms: 590.527111
+  type: 'test'
+  ...
+# Subtest: malformed finding "resolved:   " requires repair
+ok 330 - malformed finding "resolved:   " requires repair
+  ---
+  duration_ms: 588.799418
+  type: 'test'
+  ...
+# Subtest: malformed finding "Open: incorrect case" requires repair
+ok 331 - malformed finding "Open: incorrect case" requires repair
+  ---
+  duration_ms: 592.580004
+  type: 'test'
+  ...
+# Subtest: malformed finding "unknown: issue" requires repair
+ok 332 - malformed finding "unknown: issue" requires repair
+  ---
+  duration_ms: 636.107103
+  type: 'test'
+  ...
+# Subtest: malformed finding "\\u001b[31mBAD: issue" requires repair
+ok 333 - malformed finding "\\u001b[31mBAD: issue" requires repair
+  ---
+  duration_ms: 624.255921
+  type: 'test'
+  ...
+# Subtest: the established explicit empty findings list remains valid
+ok 334 - the established explicit empty findings list remains valid
+  ---
+  duration_ms: 615.176877
+  type: 'test'
+  ...
+# Subtest: a scalar findings value requires the supported list format
+ok 335 - a scalar findings value requires the supported list format
+  ---
+  duration_ms: 598.783949
+  type: 'test'
+  ...
+# Subtest: a Requirements: line written as a list is read like the flat form (LOOP-102)
+ok 336 - a Requirements: line written as a list is read like the flat form (LOOP-102)
+  ---
+  duration_ms: 178.925209
+  type: 'test'
+  ...
+# Subtest: a subdirectory or a README in a record directory changes nothing (LOOP-103)
+ok 337 - a subdirectory or a README in a record directory changes nothing (LOOP-103)
+  ---
+  duration_ms: 614.153174
+  type: 'test'
+  ...
+# Subtest: two Current: lines are a roadmap repair (LOOP-104)
+ok 338 - two Current: lines are a roadmap repair (LOOP-104)
+  ---
+  duration_ms: 159.123666
+  type: 'test'
+  ...
+# Subtest: a repeated identifier, an input under the evidence directory, and a missing cwd are refused by name (LOOP-105)
+ok 339 - a repeated identifier, an input under the evidence directory, and a missing cwd are refused by name (LOOP-105)
+  ---
+  duration_ms: 667.235152
+  type: 'test'
+  ...
+# Subtest: a requirement whose evidence outlives its mechanism is named declare, not a regression or an escalation (LOOP-106)
+ok 340 - a requirement whose evidence outlives its mechanism is named declare, not a regression or an escalation (LOOP-106)
+  ---
+  duration_ms: 1028.865907
+  type: 'test'
+  ...
+# Subtest: an unreadable record is a repair, not an error exit (LOOP-107)
+ok 341 - an unreadable record is a repair, not an error exit (LOOP-107) # SKIP root reads everything
+  ---
+  duration_ms: 0.208841
+  type: 'test'
+  ...
+# Subtest: a review needs commit, a nonempty examined list, and a findings list, each named when missing (LOOP-108)
+ok 342 - a review needs commit, a nonempty examined list, and a findings list, each named when missing (LOOP-108)
+  ---
+  duration_ms: 1308.160877
+  type: 'test'
+  ...
+# Subtest: a decision record missing a header field or naming a missing predecessor is a repair (LOOP-109)
+ok 343 - a decision record missing a header field or naming a missing predecessor is a repair (LOOP-109)
+  ---
+  duration_ms: 774.721374
+  type: 'test'
+  ...
+# Subtest: a dirty declared input with no in-progress record is named record ahead of run (LOOP-022, LOOP-110)
+ok 344 - a dirty declared input with no in-progress record is named record ahead of run (LOOP-022, LOOP-110)
+  ---
+  duration_ms: 497.672993
+  type: 'test'
+  ...
+# Subtest: with core.filemode false the index mode is the identity, so a mode-only difference does not refuse the check (LOOP-111)
+ok 345 - with core.filemode false the index mode is the identity, so a mode-only difference does not refuse the check (LOOP-111)
+  ---
+  duration_ms: 326.674941
+  type: 'test'
+  ...
+# Subtest: a project below the Git toplevel can run check (LOOP-112)
+ok 346 - a project below the Git toplevel can run check (LOOP-112)
+  ---
+  duration_ms: 394.314447
+  type: 'test'
+  ...
+# Subtest: a shallow clone names history to fetch, not a decision to build (LOOP-113)
+ok 347 - a shallow clone names history to fetch, not a decision to build (LOOP-113)
+  ---
+  duration_ms: 586.166635
+  type: 'test'
+  ...
+# Subtest: record-writing commands refuse to run outside a Cairn repository and write nothing (LOOP-118)
+ok 348 - record-writing commands refuse to run outside a Cairn repository and write nothing (LOOP-118)
+  ---
+  duration_ms: 333.920957
+  type: 'test'
+  ...
+# Subtest: empty footprint names declaration before scope and records no evidence (LOOP-081)
+ok 349 - empty footprint names declaration before scope and records no evidence (LOOP-081)
+  ---
+  duration_ms: 710.665299
+  type: 'test'
+  ...
+# Subtest: first declaration still checks the full earlier history (LOOP-081)
+ok 350 - first declaration still checks the full earlier history (LOOP-081)
+  ---
+  duration_ms: 563.075121
+  type: 'test'
+  ...
+# Subtest: an empty current footprint does not block an explicitly requested existing mechanism (LOOP-081)
+ok 351 - an empty current footprint does not block an explicitly requested existing mechanism (LOOP-081)
+  ---
+  duration_ms: 409.175474
+  type: 'test'
+  ...
+# Subtest: an inherited mechanism provides a footprint even before local mechanisms exist
+ok 352 - an inherited mechanism provides a footprint even before local mechanisms exist
+  ---
+  duration_ms: 369.309368
+  type: 'test'
+  ...
+# Subtest: scope reports every path, escapes line breaks, and gives identical remedies (LOOP-082)
+ok 353 - scope reports every path, escapes line breaks, and gives identical remedies (LOOP-082)
+  ---
+  duration_ms: 347.223414
+  type: 'test'
+  ...
+# Subtest: scope verdict reuses the answered-escalation annotation (LOOP-048, LOOP-051, LOOP-083)
+ok 354 - scope verdict reuses the answered-escalation annotation (LOOP-048, LOOP-051, LOOP-083)
+  ---
+  duration_ms: 896.100038
+  type: 'test'
+  ...
+# Subtest: a committed scope acknowledgment lets restored history proceed (LOOP-083)
+ok 355 - a committed scope acknowledgment lets restored history proceed (LOOP-083)
+  ---
+  duration_ms: 977.502586
+  type: 'test'
+  ...
+# Subtest: scope acknowledgment must be committed before it can clear a breach
+ok 356 - scope acknowledgment must be committed before it can clear a breach
+  ---
+  duration_ms: 944.579505
+  type: 'test'
+  ...
+# Subtest: ordinary ok does not acknowledge scope history
+ok 357 - ordinary ok does not acknowledge scope history
+  ---
+  duration_ms: 656.572673
+  type: 'test'
+  ...
+# Subtest: scope escalation refuses unrestored paths and names the restoration remedy
+ok 358 - scope escalation refuses unrestored paths and names the restoration remedy
+  ---
+  duration_ms: 448.403771
+  type: 'test'
+  ...
+# Subtest: an invalid scope request still records an explicitly Blocking decision
+ok 359 - an invalid scope request still records an explicitly Blocking decision
+  ---
+  duration_ms: 312.948959
+  type: 'test'
+  ...
+# Subtest: ask and explanation stay open; only the final committed ok acknowledges scope
+ok 360 - ask and explanation stay open; only the final committed ok acknowledges scope
+  ---
+  duration_ms: 1288.023708
+  type: 'test'
+  ...
+# Subtest: instead is visible but does not silently authorize a scope exception
+ok 361 - instead is visible but does not silently authorize a scope exception
+  ---
+  duration_ms: 790.419467
+  type: 'test'
+  ...
+# Subtest: later changes to an acknowledged path still block, including later reverts
+ok 362 - later changes to an acknowledged path still block, including later reverts
+  ---
+  duration_ms: 1942.936988
+  type: 'test'
+  ...
+# Subtest: approval cannot hide another path changed after the snapshot
+ok 363 - approval cannot hide another path changed after the snapshot
+  ---
+  duration_ms: 895.331026
+  type: 'test'
+  ...
+# Subtest: acknowledged history remains conditional on the paths staying restored
+ok 364 - acknowledged history remains conditional on the paths staying restored
+  ---
+  duration_ms: 1233.888297
+  type: 'test'
+  ...
+# Subtest: editing the scope snapshot after answer invalidates its acknowledgment
+ok 365 - editing the scope snapshot after answer invalidates its acknowledgment
+  ---
+  duration_ms: 795.261791
+  type: 'test'
+  ...
+# Subtest: malformed scope metadata cannot suppress a breach
+ok 366 - malformed scope metadata cannot suppress a breach
+  ---
+  duration_ms: 3040.728502
+  type: 'test'
+  ...
+# Subtest: damaged acknowledgment fields cannot suppress a breach
+ok 367 - damaged acknowledgment fields cannot suppress a breach
+  ---
+  duration_ms: 1363.18638
+  type: 'test'
+  ...
+# Subtest: scope path matching is literal, including wildcard filenames and control characters
+ok 368 - scope path matching is literal, including wildcard filenames and control characters
+  ---
+  duration_ms: 1109.274015
+  type: 'test'
+  ...
+# Subtest: scope acknowledgment does not carry into another activation of the same slug
+ok 369 - scope acknowledgment does not carry into another activation of the same slug
+  ---
+  duration_ms: 1046.357699
+  type: 'test'
+  ...
+# Subtest: restoration checks additions, deletions, executable modes, and symlink kinds
+ok 370 - restoration checks additions, deletions, executable modes, and symlink kinds
+  ---
+  duration_ms: 3107.527801
+  type: 'test'
+  ...
+# Subtest: explicit committed retention keeps correct work and requires new evidence and review (LOOP-084, LOOP-085)
+ok 371 - explicit committed retention keeps correct work and requires new evidence and review (LOOP-084, LOOP-085)
+  ---
+  duration_ms: 2216.336811
+  type: 'test'
+  ...
+# Subtest: a missing declaration covers correct earlier work without retention or revert
+ok 372 - a missing declaration covers correct earlier work without retention or revert
+  ---
+  duration_ms: 682.173002
+  type: 'test'
+  ...
+# Subtest: keep requires scope and an unchanged committed candidate
+ok 373 - keep requires scope and an unchanged committed candidate
+  ---
+  duration_ms: 318.543145
+  type: 'test'
+  ...
+# Subtest: uncommitted retention and instead answers cannot clear the incident
+ok 374 - uncommitted retention and instead answers cannot clear the incident
+  ---
+  duration_ms: 1477.606051
+  type: 'test'
+  ...
+# Subtest: retention does not grant future edits, even when reverted to the approved tree
+ok 375 - retention does not grant future edits, even when reverted to the approved tree
+  ---
+  duration_ms: 1957.024824
+  type: 'test'
+  ...
+# Subtest: retention cannot cover another path or another activation
+ok 376 - retention cannot cover another path or another activation
+  ---
+  duration_ms: 1244.354289
+  type: 'test'
+  ...
+# Subtest: imported changes must still match the retained tree
+ok 377 - imported changes must still match the retained tree
+  ---
+  duration_ms: 1205.229083
+  type: 'test'
+  ...
+# Subtest: retention handles additions, deletions, modes, symlinks, and literal filenames
+ok 378 - retention handles additions, deletions, modes, symlinks, and literal filenames
+  ---
+  duration_ms: 3558.739609
+  type: 'test'
+  ...
+# Subtest: retention cannot convert an existing restoration answer or accept an unknown mode
+ok 379 - retention cannot convert an existing restoration answer or accept an unknown mode
+  ---
+  duration_ms: 1177.471291
+  type: 'test'
+  ...
+# Subtest: a check failure after retention remains a failure
+ok 380 - a check failure after retention remains a failure
+  ---
+  duration_ms: 1259.420278
+  type: 'test'
+  ...
+# Subtest: retained paths stay part of the stable checked candidate without extending its footprint
+ok 381 - retained paths stay part of the stable checked candidate without extending its footprint
+  ---
+  duration_ms: 1350.531831
+  type: 'test'
+  ...
+# Subtest: retention ask needs an explanation and final committed approval
+ok 382 - retention ask needs an explanation and final committed approval
+  ---
+  duration_ms: 1128.588534
+  type: 'test'
+  ...
+# Subtest: an unknown scope mode remains invalid even with a matching approval digest
+ok 383 - an unknown scope mode remains invalid even with a matching approval digest
+  ---
+  duration_ms: 727.633809
+  type: 'test'
+  ...
+# Subtest: backlog writes the item; a second with the same title is refused, never overwritten (LOOP-016)
+ok 384 - backlog writes the item; a second with the same title is refused, never overwritten (LOOP-016)
+  ---
+  duration_ms: 234.832779
+  type: 'test'
+  ...
+# Subtest: a commit inside the footprint: check runs; outside it: check names the path and does not run (LOOP-015, LOOP-035)
+ok 385 - a commit inside the footprint: check runs; outside it: check names the path and does not run (LOOP-015, LOOP-035)
+  ---
+  duration_ms: 693.197828
+  type: 'test'
+  ...
+# Subtest: Cairn's records are never a breach; another file under docs/ is (LOOP-117)
+ok 386 - Cairn's records are never a breach; another file under docs/ is (LOOP-117)
+  ---
+  duration_ms: 740.165127
+  type: 'test'
+  ...
+# Subtest: declaring the path as an input clears the breach
+ok 387 - declaring the path as an input clears the breach
+  ---
+  duration_ms: 448.829076
+  type: 'test'
+  ...
+# Subtest: a revert preserves the record of an out-of-scope commit (LOOP-047)
+ok 388 - a revert preserves the record of an out-of-scope commit (LOOP-047)
+  ---
+  duration_ms: 515.945159
+  type: 'test'
+  ...
+# Subtest: a commitment naming a requirement the spec set does not hold as Agreed is repaired (LOOP-029)
+ok 389 - a commitment naming a requirement the spec set does not hold as Agreed is repaired (LOOP-029)
+  ---
+  duration_ms: 167.401563
+  type: 'test'
+  ...
+# Subtest: a requirement in a Draft spec file is not Agreed
+ok 390 - a requirement in a Draft spec file is not Agreed
+  ---
+  duration_ms: 156.580488
+  type: 'test'
+  ...
+# Subtest: working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036)
+ok 391 - working agreements and the ignore file are Cairn records (LOOP-035, LOOP-036)
+  ---
+  duration_ms: 523.826902
+  type: 'test'
+  ...
+# Subtest: the over-asking rule is gone from both skills (SPEC-005, SPEC-006, SPEC-007)
+ok 392 - the over-asking rule is gone from both skills (SPEC-005, SPEC-006, SPEC-007)
+  ---
+  duration_ms: 1.129408
+  type: 'test'
+  ...
+# Subtest: a decision during the phase is recorded (DEC-003)
+ok 393 - a decision during the phase is recorded (DEC-003)
+  ---
+  duration_ms: 0.163008
+  type: 'test'
+  ...
+# Subtest: understanding is restated before writing (SPEC-003)
+ok 394 - understanding is restated before writing (SPEC-003)
+  ---
+  duration_ms: 0.077841
+  type: 'test'
+  ...
+# Subtest: falsifiers are proposed as one set and confirmed by exception (SPEC-004)
+ok 395 - falsifiers are proposed as one set and confirmed by exception (SPEC-004)
+  ---
+  duration_ms: 0.131315
+  type: 'test'
+  ...
+# Subtest: depth is inferred and domains derived, never asked or imposed (SPEC-008, SPEC-009)
+ok 396 - depth is inferred and domains derived, never asked or imposed (SPEC-008, SPEC-009)
+  ---
+  duration_ms: 0.152884
+  type: 'test'
+  ...
+# Subtest: a term enters the glossary at first occurrence (SPEC-010)
+ok 397 - a term enters the glossary at first occurrence (SPEC-010)
+  ---
+  duration_ms: 0.096655
+  type: 'test'
+  ...
+# Subtest: the phase ends at the first commitment, and later ones are specified during the loop (SPEC-011, SPEC-012)
+ok 398 - the phase ends at the first commitment, and later ones are specified during the loop (SPEC-011, SPEC-012)
+  ---
+  duration_ms: 0.13355
+  type: 'test'
+  ...
+# Subtest: a requirement goes Agreed only with a nameable mechanism (SPEC-013)
+ok 399 - a requirement goes Agreed only with a nameable mechanism (SPEC-013)
+  ---
+  duration_ms: 0.063852
+  type: 'test'
+  ...
+# Subtest: review before agreement, recording what it attacked (SPEC-014, SPEC-015)
+ok 400 - review before agreement, recording what it attacked (SPEC-014, SPEC-015)
+  ---
+  duration_ms: 0.249014
+  type: 'test'
+  ...
+# Subtest: no spec file without requirements; nothing Agreed without a falsifier (SPEC-001, SPEC-002)
+ok 401 - no spec file without requirements; nothing Agreed without a falsifier (SPEC-001, SPEC-002)
+  ---
+  duration_ms: 0.260461
+  type: 'test'
+  ...
+# Subtest: Observed is marked, and is not contract (SPEC-016, SPEC-017)
+ok 402 - Observed is marked, and is not contract (SPEC-016, SPEC-017)
+  ---
+  duration_ms: 0.153613
+  type: 'test'
+  ...
+# Subtest: the skills exclude artifacts outside Cairn's workflow
+ok 403 - the skills exclude artifacts outside Cairn's workflow
+  ---
+  duration_ms: 0.126153
+  type: 'test'
+  ...
+# Subtest: the working agreement names the agent's move for each verdict and the write-ahead record (LOOP-036)
+ok 404 - the working agreement names the agent's move for each verdict and the write-ahead record (LOOP-036)
+  ---
+  duration_ms: 0.116315
+  type: 'test'
+  ...
+# Subtest: the working agreement names the developer's moves (LOOP-036, DEC-014)
+ok 405 - the working agreement names the developer's moves (LOOP-036, DEC-014)
+  ---
+  duration_ms: 0.045869
+  type: 'test'
+  ...
+# Subtest: this repository runs by the file it ships
+ok 406 - this repository runs by the file it ships
+  ---
+  duration_ms: 0.359082
+  type: 'test'
+  ...
+# Subtest: both skills write the working agreement without naming a vendor's file (LOOP-002, LOOP-036, PKG-006)
+ok 407 - both skills write the working agreement without naming a vendor's file (LOOP-002, LOOP-036, PKG-006)
+  ---
+  duration_ms: 0.088988
+  type: 'test'
+  ...
+# Subtest: the working agreement says what an attempt is (LOOP-036, DEC-017, DEC-018)
+ok 408 - the working agreement says what an attempt is (LOOP-036, DEC-017, DEC-018)
+  ---
+  duration_ms: 0.046273
+  type: 'test'
+  ...
+# Subtest: the working agreement says a failure no footprint change can address is an escalation, and where an inherited requirement is repaired (DEC-019, LOOP-057)
+ok 409 - the working agreement says a failure no footprint change can address is an escalation, and where an inherited requirement is repaired (DEC-019, LOOP-057)
+  ---
+  duration_ms: 0.053951
+  type: 'test'
+  ...
+# Subtest: the working agreement states the promote, next-iteration, and no-deferral moves (LOOP-029, LOOP-087, LOOP-091, LOOP-092)
+ok 410 - the working agreement states the promote, next-iteration, and no-deferral moves (LOOP-029, LOOP-087, LOOP-091, LOOP-092)
+  ---
+  duration_ms: 0.056636
+  type: 'test'
+  ...
+# Subtest: both skills sort captures into the backlog or next-iteration and forbid deferral (LOOP-029, LOOP-092, LOOP-093)
+ok 411 - both skills sort captures into the backlog or next-iteration and forbid deferral (LOOP-029, LOOP-092, LOOP-093)
+  ---
+  duration_ms: 0.048987
+  type: 'test'
+  ...
+# Subtest: the skill requires a falsifier on every requirement, a MAY included (SPEC-025)
+ok 412 - the skill requires a falsifier on every requirement, a MAY included (SPEC-025)
+  ---
+  duration_ms: 0.044681
+  type: 'test'
+  ...
+# Subtest: the working agreement names the hooks as optional and the install skill registers them for two harnesses (PKG-006, PKG-018, PKG-019)
+ok 413 - the working agreement names the hooks as optional and the install skill registers them for two harnesses (PKG-006, PKG-018, PKG-019)
+  ---
+  duration_ms: 0.203242
+  type: 'test'
+  ...
+# Subtest: the working agreement says the kernel is upgraded at Done, never inside a commitment (LOOP-096)
+ok 414 - the working agreement says the kernel is upgraded at Done, never inside a commitment (LOOP-096)
+  ---
+  duration_ms: 0.055497
+  type: 'test'
+  ...
+# Subtest: the next-iteration skill starts from the specification and ends by naming the next commitment (SPEC-026, SPEC-027)
+ok 415 - the next-iteration skill starts from the specification and ends by naming the next commitment (SPEC-026, SPEC-027)
+  ---
+  duration_ms: 0.228258
+  type: 'test'
+  ...
+# Subtest: every document that names the project skills names next-iteration beside them (SPEC-026, PKG-014)
+ok 416 - every document that names the project skills names next-iteration beside them (SPEC-026, PKG-014)
+  ---
+  duration_ms: 2.491962
+  type: 'test'
+  ...
+# Subtest: the working agreement states a move for every action the kernel can name (LOOP-101)
+ok 417 - the working agreement states a move for every action the kernel can name (LOOP-101)
+  ---
+  duration_ms: 0.862081
+  type: 'test'
+  ...
+# Subtest: the working agreement states both record formats and the two flags the moves need (LOOP-036)
+ok 418 - the working agreement states both record formats and the two flags the moves need (LOOP-036)
+  ---
+  duration_ms: 0.201366
+  type: 'test'
+  ...
+# Subtest: the skills demonstrate a safe violating example and preserve recon findings (SPEC-022, SPEC-023)
+ok 419 - the skills demonstrate a safe violating example and preserve recon findings (SPEC-022, SPEC-023)
+  ---
+  duration_ms: 0.083273
+  type: 'test'
+  ...
+# Subtest: the specification skills run the checker through the cairn command (PKG-029)
+ok 420 - the specification skills run the checker through the cairn command (PKG-029)
+  ---
+  duration_ms: 0.317198
+  type: 'test'
+  ...
+# Subtest: the README invokes the phase skills by name and states versions and platforms (PKG-030, PKG-031)
+ok 421 - the README invokes the phase skills by name and states versions and platforms (PKG-030, PKG-031)
+  ---
+  duration_ms: 0.39195
+  type: 'test'
+  ...
+# Subtest: the manual and the walkthrough say the loop promotes backlog items at Done
+ok 422 - the manual and the walkthrough say the loop promotes backlog items at Done
+  ---
+  duration_ms: 1.527177
+  type: 'test'
+  ...
+# Subtest: a two-obligation sentence is named (PKG-007)
+ok 423 - a two-obligation sentence is named (PKG-007)
+  ---
+  duration_ms: 41.219889
+  type: 'test'
+  ...
+# Subtest: an obligation with no actor is named (PKG-010)
+ok 424 - an obligation with no actor is named (PKG-010)
+  ---
+  duration_ms: 39.534967
+  type: 'test'
+  ...
+# Subtest: a leading condition clause is not the actor, and the actor after it counts
+ok 425 - a leading condition clause is not the actor, and the actor after it counts
+  ---
+  duration_ms: 41.991228
+  type: 'test'
+  ...
+# Subtest: an Agreed requirement with no falsifier is named (SPEC-002); a Draft one is not
+ok 426 - an Agreed requirement with no falsifier is named (SPEC-002); a Draft one is not
+  ---
+  duration_ms: 83.38802
+  type: 'test'
+  ...
+# Subtest: prose after a Draft requirement with no falsifier is not scanned as requirement text
+ok 427 - prose after a Draft requirement with no falsifier is not scanned as requirement text
+  ---
+  duration_ms: 41.004564
+  type: 'test'
+  ...
+# Subtest: a spec declaring a prefix with no requirement is named (SPEC-001)
+ok 428 - a spec declaring a prefix with no requirement is named (SPEC-001)
+  ---
+  duration_ms: 38.396957
+  type: 'test'
+  ...
+# Subtest: a keyword in backticks or quotes is a mention, not an obligation
+ok 429 - a keyword in backticks or quotes is a mention, not an obligation
+  ---
+  duration_ms: 41.53897
+  type: 'test'
+  ...
+# Subtest: duplicate identifiers are rejected within a file and across files (SPEC-020)
+ok 430 - duplicate identifiers are rejected within a file and across files (SPEC-020)
+  ---
+  duration_ms: 80.735249
+  type: 'test'
+  ...
+# Subtest: references resolve across files; missing references name their source (SPEC-021)
+ok 431 - references resolve across files; missing references name their source (SPEC-021)
+  ---
+  duration_ms: 79.032562
+  type: 'test'
+  ...
+# Subtest: code examples and quoted mentions are neither definitions nor references
+ok 432 - code examples and quoted mentions are neither definitions nor references
+  ---
+  duration_ms: 40.504703
+  type: 'test'
+  ...
+# Subtest: machine-local paths are findings in prose, links, quotes, and examples (SPEC-019)
+ok 433 - machine-local paths are findings in prose, links, quotes, and examples (SPEC-019)
+  ---
+  duration_ms: 414.160575
+  type: 'test'
+  ...
+# Subtest: relative paths, URLs, slash commands, and character mentions are not absolute path findings
+ok 434 - relative paths, URLs, slash commands, and character mentions are not absolute path findings
+  ---
+  duration_ms: 41.531626
+  type: 'test'
+  ...
+# Subtest: a slash after a placeholder continues the template (SPEC-019)
+ok 435 - a slash after a placeholder continues the template (SPEC-019)
+  ---
+  duration_ms: 90.494695
+  type: 'test'
+  ...
+# Subtest: a host path is a finding until the file declares it (SPEC-019, SPEC-024)
+ok 436 - a host path is a finding until the file declares it (SPEC-019, SPEC-024)
+  ---
+  duration_ms: 85.66671
+  type: 'test'
+  ...
+# Subtest: declared host paths cover children with a slash boundary and stay file-local
+ok 437 - declared host paths cover children with a slash boundary and stay file-local
+  ---
+  duration_ms: 119.316213
+  type: 'test'
+  ...
+# Subtest: a host-path declaration inside a requirement or example grants no exception
+ok 438 - a host-path declaration inside a requirement or example grants no exception
+  ---
+  duration_ms: 131.022102
+  type: 'test'
+  ...
+# Subtest: host-path declarations require absolute or home-relative entries
+ok 439 - host-path declarations require absolute or home-relative entries
+  ---
+  duration_ms: 213.520996
+  type: 'test'
+  ...
+# Subtest: an Agreed block whose only keyword is MAY needs a falsifier like any other (SPEC-025, SPEC-002)
+ok 440 - an Agreed block whose only keyword is MAY needs a falsifier like any other (SPEC-025, SPEC-002)
+  ---
+  duration_ms: 87.066603
+  type: 'test'
+  ...
+# Subtest: a regex literal is not a path, a drive path and a file URL are, and a skill's slash name is allowed (SPEC-028, SPEC-029)
+ok 441 - a regex literal is not a path, a drive path and a file URL are, and a skill's slash name is allowed (SPEC-028, SPEC-029)
+  ---
+  duration_ms: 84.744836
+  type: 'test'
+  ...
+# Subtest: a backticked or quoted actor still counts as one (PKG-010)
+ok 442 - a backticked or quoted actor still counts as one (PKG-010)
+  ---
+  duration_ms: 41.548601
+  type: 'test'
+  ...
+# Subtest: supersede writes both lines, and the old record keeps every word it had (DEC-008, DEC-010)
+ok 443 - supersede writes both lines, and the old record keeps every word it had (DEC-008, DEC-010)
+  ---
+  duration_ms: 155.033053
+  type: 'test'
+  ...
+# Subtest: supersede without a cause, or with one outside the four, is refused (DEC-009)
+ok 444 - supersede without a cause, or with one outside the four, is refused (DEC-009)
+  ---
+  duration_ms: 220.906333
+  type: 'test'
+  ...
+# Subtest: supersede of a record that does not exist is refused
+ok 445 - supersede of a record that does not exist is refused
+  ---
+  duration_ms: 146.117122
+  type: 'test'
+  ...
+# Subtest: a predecessor with no title line cannot be stamped, so nothing is written
+ok 446 - a predecessor with no title line cannot be stamped, so nothing is written
+  ---
+  duration_ms: 140.564256
+  type: 'test'
+  ...
+# Subtest: reversals reports counts by decider, cause, and domain (DEC-011)
+ok 447 - reversals reports counts by decider, cause, and domain (DEC-011)
+  ---
+  duration_ms: 270.117996
+  type: 'test'
+  ...
+# Subtest: decide in a domain with a reversal is refused without --history, naming the reversal; with it, the record carries History (DEC-012)
+ok 448 - decide in a domain with a reversal is refused without --history, naming the reversal; with it, the record carries History (DEC-012)
+  ---
+  duration_ms: 261.650804
+  type: 'test'
+  ...
+# Subtest: decide in a domain with no reversals needs no --history
+ok 449 - decide in a domain with no reversals needs no --history
+  ---
+  duration_ms: 200.202971
+  type: 'test'
+  ...
+# Subtest: a record resting on prose alone is in the domain unspecified, and so is the next one
+ok 450 - a record resting on prose alone is in the domain unspecified, and so is the next one
+  ---
+  duration_ms: 201.509138
+  type: 'test'
+  ...
+# Subtest: the decider tally normalizes case and whitespace, and names a value outside the vocabulary (DEC-020, DEC-011)
+ok 451 - the decider tally normalizes case and whitespace, and names a value outside the vocabulary (DEC-020, DEC-011)
+  ---
+  duration_ms: 146.722031
+  type: 'test'
+  ...
+# Subtest: a record with no Decided by line is tallied as unrecorded, not as a vocabulary value
+ok 452 - a record with no Decided by line is tallied as unrecorded, not as a vocabulary value
+  ---
+  duration_ms: 160.886782
+  type: 'test'
+  ...
+# Subtest: a second declaration for one requirement is accepted, a named check runs every mechanism, and Done needs each to pass (LOOP-056, LOOP-099)
+ok 453 - a second declaration for one requirement is accepted, a named check runs every mechanism, and Done needs each to pass (LOOP-056, LOOP-099)
+  ---
+  duration_ms: 1879.65182
+  type: 'test'
+  ...
+# Subtest: one mechanism's stale evidence names that mechanism, and --stale runs only it (LOOP-056, LOOP-094)
+ok 454 - one mechanism's stale evidence names that mechanism, and --stale runs only it (LOOP-056, LOOP-094)
+  ---
+  duration_ms: 948.814768
+  type: 'test'
+  ...
+# Subtest: attempts are counted within one mechanism's records, so the other's passes do not reset them (LOOP-100, DEC-016)
+ok 455 - attempts are counted within one mechanism's records, so the other's passes do not reset them (LOOP-100, DEC-016)
+  ---
+  duration_ms: 1711.875609
+  type: 'test'
+  ...
+# Subtest: step 1: an in-progress record is reconciled before anything else
+ok 456 - step 1: an in-progress record is reconciled before anything else
+  ---
+  duration_ms: 162.690188
+  type: 'test'
+  ...
+# Subtest: step 2: an open escalation is presented and nothing else happens
+ok 457 - step 2: an open escalation is presented and nothing else happens
+  ---
+  duration_ms: 148.965088
+  type: 'test'
+  ...
+# Subtest: an answered escalation is not open
+ok 458 - an answered escalation is not open
+  ---
+  duration_ms: 432.920136
+  type: 'test'
+  ...
+# Subtest: step 3: a decision with no realized-by is built, first by name (DEC-007)
+ok 459 - step 3: a decision with no realized-by is built, first by name (DEC-007)
+  ---
+  duration_ms: 157.297447
+  type: 'test'
+  ...
+# Subtest: a superseded decision with no realized-by is not work
+ok 460 - a superseded decision with no realized-by is not work
+  ---
+  duration_ms: 182.805558
+  type: 'test'
+  ...
+# Subtest: step 6: a mechanism that has never run is run, not implemented (LOOP-008)
+ok 461 - step 6: a mechanism that has never run is run, not implemented (LOOP-008)
+  ---
+  duration_ms: 184.591353
+  type: 'test'
+  ...
+# Subtest: step 6: a requirement whose mechanism fails is implemented
+ok 462 - step 6: a requirement whose mechanism fails is implemented
+  ---
+  duration_ms: 488.854955
+  type: 'test'
+  ...
+# Subtest: step 6 before step 7: failing evidence outranks a missing mechanism
+ok 463 - step 6 before step 7: failing evidence outranks a missing mechanism
+  ---
+  duration_ms: 392.775965
+  type: 'test'
+  ...
+# Subtest: step 7: a requirement with no mechanism is declared (LOOP-106)
+ok 464 - step 7: a requirement with no mechanism is declared (LOOP-106)
+  ---
+  duration_ms: 163.171599
+  type: 'test'
+  ...
+# Subtest: every verdict names who acts: Resolvable is the agent's, Done needs nobody, Escalate waits for the developer (LOOP-004)
+ok 465 - every verdict names who acts: Resolvable is the agent's, Done needs nobody, Escalate waits for the developer (LOOP-004)
+  ---
+  duration_ms: 642.890157
+  type: 'test'
+  ...
+# Subtest: malformed roadmap is Resolvable, not fatal (LOOP-005)
+ok 466 - malformed roadmap is Resolvable, not fatal (LOOP-005)
+  ---
+  duration_ms: 164.16163
+  type: 'test'
+  ...
+# Subtest: a commitment naming no requirements is Resolvable (LOOP-018)
+ok 467 - a commitment naming no requirements is Resolvable (LOOP-018)
+  ---
+  duration_ms: 155.148841
+  type: 'test'
+  ...
+# Subtest: the primary test: two wakes on the same checkout give the same action, before and after a persisted transition (LOOP-001, LOOP-003)
+ok 468 - the primary test: two wakes on the same checkout give the same action, before and after a persisted transition (LOOP-001, LOOP-003)
+  ---
+  duration_ms: 849.360336
+  type: 'test'
+  ...
+# Subtest: outside a cairn repository wake cannot run
+ok 469 - outside a cairn repository wake cannot run
+  ---
+  duration_ms: 59.235589
+  type: 'test'
+  ...
+# Subtest: the loop never waits on the review queue (DEC-015)
+ok 470 - the loop never waits on the review queue (DEC-015)
+  ---
+  duration_ms: 430.681296
+  type: 'test'
+  ...
+# Subtest: the linked walkthrough runs from agreement through the next commitment (PKG-016)
+ok 471 - the linked walkthrough runs from agreement through the next commitment (PKG-016)
+  ---
+  duration_ms: 1129.966303
+  type: 'test'
+  ...
+1..471
+# tests 471
+# suites 0
+# pass 468
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 0
+# duration_ms 102531.457257

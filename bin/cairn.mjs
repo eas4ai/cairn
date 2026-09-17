@@ -314,10 +314,17 @@ const reversed = (root) => decisions(root).filter((d) => "Superseded by" in d);
 // Inheritance is declared by Scope in the specification, never by prefix.
 const fold = (c, inherited) => { for (const r of [...inherited].sort()) if (!c.requirements.includes(r)) c.requirements.push(r); };
 
+// What decide writes under Realized by, and what DEC-021 refuses to see
+// above a commit that resolves.
+const UNBUILT = "(none yet: recorded, not built)";
+// Whitespace around the line, and a CR from a CRLF checkout, are not part of it.
+const hasUnbuilt = (section) => section.split("\n").some((l) => l.trim() === UNBUILT);
+
 // A decision record is read whole: its header (DEC-005, LOOP-109), its
 // predecessor (DEC-010), and its Realized by section, where a resolving
-// entry makes it built and an identifier a shallow clone or an ambiguous
-// prefix cannot resolve is named as such (DEC-007, LOOP-113).
+// entry makes it built, a placeholder left above one is named as a
+// repair, and an identifier a shallow clone or an ambiguous prefix
+// cannot resolve is named as such (DEC-007, DEC-021, LOOP-113).
 function decisionVerdict(root) {
   const dir = join(root, "docs", "decisions");
   for (const n of files(dir)) {
@@ -326,15 +333,22 @@ function decisionVerdict(root) {
     const missing = ["Level", "Decided by", "Rests on", "Would be wrong if"].find((k) => !f[k]);
     if (missing) return repair(`the record lacks its ${missing}: line (DEC-005, LOOP-109)`);
     if (f.Supersedes && !existsSync(join(dir, `${f.Supersedes}.md`))) return repair(`Supersedes: ${f.Supersedes} names no record under docs/decisions/; a reversal is never deleted (DEC-010, LOOP-109)`);
-    if ("Superseded by" in f) continue;
     const headings = [...t.matchAll(/^ {0,3}## Realized by[ \t]*$/gm)];
     const section = headings.length !== 1 ? "" : t.slice(headings[0].index + headings[0][0].length).split(/^ {0,3}#{1,6}[ \t]/m)[0];
+    // A superseded record is never deleted, so its placeholder is held to the same line (DEC-010,
+    // DEC-021); with no placeholder there is nothing left to judge and its entries cost nothing.
+    const placeholder = hasUnbuilt(section), superseded = "Superseded by" in f;
+    if (superseded && !placeholder) continue;
     const entries = [...section.matchAll(/^- ([0-9a-f]{7,64})[ \t]+(\S[^\n]*)$/gm)].map((m) => ({ id: m[1], r: git(root, "rev-parse", "--verify", `${m[1]}^{commit}`) }));
-    if (entries.some((e) => e.r.status === 0)) continue;
+    // A resolving entry settles the record, but not while it still says it was never built (DEC-021).
+    // The test is a resolving entry, so a shallow clone reaches its own repair below instead (LOOP-113).
+    const built = entries.some((e) => e.r.status === 0);
+    if (built && placeholder) return repair(`Realized by holds "${UNBUILT}" above a commit that resolves; remove the placeholder line, which says the decision was never built (DEC-021)`);
+    if (built || superseded) continue;
     if (entries.length && git(root, "rev-parse", "--is-shallow-repository").stdout.trim() === "true") return repair(`Realized by names ${entries[0].id}, which this shallow clone cannot resolve; fetch the history before judging the record (LOOP-113)`);
     const ambiguous = entries.find((e) => /ambiguous/i.test(e.r.stderr));
     if (ambiguous) return repair(`Realized by identifier ${ambiguous.id} is ambiguous; lengthen it (LOOP-113)`);
-    return { verdict: "Resolvable", action: `build ${path}`, why: "the record needs a resolving commit identifier followed by its subject in Realized by; the commit or subject is missing" };
+    return { verdict: "Resolvable", action: `build ${path}`, why: `the record needs a resolving commit identifier followed by its subject in Realized by, replacing "${UNBUILT}" rather than sitting under it; the commit or subject is missing (DEC-006, DEC-021)` };
   }
   return null;
 }
@@ -1137,6 +1151,16 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
 // ------------------------------------------------------------ decide
 
 const LEVELS = ["Judged", "Consequential", "Blocking"];
+// Who decided is counted, not read, so the field is a closed vocabulary
+// (DEC-020). Writing stores it lowercase; reading normalizes case and
+// surrounding whitespace, and names a value outside it rather than
+// dropping or guessing it, so drift stays visible (DEC-011).
+const DECIDERS = ["developer", "agent", "joint"];
+const decider = (v) => {
+  const s = asList(v).join(" ").trim().replace(/\s+/g, " ");   // the field reads as a string or as a list (LOOP-124)
+  if (!s) return "unrecorded";
+  return DECIDERS.includes(s.toLowerCase()) ? s.toLowerCase() : `unrecognized: ${s}`;
+};
 const CAUSES = ["the stated condition occurred", "an unforeseen condition occurred", "it was wrong when it was made", "the premise was false"];
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -1147,6 +1171,8 @@ function decide(root, o) {
   if (multiline) return usage(`decide: --${multiline} must be one line; put multiline text in --body`);
   if (o.level === "Routine") return usage("decide: a Routine decision produces no record (DEC-001, DEC-003)");
   if (!LEVELS.includes(o.level)) return usage(`decide: --level must be one of ${LEVELS.join(", ")}`);
+  const who = decider(o["decided-by"]);   // written through the same normalizer the tally reads with
+  if (!DECIDERS.includes(who)) return usage(`decide: --decided-by must be one of ${DECIDERS.join(", ")}; name the person or tool in --body (DEC-020)`);
   if (o.supersedes && !CAUSES.includes(o.cause ?? "")) return usage(`decide: --supersedes needs --cause, one of: ${CAUSES.join("; ")}`);
   const slug = slugify(o.title);
   if (!slug) return usage("decide: the title has no letters or digits to name the record (LOOP-128)");
@@ -1160,12 +1186,12 @@ function decide(root, o) {
   const domain = ids.length ? [...new Set(ids)] : ["unspecified"];
   const prior = reversed(root).filter((d) => d.domain.some((x) => domain.includes(x)));
   if (prior.length && !o.history) return usage(`decide: ${domain.join("/")} carries ${prior.length} reversal(s): ${prior.map((d) => d.slug).join(", ")}; pass --history stating what that history changed about the level (DEC-012)`);
-  const head = [`# ${o.title}`, "", `Level: ${o.level}`, `Decided by: ${o["decided-by"]}`];
+  const head = [`# ${o.title}`, "", `Level: ${o.level}`, `Decided by: ${who}`];
   if (o.promotes) head.push(`Promotes: ${item(o.promotes)}`);   // the item a promotion record names (LOOP-088, LOOP-115)
   if (o.supersedes) head.push(`Supersedes: ${o.supersedes}`, `Cause: ${o.cause}`);
   head.push(`Rests on: ${o["rests-on"]}`, `Would be wrong if: ${o["wrong-if"]}`);
   if (o.history) head.push(`History: ${o.history}`);
-  head.push("", "## Decision", "", o.body, "", "## Realized by", "", "(none yet: recorded, not built)", "");
+  head.push("", "## Decision", "", o.body, "", "## Realized by", "", UNBUILT, "");
   writeFileSync(path, head.join("\n"));
   // The old record learns it was superseded; nothing in it is removed (DEC-008, DEC-010).
   if (oldPath) {
@@ -1294,7 +1320,7 @@ function reversals(root) {
   const all = decisions(root), rev = all.filter((d) => "Superseded by" in d);
   const tally = (f) => { const m = new Map(); for (const d of rev) for (const k of [].concat(f(d))) m.set(k, (m.get(k) ?? 0) + 1); return [...m].sort().map(([k, v]) => `${k} ${v}`).join(", ") || "none"; };
   const causeOf = (d) => all.find((x) => x.slug === d["Superseded by"])?.Cause ?? "unrecorded";
-  process.stdout.write([`reversals: ${rev.length} of ${all.length} decisions`, `by decider: ${tally((d) => d["Decided by"] ?? "unrecorded")}`,
+  process.stdout.write([`reversals: ${rev.length} of ${all.length} decisions`, `by decider: ${tally((d) => decider(d["Decided by"]))}`,
     `by cause: ${tally(causeOf)}`, `by domain: ${tally((d) => d.domain)}`, ...rev.map((d) => `  ${d.slug} -> ${d["Superseded by"]} (${causeOf(d)})`)].join("\n") + "\n");
   return 0;
 }
@@ -1323,9 +1349,9 @@ Commands:
     --stale runs once each mechanism whose requirement has missing or stale
     evidence and nothing else; a fresh failure or an unverified result is
     skipped with implement named (LOOP-094).
-  decide --title TEXT --level LEVEL --decided-by NAME --rests-on REFS
+  decide --title TEXT --level LEVEL --decided-by WHO --rests-on REFS
          --wrong-if TEXT --body TEXT [--history TEXT] [--promotes ITEM]
-    Record a decision. Levels: ${LEVELS.join(", ")}.
+    Record a decision. Levels: ${LEVELS.join(", ")}. Deciders: ${DECIDERS.join(", ")}.
     --history is required when the decision's domain has recorded reversals.
     --promotes names the backlog item a promotion record promotes (LOOP-088).
     To replace an earlier decision, add --supersedes SLUG --cause CAUSE.

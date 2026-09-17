@@ -3,10 +3,10 @@
 // records-in-every-shape).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, readFileSync, existsSync, mkdirSync, chmodSync, appendFileSync, unlinkSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, mkdirSync, chmodSync, appendFileSync, unlinkSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { repo as base, cairn, commit, review, fromFile, passing, head, git, records, CLI } from "./helpers.mjs";
+import { repo as base, cairn, commit, review, fromFile, passing, head, git, records, CLI, realize, UNBUILT } from "./helpers.mjs";
 import { parseSpec } from "../bin/spec.mjs";
 
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
@@ -39,7 +39,7 @@ test("an item named by filename, path, or backticked slug resolves like the slug
   const r = cairn(root, "decide", "--title", "Promote it", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x", "--promotes", ".cairn/backlog/some-item.md");
   assert.equal(r.status, 0, r.stderr);
   assert.match(readFileSync(join(root, "docs/decisions/promote-it.md"), "utf8"), /^Promotes: some-item$/m);
-  appendFileSync(join(root, "docs/decisions/promote-it.md"), `- ${head(root)} init\n`); commit(root, "recorded");
+  realize(root, "promote-it"); commit(root, "recorded");
   assert.doesNotMatch(wake(root).stdout, /repair docs\/commitments/);
 });
 
@@ -119,7 +119,7 @@ test("a Consequential record this commitment added needs its queue entry committ
   const root = repo();
   const r = cairn(root, "decide", "--title", "Big call", "--level", "Consequential", "--decided-by", "agent", "--rests-on", "R-001", "--wrong-if", "never", "--body", "x");
   assert.equal(r.status, 0, r.stderr);
-  appendFileSync(join(root, "docs/decisions/big-call.md"), `- ${head(root)} init\n`);
+  realize(root, "big-call");
   git(root, "add", "docs/decisions"); git(root, "commit", "-qm", "the record without its queue entry");
   let out = wake(root).stdout;
   assert.match(out, /^Resolvable: commit \.cairn\/queue\/big-call/, out); assert.match(out, /LOOP-131/);
@@ -155,4 +155,107 @@ test("a Current: line inside a fenced example is neither a second Current: line 
 test("a Status: word is taken only from a line that carries one, never from wrapped prose after it (SPEC-018)", () => {
   const block = parseSpec("# A\n\nStatus: Draft\nPrefix: A\n\n[A-001] The tool MUST work.\nFalsifier: it does not.\nStatus: Agreed 2026-09-15\nRevised on the same day; the prose wraps onto a\nStatus: line without a status word.\n").blocks[0];
   assert.equal(block.status, "Agreed");
+});
+
+// --- the unbuilt placeholder above a resolving commit (DEC-021) ---
+
+// A decision record whose Realized by section is exactly what is passed.
+const realized = (body) => `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n## Decision\n\nx\n\n## Realized by\n\n${body}\n`;
+
+test("the placeholder left above a resolving entry is a repair naming the file (DEC-021)", () => {
+  // Both orders: decide writes the placeholder, and an agent appends below or above it.
+  for (const body of [`${UNBUILT}\n\n- ${"HEAD"} init`, `- ${"HEAD"} init\n\n${UNBUILT}`, `${UNBUILT}\n- ${"HEAD"} init\n- ${"HEAD"} init`]) {
+    const root = repo();
+    writeFileSync(join(root, "docs/decisions/d.md"), realized(body.replaceAll("HEAD", head(root))));
+    commit(root, "placeholder above the commits");
+    const r = wake(root);
+    assert.equal(r.status, 1, r.stdout + r.stderr);
+    assert.match(r.stdout, /^Resolvable: repair docs\/decisions\/d\.md/, r.stdout);
+    assert.match(r.stdout, /remove the placeholder line/, r.stdout);
+    assert.match(r.stdout, /DEC-021/, r.stdout);
+  }
+});
+
+test("the placeholder alone is a decision recorded and not yet built, unchanged (DEC-007)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(UNBUILT));
+  commit(root, "recorded, not built");
+  const r = wake(root);
+  assert.match(r.stdout, /^Resolvable: build docs\/decisions\/d\.md/, r.stdout);
+  assert.doesNotMatch(r.stdout, /placeholder/, r.stdout);
+});
+
+test("resolving entries with no placeholder are unchanged (DEC-006)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(`- ${head(root)} init`));
+  commit(root, "built");
+  const r = wake(root);
+  assert.doesNotMatch(r.stdout, /docs\/decisions\/d\.md/, r.stdout);
+  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
+});
+
+test("a shallow clone that cannot resolve its entries is still told to fetch, not to edit (LOOP-113 keeps precedence)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(`${UNBUILT}\n\n- ${head(root)} init`));
+  commit(root, "placeholder above the commits");
+  const shallow = join(root, "..", `shallow-${Date.now()}`);
+  assert.equal(spawnSync("git", ["clone", "-q", "--depth", "1", "--no-local", `file://${root}`, shallow], { encoding: "utf8" }).status, 0);
+  // The clone's one commit is the record's own, so its identifier does not resolve there.
+  writeFileSync(join(shallow, "docs/decisions/d.md"), realized(`${UNBUILT}\n\n- 0123456789abcdef0123456789abcdef01234567 gone`));
+  commit(shallow, "an identifier this clone cannot resolve");
+  const r = cairn(shallow, "wake");
+  assert.match(r.stdout, /^Resolvable: repair docs\/decisions\/d\.md/, r.stdout);
+  assert.match(r.stdout, /shallow clone/, r.stdout);
+  assert.match(r.stdout, /LOOP-113/, r.stdout);
+  assert.doesNotMatch(r.stdout, /placeholder/, r.stdout);
+  rmSync(shallow, { recursive: true, force: true });
+});
+
+test("the placeholder quoted in a fenced example does not make a built record a repair (DEC-021)", () => {
+  const root = repo();
+  const quoted = "# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n## Decision\n\nA record that has not been built reads:\n\n```\n## Realized by\n\n" + UNBUILT + "\n```\n\n## Realized by\n\n- " + head(root) + " init\n";
+  writeFileSync(join(root, "docs/decisions/d.md"), quoted);
+  commit(root, "a record whose body quotes the placeholder");
+  const r = wake(root);
+  assert.doesNotMatch(r.stdout, /docs\/decisions\/d\.md/, r.stdout);
+  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
+});
+
+test("supersede takes the same decider vocabulary as decide (DEC-020)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/old.md"), "# Old\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: x\n\n## Realized by\n\n- abc1234 did it\n");
+  const supersede = (by) => cairn(root, "supersede", "old", "--title", "New", "--level", "Judged", "--decided-by", by,
+    "--rests-on", "R-001", "--wrong-if", "w", "--body", "b", "--cause", "the premise was false");
+  let r = supersede("Codex");
+  assert.equal(r.status, 3, r.stdout); assert.match(r.stderr, /DEC-020/);
+  assert.equal(existsSync(join(root, "docs/decisions/new.md")), false, "nothing was written");
+  assert.doesNotMatch(readFileSync(join(root, "docs/decisions/old.md"), "utf8"), /Superseded by/, "the old record was not stamped");
+  r = supersede("Joint");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(readFileSync(join(root, "docs/decisions/new.md"), "utf8"), /^Decided by: joint$/m);
+});
+
+test("a superseded record is held to the same line: its placeholder above a resolving entry is a repair (DEC-021, DEC-010)", () => {
+  const root = repo();
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(`${UNBUILT}\n\n- ${head(root)} init`).replace("History: none\n", "History: none\nSuperseded by: e\n"));
+  writeFileSync(join(root, "docs/decisions/e.md"), realized(`- ${head(root)} init`).replace("History: none\n", "History: none\nSupersedes: d\nCause: the premise was false\n"));
+  commit(root, "a reversed record still says it was never built");
+  const r = wake(root);
+  assert.match(r.stdout, /^Resolvable: repair docs\/decisions\/d\.md/, r.stdout); assert.match(r.stdout, /DEC-021/);
+  // Once repaired, a superseded record with no resolving entry is still skipped, never named build.
+  writeFileSync(join(root, "docs/decisions/d.md"), realized(UNBUILT).replace("History: none\n", "History: none\nSuperseded by: e\n"));
+  commit(root, "repaired, and unbuilt");
+  assert.doesNotMatch(wake(root).stdout, /docs\/decisions\/d\.md/);
+});
+
+test("realize() touches only the Realized by section; a body that quotes the placeholder keeps it", () => {
+  const root = repo();
+  const body = `## Decision\n\nUntil built, the section reads ${UNBUILT}.\n\n## Realized by\n\n${UNBUILT}\n`;
+  writeFileSync(join(root, "docs/decisions/d.md"), `# D\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\nHistory: none\n\n${body}`);
+  realize(root, "d", "built");
+  const t = readFileSync(join(root, "docs/decisions/d.md"), "utf8");
+  assert.ok(t.includes(`the section reads ${UNBUILT}.`), "the body sentence is untouched");
+  assert.match(t, /## Realized by\n\n- [0-9a-f]+ built\n$/, t);
+  commit(root, "built");
+  assert.doesNotMatch(wake(root).stdout, /docs\/decisions\/d\.md/);
 });

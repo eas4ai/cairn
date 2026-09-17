@@ -118,7 +118,7 @@ Ask the agent to declare them in the affected spec file's header, before
 its first requirement:
 
 ```text
-Host paths: /usr/bin/bwrap, ~/.suprnova/config.toml
+Host paths: /usr/bin/bwrap, ~/.widget/config.toml
 ```
 
 The list applies only to that file. Each entry permits the exact path and
@@ -259,10 +259,24 @@ your instruction that you have reviewed those decisions.
 An empty queue is not required for Done. A queued decision deserves your
 attention, but it is not a request for permission that has stopped the work.
 
+`--decided-by` takes one of three words: `developer`, `agent`, or `joint`.
+They are counted, not read: `cairn reversals` reports the reversal rate
+separately for the decisions you made and the ones the agent made, and a
+free-text field spreads one decider over several spellings and answers
+nothing (DEC-020). A name, a product or a role is one of the three wearing
+a different word, so a decision an assistant made is `agent` whatever the
+assistant is called, and the name itself goes in `--body` where it can be
+read. Records written before this rule keep the decider they were written
+with; nothing rewrites them, and the report names a value it does not
+recognize rather than dropping or guessing it.
+
 Decision and review metadata belongs in the record's header. Put prose and
 examples in the body; their quoted fields do not change whether a decision
 is built or a finding is open. A realizing commit belongs in the actual
-`Realized by` section, outside a code example. CLI metadata values stay on
+`Realized by` section, outside a code example, and it replaces the
+`(none yet: recorded, not built)` line rather than following it: a record
+that states both says the decision was never built above the commits that
+built it, and the wake names that as a repair (DEC-021). CLI metadata values stay on
 one line; use `--body` for multiline decision text.
 
 ## Understand checks and their results

@@ -1,5 +1,5 @@
 commitment: releases-are-versioned
-commit: 0be0d8f
+commit: 40ae00d
 examined:
   - cairn --version: prints the package.json version and exits 0 outside a repository and ahead of a command, and the help lists it; the read happens only when asked, so a kernel copied without package.json, as the hooks and plugin tests do with bin/, still wakes and judges; --version there is one line and exit 3.
   - the release script's refusals, each reproduced in the fixture tests: a malformed or extra argument, a version that is not an increase, a missing changelog entry, an existing tag, a version file that disagrees, a dirty tree including the changelog, and a loop not at Done; each is one line, exit 3, and leaves HEAD, the tags and the working tree as they were.
@@ -10,6 +10,9 @@ examined:
   - re-examined at 0be0d8f: the README gained the verdict in notation (4736c39), the developer's image with a plain-character transcription and a legend that names what the notation leaves out; assets/notation.png is declared beside the cover image; no code changed.
   - re-examined at c7f0474: the release 0.3.0 was cut by the script as one commit tagged v0.3.0; the version files changed and nothing else; cairn --version prints 0.3.0; node-test and pkg-lint rerun and pass.
   - attack: the script run from a subdirectory of the checkout, where package.json is not in cwd; the read throws, printing a stack trace with exit 1 instead of one line and exit 3. Recorded as the open finding below.
+  - re-examined at 40ae00d: the Muse plugin manifest (b290963) carries the same version as package.json and the other four version files, names the four skills the repository holds and two hook entries under bin/hooks/, each delegating to bin/hook.mjs; scripts/release.mjs and tests/plugin.test.mjs both read it, so it is a node-test input and was undeclared until this commit.
+  - attack: both Muse hook entries run by hand. Outside a Cairn project, session-start links $HOME/.local/bin/cairn and says which cairn the hooks judge with, exit 0; inside this repository, stop prints the block JSON carrying the current Resolvable verdict, exit 0. The entry files relay standard input and the child's status, so the Muse path reaches the same verdict as the hooks/hooks.json path.
+  - attack: the scope breach itself. The Muse manifest was committed outside every mechanism's declared inputs, so wake refused before any check. Declaring .muse-plugin/ under node-test is the correct repair rather than a retention escalation, because the manifest is read by two of that mechanism's own test files; pkg-lint reads no plugin manifest, so its declaration is unchanged.
 findings:
   - resolved: scripts/release.mjs run from a directory without package.json or CHANGELOG.md printed a stack trace and exited 1; every file read now refuses in one line naming the file and the directory (6e327ea), with a test from a subdirectory.
 
@@ -33,3 +36,11 @@ last review. No open finding.
 
 The README notation section is the only change; node-test and pkg-lint
 rerun and passing. No open finding.
+
+## Commitment review at 40ae00d, 2026-09-16
+
+The Muse plugin manifest, its two hook entries, and the docs that name
+them are the change since the last review, together with the missing
+`.muse-plugin/` declaration this commit adds to node-test. Every
+requirement has current passing evidence: 460 tests run with none failing, pkg-lint and
+spec-lint clean. Attacked as listed under examined. No open finding.

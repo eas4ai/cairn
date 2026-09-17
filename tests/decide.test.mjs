@@ -89,3 +89,38 @@ test("a queued decision stays queued; nothing but the developer removes it (DEC-
   }
   assert.ok(existsSync(join(root, ".cairn/queue/sessions-live-in-sqlite")));
 });
+
+// --- the decider vocabulary (DEC-020) ---
+
+const decidedBy = (root, value) => spawnSync("node", [CLI, "decide", "--title", "Sessions live in SQLite", "--level", "Judged",
+  "--decided-by", value, "--rests-on", "PKG-001", "--wrong-if", "we need cross-process access", "--body", "Because it is there."],
+  { cwd: root, encoding: "utf8" });
+const decidedByLine = (root) => /^Decided by: (.*)$/m.exec(readFileSync(join(root, "docs/decisions/sessions-live-in-sqlite.md"), "utf8"))[1];
+
+test("each accepted decider is stored lowercase, whatever case it was typed in (DEC-020)", () => {
+  for (const [typed, stored] of [["developer", "developer"], ["agent", "agent"], ["joint", "joint"],
+                                 ["Developer", "developer"], ["AGENT", "agent"], ["Joint", "joint"], ["  agent  ", "agent"]]) {
+    const root = repo();
+    const r = decidedBy(root, typed);
+    assert.equal(r.status, 0, `${JSON.stringify(typed)}: ${r.stderr}`);
+    assert.equal(decidedByLine(root), stored, JSON.stringify(typed));
+  }
+});
+
+test("a decider outside the vocabulary is a usage error naming all three, and nothing is written (DEC-020)", () => {
+  for (const value of ["Codex", "Shawn", "Shawn and Codex", "agents", "dev", "   "]) {
+    const root = repo();
+    const r = decidedBy(root, value);
+    assert.equal(r.status, 3, `${JSON.stringify(value)} was accepted: ${r.stdout}`);
+    for (const word of ["developer", "agent", "joint", "DEC-020"]) assert.match(r.stderr, new RegExp(word), `${JSON.stringify(value)}: ${word}`);
+    assert.equal(readdirSync(join(root, "docs/decisions")).length, 0, JSON.stringify(value));
+  }
+});
+
+test("an empty --decided-by is the missing-field error, not the vocabulary one", () => {
+  const root = repo();
+  const r = decidedBy(root, "");
+  assert.equal(r.status, 3, r.stdout);
+  assert.match(r.stderr, /missing --decided-by/);
+  assert.equal(readdirSync(join(root, "docs/decisions")).length, 0);
+});

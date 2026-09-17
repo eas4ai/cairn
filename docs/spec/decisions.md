@@ -105,6 +105,36 @@ decision made and not yet built.
 Falsifier: the agent reports a commitment as complete while a decision
 record for it names no commit.
 
+[DEC-020] A decision record MUST name its decider as one of:
+`developer`, `agent`, `joint`.
+Falsifier: a decision recorded with an unlisted decider is accepted.
+Status: Agreed 2026-09-16 by deference record-integrity-on-the-developer-s-direction
+
+Who decided is counted, not read. DEC-011 asks for the reversal rate
+computed separately for the agent's decisions and the developer's, and
+a free-text field answers that question with one decider spread over
+several spellings. Three values cover the cases: the developer decided,
+the agent decided, or they decided together. A name, a product, or a
+role is one of those three wearing a different word, and it is recorded
+in the body where it can be read, not in the field that is tallied.
+
+A record already written keeps the decider it was written with. Reading
+normalizes case and surrounding whitespace before it counts, and a value
+still outside the vocabulary is counted as unrecognized rather than
+dropped or guessed, so drift stays visible in the report that found it.
+
+[DEC-021] A decision record MUST NOT keep its unbuilt placeholder in
+`Realized by` alongside a commit entry that resolves.
+Falsifier: a decision with a placeholder and a realizing commit passes
+validation.
+Status: Agreed 2026-09-16 by deference record-integrity-on-the-developer-s-direction
+
+The placeholder is what DEC-007 reads as "made and not yet built". Left
+in place under the commits that built the decision, the record states
+both, and the one a reader reaches first is an accident of order. A
+section holding the placeholder alone is not this defect: that record is
+exactly what it says it is.
+
 ## Supersession
 
 [DEC-008] A decision record that supersedes another MUST name its

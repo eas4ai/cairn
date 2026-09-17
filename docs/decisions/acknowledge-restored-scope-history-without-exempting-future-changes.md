@@ -12,6 +12,4 @@ Share scope diagnostics between wake and check. With no applicable mechanism, na
 
 ## Realized by
 
-(none yet: recorded, not built)
-
 - b90c3650b61ebcbab5ecefd7c81302a0dbd2bdc2 Repair scope bootstrap, diagnostics, and restored-history recovery

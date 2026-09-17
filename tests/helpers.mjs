@@ -56,6 +56,18 @@ export function repo(overrides = {}) {
   git(root, "init", "-q", "-b", "main"); commit(root, "init");
   return root;
 }
+// What decide writes under Realized by until the decision is built.
+export const UNBUILT = "(none yet: recorded, not built)";
+// A decision record is realized the way the wake asks for: the resolving
+// entry replaces the unbuilt placeholder rather than following it (DEC-021).
+// Only the Realized by section is touched; a body that quotes the placeholder keeps it.
+export const realize = (root, slug, subject = "init", id = head(root)) => {
+  const p = join(root, "docs/decisions", `${slug}.md`), t = readFileSync(p, "utf8");
+  const entry = `- ${id} ${subject}`, at = t.search(/^ {0,3}## Realized by[ \t]*$/m);   // the heading, never one quoted in a fence
+  const before = at < 0 ? t : t.slice(0, at), section = at < 0 ? "" : t.slice(at);
+  writeFileSync(p, at >= 0 && section.includes(UNBUILT) ? before + section.replace(UNBUILT, entry) : `${t.replace(/\n*$/, "")}\n${entry}\n`);
+};
+
 // A clean review at HEAD, optionally with findings ("open: ..." / "resolved: ...").
 export const review = (root, findings = []) => writeFileSync(join(root, ".cairn/reviews/first.md"),
   `commitment: first\ncommit: ${head(root)}\nexamined:\n  - everything\nfindings:\n${findings.map((f) => `  - ${f}\n`).join("")}`);

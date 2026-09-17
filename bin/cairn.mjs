@@ -828,6 +828,8 @@ function independentGap(root, slug, rv) {
   // the record's own, not the reviewer's words. A report for another commit is
   // replaced first, so the repair is never asked for a record that is then thrown
   // away (LOOP-020).
+  const bare = f.commitment === undefined && f.commit === undefined && !early.examined.entries.length && early.findings.missing;
+  if (bare) return again(text.trim() ? `${name} carries no record: none of commitment:, commit:, examined: or findings: is a field at its top` : `${name} is empty`);
   if (f.commitment === undefined) {
     const mine = commitOf(f.commit);
     if (mine && mine !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
@@ -843,13 +845,16 @@ function independentGap(root, slug, rv) {
   // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
+  // A heading that names findings cannot be repaired without retitling the reviewer's
+  // own section, which this gate forbids: the answer is a report written again (LOOP-020).
+  if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
-    : list.heading === "named" ? `has content under the heading ${displayPath(list.named)}, whose title names findings, where the loop does not read it; move any finding into the findings: list above the first heading, and retitle that heading if its lines are notes`
+    : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
     : list.heading ? "holds findings under a heading, where the loop does not read them; move them into the findings: list above the first heading. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
-  if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread, text) : null);
+  if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread, text) : list.heading === "named" ? "ask the reviewer for a report that lists every finding under findings:, and titles a section of notes something else" : null);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
   const report = list.entries.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
@@ -932,9 +937,13 @@ function listOf(text, key) {
     if (hashed || under) { sections.push({ title: (hashed ? hashed[1] : lines[i]).trim(), body: [] }); if (under) i++; continue; }
     if (sections.length) sections[sections.length - 1].body.push(lines[i]);
   }
-  // A heading that names findings holds nothing: a bullet, a table row and a
-  // paragraph can each carry one, and the loop cannot tell them apart.
-  const named = sections.find((s) => /\bfindings?\b/i.test(s.title) && s.body.some((l) => l.trim()));
+  // A heading whose title names findings holds nothing at all: a bullet, a table
+  // row, a paragraph and a subsection can each carry a finding, and the heading's
+  // presence is the whole test, so nothing hides in a subsection or after a rule.
+  // The title is not narrowed to its first word: "More findings" carries findings
+  // as readily as "Findings", and no rule over a title tells either from a section
+  // that only mentions them, so the loop refuses in the open rather than lose one.
+  const named = sections.find((s) => /\bfindings?\b/i.test(s.title));
   const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
   return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread };
 }
@@ -964,7 +973,7 @@ function reviewOf(root, slug) {
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
     : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
-    : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings and holds content the loop does not read; keep every finding in the header's list, and retitle that heading if its lines are notes (LOOP-086)`
+    : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings in its title, where the loop reads no finding; keep every finding in the header's list, and title a section of notes something else (LOOP-086)`
     : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;

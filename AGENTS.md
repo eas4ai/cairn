@@ -128,14 +128,20 @@ rather than read past. Prose goes after a heading, where a finding never
 belongs: a bullet under a heading is read as prose unless it reads as a
 finding, or the record names `findings:` and lists none above it.
 `findings: []` says there are none, and leaves the body's bullets prose.
-A heading whose title names findings holds no list: a report's findings
-carry no prefix, so the loop cannot tell them from notes, and every
-finding belongs in the `findings:` list. Outside that list the loop
-reads a bullet under a heading as prose, and refuses only what it can
-recognise: a bullet that begins `open:` or `resolved:`, and any list
-under a heading that names findings. A finding written as ordinary
-prose under another heading is read as a note, and nothing names it.
-Say so when you brief a reviewer. An independent report carries
+A heading whose title names the word findings holds nothing at all: a
+report's findings carry no prefix, so a bullet, a numbered line, a table
+row, a paragraph or a subsection under it could each be a finding the
+loop cannot tell from a note. Such a heading is refused for its title
+alone, whatever sits beneath it, and a report that carries one is written
+again rather than retitled, because retitling changes the reviewer's
+words. Title a section of notes something that does not name findings.
+The loop cannot tell "More findings" from "What the findings mean", so it
+refuses both in the open rather than lose a finding in silence. Outside
+the `findings:` list the loop reads a bullet under a heading as prose,
+and refuses only what it can recognise: a bullet that begins `open:` or
+`resolved:`, and any heading whose title names findings. A finding
+written as ordinary prose under a heading that does not name them is
+read as a note, and nothing names it. Say so when you brief a reviewer. An independent report carries
 `commitment:`, `commit:`, `examined:` and `findings:` in the same shape.
 
 Check execution has a separate working-tree lock. When wake names

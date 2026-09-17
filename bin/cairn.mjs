@@ -805,19 +805,15 @@ function independentGap(root, slug, rv) {
   if (!examined.length) return repair(`${name} needs a nonempty examined: list`);
   // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/m, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
-  if (f.findings !== "[]" && !Array.isArray(f.findings)) return repair(`${name} needs findings: as a list of one-line entries, or findings: [], above any heading`);
-  const brokenReport = findingsBreak(text);
-  if (brokenReport) return repair(`${name}: ${brokenReport}`);
-  const block = (text.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean);   // the findings list, up to a blank or other unindented line
-  if (block.some((l) => !/^\s*-\s/.test(l))) return repair(`${name} has a finding that wraps onto a second line; keep each finding on one line`);
+  const listed = findingsOf(text);
+  if (listed === null) return repair(`${name} needs findings: as a list of - entries, or findings: [] for none, above any heading`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
-  const report = f.findings === "[]" ? [] : f.findings.map(norm);
+  const report = listed.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
   // Each finding n is carried by the one review line that cites (independent <report commit> n) and nothing else, and begins with its words (LOOP-020).
   const reviewText = committed(own) ?? "", short = at.slice(0, 7), mark = (n) => `(independent ${short} ${n})`;
-  if (report.length && ((reviewText.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean)).some((l) => !/^\s*-\s/.test(l))) return { verdict: "Resolvable", action: `repair ${own}`, why: "a review finding wraps onto a second line, and a citation must sit at the end of the line it carries; keep each finding on one line (LOOP-020)" };
   // Only the citations that end a line carry; a citation inside a finding's own words is words (LOOP-020).
-  const lines = asList(recordFields(reviewText).findings).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi, tail = (l) => l.match(/(?:\s*\(independent [0-9a-f]{7,40}\s+\d+\))+\s*$/i)?.[0] ?? "";
+  const lines = (findingsOf(reviewText) ?? []).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi, tail = (l) => l.match(/(?:\s*\(independent [0-9a-f]{7,40}\s+\d+\))+\s*$/i)?.[0] ?? "";
   const pairs = (l) => new Set([...tail(l).matchAll(cite)].map((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}`));
   for (const [i, words] of report.entries()) {
     const n = i + 1, key = `${short} ${n}`, hits = lines.filter((l) => pairs(l).has(key)), stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
@@ -830,30 +826,34 @@ function independentGap(root, slug, rv) {
   return null;
 }
 // A findings list the loop reads only in part: a blank line, an unread bullet, or a finding after a heading (LOOP-086, LOOP-020).
-function findingsBreak(text) {
-  const body = String(text ?? ""), head = body.split(/\n(?= {0,3}#)/)[0];
-  const list = /^findings:[^\n]*\n((?:[ \t]*-\s[^\n]*\n|[ \t]+\S[^\n]*\n)*)/m.exec(head);
-  if (!list) return null;
-  const after = head.slice(list.index + list[0].length);
-  const entries = /^[ \t]*-\s/m.test(list[1]);   // a list with entries: a bullet after a blank line was meant to be one of them
-  if (entries && /^\s*\n(?:[ \t]*\n)*[ \t]*[-*+]\s/.test(after)) return "a blank line inside findings: ends the list, and every entry after it is unread";
-  if (/^[ \t]*[*+]\s/m.test(list[1])) return "findings: holds a bullet the loop does not read; every entry is a - entry";
-  return null;
+// The findings list, read from the record's text: every bullet after findings:
+// up to the first heading, blank lines between entries allowed, a wrapped line
+// joined to its entry. A list after a heading stays unread (LOOP-071), so a
+// decoy section cannot replace a finding. null when findings: is absent.
+function findingsOf(text) {
+  const head = withoutFences(String(text ?? "")).join("\n").split(/\n(?= {0,3}#)/)[0], m = /^findings:[ \t]*(.*)$/m.exec(head);
+  if (!m) return null;
+  if (m[1].trim() === "[]") return [];
+  const out = m[1].trim() ? [m[1].trim()] : [];
+  for (const line of head.slice(m.index + m[0].length).split("\n")) {
+    if (!line.trim()) continue;
+    const item = /^[ \t]*[-*+][ \t]+(\S[\s\S]*)$/.exec(line);
+    if (item) { out.push(item[1].trim()); continue; }
+    if (/^[ \t]+\S/.test(line) && out.length) { out[out.length - 1] += ` ${line.trim()}`; continue; }
+    break;
+  }
+  return out;
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
   const text = read(p), f = recordFields(text);
   // The header the gate reads: commit, a nonempty examined list, a findings list (LOOP-108).
-  const missing = !f.commit ? "commit: names the commit the review examined" : !asList(f.examined).filter((x) => x !== "[]").length ? "examined: needs a nonempty list of what the review examined (LOOP-020)" : !("findings" in f) ? "findings: is missing; write findings: [] when there are none (LOOP-086)" : null;
+  const missing = !f.commit ? "commit: names the commit the review examined" : !asList(f.examined).filter((x) => x !== "[]").length ? "examined: needs a nonempty list of what the review examined (LOOP-020)" : findingsOf(text) === null ? "findings: is missing; write findings: [] when there are none (LOOP-086)" : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t]/m.test(text) && /^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };
-  const broken = findingsBreak(text);
-  if (broken) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${broken}; keep the findings in one unbroken list of - entries above any heading (LOOP-086)` } };
-  const findings = f.findings === "[]" ? [] : asList(f.findings);
+  const list = findingsOf(text), findings = list ?? [];
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
-  const malformed = f.findings && f.findings !== "[]" && !Array.isArray(f.findings)
-    ? "findings must be a list"
-    : invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
+  const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
   const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,
     why: `${malformed}; use list entries 'open: <description>' or 'resolved: <description>' with a nonempty description, or leave findings empty when there are no findings (LOOP-086). Preserve unresolved issues as open findings.` } : null;
   return { commit: f.commit ?? null, open: findings.filter((x) => /^open:/.test(x)), repair };

@@ -59,8 +59,10 @@ test("each finding is carried by the one line citing its number and beginning wi
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, again (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /finding 1 is not carried: 2 review lines cite \(independent [0-9a-f]{7} 1\)/);
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /^Done: /);
   const repairs = /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n/;
-  for (const tail of ["", "\n## Findings\n\nfindings:\n  - a defect\n", "findings:\n\n  - a defect\n", "findings: none\n", "findings:\n  - the\n    kernel lets an empty report reach Done\n", "findings:\n- the\n  kernel lets an empty report reach Done\n"])
+  for (const tail of ["", "\n## Findings\n\nfindings:\n  - a defect\n"])   // findings: absent, or only after a heading, where the loop does not read it
     assert.match(handReport(root, `examined:\n  - x at ${head(root)}\n${tail}`), repairs, tail);   // built at each call, so the report names the commit it is written at
+  for (const tail of ["findings:\n\n  - a defect\n", "findings: none\n", "findings:\n  - a\n    defect\n", "findings:\n- a defect\n"])   // a blank line, a value on the line, a wrapped entry, an unindented bullet: each is read
+    assert.match(handReport(root, `examined:\n  - x at ${head(root)}\n${tail}`), /^Resolvable: review first\n.*finding 1 is not carried/, tail);
   assert.match(handReport(root, `examined:\n  - x at ${head(root).toUpperCase()}\nfindings: []\n\n- tried x\n  and y\n`, { at: head(root).toUpperCase() }), /^Done: /, "capitals, and prose after the findings list");
   assert.match(handReport(root, `examined:\r\n  - x at ${head(root)}\r\nfindings: []\r\n`), /^Done: /, "CRLF");
 });
@@ -77,7 +79,7 @@ test("citations name their report's commit, so rounds never collide and an old l
   const s = head(root).slice(0, 7);
   writeFileSync(join(root, ".cairn/reviews/first.md"), `commitment: first\ncommit: ${head(root)}\nexamined:\n  - x\nfindings:\n  - resolved: a defect, fixed by a long explanation\n    that wraps (independent ${s} 1)\n`);
   writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings:\n  - a defect\n`); commit(root, "a wrapped review line");
-  assert.match(wake(root), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*wraps onto a second line/);
+  assert.match(wake(root), /^Done: /, "a wrapped review line keeps its citation, which the reader joins to its entry");
 });
 
 test("a finding that quotes a citation in its own words is carried by copying it, and an uncited wrapped line is no repair when there is nothing to carry (LOOP-020)", () => {
@@ -119,17 +121,21 @@ test("a report written or changed on disk but not committed is named commit, nev
   assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n/, "a new report not yet committed is named commit, not a new reviewer");
 });
 
-test("a findings list broken by a blank line, an unread bullet or a heading is a repair, in the review and in the report (LOOP-020, LOOP-086)", () => {
+test("the findings list is read from the record's text: blank lines between entries, a wrapped entry, any bullet, and a blank line inside examined: lose nothing; a list after a heading stays unread (LOOP-020, LOOP-086, LOOP-071)", () => {
   const root = repo();
   review(root); commit(root, "reviewed");
   const s = head(root).slice(0, 7), at = head(root);
   const write = (review, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), review); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
-  const reportWith = (findings) => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}`;
-  const reviewWith = (findings) => `commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${findings}`;
-  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`), reportWith("  - one\n\n  - two\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*a blank line inside findings: ends the list/, "the report's list");
-  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n\n  - resolved: two, fixed (independent ${s} 2)\n`), reportWith("  - one\n  - two\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*a blank line inside findings: ends the list/, "the review's list");
-  assert.match(write(reviewWith("  - open: the gate never reads this\n"), reportWith("  - one\n")), /^Resolvable: resolve first/, "an open finding is read when the list is unbroken");
-  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n  * resolved: two, fixed (independent ${s} 2)\n`), reportWith("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*a bullet the loop does not read/, "an unread bullet");
-  assert.match(write(`${reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`)}\n## Notes\n\n- open: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a list after a heading is ignored, as LOOP-071 requires");
-  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`), reportWith("  - one\n")), /^Done: /, "unbroken lists pass");
+  const reportWith = (findings, examined = `examined:\n  - x at ${at}\n`) => `commitment: first\ncommit: ${at}\nreviewer: r\n${examined}findings:\n${findings}`;
+  const reviewWith = (findings, examined = "examined:\n  - x\n") => `commitment: first\ncommit: ${at}\n${examined}findings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  assert.match(write(reviewWith(carry(1, "one")), reportWith("\n  - one\n")), /^Done: /, "a report list that begins after a blank line is read");
+  assert.match(write(reviewWith(carry(1, "one")), reportWith("  - one\n\n  - two\n")), /finding 2 is not carried/, "entries after a blank line are read");
+  assert.match(write(reviewWith("\n" + carry(1, "one")), reportWith("  - one\n")), /^Done: /, "a review list that begins after a blank line is read");
+  assert.match(write(reviewWith("\n  - open: the blank line above hides nothing\n"), reportWith("findings: []\n".replace("findings: ", ""))), /^Resolvable: resolve first/, "an open finding after a blank line still gates");
+  assert.match(write(reviewWith(carry(1, "one and two together")), reportWith("  - one and two\n    together\n")), /^Done: /, "a wrapped report entry is one finding");
+  assert.match(write(reviewWith(`  * resolved: one, fixed (independent ${s} 1)\n`), reportWith("  * one\n")), /^Done: /, "any bullet is an entry");
+  assert.match(write(reviewWith(carry(1, "one"), "examined:\n  - x\n\n  - y\n"), reportWith("  - one\n", `examined:\n  - x at ${at}\n\n  - y\n`)), /^Done: /, "a blank line inside examined: loses no findings");
+  assert.match(write(`${reviewWith(carry(1, "one"))}\n## Notes\n\nfindings:\n  - open: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a list after a heading stays unread (LOOP-071)");
+  assert.match(write(reviewWith(carry(1, "one")), reportWith("  - one\n\n- I also read the tests.\n")), /finding 2 is not carried/, "a bullet under findings: is a finding, prose belongs in examined:");
 });

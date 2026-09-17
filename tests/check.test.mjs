@@ -239,3 +239,16 @@ test("a receipt names its commit in full, and an older receipt with the short fo
   const p = join(root, e.path); writeFileSync(p, readFileSync(p, "utf8").replace(`commit: ${full}`, `commit: ${full.slice(0, 7)}`)); commit(root, "an older receipt");
   r = cairn(root, "wake"); assert.equal(r.status, 1, r.stdout + r.stderr); assert.doesNotMatch(r.stdout, /unavailable|review mechanism/, r.stdout); assert.match(r.stdout, /^Resolvable: review first/, r.stdout);
 });
+
+test("a change only to a document its declaration lists leaves the review fresh and the evidence stale; a change to another input makes the review stale (LOOP-141)", () => {
+  const root = repo({ ".cairn/mechanisms/m": fromFile("R-001", "R-002").replace("  - src/exit", "  - src/exit\n  - README.md") + "documents:\n  - README.md\n", "README.md": "# A project\n" });
+  cairn(root, "check"); review(root); commit(root, "green");
+  assert.match(cairn(root, "wake").stdout, /^Done: /);
+  writeFileSync(join(root, "README.md"), "# A project, described better\n"); commit(root, "a document");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: run R-001/, "the document is still an input: evidence is stale");
+  cairn(root, "check"); commit(root, "evidence");
+  assert.match(cairn(root, "wake").stdout, /^Done: /, "the review is still fresh");
+  writeFileSync(join(root, "src/exit"), "0\n\n"); commit(root, "code");
+  cairn(root, "check"); commit(root, "evidence again");
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: review first/, "a change to another input makes the review stale");
+});

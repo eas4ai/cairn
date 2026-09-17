@@ -17,6 +17,13 @@ inputs:
   - .muse-plugin/
   - hooks/
   - CHANGELOG.md
+documents:
+  - README.md
+  - CHANGELOG.md
+  - docs/manual.md
+  - docs/walkthrough.md
+  - docs/releasing.md
+  - docs/recon.md
 requirements:
   - PKG-001
   - PKG-002

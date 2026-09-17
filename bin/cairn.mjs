@@ -957,9 +957,13 @@ function wakeVerdict(root) {
   // A review is stale the way evidence is: when a declared input of the
   // commitment's mechanisms changed since the commit it examined. HEAD
   // moving on its own, as it does when the review is committed, is not.
-  const inputs = [...new Set(state.filter((x) => x.mech).flatMap((x) => asList(mechs.byName.get(x.mech).def.inputs)))];
-  const then = rv.commit ? inputsDigestAt(root, inputs, rv.commit) : null;
-  if (then === null || then !== committedInputsDigest(root, inputs, mechs.inputs)) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
+  // Each mechanism's inputs, less the documents its own declaration lists: a change only to those keeps the review fresh (LOOP-141).
+  const moved = [...new Set(state.filter((x) => x.mech).map((x) => x.mech))].some((n) => {
+    const d = mechs.byName.get(n).def, spec = [...asList(d.inputs), ...asList(d.documents).map((p) => `:(exclude)${p}`)];
+    const then = rv.commit ? inputsDigestAt(root, spec, rv.commit) : null;
+    return then === null || then !== committedInputsDigest(root, spec, mechs.inputs);
+  });
+  if (moved) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
   if (rv.open.length) return { verdict: "Resolvable", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
   // Done only when nothing remains the agent may decide (LOOP-087, LOOP-091).
   const complete = `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean`;

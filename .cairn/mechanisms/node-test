@@ -16,6 +16,11 @@ inputs:
   - hooks/
   - package.json
   - CHANGELOG.md
+documents:
+  - README.md
+  - CHANGELOG.md
+  - docs/manual.md
+  - docs/walkthrough.md
 requirements:
   - LOOP-036
   - LOOP-001

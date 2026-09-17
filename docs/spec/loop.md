@@ -1552,3 +1552,26 @@ that was never checked, and a declaration could lose its first input
 without any repair verdict. Every record type is read through the
 same grammar, so the rule holds for inputs, examined, findings and
 reviewed alike.
+
+[LOOP-134] The loop MUST read the Current: line of a historical
+roadmap revision as it reads the line at HEAD: outside fenced
+examples. When a historical revision carries more than one Current:
+line outside fences, the commit MUST count as activating the
+commitment when any of them names it.
+Falsifier: a fenced Current: example below the real line in an
+earlier roadmap revision moves the footprint's start, so a commit
+inside the commitment is not checked for scope; or a historical
+revision with two Current: lines, one naming the commitment, ends
+the walk.
+Status: Agreed 2026-09-17 by promotion promote-the-scope-history-reads-current-as-the-wake-does
+
+Promoted 2026-09-17 from the kernel review's finding 2. The wake
+reads the roadmap through the fence stripper and refuses two Current:
+lines (LOOP-104); the footprint's walk through history read each
+revision raw, where the last Current: line won and a fenced example
+counted. A fenced example below the real line, which LOOP-104 allows,
+stopped the walk early, and every commit between the true activation
+and that point escaped the scope check (LOOP-035) and the contract
+comparison (LOOP-089, LOOP-090). Two lines in history are a repair the
+agent made in the next commit; counting the commit as inside keeps
+the footprint whole.

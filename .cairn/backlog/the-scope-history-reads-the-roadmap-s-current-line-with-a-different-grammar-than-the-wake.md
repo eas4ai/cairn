@@ -1,6 +1,7 @@
 # The scope history reads the roadmap's Current line with a different grammar than the wake
 
 Surfaced from: LOOP-104
+Promoted to: the-scope-history-reads-current-as-the-wake-does (2026-09-17, by promote-the-scope-history-reads-current-as-the-wake-does)
 Outside because: found by the kernel review the developer requested on 2026-09-17 after this commitment reached Done; every mechanism of the commitment passes, the case lies outside its falsifiers, and the developer directed that review findings enter the backlog
 Captured: 2026-09-17T11:59:29.006Z
 

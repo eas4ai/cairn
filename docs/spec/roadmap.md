@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: a-value-followed-by-list-items-keeps-the-value
+Current: the-scope-history-reads-current-as-the-wake-does
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -527,3 +527,11 @@ the field grammar dropped a key line's value when list items followed
 it, so a commitment could name a requirement the wake never checked.
 Adds LOOP-133; the value becomes the first item of the list.
 [Commitment](../commitments/a-value-followed-by-list-items-keeps-the-value.md).
+
+## The scope history reads Current as the wake does
+
+Promoted on 2026-09-17 from the kernel review: the walk through
+roadmap history read Current: raw, so a fenced example that LOOP-104
+allows could start the footprint late and hide scope breaches. Adds
+LOOP-134; one reader serves the wake and the history.
+[Commitment](../commitments/the-scope-history-reads-current-as-the-wake-does.md).

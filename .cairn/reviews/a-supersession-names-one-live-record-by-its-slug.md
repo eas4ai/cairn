@@ -1,6 +1,7 @@
 commitment: a-supersession-names-one-live-record-by-its-slug
-commit: 4f03737
+commit: 0cdc1a74
 examined:
+  - re-examined at 0cdc1a74 after the resolution: the only declared inputs that changed are the reader line in decide() and the fenced-quote case in the test; the probe record is now superseded normally and stamped once under its title, and the two refusals behave as recorded above.
   - the failure demonstration before the fix: with both tests in place and the kernel at 56b80db's parent, supersede ../../outside stamped outside.md at the repository root and wrote new-one.md, and a second supersede of old-one wrote newer-one.md above a second stamp; with the change, each of ../../outside, Old-One, "old one" and old-one.md exits 3 naming the slug rule and DEC-022 with the outside file untouched and no record written, and the second supersession exits 3 naming new-one, leaving the old record byte-identical. Full suite 481.
   - a leading hyphen, -old-one, is refused earlier by the option parser as an unknown flag; it never reaches the slug check, so the test does not claim it.
   - the order of refusals inside decide: the slug check comes before the path is built, so no argument outside the alphabet touches the filesystem; the existence check and the already-superseded check come before the new record is written, so a refusal writes nothing.
@@ -9,7 +10,7 @@ examined:
   - the documents: the manual names supersede once, as the way to reverse a promotion, and describes no argument shape; nothing there needs the rule.
   - the package: every mechanism re-run after the kernel change, every requirement pass; bin/ is 1576 lines against the 1600 ceiling.
 findings:
-  - open: the already-superseded check reads the old record with fields() over the raw text while the wake reads it with recordFields over the fence-stripped header, so a record that only quotes a Superseded by: line in a fenced example is refused as already superseded; the check should read the record exactly as the wake does
+  - resolved: the already-superseded check reads the old record with fields() over the raw text while the wake reads it with recordFields over the fence-stripped header, so a record that only quotes a Superseded by: line in a fenced example is refused as already superseded; the check should read the record exactly as the wake does. Resolved: the check reads recordFields over withoutFences, the same call decisionVerdict makes; the test adds a record that quotes the stamp in a fence and is superseded normally (0cdc1a74)
 
 ## Commitment review at 4f03737, 2026-09-17
 
@@ -19,3 +20,6 @@ readers of the same record, the same shape as the LOOP-134 defect this
 review series already fixed once. The rule to carry: when a command
 judges a record the wake also judges, it reads it through the wake's
 reader.
+
+Resolved after the record: the command reads the record through the wake's
+reader. No open finding.

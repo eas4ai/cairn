@@ -809,7 +809,7 @@ function independentGap(root, slug, rv) {
   const list = listOf(text, "findings");
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
-    : list.heading ? "holds its findings under a heading, where the loop does not read them"
+    : list.heading ? "holds findings under a heading, where the loop does not read them; they belong in the findings: list above the first heading"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
   if (wrong) return repair(`${name} ${wrong}`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -837,18 +837,16 @@ function independentGap(root, slug, rv) {
 // too unless it reads as a finding of its own. Blank lines are nothing. Every
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
-const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i, FIELD = /^(commitment|commit|examined|findings|reviewer):(?:[ \t]|$)/i;   // only a field these records use ends a list, so a dropped entry or a note is never mistaken for one
+const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
 function listOf(text, key) {
   const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
-  const above = new Set([...head.slice(0, m.index).matchAll(/^([A-Za-z][A-Za-z _-]*):(?:[ \t]|$)/gm)].map((x) => x[1].toLowerCase().trim()).concat(key));
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
   let indent = null, blank = false, unread = null, dropped = false;
   for (const line of head.slice(m.index + m[0].length).split("\n")) {
     if (!line.trim()) { blank = true; continue; }
-    const field = FIELD.exec(line);
-    if (field && !above.has(field[1].toLowerCase())) break;        // the next field of the record ends this list; a name already above it is not one
+    if (key === "examined" && /^findings:(?:[ \t]|$)/i.test(line)) break;   // the only field that follows a list in these records
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
     if (item && !(deep && FINDING.test(item[2])) && !empty) {
       if (unread) { dropped = true; continue; }
@@ -863,7 +861,7 @@ function listOf(text, key) {
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim()), titles = [...rest.matchAll(/^ {0,3}#{1,6}[ \t]*(.+)$/gm)].map((x) => x[1]);
-  const heading = below.some((x) => /^open:/i.test(x)) || (!!below.length && (titles.some((x) => /finding/i.test(x)) || (!entries.length && !empty)));
+  const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) || (!entries.length && !!below.length);   // a finding-shaped entry under a heading, or the record's only list
   return { entries, empty, value: empty ? null : value || null, dropped, heading, unread };
 }
 function reviewOf(root, slug) {

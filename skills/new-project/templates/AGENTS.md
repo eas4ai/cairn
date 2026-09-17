@@ -118,14 +118,15 @@ above the first heading:
       - resolved: <defect, and how>
 
 `findings:` may be an empty list, never absent. `examined:` and
-`findings:` are the entries that follow them, and each list ends at the
-next field of the record (`commitment:`, `commit:`, `examined:`,
-`findings:` or `reviewer:`), the first heading, or the record's end. An entry is a bullet
-or a number, one per line; a line indented under an entry joins it, and
-so does a bullet nested beneath it unless that bullet reads as a finding
-of its own. Blank lines between entries are nothing. Every other line
-inside a list is named by the loop rather than read past, so prose goes
-after a heading, and a finding never does. An independent report carries
+`findings:` are the entries that follow them. An `examined:` list ends
+at `findings:`; a `findings:` list ends at the first heading or the
+record's end. An entry is a bullet or a number, one per line; a line
+indented under an entry joins it, and so does a bullet nested beneath it
+unless that bullet reads as a finding of its own. Blank lines between
+entries are nothing. Every other line inside a list is named by the loop
+rather than read past. Prose goes after a heading, where a finding never
+belongs: a bullet under a heading is read as prose unless it reads as a
+finding or the list above it is empty. An independent report carries
 `commitment:`, `commit:`, `examined:` and `findings:` in the same shape.
 
 Check execution has a separate working-tree lock. When wake names

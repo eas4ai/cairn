@@ -1,6 +1,7 @@
 # decide --supersedes validates neither the slug nor a prior supersession
 
 Surfaced from: DEC-010
+Promoted to: a-supersession-names-one-live-record-by-its-slug (2026-09-17, by promote-a-supersession-names-one-live-record-by-its-slug)
 Outside because: found by the kernel review the developer requested on 2026-09-17 after this commitment reached Done; every mechanism of the commitment passes, the case lies outside its falsifiers, and the developer directed that review findings enter the backlog
 Captured: 2026-09-17T11:59:29.106Z
 

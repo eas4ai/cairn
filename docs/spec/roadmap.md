@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-hooks-name-the-failure-they-met
+Current: a-supersession-names-one-live-record-by-its-slug
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -552,3 +552,12 @@ could not start exited quietly, and the walk to a toplevel at the
 filesystem root never ended. Adds PKG-041; the walk ends by
 construction.
 [Commitment](../commitments/the-hooks-name-the-failure-they-met.md).
+
+## A supersession names one live record by its slug
+
+Promoted on 2026-09-17 from the kernel review: the --supersedes
+argument reached the filesystem unchecked, and a record could be
+stamped Superseded by: twice, bending the reversal chain. Adds
+DEC-022; the argument is a slug, the target a record not yet
+reversed.
+[Commitment](../commitments/a-supersession-names-one-live-record-by-its-slug.md).

@@ -155,6 +155,23 @@ designed.
 Falsifier: a decision record's history shows a decision changing with no
 record of the earlier one.
 
+[DEC-022] A supersession MUST name its target by a record slug of
+lowercase letters, digits and hyphens that exists under
+docs/decisions/. The loop MUST refuse a target that already carries a
+`Superseded by:` line, and write nothing.
+Falsifier: `--supersedes ../x` reads or rewrites a file outside
+docs/decisions/; or a second supersession of one record appends a
+second `Superseded by:` line.
+Status: Agreed 2026-09-17 by promotion promote-a-supersession-names-one-live-record-by-its-slug
+
+Promoted 2026-09-17 from the kernel review's finding 5. The old
+record is found by joining the raw argument under docs/decisions/, so
+a path could reach any file with a title line, and nothing refused a
+record already stamped, so a second stamp made the last-wins read
+point at a different reversal than the first. A reversal is never
+lost (DEC-010); one record carries one `Superseded by:` line, and a
+reversal of the reversal names the newer record.
+
 ## The experience log
 
 The records accumulate into a measurement of judgment, not just a list of

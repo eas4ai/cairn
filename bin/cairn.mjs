@@ -41,7 +41,7 @@ function fields(text) {
     if (line === "" || line.startsWith("#")) { key = null; continue; }
     let m;
     if ((m = FIELD_LINE.exec(line))) { key = m[1]; out[key] = m[2] ?? ""; }
-    else if (key && (m = /^\s*-\s+(.*)$/.exec(line))) { out[key] = (Array.isArray(out[key]) ? out[key] : []).concat(m[1]); }
+    else if (key && (m = /^\s*-\s+(.*)$/.exec(line))) { out[key] = (Array.isArray(out[key]) ? out[key] : out[key] === "" ? [] : [out[key]]).concat(m[1]); }   // a value on the key line is the first item (LOOP-133)
     else if (key && typeof out[key] === "string") out[key] += " " + line.trim();
   }
   return out;

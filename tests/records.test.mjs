@@ -108,6 +108,17 @@ test("below the Git toplevel an uncommitted declared input is named from the pro
   r = run("check"); assert.match(r.stdout, /^Resolvable: commit src\/other\n/, r.stdout); assert.match(r.stdout, /uncommitted changes: src\/other \(LOOP-030\)/, r.stdout);
 });
 
+test("a value on the key line followed by list items is the first item, never dropped (LOOP-133)", () => {
+  let root = repo({ "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements: R-001\n  - R-002\n" });
+  let r = wake(root); assert.equal(r.status, 1, r.stdout + r.stderr); assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
+  root = repo({ ".cairn/mechanisms/m": fromFile("R-001", "R-002").replace("inputs:\n  - src/exit", "inputs: src/exit\n  - src/other") });
+  cairn(root, "check"); commit(root, "green");
+  writeFileSync(join(root, "src/exit"), "0\n\n");
+  r = wake(root); assert.match(r.stdout, /^Resolvable: record src\/exit\n/, r.stdout);
+  root = repo({ "docs/commitments/first.md": "# First\n\nSlug: first\nRequirements:\n  - R-001\n  - R-002\n" });
+  r = wake(root); assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
+});
+
 test("an input spelled .. from a project below the Git toplevel covers the evidence directory (LOOP-126, LOOP-105)", () => {
   const { project, run } = nested(passing("R-001", "R-002").replace("  - src/other", "  - .."));
   const r = run("check");

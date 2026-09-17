@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: check-asks-mechanism-reviews-only-for-the-commitment
+Current: documents-and-the-changelog-cost-one-check
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.

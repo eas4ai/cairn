@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: record-integrity
+Current: a-value-followed-by-list-items-keeps-the-value
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -519,3 +519,11 @@ another that read as unbuilt above the commits that built them. Adds
 DEC-020 and DEC-021; existing records are not rewritten, and the
 report makes their drift visible rather than hiding it.
 [Commitment](../commitments/record-integrity.md).
+
+## A value followed by list items keeps the value
+
+Promoted on 2026-09-17 from the kernel review the developer requested:
+the field grammar dropped a key line's value when list items followed
+it, so a commitment could name a requirement the wake never checked.
+Adds LOOP-133; the value becomes the first item of the list.
+[Commitment](../commitments/a-value-followed-by-list-items-keeps-the-value.md).

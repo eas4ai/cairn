@@ -1,6 +1,7 @@
 # fields drops a scalar value when a list item follows it
 
 Surfaced from: unstated
+Promoted to: a-value-followed-by-list-items-keeps-the-value (2026-09-17, by promote-a-value-followed-by-list-items-keeps-the-value)
 Outside because: found by the kernel review the developer requested on 2026-09-17 after this commitment reached Done; every mechanism of the commitment passes, the case lies outside its falsifiers, and the developer directed that review findings enter the backlog
 Captured: 2026-09-17T11:59:29.076Z
 

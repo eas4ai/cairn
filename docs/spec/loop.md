@@ -1535,3 +1535,20 @@ nested project (LOOP-126), the lint's message for a --root that is
 not a directory (PKG-028), the command link to a directory
 (PKG-034), the kernel line count (PKG-004), and the PKG-022 and
 PKG-026 texts.
+
+[LOOP-133] When a field line carries a value and list items follow it
+under the same key, the loop MUST read the value as the first item of
+the list.
+Falsifier: a commitment written as `Requirements: LOOP-001` followed
+by `- LOOP-002` reads as a list without LOOP-001; or a declaration's
+inputs written the same way lose the first input.
+Status: Agreed 2026-09-17 by promotion promote-a-value-followed-by-list-items-keeps-the-value
+
+Promoted 2026-09-17 from the kernel review's finding 4. The field
+grammar lets a `- item` line join a list under the last key; before
+this, an item after a scalar started a fresh list and the scalar was
+discarded, so a commitment could reach Done with a named requirement
+that was never checked, and a declaration could lose its first input
+without any repair verdict. Every record type is read through the
+same grammar, so the rule holds for inputs, examined, findings and
+reviewed alike.

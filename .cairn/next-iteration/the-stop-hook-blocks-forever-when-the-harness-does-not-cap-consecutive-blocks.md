@@ -1,6 +1,7 @@
 # The stop hook blocks forever when the harness does not cap consecutive blocks
 
 Changes: PKG-018
+Promoted to: untracked-files-reports-stops-and-stale-checks (2026-09-17, specified in the next-iteration phase on the developer's approval)
 Outside because: it changes an Agreed requirement, which a commitment never does (LOOP-093); captured on 2026-09-17 after this commitment reached Done, from the kernel review and the developer's direction, for the next specification phase
 Captured: 2026-09-17T11:59:29.237Z
 

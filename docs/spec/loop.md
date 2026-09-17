@@ -1094,11 +1094,24 @@ Status: Agreed 2026-09-14
 mechanism that speaks for a requirement of the current commitment
 whose evidence is missing or stale. The loop MUST NOT run any other
 mechanism under --stale. The loop MUST run each selected mechanism
-once.
+once. The loop MUST NOT run under --stale a mechanism that speaks
+for a requirement with three attempts and no escalation since
+(DEC-016). The loop MUST name that requirement when it skips the
+mechanism.
 Falsifier: check --stale runs a mechanism none of whose requirements
 has missing or stale evidence, runs one mechanism twice, or skips a
-mechanism for a requirement whose evidence is missing or stale.
-Status: Agreed 2026-09-14 by promotion promote-the-stale-only-check-selector
+mechanism for a requirement whose evidence is missing or stale when
+none of its requirements has three attempts and no escalation since;
+or check --stale runs a mechanism one of whose requirements has.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") in the
+next-iteration phase, from the kernel review's finding 1. The first
+falsifier made every skip of a stale mechanism a violation, so after a
+kernel upgrade check --stale recorded a fourth attempt at a requirement
+the wake had already sent to escalation. The whole mechanism is
+skipped, because a run records evidence for every requirement it
+speaks for (LOOP-040); the wake names the escalation before any run.
 
 Promoted 2026-09-14 under LOOP-087 from the second adoption's request.
 A fresh failure and an unverified result are not stale: wake names
@@ -1302,12 +1315,26 @@ when its Supersedes line names no record.
 Falsifier: such a record reaches Done.
 Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
 
-[LOOP-110] When a declared input of the current commitment's
+[LOOP-110] When a tracked declared input of the current commitment's
 mechanisms has uncommitted changes and no in-progress record exists,
-the wake MUST name writing the record ahead of any evidence action.
+the wake MUST name writing the record ahead of any evidence action. A
+file Git does not track MUST NOT make the wake name the record.
 Falsifier: wake names run, implement, or review for a commitment
-whose declared input is dirty while no in-progress record exists.
-Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
+whose tracked declared input is modified while no in-progress record
+exists; or wake names record for a file Git does not track.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") in the
+next-iteration phase. The first text named the record for any
+uncommitted change to a declared input, and a file nobody had added to
+Git counted: a folder of drafts saved under docs/ by a session without
+the plugin made the wake name record, and the stop hook refused to stop
+more than ten times. The developer ruled that "Cairn should ignore
+images and focus on code", and that a report should only lead to
+captured items. An untracked file is not a change under way. Check
+still refuses to record evidence while one sits in a declared input
+(LOOP-030): the inputs digest covers tracked files, and a mechanism
+such as a test glob would run the untracked file anyway.
 
 This is LOOP-022 observed. The action is `record <path>`: write the
 four-field record for the change under way, or commit it.
@@ -1624,3 +1651,24 @@ absence, read as a git that said no, or crashed with a stack trace.
 Three one-off test failures on one day each fit that shape and none
 said so. A spawn failure is the kernel's own failure, and the kernel
 names it the way it names an unreadable record (LOOP-107).
+
+[LOOP-138] The working agreement MUST tell the agent to capture each
+finding of a report, audit or review it did not write: to the backlog,
+or to next-iteration when the fix would change Agreed text. The
+working agreement MUST state that such a report is not work under
+way. The working agreement MUST tell the agent to commit the report
+with the captured items.
+Falsifier: the working agreement template lacks the capture of a
+report's findings, the next-iteration condition, the statement that
+the report is not work under way, or the commit of the report with its
+items.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("approved") in the
+next-iteration phase, from the developer's ruling: "adding things like
+audit reports should only trigger adding the items to backlog or
+next-iteration if a new specification is required." The report is
+committed with its items so each item cites a file the repository
+holds. The mechanism reads the template, as for LOOP-096: what the
+agent does with a report is the agent's, and the text is what the
+loop can observe.

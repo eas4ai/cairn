@@ -171,6 +171,10 @@ falsifier, or this file goes to `cairn backlog --next-iteration
 A backlog item enters a commitment by a recorded promotion at Done. A
 next-iteration item enters only when the developer writes it into the
 specification.
+A report, audit or review you did not write is not work under way:
+read it, capture each finding the same way, to next-iteration only
+when its fix would change Agreed text, and commit the report with the
+captured items.
 
 Deferral is not allowed. Work the commitment includes is finished or
 escalated, never captured. When an idea surfaces from one of the

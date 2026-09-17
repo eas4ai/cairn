@@ -1,6 +1,7 @@
 # An added report is not a change under way; its items go to the backlog or next-iteration
 
 Changes: LOOP-110
+Promoted to: untracked-files-reports-stops-and-stale-checks (2026-09-17, specified in the next-iteration phase on the developer's approval)
 Outside because: it changes an Agreed requirement, which a commitment never does (LOOP-093); captured on 2026-09-17 after this commitment reached Done, from the kernel review and the developer's direction, for the next specification phase
 Captured: 2026-09-17T11:59:29.307Z
 

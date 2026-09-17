@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-release-script-reads-a-version-field-in-any-json-spacing
+Current: untracked-files-reports-stops-and-stale-checks
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -592,3 +592,13 @@ Promoted on 2026-09-17 when release 0.4.0 was refused: the script
 matched the version field only with a space after the colon, and the
 Muse manifest is compact. Adds PKG-042; the file's formatting is kept.
 [Commitment](../commitments/the-release-script-reads-a-version-field-in-any-json-spacing.md).
+
+## Untracked files, reports, stops and stale checks
+
+Specified on 2026-09-17 in the next-iteration phase from the four
+waiting items. Revises LOOP-110 (an untracked file is not a change
+under way), LOOP-094 (check --stale holds back a mechanism at the
+three-attempt limit) and PKG-018 (the stop hook gives way once it has
+refused); adds LOOP-138 (a report's findings are captured, and the
+report committed with them).
+[Commitment](../commitments/untracked-files-reports-stops-and-stale-checks.md).

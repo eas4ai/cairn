@@ -184,11 +184,24 @@ that passes JSON on standard input and reads standard output.
 
 [PKG-018] Cairn MUST ship a stop hook that runs wake and returns a
 block decision naming the verdict while the verdict is Resolvable.
+When the harness says the stop was already blocked by a hook, the hook
+MUST print the verdict and return no block decision.
 Falsifier: given a repository whose wake prints Resolvable, the hook
-exits without a block decision; or given one whose wake prints
-Escalate or Done, or a directory that is not a Cairn repository, it
-emits a block decision or exits nonzero.
-Status: Agreed 2026-09-14
+exits without a block decision when the input does not carry
+stop_hook_active true, or returns one when it does; or given one whose
+wake prints Escalate or Done, or a directory that is not a Cairn
+repository, it emits a block decision or exits nonzero.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") in the
+next-iteration phase, from the kernel review's finding 11. The first
+text blocked every stop while the verdict was Resolvable, on the
+understanding that the harness caps consecutive blocks. It did not: on
+2026-09-17 one session was refused more than ten times on a verdict
+only the developer could act on. Claude Code sends stop_hook_active
+when a hook already blocked the stop, and the Codex binary carries the
+same field. The hook gives way once it has refused; the working
+agreement still holds the agent to the verdict.
 
 [PKG-019] Cairn MUST ship a session-start hook that prints the wake
 verdict for a Cairn repository. The hook MUST link the command onto
@@ -199,7 +212,7 @@ Cairn repository its output lacks the wake verdict; or in a directory
 that is not a Cairn repository it prints a verdict or exits nonzero.
 Status: Agreed 2026-09-14
 
-The harness caps consecutive blocks, so the stop hook keeps no counter.
+The harness says when a stop was already blocked, so the stop hook keeps no counter (PKG-018).
 Cairn's own loop bounds real work: three attempts escalate (DEC-016),
 and an escalation lets the agent stop. The plugin's hooks file registers
 both hooks when Cairn is installed from a marketplace (PKG-038); the

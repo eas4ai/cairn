@@ -78,6 +78,11 @@ roadmap file, never in a filename.
 **Routine.** The decision level the agent settles without a record.
 Defined in decisions.md.
 
+**Untracked file.** A file in the working tree that Git does not track.
+It is not a change under way: the wake names no record for it, and check
+refuses to record evidence while one sits in a declared input (LOOP-110,
+LOOP-030).
+
 **Wake.** The moment an agent with no memory of previous sessions begins
 work and reconstructs its position from disk.
 

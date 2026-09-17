@@ -257,3 +257,27 @@ test("a field name in another case never ends a list in silence, a record with i
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${carry(1, "one")}  - resolved: a defect I found myself, fixed (independent ${s} 7)\n`, rep("  - one\n")), /^Resolvable: review first\n.*the review cites \(independent [0-9a-f]{7} 7\), and the report holds 1 finding/, "a citation beyond the report's findings");
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${carry(1, "one")}  - open: a defect I found myself\n`, rep("  - one\n")), /^Resolvable: resolve first/, "and my own finding with no citation is read as mine");
 });
+
+test("a citation of zero is a citation, a field ends a list however it is spaced, a heading may be underlined, a blank line before a continuation is nothing, and a doubled commit: line does not name the commit (LOOP-020, LOOP-086, LOOP-108)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const rep = (findings, extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}${extra}`;
+  const own = (findings, extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${findings}${extra}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  // A citation of 0 claims a finding the report cannot have made.
+  for (const n of ["0", "000"])
+    assert.match(write(own(carry(1, "one") + `  - resolved: my own, fixed (independent ${s} ${n})\n`), rep("  - one\n")), /^Resolvable: review first\n.*the review cites \(independent [0-9a-f]{7} 0\), and the report holds 1 finding/, `a citation of ${n}`);
+  // The field ends the list however it is spaced.
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:[]\n`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:[]\n`), /^Done: /, "findings:[] with no space ends examined: and declares no findings");
+  // A stray field name inside a list is told what fixes it, and only a real misorder is told to reorder.
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x at ${at}\nFindings:\n  - open: a real defect that nobody resolved\nfindings: []\n`, rep("findings: []\n").replace("findings:\nfindings: []", "findings: []")), /take it out of the list; the fields are examined: then findings:, each named once/, "a repeated field name is not a misorder");
+  assert.match(write(`commitment: first\ncommit: ${at}\nfindings:\n${carry(1, "one")}examined:\n  - x\n`, rep("  - one\n")), /write examined: above findings:, both above the first heading/, "a real misorder is told to reorder");
+  // A heading may be underlined instead of hashed.
+  assert.match(write(own(carry(1, "one"), "\nAttacked\n--------\n\n- the reader, line by line\n"), rep("  - one\n", "\nAttacked\n========\n\n- the gate\n")), /^Done: /, "prose under a setext heading is prose");
+  // A blank line between an entry and its indented continuation is nothing.
+  assert.match(write(own(`  - resolved: one reproduced in a scratch clone, fixed (independent ${s} 1)\n`), rep("  - one\n\n    reproduced in a scratch clone\n")), /^Done: /, "the continuation joins across the blank line, and the joined words are carried");
+  // A doubled commit: line cannot stand in for naming the commit the reviewer examined.
+  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\ncommit: ${at}\nreviewer: r\nexamined:\n  - the kernel\nfindings:\n  - one\n`), /^Resolvable: review first\n.*does not name commit [0-9a-f]{7} anywhere but its commit: line/, "a doubled commit: line is still only its commit: line");
+});

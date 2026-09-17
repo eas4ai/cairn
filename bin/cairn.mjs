@@ -803,15 +803,15 @@ function independentGap(root, slug, rv) {
   if (commitOf(f.commit) !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
   const seen = listOf(text, "examined"), examined = seen.entries.map(String);
   if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`);
-  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread));
+  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text));
   // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
-  if (!text.replace(/^commit:[^\n]*\n/m, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
+  if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
     : list.heading ? "holds findings under a heading, where the loop does not read them; they belong in the findings: list above the first heading"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
-  if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread) : null);
+  if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread, text) : null);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
   const report = list.entries.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
@@ -829,8 +829,9 @@ function independentGap(root, slug, rv) {
     if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> ${mark("n")} or resolved: <its words>, and how ${mark("n")}, with the citation last (LOOP-020)` };
   }
   // A citation is a claim that the reviewer reported it: a number the report does not have claims support it never gave (LOOP-020).
-  const beyond = lines.flatMap((l) => [...pairs(l)]).map((k) => (k.startsWith(`${short} `) ? Number(k.slice(short.length + 1)) : 0)).find((n) => n < 1 || n > report.length);
-  if (beyond) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review cites ${mark(beyond)}, and the report holds ${report.length} finding${report.length === 1 ? "" : "s"}; cite only the findings the report made, and write your own findings on their own lines with no citation (LOOP-020)` };
+  const cited = lines.flatMap((l) => [...pairs(l)]).filter((k) => k.startsWith(`${short} `)).map((k) => Number(k.slice(short.length + 1)));
+  const beyond = cited.find((n) => n < 1 || n > report.length);
+  if (beyond !== undefined) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review cites ${mark(beyond)}, and the report holds ${report.length} finding${report.length === 1 ? "" : "s"}; cite only the findings the report made, and write your own findings on their own lines with no citation (LOOP-020)` };
   return null;
 }
 // A findings list the loop reads only in part: a blank line, an unread bullet, or a finding after a heading (LOOP-086, LOOP-020).
@@ -841,17 +842,32 @@ function independentGap(root, slug, rv) {
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-// A list holding the other field's name: the record's fields are out of order, and only their order fixes it (LOOP-108).
-const entryFix = (unread) => /^(?:examined|findings):/i.test(String(unread ?? "")) ? "write examined: above findings:, both above the first heading" : null;
+const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/;   // a heading is hashed, or underlined with = or -- under its text
+// The header: the record above its first heading, of either form (LOOP-108).
+function headerOf(whole) {
+  const lines = whole.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    if (ATX.test(lines[i])) return lines.slice(0, i).join("\n");
+    if (i && SETEXT.test(lines[i]) && lines[i - 1].trim() && !ENTRY.test(lines[i - 1])) return lines.slice(0, i - 1).join("\n");
+  }
+  return whole;
+}
+// A line inside a list that names a field: the fields are out of order, or the line is a stray the writer must bullet or remove (LOOP-108).
+const entryFix = (unread, text) => {
+  if (!/^(?:examined|findings):/i.test(String(unread ?? ""))) return null;
+  const e = String(text).search(/^examined:/m), f = String(text).search(/^findings:/m);
+  return e >= 0 && f >= 0 && f < e ? "write examined: above findings:, both above the first heading"
+    : "write that line as a - entry or take it out of the list; the fields are examined: then findings:, each named once";
+};
 function listOf(text, key) {
-  const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
+  const whole = withoutFences(String(text ?? "")).join("\n"), head = headerOf(whole);
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
   let indent = null, blank = false, unread = null, dropped = false;
   for (const line of head.slice(m.index + m[0].length).split("\n")) {
     if (!line.trim()) { blank = true; continue; }
-    if (key === "examined" && /^findings:(?:[ \t]|$)/.test(line)) break;   // the field as the kernel reads it: a Findings: line is named, never a silent end (LOOP-086)   // the only field that follows a list in these records
+    if (key === "examined" && /^findings:/.test(line)) break;   // the field as the kernel reads it, however it is spaced: a Findings: line is named, never a silent end (LOOP-086)
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
     if (item && !(deep && FINDING.test(item[2])) && !empty) {
       if (unread) { dropped = true; continue; }
@@ -859,7 +875,7 @@ function listOf(text, key) {
       else { if (indent === null) indent = item[1].length; entries.push(item[2].trim()); }
       blank = false; continue;
     }
-    if (!item && !unread && /^[ \t]+\S/.test(line) && entries.length && !blank && !FINDING.test(line.trim())) { entries[entries.length - 1] += ` ${line.trim()}`; continue; }
+    if (!item && !unread && /^[ \t]+\S/.test(line) && entries.length && !FINDING.test(line.trim())) { entries[entries.length - 1] += ` ${line.trim()}`; blank = false; continue; }   // a blank line before it is nothing (LOOP-086)
     if (unread) { dropped = dropped || !!item; continue; }
     unread = item ? item[2].trim() : line.trim();
   }
@@ -879,10 +895,10 @@ function reviewOf(root, slug) {
   const unrecognized = fin.entries.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));   // an entry the gate cannot classify is named before anything the reader could not read
   const missing = !f.commit ? "commit: names the commit the review examined"
     : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
-    : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(ex.unread) ?? "write each as a - entry"} (LOOP-020)`
+    : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(ex.unread, text) ?? "write each as a - entry"} (LOOP-020)`
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
-    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
+    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t][\s\S]*^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };

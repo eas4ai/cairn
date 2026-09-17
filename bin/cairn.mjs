@@ -1181,8 +1181,11 @@ function decide(root, o) {
   if (o.promotes && o.level !== "Consequential") return usage(`decide: a promotion is recorded at Consequential, so the developer reviews it in the queue, not at ${o.level} (LOOP-088)`);
   const path = join(root, "docs", "decisions", `${slug}.md`);
   if (existsSync(path)) return usage(`decide: ${rel(root, path)} exists; supersede it rather than overwrite it`);
+  if (o.supersedes && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(o.supersedes)) return usage("decide: --supersedes names a record by its slug: lowercase letters, digits and hyphens (DEC-022)");
   const oldPath = o.supersedes ? join(root, "docs", "decisions", `${o.supersedes}.md`) : null;
   if (oldPath && !existsSync(oldPath)) return usage(`decide: --supersedes names ${o.supersedes}, and no such record exists`);
+  const already = oldPath && fields(read(oldPath))["Superseded by"];
+  if (already) return usage(`decide: ${o.supersedes} is already superseded by ${already}; supersede that record instead, so the chain keeps one link per record (DEC-010, DEC-022)`);
   // DEC-012: in a domain that has seen reversals, the record says what the history changed.
   const ids = [...o["rests-on"].matchAll(/\b([A-Z]+)-\d+\b/g)].map((m) => m[1]);
   const domain = ids.length ? [...new Set(ids)] : ["unspecified"];

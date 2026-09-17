@@ -2,7 +2,7 @@
 // its cause, and a new decision in a reversed domain accounts for it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { repo, cairn } from "./helpers.mjs";
 
@@ -37,6 +37,28 @@ test("a predecessor with no title line cannot be stamped, so nothing is written"
   const r = cairn(root, "supersede", "bare", "--title", "N", "--level", "Judged", "--rests-on", "R-001", "--cause", "the premise was false", ...fields);
   assert.equal(r.status, 3); assert.match(r.stderr, /no title line/);
   assert.equal(readFileSync(join(root, "docs/decisions/bare.md"), "utf8"), "Level: Judged\nRests on: R-001\n");
+});
+
+test("a --supersedes argument outside the slug alphabet is refused, and a path never reaches the filesystem (DEC-022)", () => {
+  const root = repo(); old(root);
+  writeFileSync(join(root, "outside.md"), "# Outside\n\nkeep\n");   // what ../../outside would have stamped
+  for (const bad of ["../../outside", "Old-One", "old one", "old-one.md"]) {   // a leading hyphen is the option parser's refusal, before this one
+    const r = cairn(root, "supersede", bad, "--title", "New one", "--level", "Judged", "--rests-on", "R-001", "--cause", "the premise was false", ...fields);
+    assert.equal(r.status, 3, bad + ": " + r.stdout + r.stderr); assert.match(r.stderr, /by its slug/, bad); assert.match(r.stderr, /DEC-022/, bad);
+  }
+  assert.equal(readFileSync(join(root, "outside.md"), "utf8"), "# Outside\n\nkeep\n", "the file outside docs/decisions is untouched");
+  assert.equal(existsSync(join(root, "docs/decisions/new-one.md")), false, "no new record");
+});
+
+test("a record already superseded cannot be superseded again: one Superseded by line per record (DEC-022, DEC-010)", () => {
+  const root = repo(); old(root);
+  let r = cairn(root, "supersede", "old-one", "--title", "New one", "--level", "Judged", "--rests-on", "R-001", "--cause", "the premise was false", ...fields);
+  assert.equal(r.status, 0, r.stderr);
+  const stamped = readFileSync(join(root, "docs/decisions/old-one.md"), "utf8");
+  r = cairn(root, "supersede", "old-one", "--title", "Newer one", "--level", "Judged", "--rests-on", "R-001", "--cause", "it was wrong when it was made", "--history", "one reversal", ...fields);
+  assert.equal(r.status, 3, r.stdout + r.stderr); assert.match(r.stderr, /already superseded by new-one/); assert.match(r.stderr, /DEC-022/);
+  assert.equal(readFileSync(join(root, "docs/decisions/old-one.md"), "utf8"), stamped, "the old record keeps its one line");
+  assert.equal(existsSync(join(root, "docs/decisions/newer-one.md")), false, "nothing written");
 });
 
 test("reversals reports counts by decider, cause, and domain (DEC-011)", () => {

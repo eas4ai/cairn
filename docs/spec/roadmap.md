@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: a-supersession-names-one-live-record-by-its-slug
+Current: a-receipt-names-its-commit-in-full
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -561,3 +561,11 @@ stamped Superseded by: twice, bending the reversal chain. Adds
 DEC-022; the argument is a slug, the target a record not yet
 reversed.
 [Commitment](../commitments/a-supersession-names-one-live-record-by-its-slug.md).
+
+## A receipt names its commit in full
+
+Promoted on 2026-09-17 from the kernel review: receipts carried a
+seven-character commit identifier, unique only when written, so an
+old receipt could stop resolving and send an unchanged requirement
+back for review. Adds LOOP-136; older receipts are still read.
+[Commitment](../commitments/a-receipt-names-its-commit-in-full.md).

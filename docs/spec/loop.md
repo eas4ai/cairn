@@ -1592,3 +1592,20 @@ before the agent replied had the refinement stored as the agent's
 Reply: and presented back as the explanation, and the first ask was
 never answered. An explanation that begins with one of the three words
 and a space is refused too; the agent rewords it.
+
+[LOOP-136] An evidence receipt MUST record the full identifier of the
+commit it was written against. A reader of receipts MUST accept the
+abbreviated identifier an older receipt carries.
+Falsifier: a receipt written by check carries fewer than forty hex
+characters in its commit field; or a reader refuses an older receipt
+whose abbreviated identifier still resolves.
+Status: Agreed 2026-09-17 by promotion promote-a-receipt-names-its-commit-in-full
+
+Promoted 2026-09-17 from the kernel review's finding 6. Receipts
+carried the seven-character form, unique only on the day it was
+written; the wake's questions about an old receipt, what the
+requirement said then and what retention held then, pass that
+identifier to git, and an ambiguous one fails them, so a requirement
+whose text never changed is sent back for a mechanism review. The
+full identifier never becomes ambiguous. Older receipts keep their
+form and git resolves it while it is unique.

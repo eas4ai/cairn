@@ -69,5 +69,8 @@ export const realize = (root, slug, subject = "init", id = head(root)) => {
 };
 
 // A clean review at HEAD, optionally with findings ("open: ..." / "resolved: ...").
-export const review = (root, findings = []) => writeFileSync(join(root, ".cairn/reviews/first.md"),
-  `commitment: first\ncommit: ${head(root)}\nexamined:\n  - everything\nfindings:\n${findings.map((f) => `  - ${f}\n`).join("")}`);
+export const review = (root, findings = [], report = []) => {
+  writeFileSync(join(root, ".cairn/reviews/first.md"), `commitment: first\ncommit: ${head(root)}\nexamined:\n  - everything\nfindings:\n${findings.map((f) => `  - ${f}\n`).join("")}`);
+  // The independent report the gate requires, at the same commit (LOOP-020); null leaves it out.
+  if (report !== null) writeFileSync(join(root, ".cairn/reviews/first.independent.md"), `commitment: first\ncommit: ${head(root)}\nreviewer: a fresh reviewer\nexamined:\n  - everything\nfindings:${report.length ? "\n" + report.map((f) => `  - ${f}\n`).join("") : " []\n"}`);
+};

@@ -105,20 +105,29 @@ the assertions cover an empty name and `Ada`. They do not define how spaces
 or non-string values should behave. Those are limits to discuss, not
 permission to invent extra requirements.
 
-After that examination, record it:
+The builder's own review is not enough. The agent also starts a reviewer
+with none of the build's context, such as a fresh subagent, gives it only the
+commitment, the requirement text and the commit range, and keeps its report
+beside the review at the same commit. Every finding the report raises is
+carried into the review as open or resolved.
+
+After both examinations, record them:
 
 ```sh
 git add .cairn/evidence
 git commit -qm 'Record the passing check'
 printf 'commitment: reject-empty-names\ncommit: %s\nexamined:\n  - empty-name failure before the fix and success after it\n  - ordinary-name acceptance; spaces and non-string values are outside this agreement\nfindings: []\n' \
   "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.md
-git add .cairn/reviews/reject-empty-names.md
+printf 'commitment: reject-empty-names\ncommit: %s\nreviewer: a fresh subagent given the commitment, APP-001 and the commit range\nexamined:\n  - the test against the falsifier\nfindings: []\n' \
+  "$(git rev-parse HEAD)" > .cairn/reviews/reject-empty-names.independent.md
+git add .cairn/reviews
 git commit -qm 'Review empty-name behavior'
 cairn wake
 ```
 
 Cairn reports `Done`. The agent stops. A review record describes work
-actually examined; copying this example into another project is not a review.
+actually examined; copying this example into another project is not a review,
+and an independent report written by the builder is not independent.
 
 ## Resolve a question that belongs to you
 

@@ -786,6 +786,16 @@ function evidenceError(root, receipt, outputs) {
   }
   return null;
 }
+// The review is not the builder's alone: an independent report at its commit, every finding carried (LOOP-020).
+function independentGap(root, slug, rv) {
+  const p = join(root, ".cairn", "reviews", `${slug}.independent.md`), name = rel(root, p);
+  if (!existsSync(p)) return `no independent report at ${name}; start a reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and keep its report there with the review's commit: line`;
+  const f = recordFields(read(p)), at = String(f.commit ?? "").trim(), same = (a, b) => a.length >= 7 && b.length >= 7 && (a.startsWith(b) || b.startsWith(a));
+  if (!same(at, String(rv.commit ?? ""))) return `${name} names commit ${at || "none"}, and the review examined ${rv.commit}; the report must be at the review's commit`;
+  const carried = asList(recordFields(read(join(root, ".cairn", "reviews", `${slug}.md`))).findings).map((x) => String(x).replace(/^(?:open|resolved):\s*/, ""));
+  const missing = (f.findings === "[]" ? [] : asList(f.findings)).map((x) => String(x).trim()).find((x) => x && !carried.some((t) => t.startsWith(x)));
+  return missing ? `the independent report's finding is not in the review as open or resolved: ${missing}` : null;
+}
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
@@ -978,6 +988,8 @@ function wakeVerdict(root) {
   });
   if (moved) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `the review examined ${rv.commit ?? "?"} and a declared input has changed since; the tree is at ${head} (LOOP-032)` };
   if (rv.open.length) return { verdict: "Resolvable", action: `resolve ${c.slug}`, why: `the review names an open finding: ${rv.open[0].replace(/^open:\s*/, "")} (LOOP-033)` };
+  const independent = independentGap(root, c.slug, rv);
+  if (independent) return { verdict: "Resolvable", action: `review ${c.slug}`, why: `${independent} (LOOP-020)` };
   // Done only when nothing remains the agent may decide (LOOP-087, LOOP-091).
   const complete = `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean`;
   const items = (dir, keep) => files(join(root, ".cairn", dir)).filter((n) => keep(fields(read(join(root, ".cairn", dir, n))))).map((n) => n.replace(/\.md$/, ""));

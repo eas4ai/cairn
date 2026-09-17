@@ -76,6 +76,7 @@ test("a review needs commit, a nonempty examined list, and a findings list, each
   assert.match(write(`commitment: first\ncommit: ${head(root)}\nexamined:\n  - x\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*findings/);
   assert.match(write(`commitment: first\ncommit: ${head(root)}\n\n## Findings\n\nexamined:\n  - x\nfindings:\n  - open: y\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*heading/);
   assert.match(write(`commitment: first\nexamined:\n  - x\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*commit/);
+  writeFileSync(join(root, ".cairn/reviews/first.independent.md"), `commitment: first\ncommit: ${head(root)}\nreviewer: a fresh reviewer\nexamined:\n  - x\nfindings: []\n`);   // the independent report (LOOP-020)
   assert.match(write(`commitment: first\ncommit: ${head(root)}\nexamined:\n  - x\nfindings: []\n`), /^Done: first/);
 });
 

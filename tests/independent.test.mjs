@@ -136,7 +136,8 @@ test("the findings list is read from the record's text: blank lines between entr
   assert.match(write(reviewWith(carry(1, "one and two together")), reportWith("  - one and two\n    together\n")), /^Done: /, "a wrapped report entry is one finding");
   assert.match(write(reviewWith(`  * resolved: one, fixed (independent ${s} 1)\n`), reportWith("  * one\n")), /^Done: /, "any bullet is an entry");
   assert.match(write(reviewWith(carry(1, "one"), "examined:\n  - x\n\n  - y\n"), reportWith("  - one\n", `examined:\n  - x at ${at}\n\n  - y\n`)), /^Done: /, "a blank line inside examined: loses no findings");
-  assert.match(write(`${reviewWith(carry(1, "one"))}\n## Notes\n\nfindings:\n  - open: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a list after a heading stays unread (LOOP-071)");
+  assert.match(write(`${reviewWith(carry(1, "one"))}\n## Notes\n\nfindings:\n  - resolved: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a resolved decoy after a heading stays unread (LOOP-071)");
+  assert.match(write(`${reviewWith(carry(1, "one"))}\n## Open\n\n- open: a defect still unfixed\n`, reportWith("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "an open finding under a heading is named");
   assert.match(write(reviewWith(carry(1, "one")), reportWith("  - one\n\n- I also read the tests.\n")), /finding 2 is not carried/, "a bullet under findings: is a finding, prose belongs in examined:");
 });
 
@@ -156,4 +157,22 @@ test("the reader reads a numbered or nested list and a blank line in examined:, 
   assert.match(write(own("  REM-002: an unbulleted finding\nStatus: in progress\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry: "REM-002/, "an unbulleted review finding is named, not read as nothing");
   assert.match(write(own("  - resolved: one, fixed (independent " + s + " 1)\n"), report("  REM-002: an unbulleted finding\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*cannot read as an entry: "REM-002/, "and the same in the report");
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n\n## Findings\n\n- open: a real defect I found\n`, report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a finding under a heading with nothing above it");
+});
+
+test("a line the reader cannot read is named whenever an entry follows it, in the review and in the report, and a finding under a heading is named (LOOP-086, LOOP-020)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const s = head(root).slice(0, 7), at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const report = (findings) => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}`;
+  const own = (findings) => `commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  const repairsOwn = /^Resolvable: repair \.cairn\/reviews\/first\.md\n/, repairsReport = /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n/;
+  assert.match(write(own(carry(1, "one") + "  open: the cache is never invalidated\n"), report("  - one\n")), repairsOwn, "an entry that lost its dash, indented under the one above");
+  assert.match(write(own(carry(1, "one") + "    - open: the cache is never invalidated\n"), report("  - one\n")), repairsOwn, "a finding as a nested bullet");
+  assert.match(write(own(carry(1, "one") + "A plain sentence between entries.\n  - open: a defect\n"), report("  - one\n")), repairsOwn, "a sentence between entries drops what follows");
+  assert.match(write(own(carry(1, "one")), report("  - one\nI also read the tests.\n  - two is broken too\n")), repairsReport, "the same in a report, whose findings carry no prefix");
+  assert.match(write(own(carry(1, "one")), report("  - one\n\nI also read the tests.\n")), /^Done: /, "a note after the list is prose");
+  assert.match(write(own(carry(1, "one reproduced in a clone")), report("  - one\n    - reproduced in a clone\n")), /^Done: /, "a nested detail still joins its entry");
+  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), repairsReport, "a report's findings under a heading");
 });

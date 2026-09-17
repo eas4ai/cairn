@@ -807,8 +807,8 @@ function independentGap(root, slug, rv) {
   if (!text.replace(/^commit:[^\n]*\n/m, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
-    : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}`
-    : list.below ? "holds a finding under a heading, where the loop does not read it"
+    : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
+    : list.heading ? "holds its findings under a heading, where the loop does not read them"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
   if (wrong) return repair(`${name} ${wrong}`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -824,42 +824,44 @@ function independentGap(root, slug, rv) {
     const anywhere = lines.some((l) => [...l.matchAll(cite)].some((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}` === key));
     // Its words first, so a citation the finding itself quotes is words; the carrying citation ends what follows them.
     const text = hits.length === 1 ? norm(hits[0]) : "", rest = text.toLowerCase().startsWith(stem) ? text.slice(stem.length) : null;
-    const why = !hits.length ? (anywhere ? `a review line cites ${mark(n)} but does not end with it; put the citation last on its line` : `no review line cites ${mark(n)}`) : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : rest === null ? "its review line does not begin with its words" : pairs(rest).size > 1 ? "its review line cites another finding too" : null;
+    const why = !hits.length ? (anywhere ? `a review line cites ${mark(n)} but does not end with it; put the citation last on its line, and keep notes out of the findings list, since a line indented under a finding joins it` : `no review line cites ${mark(n)}`) : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : rest === null ? "its review line does not begin with its words" : pairs(rest).size > 1 ? "its review line cites another finding too" : null;
     if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> ${mark("n")} or resolved: <its words>, and how ${mark("n")}, with the citation last (LOOP-020)` };
   }
   return null;
 }
 // A findings list the loop reads only in part: a blank line, an unread bullet, or a finding after a heading (LOOP-086, LOOP-020).
 // A record's list, read from its text: the entries under key:, above the first
-// heading. Any bullet or number is an entry; a line indented under an entry, or
-// a bullet nested beneath it, belongs to that entry; blank lines between entries
-// are nothing. A line the reader cannot read as an entry stops the list and is
-// named, so no entry is silently dropped (LOOP-086, LOOP-020). A list after a
-// heading stays unread (LOOP-071), unless nothing above it was read.
+// heading. Any bullet or number is an entry. A line indented under an entry, or
+// a bullet nested beneath it, belongs to that entry unless it reads as a finding
+// of its own. Blank lines between entries are nothing. A line the reader cannot
+// read as an entry ends the list, and is named when nothing was read, when an
+// entry follows it, or when it reads as a finding, so no entry is dropped in
+// silence (LOOP-086, LOOP-020). Prose after the list is prose.
+const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
 function listOf(text, key) {
   const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
-  const value = m[1].trim();
-  if (value === "[]") return { entries: [], empty: true };
-  const entries = value ? [value] : [];
-  let indent = null, blank = false, unread = null;
-  for (const line of head.slice(m.index + m[0].length).split("\n")) {
+  const value = m[1].trim(), empty = value === "[]";
+  const entries = value && !empty ? [value] : [];
+  let indent = null, blank = false, unread = null, dropped = false;
+  for (const line of empty ? [] : head.slice(m.index + m[0].length).split("\n")) {
     if (!line.trim()) { blank = true; continue; }
-    const item = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/.exec(line);
-    if (item) {
-      if (indent === null) indent = item[1].length;
-      if (item[1].length > indent && entries.length) entries[entries.length - 1] += ` ${item[2].trim()}`;
-      else entries.push(item[2].trim());
+    const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
+    if (item && !(deep && FINDING.test(item[2]))) {
+      if (unread) { dropped = true; continue; }
+      if (deep && entries.length) entries[entries.length - 1] += ` ${item[2].trim()}`;
+      else { if (indent === null) indent = item[1].length; entries.push(item[2].trim()); }
       blank = false; continue;
     }
-    if (/^[ \t]+\S/.test(line) && entries.length && !blank) { entries[entries.length - 1] += ` ${line.trim()}`; continue; }
-    if (!entries.length || /^\s*(?:open|resolved):/i.test(line)) unread = line.trim();
-    break;
+    if (!item && !unread && /^[ \t]+\S/.test(line) && entries.length && !blank && !FINDING.test(line.trim())) { entries[entries.length - 1] += ` ${line.trim()}`; continue; }
+    unread = unread ?? (item ? item[2].trim() : line.trim());   // a nested bullet that reads as a finding is named by its text
   }
-  // A finding under a heading, with nothing above it, is not prose: the loop would read the record in part.
-  const below = !entries.length && !unread && /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+(?:open|resolved):/im.test(whole.slice(head.length));
-  return { entries, value: value || null, unread, below };
+  // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a decoy beside a real list unread).
+  const rest = key !== "findings" ? "" : whole.slice(head.length);
+  const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim()), titles = [...rest.matchAll(/^ {0,3}#{1,6}[ \t]*(.+)$/gm)].map((x) => x[1]);
+  const heading = below.some((x) => /^open:/i.test(x)) || (!entries.length && !!below.length && (!empty || titles.some((x) => /finding/i.test(x))));
+  return { entries, empty, value: empty ? null : value || null, dropped, heading, unread: unread && (dropped || !entries.length || FINDING.test(unread)) ? unread : null };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
@@ -867,19 +869,22 @@ function reviewOf(root, slug) {
   const text = read(p), f = recordFields(text);
   // The header the gate reads: commit, a nonempty examined list, a findings list (LOOP-108).
   const ex = listOf(text, "examined"), fin = listOf(text, "findings");
+  const hasOpen = fin.entries.some((x) => /^open:\s*\S/.test(x));   // an open finding the loop did read is named first, then the line it could not read
   const missing = !f.commit ? "commit: names the commit the review examined"
     : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
-    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}; write each finding as a - entry (LOOP-086)`
-    : fin.below ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
+    : hasOpen ? null
+    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; write each finding as a - entry (LOOP-086)`
+    : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t]/m.test(text) && /^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };
   const findings = fin.entries;
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
   const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
+  const open = findings.filter((x) => /^open:/.test(x));
   const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,
     why: `${malformed}; use list entries 'open: <description>' or 'resolved: <description>' with a nonempty description, or leave findings empty when there are no findings (LOOP-086). Preserve unresolved issues as open findings.` } : null;
-  return { commit: f.commit ?? null, open: findings.filter((x) => /^open:/.test(x)), repair };
+  return { commit: f.commit ?? null, open, repair };
 }
 
 // ------------------------------------------------------------ wake

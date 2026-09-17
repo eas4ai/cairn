@@ -117,9 +117,14 @@ above the first heading:
       - open: <defect>
       - resolved: <defect, and how>
 
-`findings:` may be an empty list, never absent, and is one unbroken
-list of `- ` entries above any heading: a blank line inside it ends it.
-Prose follows the header.
+`findings:` may be an empty list, never absent. `examined:` and
+`findings:` are the entries that follow them, above the first heading:
+any bullet or number, one per entry, blank lines between them allowed. A
+line indented under an entry, or a bullet nested beneath it, belongs to
+that entry. Any other line ends the list, and the loop names it rather
+than read past it. Prose goes after a heading, and a finding never does.
+An independent report carries `commitment:`, `commit:`, `examined:` and
+`findings:` in the same shape, above its first heading.
 
 Check execution has a separate working-tree lock. When wake names
 `cairn-check.lock`, wait for a live owner. If the owner is dead or the

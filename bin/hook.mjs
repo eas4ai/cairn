@@ -39,12 +39,13 @@ const judged = (w) => !w.error && /^(?:Resolvable|Escalate|Done): /.test(w.stdou
 const noVerdict = (w) => `the kernel ${kernel().flat().join(" ")} printed no verdict: ${oneLine(w.error?.message ?? (w.stderr ?? "").split("\n").find(Boolean) ?? `exit ${w.status}`)}`;
 
 try {
-  const mode = process.argv[2], { cwd } = input();
+  const mode = process.argv[2], { cwd, stop_hook_active: again } = input();
   if (cwd !== undefined && typeof cwd !== "string") throw new Error("stdin cwd is not a string");
   const top = root(cwd ?? process.cwd());
   if (mode === "stop") {
     const w = top ? wake(top) : null;
     if (w && !judged(w)) complain(noVerdict(w));   // never blocks on a kernel it cannot read (PKG-036)
+    else if (w && /^Resolvable: /.test(w.stdout) && again === true) process.stdout.write(w.stdout);   // refused once already: print the verdict, let the stop happen (PKG-018)
     else if (w && /^Resolvable: /.test(w.stdout)) process.stdout.write(JSON.stringify({ decision: "block", reason: `${w.stdout.trim()}\nAct on the named action, then run cairn wake again. Do not stop while the verdict is Resolvable (AGENTS.md).` }) + "\n");
   } else if (mode === "session-start") {
     try {   // the link is not the verdict: a failure here is one line, and the verdict still prints (PKG-019, PKG-022)

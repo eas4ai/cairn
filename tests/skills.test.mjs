@@ -163,3 +163,9 @@ test("the manual and the walkthrough say the loop promotes backlog items at Done
   has(WALK, "promotes", "the walkthrough names promotion");
   has(MANUAL, ".cairn/evidence/runs/", "the receipt path"); lacks(MANUAL, "numeric collision suffix", "the suffix is the process id");
 });
+
+test("the working agreement says a report is not work under way, its findings are captured, and it is committed with them (LOOP-138)", () => {
+  has(TEMPLATE, "A report, audit or review you did not write is not work under way", "LOOP-138");
+  has(TEMPLATE, "capture each finding the same way, to next-iteration only when its fix would change Agreed text", "LOOP-138");
+  has(TEMPLATE, "commit the report with the captured items", "LOOP-138");
+});

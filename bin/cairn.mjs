@@ -659,8 +659,8 @@ function checkOwner(root, path = checkLockPath(root)) {
       : "the check owner is dead or incomplete; inspect its command and .cairn/in-progress, then remove this lock when execution has stopped" };
 }
 
-function dirtyInputs(root, inputs, cache = inputCache()) {
-  const r = git(root, "status", "--porcelain", "-z", "--", ...inputs);
+function dirtyInputs(root, inputs, cache = inputCache(), trackedOnly = false) {
+  const r = git(root, "status", "--porcelain", "-z", ...(trackedOnly ? ["--untracked-files=no"] : []), "--", ...inputs);   // a file Git does not track is no change under way (LOOP-110)
   if (r.error || r.status !== 0) throw new Error(`cannot inspect committed inputs: ${r.stderr || r.error?.message}`);
   const toks = r.stdout.split("\0"), out = [];
   for (let i = 0; i < toks.length; i++) if (toks[i]) { out.push(toks[i].slice(3)); if (/[RC]/.test(toks[i].slice(0, 2))) out.push(toks[++i]); }   // a rename or copy carries its origin as the next token
@@ -893,7 +893,7 @@ function wakeVerdict(root) {
   if (invalid) return { verdict: "Resolvable", action: `repair .cairn/mechanisms/${invalid.name}`, why: modeError(invalid) };
   // An uncommitted change to a declared input with no write-ahead record: the record comes first (LOOP-022, LOOP-110).
   const footprint = [...new Set(c.requirements.flatMap((r) => mechs.byReq.get(r) ?? []).flatMap((n) => asList(mechs.byName.get(n).def.inputs)))];
-  const dirty = footprint.length && !existsSync(ip) ? dirtyInputs(root, footprint, mechs.inputs) : [];
+  const dirty = footprint.length && !existsSync(ip) ? dirtyInputs(root, footprint, mechs.inputs, true) : [];
   if (dirty.length) return { verdict: "Resolvable", action: `record ${dirty[0]}`, why: `${dirty.length} declared input(s) have uncommitted changes and no .cairn/in-progress record names the action; write the record (action, target, base, started) for the change under way, or commit it (LOOP-022, LOOP-110)` };
   const scope = scopeVerdict(root, c, mechs);
   if (scope) return scope;
@@ -1065,7 +1065,7 @@ async function runChecks(root, only, stale = false) {
   const runs = new Set();
   // --stale: the requirements wake would name run for, and no other; a
   // fresh failure or an unverified result is an implement action (LOOP-094).
-  const waiting = [];
+  const waiting = [], held = new Map();
   let repairs = 0;
   if (stale) {
     targets.length = 0;
@@ -1073,14 +1073,16 @@ async function runChecks(root, only, stale = false) {
     for (const x of c.requirements.flatMap((r) => assess(root, r, mechs, ctx))) {
       if (x.repair) { repairs++; continue; }
       if (!x.mech) continue;
-      if (!x.latest || x.stale) runs.add(x.mech);
+      if (x.threeFails && !x.escalatedSince) held.set(x.mech, x.req);   // a fourth attempt is not the next action (DEC-016, LOOP-094)
+      else if (!x.latest || x.stale) runs.add(x.mech);
       else if (x.latest.result !== "pass") waiting.push(x);
     }
+    for (const [n, req] of held) { runs.delete(n); process.stdout.write(`skipped ${n}: ${req} has three attempts without new passing evidence and no escalation since; escalate ${req} (DEC-016, LOOP-094)\n`); }
   }
   // A named requirement runs every mechanism that speaks for it (LOOP-099).
   for (const r of targets) { const ns = mechs.byReq.get(r) ?? []; if (ns.length) ns.forEach((n) => runs.add(n)); else if (only.length) process.stdout.write(`skipped ${r}: no mechanism claims it\n`); }
   for (const x of waiting) if (!runs.has(x.mech)) process.stdout.write(`skipped ${x.req}: latest evidence is ${x.latest.result} and not stale; implement, then check ${x.req} (LOOP-094)\n`);
-  if (stale && !runs.size) process.stdout.write(repairs ? `nothing ran: ${repairs} receipt(s) need repair first; see wake (LOOP-094)\n` : "nothing stale: every requirement with a mechanism has current evidence or waits on implementation (LOOP-094)\n");
+  if (stale && !runs.size && !held.size) process.stdout.write(repairs ? `nothing ran: ${repairs} receipt(s) need repair first; see wake (LOOP-094)\n` : "nothing stale: every requirement with a mechanism has current evidence or waits on implementation (LOOP-094)\n");
   const ctx = { requirements: requirementTexts(root), past: new Map() };
   for (const name of runs) {
     const status = await runMechanism(root, mechs.byName.get(name), ctx, head, mechs);
@@ -1092,7 +1094,8 @@ async function runChecks(root, only, stale = false) {
 async function runMechanism(root, m, ctx, head, mechs) {
   const name = m.name, reqs = asList(m.def.requirements);
   const before = candidate(root, m, ctx.requirements, head), dirty = before.dirty;
-  if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030); commit them, or write .cairn/in-progress while the work continues (LOOP-110)\n`); return 1; }
+  const loose = dirty.length ? dirty.filter((p) => !dirtyInputs(root, [p], undefined, true).length) : [];   // untracked: still no evidence beside them (LOOP-030)
+  if (dirty.length) { process.stdout.write(`Resolvable: commit ${dirty[0]}\n  ${name} needs committed inputs, specification, and declaration; uncommitted changes: ${dirty.join(", ")} (LOOP-030); commit them, or write .cairn/in-progress while the work continues (LOOP-110)${loose.length ? `; a file Git does not track can go in .gitignore instead: ${loose.join(", ")}` : ""}\n`); return 1; }
   if (!before.digest) { process.stdout.write(`Resolvable: run ${reqs[0]}\n  candidate changed before ${name}; no evidence recorded\n`); return 1; }
   if (before.committed !== inputsDigestAt(root, before.paths, head)) {
     process.stdout.write(`Resolvable: commit candidate for ${name}\n  inputs do not match the committed candidate at ${head}; inspect Git flags, file modes, and declared paths before rerunning (LOOP-030)\n`);

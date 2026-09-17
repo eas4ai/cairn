@@ -188,3 +188,10 @@ test("with git absent the hooks say so in one line and block nothing (PKG-022)",
   r = hook("session-start", root, { PATH: "/nonexistent" });
   assert.equal(r.status, 0); assert.equal(r.stderr.trim().split("\n").length, 1, r.stderr);
 });
+
+test("the stop hook gives way once it has refused: stop_hook_active true prints the verdict and returns no block decision (PKG-018)", () => {
+  const root = repo();
+  const r = hook("stop", root, {}, { stop_hook_active: true });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout); assert.doesNotMatch(r.stdout, /"decision"/, r.stdout);
+});

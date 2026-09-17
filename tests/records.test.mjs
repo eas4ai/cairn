@@ -284,3 +284,13 @@ test("realize() touches only the Realized by section; a body that quotes the pla
   commit(root, "built");
   assert.doesNotMatch(wake(root).stdout, /docs\/decisions\/d\.md/);
 });
+
+test("an untracked file under a declared input is not a change under way; check still refuses beside it and names .gitignore (LOOP-110, LOOP-030)", () => {
+  const root = repo({ ".cairn/mechanisms/m": passing("R-001", "R-002").replace("  - src/other", "  - src/") });
+  mkdirSync(join(root, "src/drafts"), { recursive: true }); writeFileSync(join(root, "src/drafts/report.md"), "# A report\n");
+  let r = wake(root); assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout); assert.doesNotMatch(r.stdout, /record/);
+  r = cairn(root, "check"); assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, /^Resolvable: commit src\/drafts\//, r.stdout); assert.match(r.stdout, /\.gitignore instead: src\/drafts\//, r.stdout);
+  assert.deepEqual(records(root, "R-001"), [], "no evidence beside an untracked file");
+  git(root, "add", "src/drafts/report.md");
+  assert.match(wake(root).stdout, /^Resolvable: record src\/drafts\/report\.md/, "once added, it is work under way");
+});

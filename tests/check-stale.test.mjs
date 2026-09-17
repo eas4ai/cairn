@@ -56,3 +56,16 @@ test("--stale with a requirement identifier is refused (LOOP-094)", () => {
   assert.equal(r.status, 3); assert.match(r.stderr, /--stale/);
   assert.equal(records(root, "R-001").length, 0);
 });
+
+test("check --stale holds back a mechanism whose requirement has three attempts and no escalation, names it, and records nothing (LOOP-094, DEC-016)", () => {
+  const root = two();
+  cairn(root, "check");                                                             // the baseline at exit 0
+  for (const code of ["1", "2", "3"]) { writeFileSync(join(root, "src/exit"), `${code}\n`); commit(root, `exit ${code}`); cairn(root, "check"); }
+  assert.match(cairn(root, "wake").stdout, /^Resolvable: escalate R-001/);
+  writeFileSync(join(root, "src/exit"), "4\n"); commit(root, "a fourth try");      // stale, and the next run would be a fourth attempt
+  const before = records(root, "R-001").length;
+  const r = cairn(root, "check", "--stale");
+  assert.match(r.stdout, /^skipped m1: R-001 has three attempts without new passing evidence and no escalation since; escalate R-001 \(DEC-016, LOOP-094\)$/m, r.stdout);
+  assert.doesNotMatch(r.stdout, /nothing stale/, r.stdout);
+  assert.equal(records(root, "R-001").length, before, "no fourth attempt recorded");
+});

@@ -513,7 +513,7 @@ silently changing what you agreed to build.
 | The directory is not a Cairn repository or Git working tree. | Open your project root. A plain directory needs Git and the project files prepared through a project skill. |
 | `repair` names a mechanism. | Inspect missing fields, unmatched inputs, unsupported submodules, reporting mode, a repeated identifier, or an input that covers Cairn's own evidence. Repair the declaration before rerunning. |
 | `commit` names a path. | The check requires committed inputs, spec text, and its declaration. Ask the agent to inspect and commit the intended change, including a deletion, before checking. |
-| `record` names a path. | A declared input has uncommitted changes and no `.cairn/in-progress` record names the action. Ask the agent to write the record for the work under way, or to commit the change. |
+| `record` names a path. | A tracked declared input has uncommitted changes and no `.cairn/in-progress` record names the action. Ask the agent to write the record for the work under way, or to commit the change. A file Git does not track is never named here; check still refuses to run beside one until it is committed or ignored. |
 | `declare` names a requirement. | No mechanism speaks for it yet. Ask the agent to write a declaration naming the command, every path it reads, and the requirement. |
 | `resolve` names a commitment. | Its review holds an open finding. Ask the agent to fix it as its own work and mark it resolved in the review. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
@@ -686,8 +686,9 @@ take the same two commands, `node <checkout>/bin/hook.mjs session-start` and
 events. The stop hook runs `cairn wake` when the agent tries to stop and
 refuses the stop, with the verdict as the reason, only while the verdict is
 Resolvable. At Escalate or Done, outside a Cairn project, or on any error it
-lets the agent stop. Both harnesses cap how many times in a row a stop can
-be refused. The hooks are optional: the working agreement is the path an
+lets the agent stop. When the harness says the stop was already refused
+once, the hook prints the verdict and lets the agent stop, so a verdict
+only you can act on never traps the session. The hooks are optional: the working agreement is the path an
 agent takes without them.
 
 Skills live in your agent's skill directory. The plugin carries them; the

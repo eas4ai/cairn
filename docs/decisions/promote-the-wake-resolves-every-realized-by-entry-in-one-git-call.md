@@ -13,4 +13,4 @@ Promotes .cairn/backlog/every-wake-spawns-one-git-process-per-realized-by-entry.
 
 ## Realized by
 
-(none yet: recorded, not built)
+- efe6b3e8c87e22ce1398b8b6dd3e19a2c6800cb3 The wake resolves every Realized-by entry through one git cat-file batch (DEC-023)

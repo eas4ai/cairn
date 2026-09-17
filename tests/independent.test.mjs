@@ -79,3 +79,19 @@ test("citations name their report's commit, so rounds never collide and an old l
   writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings:\n  - a defect\n`); commit(root, "a wrapped review line");
   assert.match(wake(root), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*wraps onto a second line/);
 });
+
+test("a finding that quotes a citation in its own words is carried by copying it, and an uncited wrapped line is no repair when there is nothing to carry (LOOP-020)", () => {
+  const root = repo();
+  const round = (entries, findings) => { const s = head(root).slice(0, 7); review(root, entries.map((e) => e.replace(/#(\d+)/g, `${s} $1`)), findings); commit(root, "a round"); return wake(root); };
+  const quoting = "the claimed fix for (independent bbbbbbb 3) does not hold";
+  assert.match(round([`open: ${quoting} (independent #1)`], [quoting]), /^Resolvable: resolve first/, "an earlier report's citation inside the words");
+  review(root, [], null);
+  const s = head(root).slice(0, 7), same = `the claimed fix for (independent ${s} 1) does not hold`;
+  writeFileSync(join(root, ".cairn/reviews/first.md"), `commitment: first\ncommit: ${head(root)}\nexamined:\n  - x\nfindings:\n  - resolved: ${same}, fixed (independent ${s} 1)\n`);
+  writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings:\n  - ${same}\n`); commit(root, "the current citation inside the words");
+  assert.match(wake(root), /^Done: /);
+  review(root, [], null);
+  writeFileSync(join(root, ".cairn/reviews/first.md"), `commitment: first\ncommit: ${head(root)}\nexamined:\n  - x\nfindings:\n  - resolved: an old defect fixed by a long explanation\n    that wraps, no citation\n`);
+  writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings: []\n`); commit(root, "a wrapped uncited line, nothing to carry");
+  assert.match(wake(root), /^Done: /);
+});

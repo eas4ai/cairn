@@ -812,12 +812,13 @@ function independentGap(root, slug, rv) {
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
   // Each finding n is carried by the one review line that cites (independent <report commit> n) and nothing else, and begins with its words (LOOP-020).
   const reviewText = committed(own) ?? "", short = at.slice(0, 7), mark = (n) => `(independent ${short} ${n})`;
-  if (((reviewText.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean)).some((l) => !/^\s*-\s/.test(l))) return { verdict: "Resolvable", action: `repair ${own}`, why: "a review finding wraps onto a second line, which loses its citation; keep each finding on one line (LOOP-020)" };
-  const lines = asList(recordFields(reviewText).findings).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi;
-  const pairs = (l) => new Set([...l.matchAll(cite)].map((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}`));
+  if (report.length && ((reviewText.match(/^findings:[^\n]*\n((?:(?:[ \t]*-\s|[ \t]+\S)[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean)).some((l) => !/^\s*-\s/.test(l))) return { verdict: "Resolvable", action: `repair ${own}`, why: "a review finding wraps onto a second line, and a citation must sit at the end of the line it carries; keep each finding on one line (LOOP-020)" };
+  // Only the citations that end a line carry; a citation inside a finding's own words is words (LOOP-020).
+  const lines = asList(recordFields(reviewText).findings).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi, tail = (l) => l.match(/(?:\s*\(independent [0-9a-f]{7,40}\s+\d+\))+\s*$/i)?.[0] ?? "";
+  const pairs = (l) => new Set([...tail(l).matchAll(cite)].map((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}`));
   for (const [i, words] of report.entries()) {
     const n = i + 1, hits = lines.filter((l) => pairs(l).has(`${short} ${n}`));
-    const body = hits.length === 1 ? norm(hits[0].replace(cite, "")).toLowerCase() : "", stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
+    const body = hits.length === 1 ? norm(hits[0].slice(0, hits[0].length - tail(hits[0]).length)).toLowerCase() : "", stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
     const why = hits.length === 0 ? `no review line cites ${mark(n)}` : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : pairs(hits[0]).size > 1 ? "its review line cites another finding too" : !body.startsWith(stem) ? "its review line does not begin with its words" : null;
     if (why) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding ${n} is not carried: ${why}: ${words}; carry each finding n on its own line as open: <its words> ${mark("n")} or resolved: <its words>, and how ${mark("n")} (LOOP-020)` };
   }

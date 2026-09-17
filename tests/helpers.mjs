@@ -63,7 +63,7 @@ export const UNBUILT = "(none yet: recorded, not built)";
 // Only the Realized by section is touched; a body that quotes the placeholder keeps it.
 export const realize = (root, slug, subject = "init", id = head(root)) => {
   const p = join(root, "docs/decisions", `${slug}.md`), t = readFileSync(p, "utf8");
-  const entry = `- ${id} ${subject}`, at = t.indexOf("## Realized by");
+  const entry = `- ${id} ${subject}`, at = t.search(/^ {0,3}## Realized by[ \t]*$/m);   // the heading, never one quoted in a fence
   const before = at < 0 ? t : t.slice(0, at), section = at < 0 ? "" : t.slice(at);
   writeFileSync(p, at >= 0 && section.includes(UNBUILT) ? before + section.replace(UNBUILT, entry) : `${t.replace(/\n*$/, "")}\n${entry}\n`);
 };

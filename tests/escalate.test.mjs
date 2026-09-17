@@ -88,6 +88,20 @@ test("a stranger resumes from the file alone: question and answer are both in it
   assert.ok(t.includes("Question:   Store sessions where?") && t.includes("Answer: ask why not both?"));
 });
 
+test("a developer-shaped answer during the agent's turn is refused and writes nothing; the explanation is still accepted (LOOP-135)", () => {
+  const root = repo();
+  esc(root); cairn(root, "answer", "r-001", "ask why not both?");
+  const before = readFileSync(file(root), "utf8");
+  for (const shaped of ["ask and what about C?", "ok", "instead use B"]) {
+    const r = cairn(root, "answer", "r-001", shaped);
+    assert.equal(r.status, 3, shaped + ": " + r.stdout + r.stderr); assert.match(r.stderr, /waits for the agent's reply/); assert.match(r.stderr, /LOOP-135/);
+    assert.equal(readFileSync(file(root), "utf8"), before, "nothing written");
+  }
+  assert.match(cairn(root, "wake").stdout, /reply r-001/);
+  const r = cairn(root, "answer", "r-001", "Both cost a second table; one is enough here.");
+  assert.equal(r.status, 0, r.stderr); assert.match(cairn(root, "wake").stdout, /^Escalate: present r-001/);
+});
+
 test("after an answer, the same concern can be escalated again under a new name", () => {
   const root = repo();
   esc(root); cairn(root, "answer", "r-001", "ok");

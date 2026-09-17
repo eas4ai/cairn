@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { writeFileSync, readFileSync, existsSync, symlinkSync, rmSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { repo as base, cairn, commit, head, records, review, fromFile, failing, entry } from "./helpers.mjs";
+import { repo as base, cairn, commit, head, records, review, fromFile, failing, entry, git } from "./helpers.mjs";
 
 const repo = (o = {}) => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002"), ...o });
 
@@ -228,4 +228,14 @@ test("three runs at one digest with no attempt since: the verdict stays implemen
   r = cairn(root, "wake");
   assert.match(r.stdout, /^Resolvable: implement R-001/);
   assert.doesNotMatch(r.stdout, /DEC-019/, "an answered escalation that names R-001 in a list counts");
+});
+
+test("a receipt names its commit in full, and an older receipt with the short form is still read (LOOP-136)", () => {
+  const root = repo();
+  let r = cairn(root, "check"); assert.match(r.stdout, /R-001: pass/, r.stdout + r.stderr);
+  const e = entry(root, "R-001"), full = git(root, "rev-parse", "HEAD").stdout.trim();
+  assert.match(e.commit, /^[0-9a-f]{40}$/, e.commit); assert.equal(e.commit, full);
+  // An older receipt: the same run rewritten with the seven-character form, as every receipt before LOOP-136 was.
+  const p = join(root, e.path); writeFileSync(p, readFileSync(p, "utf8").replace(`commit: ${full}`, `commit: ${full.slice(0, 7)}`)); commit(root, "an older receipt");
+  r = cairn(root, "wake"); assert.equal(r.status, 1, r.stdout + r.stderr); assert.doesNotMatch(r.stdout, /unavailable|review mechanism/, r.stdout); assert.match(r.stdout, /^Resolvable: review first/, r.stdout);
 });

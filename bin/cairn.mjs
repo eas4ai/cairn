@@ -996,7 +996,7 @@ function candidate(root, m, requirements, expectedHead) {
   const paths = [...inputs, ...retainedPaths, `.cairn/mechanisms/${m.name}`, ...asList(m.def.requirements).map((r) => requirements.get(r)?.path).filter(Boolean)];
   const cache = inputCache(), head = headSha(root), dirty = dirtyInputs(root, paths, cache);
   if (dirty.length || head !== expectedHead) return { head, dirty };
-  const snapshot = { head, dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache), details: inputDetails(root, inputs, cache) };
+  const snapshot = { head, full: git(root, "rev-parse", "HEAD").stdout.trim(), dirty, paths, digest: inputsDigest(root, paths, cache), inputs: inputsDigest(root, inputs, cache), committed: committedInputsDigest(root, paths, cache), details: inputDetails(root, inputs, cache) };   // full: what the receipt records, never ambiguous later (LOOP-136)
   // Git status and clean filters can themselves run local commands. Finish
   // those operations before validating the final HEAD and raw file state.
   const finalDirty = dirtyInputs(root, paths, cache), finalHead = headSha(root);
@@ -1129,7 +1129,7 @@ function recordEvidence(root, m, requirements, { before, output, stderrOutput, r
   writeFileSync(details, JSON.stringify({ version: 1, entries: before.details }) + "\n", { flag: "wx" });
   const exit = r.error ? -1 : r.signal ? `signal ${r.signal}` : r.status ?? -1, lines = r.lines;   // could not start: -1 (LOOP-062)
   const rec = [
-    `mechanism: ${m.name}`, `commit: ${before.head}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`, `kernel_digest: ${KERNEL_DIGEST}`,
+    `mechanism: ${m.name}`, `commit: ${before.full}`, `inputs_digest: ${before.inputs}`, `mechanism_digest: ${m.digest}`, `kernel_digest: ${KERNEL_DIGEST}`,
     `inputs_detail: ${rel(root, details)}`,
     `command: ${m.def.command}`, `cwd: ${m.def.cwd ?? "."}`, `exit: ${exit}`, `output_digest: ${fileDigest(output)}`, `output: ${rel(root, output)}`, `stderr_output: ${rel(root, stderrOutput)}`, `stderr_digest: ${fileDigest(stderrOutput)}`,
     `signal: ${r.signal ?? "none"}`, `execution_error: ${JSON.stringify(r.error ? { code: r.error.code ?? null, message: r.error.message } : null)}`,

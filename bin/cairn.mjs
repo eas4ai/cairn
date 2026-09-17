@@ -84,9 +84,11 @@ const KERNEL_DIGEST = sha(["cairn.mjs", "spec.mjs"].map((f) => readFileSync(new 
 const git = (root, ...args) => spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: Infinity });
 const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD"); return r.status === 0 ? r.stdout.trim() : null; };
 
+// The roadmap's Current: lines outside fenced examples: the wake and the footprint's walk read them alike (LOOP-104, LOOP-134).
+const currentLines = (text) => (withoutFences(text).join("\n").match(/^Current:.*$/gm) ?? []).map((l) => fields(l).Current);
 function currentCommitment(root) {
   const p = join(root, "docs", "spec", "roadmap.md"), text = read(p);
-  if ((withoutFences(text).join("\n").match(/^Current:/gm) ?? []).length > 1) return { repair: rel(root, p), why: "more than one Current: line names a commitment; keep one (LOOP-019, LOOP-104)" };
+  if (currentLines(text).length > 1) return { repair: rel(root, p), why: "more than one Current: line names a commitment; keep one (LOOP-019, LOOP-104)" };
   const slug = fields(withoutFences(text).join("\n"))["Current"];   // a fenced example never names the commitment (LOOP-104)
   if (!slug) return { repair: rel(root, p), why: "no Current: line names a commitment" };
   const cp = join(root, "docs", "commitments", `${slug}.md`);
@@ -146,7 +148,7 @@ function scopeHistory(root, slug) {
   let began = null, base = null;
   for (const [commit, parent] of commits) {
     const show = git(root, "show", `${commit}:./${roadmap}`);
-    if (show.status !== 0 || fields(show.stdout).Current !== slug) break;
+    if (show.status !== 0 || !currentLines(show.stdout).includes(slug)) break;   // any line outside fences that names it counts (LOOP-134)
     began = commit; base = parent ?? commit;   // the footprint and the contract comparison start at the activation commit's parent, so that commit is inside both (LOOP-116, LOOP-120); a root activation has none
   }
   if (!began) return histories.set(slug, { began, commits: "", line: [] }).get(slug);

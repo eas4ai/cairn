@@ -119,6 +119,20 @@ test("a value on the key line followed by list items is the first item, never dr
   r = wake(root); assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout);
 });
 
+test("the footprint's walk reads Current: as the wake does: a fenced example below the real line, or a second line in history, never moves the start (LOOP-134, LOOP-035)", () => {
+  const roadmap = (root, text) => writeFileSync(join(root, "docs/spec/roadmap.md"), text);
+  let root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: earlier\n" });
+  roadmap(root, "# Roadmap\n\nCurrent: first\n\nThe line looks like this:\n\n```\nCurrent: example\n```\n"); commit(root, "activate first, with a fenced example below the real line");
+  writeFileSync(join(root, "stray.txt"), "z\n"); commit(root, "a stray file inside the commitment");
+  roadmap(root, "# Roadmap\n\nCurrent: first\n\nA note.\n"); commit(root, "a roadmap note");
+  let out = wake(root).stdout; assert.match(out, /^Resolvable: scope stray\.txt/, out);
+  root = repo({ "docs/spec/roadmap.md": "# Roadmap\n\nCurrent: earlier\n" });
+  roadmap(root, "# Roadmap\n\nCurrent: first\nCurrent: earlier\n"); commit(root, "activate first, with a second Current: line left behind");
+  writeFileSync(join(root, "stray.txt"), "z\n"); commit(root, "a stray file inside the commitment");
+  roadmap(root, "# Roadmap\n\nCurrent: first\n"); commit(root, "repair the roadmap");
+  out = wake(root).stdout; assert.match(out, /^Resolvable: scope stray\.txt/, out);
+});
+
 test("an input spelled .. from a project below the Git toplevel covers the evidence directory (LOOP-126, LOOP-105)", () => {
   const { project, run } = nested(passing("R-001", "R-002").replace("  - src/other", "  - .."));
   const r = run("check");

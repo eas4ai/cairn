@@ -1,6 +1,7 @@
 commitment: unpushed-commits-carry-no-ai-attribution-when-forbidden
-commit: 49012dc0
+commit: 6a0e235f
 examined:
+  - mechanism review of node-test for LOOP-020, LOOP-059 and LOOP-087 as revised at 49012dc by the same specification phase: none is in this commitment, and check asks for their reviews anyway, which is the defect LOOP-059's revision fixes under a later commitment. The existing tests observe each first text: a review record naming what it examined (LOOP-020), a mechanism review before revised evidence (LOOP-059), promote named at a complete commitment with a backlog item (LOOP-087). No test observes the added clauses, the independent report, the commitment-only gate, or a defect item named before promote, and the kernel implements none of them. Each is built and tested by its own commitment: reviews-carry-an-independent-report, check-asks-mechanism-reviews-only-for-the-commitment, defects-are-fixed-without-a-promotion. Recorded here, not opened, because it is not this commitment's work.
   - mechanism review of node-test for PKG-040 as revised, inherited by this commitment: tests/release.test.mjs line 66 writes an uncommitted changelog entry and expects the script to refuse it as a dirty tree, which the revised text now allows and requires to be committed in the release commit. The release script's Done check runs the wake on the working tree, and the wake names record for an uncommitted change to CHANGELOG.md, a declared input; so the case the revision allows would still be refused, by the Done check instead of the dirty check. The review before agreement did not see this.
   - PKG-045 is new: no test observes it and nothing implements it; there is no .cairn/policy file.
 findings:

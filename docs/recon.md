@@ -81,3 +81,78 @@ delivered by evidence-explains-its-freshness (LOOP-076 through
 LOOP-080), and the absent next-iteration skill by
 the-next-iteration-starts-from-the-specification (SPEC-026). The
 other rows stand as the observations of 2026-09-07 at commit a97d238.
+
+## Adoption pass, 2026-09-17 (Path B)
+
+Status: Observed. Examined commit: b290963 (HEAD). This pass re-adopts
+the codebase the earlier recon already covers; it verifies what changed
+since the 2026-09-15 resolution, not the whole tree again. Earlier rows
+stand except where this section names them stale, with evidence.
+
+### The loop's position
+
+`cairn wake` says `Resolvable: scope .muse-plugin/plugin.json`: one
+path changed since the releases-are-versioned commitment began that no
+mechanism declares (LOOP-035). The path is new at HEAD: commit
+b290963 created `.muse-plugin/plugin.json` (one line: name cairn,
+version 0.3.0, hook entries for `bin/hooks/session-start.mjs` and
+`bin/hooks/stop.mjs`, skill entries for all four shipped skills) and
+taught `scripts/release.mjs` to stamp the version into it alongside
+the other four files. The same commit updated `tests/plugin.test.mjs`
+and `tests/release.test.mjs` to read it, plus README, manual,
+releasing docs, the install skill, and both hook scripts.
+
+The work looks like it belongs to the commitment: the commitment's
+deliverables say the release script "sets the version in package.json
+and the three manifests"
+([commitment](commitments/releases-are-versioned.md)), and version
+parity across every shipped manifest is PKG-039/PKG-040 territory. But
+neither declaration names the new directory: node-test declares
+`.claude-plugin/` and `.codex-plugin/` but not `.muse-plugin/`
+([declaration](../.cairn/mechanisms/node-test)), and pkg-lint does the
+same ([declaration](../.cairn/mechanisms/pkg-lint)). The tests read
+the file through the declared `tests/` input
+([plugin test](../tests/plugin.test.mjs#L15)), so execution sees it;
+the footprint does not. That is the whole breach: one undeclared new
+path, on work the commitment's own words cover.
+
+No `.cairn/in-progress` record exists, so no action is half-finished.
+The commitment's review
+([review](../.cairn/reviews/releases-are-versioned.md)) predates HEAD
+(the last recorded review examined 0be0d8f; HEAD adds b290963), so
+review and evidence are stale behind the scope verdict regardless.
+
+### Spec set
+
+The spec set is intact and current: keystone
+([overview](spec/overview.md)), glossary ([glossary](spec/glossary.md)),
+roadmap ([roadmap](spec/roadmap.md), Current: releases-are-versioned),
+and the commitment file above. No drift between the commitment text
+and the code was established in this pass beyond the undeclared path,
+which is a declaration gap, not a spec-code contradiction: the spec
+says what the code does, the code does it, and only the footprint
+omits it.
+
+### Earlier rows, corrected
+
+- The "no next-iteration skill" row is stale: `skills/next-iteration/`
+  ships now (SPEC-026, closed above). The shipped skills are
+  new-project, existing-project, install-cairn, and next-iteration.
+- The "1500-line ceiling" row is stale: the ceiling is 1600 lines
+  (PKG-004, revised by the-hooks-find-the-kernel-and-the-project);
+  `bin/cairn.mjs` is 1415 lines.
+- The "no tracked CI workflow, container, or lockfile" row was not
+  re-verified in this pass and stands as a 2026-09-07 observation only.
+
+### Untouched and unverified
+
+- Untracked files `Claude outputs/`, `assets/cover.png`, and
+  `assets/cover_bg.png` are present and were not examined; they are
+  outside any declared input and outside this recon's scope.
+- This pass ran no test suite and no `cairn check`; it read the wake
+  verdict, the commitment, the declarations, the HEAD diff, and the
+  files cited above. Behavior claims rest on those reads.
+- This file itself is now an uncommitted change to `docs/`, which
+  pkg-lint declares: committing it is part of whatever work comes
+  next, and leaving it dirty blocks `cairn check` until it is
+  committed.

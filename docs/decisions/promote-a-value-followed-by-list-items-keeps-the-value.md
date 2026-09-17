@@ -13,4 +13,4 @@ Promotes .cairn/backlog/fields-drops-a-scalar-value-when-a-list-item-follows-it.
 
 ## Realized by
 
-(none yet: recorded, not built)
+- ba5479d0270a5136b6b5cd3655017ba4445ebc4e A value on the key line is the first item when list items follow (LOOP-133)

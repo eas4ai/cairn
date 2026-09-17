@@ -1,6 +1,10 @@
 commitment: record-integrity
-commit: 79b8294
+commit: aa9fa07
 examined:
+  - re-examined at aa9fa07: three declared inputs changed since 79b8294 and none touches this commitment's deliverables. README.md (57ba820, the developer): the notation image is gone and the plain-character block now defines reviewed(c), pass(m, r) and done(c); read against the kernel, done(c) matches wake's Done at bin/cairn.mjs line 936 (every requirement met, review fresh with no open finding, no open escalation, no undeclared changed path, every backlog item promoted), and pass(m, r) matches the result-line and exit-code rule with the candidate committed and unchanged across the run. docs/recon.md (f733892, another session): an adoption pass that observed a scope verdict on .muse-plugin/plugin.json at b290963; that path is declared to node-test now and wake names no breach. .gitignore (14b24d6): docs/Claude outputs/ is ignored, a folder of 2026-09-05 drafts a phone session saved without the plugin; the developer ruled that images and saved reports are not work under way, captured to next-iteration as changes to LOOP-110.
+  - the lint's footprint against what it reads: pkg-lint checks every tracked text file for PKG-008 and declares .claude-plugin/ and .codex-plugin/, but not .muse-plugin/, which node-test declares. A non-ASCII byte written into .muse-plugin/plugin.json would fail the lint without making its evidence stale. Finding, below.
+  - assets/notation.png stays tracked and declared to pkg-lint though the README no longer references it; a 352 KB image ships in the plugin with nothing pointing at it. The developer removed the reference on purpose, so keeping or deleting the file is the developer's choice, not a defect.
+  - fresh evidence at aa9fa07: node-test and pkg-lint re-run after the README change and the ignore line, every requirement pass.
   - re-examined at 79b8294: this repository ships as a plugin, and its records named the three projects the audit read. The decision record, the commitment and this review now describe the defect without naming whose it is; the counts and shapes that made the case are unchanged. A spec-lint fixture and a manual host-path example carried one of those names from before this commitment and now use a neutral one. Nothing outside the .git directory names another project.
   - the decider vocabulary at the point of writing: each of developer, agent and joint is accepted and stored lowercase; Developer, AGENT, Joint and a padded "  agent  " normalize to the same three; Codex, Shawn, "Shawn and Codex", agents, dev and a whitespace-only value are each a usage error naming all three and DEC-020, with nothing written to docs/decisions/. An empty --decided-by is still the missing-field error, not the vocabulary one, so the two diagnostics do not collide.
   - supersede reaches decide, so it takes the same vocabulary. Attacked: cairn supersede --decided-by Codex exits 3, writes no new record, and leaves the old record unstamped, so a refused decider cannot half-apply a reversal. --decided-by Joint stores joint.
@@ -20,6 +24,7 @@ examined:
   - simulated: a downstream project on the old kernel carrying three records whose placeholder survived realization, as one audited project does. The first wake after the upgrade names a repair rather than the work, once per record. Correct under DEC-021 and undocumented anywhere the developer or the agent would read it.
   - read for the decider vocabulary: docs/manual.md, docs/walkthrough.md, README.md, AGENTS.md, every skill, and the template working agreement new-project writes into a consumer repository. None of them names --decided-by at all, before or after this commit. The vocabulary exists in cairn --help and in the specification only.
 findings:
+  - open: pkg-lint reads .muse-plugin/plugin.json under PKG-008 but its declaration omits .muse-plugin/, so a change there leaves the lint's evidence current when it is not
   - resolved: this commit resolves every Realized by entry of every superseded record, which main skipped, so wake costs one git rev-parse per entry more than it did and the cost grows with the reversal history; measured 260ms to 340ms on 100 records with 40 superseded. Resolved: a superseded record with no placeholder is skipped before its entries are resolved, so it costs no git at all; re-measured on the same fixture, 345ms to 252ms against main's 249ms (f41859a)
   - resolved: the refusal names the three deciders and not where the real name goes, so an agent called Codex is told what it may not write without being told that its name belongs in --body. Resolved: the refusal reads "name the person or tool in --body" after the three values (f41859a)
   - resolved: no document a developer or an agent reads names the decider vocabulary; the manual's decision section covers levels and the queue and not this field. Resolved: the manual's decision section names the three, says they are counted rather than read, says a name or product is one of the three wearing a different word, and says existing records keep what they were written with (f41859a)
@@ -98,3 +103,17 @@ working note. What goes in it is what a stranger installing the plugin
 should read.
 
 No open finding.
+
+## Commitment review at aa9fa07, 2026-09-17
+
+Nothing in this round touches the commitment's own work. It answers
+LOOP-032: three declared inputs moved under it, one by the developer,
+one by another session, one by me, and each was read for what it
+changes. The README's new definitions were checked against the wake's
+Done, not taken on trust, and they agree.
+
+The one finding is a footprint gap on an inherited mechanism: the Muse
+manifest was declared to the tests when it arrived and never to the
+lint that also reads it. Small, and exactly the kind of drift a
+declaration review exists to catch. Resolved as its own action after
+this record.

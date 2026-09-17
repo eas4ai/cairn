@@ -181,3 +181,19 @@ test("a line the reader cannot read is named whenever an entry follows it, in th
   assert.match(write(own(carry(1, "one reproduced in a clone")), report("  - one\n    - reproduced in a clone\n")), /^Done: /, "a nested detail still joins its entry");
   assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), repairsReport, "a report's findings under a heading");
 });
+
+test("a margin line that only looks like a field never ends a list in silence (LOOP-086, LOOP-020)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const s = head(root).slice(0, 7), at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const report = (findings, examined = `examined:\n  - x at ${at}\n`) => `commitment: first\ncommit: ${at}\nreviewer: r\n${examined}findings:\n${findings}`;
+  const own = (findings, examined = "examined:\n  - x\n") => `commitment: first\ncommit: ${at}\n${examined}findings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  assert.match(write(own(carry(1, "one") + "Status: in progress\n  - open: a real defect I found\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry: "Status: in progress", and the entries after it are unread/, "a Status line between entries is named, with what it hid");
+  assert.match(write(own(carry(1, "one") + "open: the cache is never invalidated\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry: "open: the cache/, "a finding at the margin without its bullet");
+  for (const middle of ["Note: I also read the tests.", "Status: done", "Reproduced: in a clone", "Also examined: the walkthrough"])
+    assert.match(write(own(carry(1, "one")), report(`  - one\n${middle}\n  - two is broken too\n`)), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*cannot read as an entry/, middle);
+  assert.match(write(own(carry(1, "one"), `examined:\n  - x\nNote: and the tests\n  - y\n`), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*examined: holds a line/, "the same in examined:");
+  assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Notes\n\nNote: I also read the tests.\n"), /^Done: /, "after a heading it is prose");
+});

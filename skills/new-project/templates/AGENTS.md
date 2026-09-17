@@ -119,7 +119,8 @@ above the first heading:
 
 `findings:` may be an empty list, never absent. `examined:` and
 `findings:` are the entries that follow them, and each list ends at the
-next field, the first heading, or the record's end. An entry is a bullet
+next field of the record (`commitment:`, `commit:`, `examined:`,
+`findings:` or `reviewer:`), the first heading, or the record's end. An entry is a bullet
 or a number, one per line; a line indented under an entry joins it, and
 so does a bullet nested beneath it unless that bullet reads as a finding
 of its own. Blank lines between entries are nothing. Every other line

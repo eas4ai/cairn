@@ -791,7 +791,7 @@ function independentGap(root, slug, rv) {
   const name = `.cairn/reviews/${slug}.independent.md`, own = `.cairn/reviews/${slug}.md`;
   const committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
   const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
-  const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; put the reviewer's own words in this form without changing them, or ask the reviewer again (LOOP-020)` });
+  const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; keep the reviewer's own words, and put a heading above prose that follows its findings, or ask the reviewer again (LOOP-020)` });
   const loose = dirtyInputs(root, [own, name]);   // the review or the report on disk differs from HEAD: commit it before either is judged
   if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
   const text = committed(name);
@@ -837,7 +837,7 @@ function independentGap(root, slug, rv) {
 // too unless it reads as a finding of its own. Blank lines are nothing. Every
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
-const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i, FIELD = /^[A-Za-z][A-Za-z _-]*:(?:[ \t]|$)/;   // a field starts at the margin and carries no digit, so a finding is never mistaken for one
+const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i, FIELD = /^(?:commitment|commit|examined|findings|reviewer):(?:[ \t]|$)/i;   // only a field these records use ends a list, so a dropped entry or a note is never mistaken for one
 function listOf(text, key) {
   const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
@@ -871,12 +871,13 @@ function reviewOf(root, slug) {
   // The header the gate reads: commit, a nonempty examined list, a findings list (LOOP-108).
   const ex = listOf(text, "examined"), fin = listOf(text, "findings");
   const hasOpen = fin.entries.some((x) => /^open:\s*\S/.test(x));   // an open finding the loop did read is named first, then the line it could not read
+  const unrecognized = fin.entries.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));   // an entry the gate cannot classify is named before anything the reader could not read
   const missing = !f.commit ? "commit: names the commit the review examined"
     : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
     : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; write each as a - entry (LOOP-020)`
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
-    : hasOpen ? null
-    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; write each finding as a - entry (LOOP-086)`
+    : unrecognized >= 0 || hasOpen ? null
+    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; write each finding as a - entry, and put prose after a heading (LOOP-086)`
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t][\s\S]*^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };

@@ -1,6 +1,7 @@
 commitment: a-git-that-cannot-start-is-a-refusal-never-a-verdict
-commit: 2956d29
+commit: b956cda0
 examined:
+  - re-examined at b956cda0: the declared inputs that changed since 2956d29 are the history rewrite's remapped hashes in records and CHANGELOG.md, which now lists the eight kernel fixes under 0.4.0 beside the record-integrity entry; no code changed, every mechanism re-run and pass
   - the failure demonstration before the fix: with the test in place and the kernel at ab0e332's parent, wake on a PATH whose only git is a file without the execute bit printed "is not a Cairn repository (no Git working tree)", blaming the repository; with the change, wake and check each print one line, "cairn: cannot run git: spawnSync git EACCES", exit 3, print no verdict and record nothing, and the full suite passes at 485.
   - every git spawn in the kernel goes through one helper now: the four direct spawnSync calls (diff-tree, hash-object, and two cat-file batches) were routed through it, and the only spawnSync("git") left is the helper itself; two of those sites still check .error themselves, harmlessly.
   - a git that stops mid-command, probed with a counting wrapper that removes its own execute bit after N calls on a PATH holding only the wrapper and node: for N of 2, 4, 6, 9, 12 and 20, check exits 3 with the one line, prints nothing on stdout, records no receipt, and leaves neither the check lock nor the kernel's in-progress record behind; the lock's finally and the record's finally both run under the thrown error. The probe first had to learn that /bin is /usr/bin here, so a broken wrapper on a PATH with /bin still finds the real git.

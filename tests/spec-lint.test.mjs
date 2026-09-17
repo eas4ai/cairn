@@ -91,17 +91,17 @@ test("relative paths, URLs, slash commands, and character mentions are not absol
 });
 
 test("a slash after a placeholder continues the template (SPEC-019)", () => {
-  const text = "The socket is `<runtime-directory>/suprnova.sock`; tags are `suprnova/<run>/v<version>`.\nUse <system-temp>/suprnova-<UID> and <repository>/.suprnova/config.toml.\n";
+  const text = "The socket is `<runtime-directory>/widget.sock`; tags are `widget/<run>/v<version>`.\nUse <system-temp>/widget-<UID> and <repository>/.widget/config.toml.\n";
   const r = lint(fixture(AGREED + "[X-001] The agent MUST act.\nFalsifier: It waits.\n\n" + text));
   assert.equal(r.status, 0, r.stdout);
   assert.match(lint(fixture(AGREED + "Read </tmp/input>.\n")).stdout, /absolute path \/tmp\/input/);
 });
 
 test("a host path is a finding until the file declares it (SPEC-019, SPEC-024)", () => {
-  const body = "[X-001] The agent MUST act.\nFalsifier: It waits.\n\nTask Bash requires `/usr/bin/bwrap` and reads `~/.suprnova/config.toml`.\n";
+  const body = "[X-001] The agent MUST act.\nFalsifier: It waits.\n\nTask Bash requires `/usr/bin/bwrap` and reads `~/.widget/config.toml`.\n";
   let r = lint(fixture(AGREED + body));
   assert.equal(r.status, 1); assert.match(r.stdout, /absolute path \/usr\/bin\/bwrap/);
-  r = lint(fixture(AGREED + "Host paths: /usr/bin/bwrap, ~/.suprnova/config.toml\n" + body));
+  r = lint(fixture(AGREED + "Host paths: /usr/bin/bwrap, ~/.widget/config.toml\n" + body));
   assert.equal(r.status, 0, r.stdout);
 });
 

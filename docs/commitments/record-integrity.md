@@ -14,9 +14,9 @@ and never says it was not built above the commits that built it.
 
 Requested by the developer on 2026-09-16 in writing, recorded in
 docs/decisions/record-integrity-on-the-developer-s-direction.md. An
-audit of three downstream projects found both defects: reactive-tui
-carries seven spellings of three deciders, so the `by decider:` tally
-fragments; suprnova-directory-starter carries three records whose
+audit of three downstream projects found both defects. One carries
+seven spellings of three deciders, so the `by decider:` tally
+fragments. Another carries three records whose
 `(none yet: recorded, not built)` line sits directly above their
 realizing entries, and the wake accepts them.
 

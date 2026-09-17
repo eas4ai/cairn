@@ -118,7 +118,7 @@ Ask the agent to declare them in the affected spec file's header, before
 its first requirement:
 
 ```text
-Host paths: /usr/bin/bwrap, ~/.suprnova/config.toml
+Host paths: /usr/bin/bwrap, ~/.widget/config.toml
 ```
 
 The list applies only to that file. Each entry permits the exact path and

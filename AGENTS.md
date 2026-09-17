@@ -43,6 +43,9 @@ else. `commit <path>`: commit the declared input. `record <path>`: a
 declared input has uncommitted changes and no record names the action;
 write the in-progress record below, or commit.
 `reconcile <action>`: finish or abandon the recorded action, below.
+`explain <path>`: the stop hook let you stop after three refusals with
+no progress; add an Explanation: line saying why you stopped, and
+commit it.
 `scope <path>`: the scope paragraph, below. `escalate <REQ>`: raise
 the escalation the reason asks for. `escalate <path>`: add an
 `Outside because:` line to the captured file, or escalate with the

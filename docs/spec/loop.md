@@ -1688,3 +1688,15 @@ committed with its items so each item cites a file the repository
 holds. The mechanism reads the template, as for LOOP-096: what the
 agent does with a report is the agent's, and the text is what the
 loop can observe.
+
+[LOOP-139] When a stop record under .cairn/stops/ carries no
+Explanation: line or is not committed, the wake MUST name explaining
+it ahead of every action but waiting for a live check.
+Falsifier: with an unexplained or uncommitted stop record, and no live
+check owner holding the lock, the wake names any other action.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The stop hook's valve lets an agent stop
+without progress (PKG-043); the record makes that stop the next
+session's first business, in the agent's own words, committed where
+the developer reads the history.

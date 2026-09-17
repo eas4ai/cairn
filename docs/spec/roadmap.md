@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: untracked-files-reports-stops-and-stale-checks
+Current: the-stop-hook-holds-without-trapping
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -602,3 +602,13 @@ three-attempt limit) and PKG-018 (the stop hook gives way once it has
 refused); adds LOOP-138 (a report's findings are captured, and the
 report committed with them).
 [Commitment](../commitments/untracked-files-reports-stops-and-stale-checks.md).
+
+## The stop hook holds without trapping
+
+Specified on 2026-09-17 in the next-iteration phase: the stop hook
+judges with the kernel that wrote the evidence, names escalation as
+the honest exit, and lets a stop through after three refusals with no
+progress only where the developer sees it and the next wake asks why.
+Revises PKG-018, PKG-021 and PKG-033; adds PKG-043, PKG-044 and
+LOOP-139.
+[Commitment](../commitments/the-stop-hook-holds-without-trapping.md).

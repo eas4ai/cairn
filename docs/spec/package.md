@@ -188,25 +188,21 @@ takes without them (PKG-006), and one contract serves every harness
 that passes JSON on standard input and reads standard output.
 
 [PKG-018] Cairn MUST ship a stop hook that runs wake and returns a
-block decision naming the verdict while the verdict is Resolvable.
-When the harness says the stop was already blocked by a hook, the hook
-MUST print the verdict and return no block decision.
+block decision naming the verdict while the verdict is Resolvable,
+except as PKG-043 allows.
 Falsifier: given a repository whose wake prints Resolvable, the hook
-exits without a block decision when the input does not carry
-stop_hook_active true, or returns one when it does; or given one whose
-wake prints Escalate or Done, or a directory that is not a Cairn
-repository, it emits a block decision or exits nonzero.
+exits without a block decision on a stop PKG-043 does not allow,
+whatever the input's stop_hook_active; or given one whose wake prints
+Escalate or Done, or a directory that is not a Cairn repository, it
+emits a block decision or exits nonzero.
 Status: Agreed 2026-09-17
 
-Revised 2026-09-17, confirmed by the developer ("approved") in the
-next-iteration phase, from the kernel review's finding 11. The first
-text blocked every stop while the verdict was Resolvable, on the
-understanding that the harness caps consecutive blocks. It did not: on
-2026-09-17 one session was refused more than ten times on a verdict
-only the developer could act on. Claude Code sends stop_hook_active
-when a hook already blocked the stop, and the Codex binary carries the
-same field. The hook gives way once it has refused; the working
-agreement still holds the agent to the verdict.
+Revised again 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. The text agreed earlier that day let
+the hook give way whenever the harness sent stop_hook_active true.
+Claude Code keeps that flag true for the whole continuation a block
+starts, so an agent could stop by ignoring one refusal. The only way
+past a Resolvable verdict now is the agent's own progress, an
+escalation, or PKG-043's valve, which the developer sees.
 
 [PKG-019] Cairn MUST ship a session-start hook that prints the wake
 verdict for a Cairn repository. The hook MUST link the command onto
@@ -217,7 +213,7 @@ Cairn repository its output lacks the wake verdict; or in a directory
 that is not a Cairn repository it prints a verdict or exits nonzero.
 Status: Agreed 2026-09-14
 
-The harness says when a stop was already blocked, so the stop hook keeps no counter (PKG-018).
+The stop hook counts, per session, the refusals that met no progress, in the Git directory beside the check lock (PKG-043).
 Cairn's own loop bounds real work: three attempts escalate (DEC-016),
 and an escalation lets the agent stop. The plugin's hooks file registers
 both hooks when Cairn is installed from a marketplace (PKG-038); the
@@ -236,10 +232,13 @@ nothing, because the hook built its path from a URL.
 
 [PKG-021] A hook MUST run the kernel that the command link on the
 path resolves to when that link exists, and its own checkout's kernel
-otherwise.
-Falsifier: with the command linked to another checkout, the stop
-hook's verdict differs from that checkout's wake.
-Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
+otherwise, unless PKG-033's evidence rule selects another kernel.
+Falsifier: with the command linked to another checkout and no receipt
+naming another kernel's digest, the stop hook's verdict differs from
+that checkout's wake.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase: the evidence rule of PKG-033 comes first.
 
 [PKG-022] On any error, a hook MUST exit 0. The hook MUST print one
 line on standard error for that error.
@@ -375,12 +374,25 @@ Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired
 
 [PKG-033] A hook MUST judge with the `cairn` command found on PATH, or
 with the command link's target when PATH has none, or with its own
-kernel when neither exists. The session-start hook MUST say which
-kernel it judges with when that kernel is not its own.
-Falsifier: with a wrapper on PATH that runs another checkout, the stop
-hook's verdict differs from that checkout's wake, or session-start
-prints no line naming the wrapper.
-Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+kernel when neither exists. When the latest evidence receipt names the
+digest of one of those kernels, or of the project's own bin/cairn.mjs,
+the hook MUST judge with that kernel instead. The session-start hook
+MUST say which kernel it judges with when that kernel is not its own.
+Falsifier: with a wrapper on PATH that runs another checkout and no
+receipt naming another kernel, the stop hook's verdict differs from
+that checkout's wake; or with receipts written by the project's
+bin/cairn.mjs and a different kernel on PATH, the stop hook judges the
+evidence stale because the kernel changed; or session-start prints no
+line naming the kernel it judges with.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. On 2026-09-17 the stop hook ran the
+production kernel while the checkout's newer kernel had written every
+receipt, so each stop was refused for a staleness no action in that
+repository could clear. A kernel that exists on disk and wrote the
+evidence gives the verdict that evidence was written for; choosing it
+gains an agent nothing. After an upgrade the old kernel is gone, so the
+hook judges with the new one and the re-run LOOP-095 asks for stands.
 
 [PKG-034] The session-start hook MUST replace the command link only
 when its target does not resolve to a regular file.
@@ -495,3 +507,34 @@ the literal text `"version": "X"` with one space, and the Muse manifest
 is written compact, as the Muse validator writes it. Every manifest in
 the test fixture had the space, so PKG-040's test passed while no real
 release could be cut.
+
+## The stop hook holds without trapping
+
+[PKG-043] The stop hook MUST allow a stop after it has refused the same
+Resolvable verdict three times in one session with the commit and the
+working tree unchanged. When it allows such a stop, the hook MUST show
+the developer a message naming the verdict. When it allows such a stop,
+the hook MUST write a stop record under .cairn/stops/.
+Falsifier: in one session, with the verdict, the commit and the working
+tree unchanged, the stop hook blocks a fourth stop, or allows one of
+the first three; or it allows a stop after a change to the verdict,
+the commit or the working tree reset its count; or it allows a stop
+without a systemMessage naming the verdict or without writing a stop
+record.
+Status: Agreed 2026-09-17
+
+[PKG-044] The stop hook's refusal MUST tell the agent that, when it
+cannot act on the verdict, it raises an escalation and stops.
+Falsifier: a block decision's reason does not name cairn escalate.
+Status: Agreed 2026-09-17
+
+Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. A refusal that can never end trapped a
+session more than ten times that morning; a refusal that ends after
+one ignored attempt lets an agent quit mid-work. The count resets on
+any progress, so an agent doing real work never reaches the valve. An
+agent that cannot act has an honest exit, the escalation, and never
+needs the valve. An agent that idles three times can still stop, but
+the harness shows the developer why, and the next wake asks the agent
+to explain it before any other work (LOOP-139). The count lives in the
+Git directory, which a fresh clone lacks and the next stop rebuilds
+(PKG-002); the stop record is a Cairn record and is committed.

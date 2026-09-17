@@ -92,6 +92,11 @@ roadmap file, never in a filename.
 **Routine.** The decision level the agent settles without a record.
 Defined in decisions.md.
 
+**Stop record.** A file the stop hook writes under .cairn/stops/ when it
+lets a stop through after three refusals with no progress; the agent
+adds an Explanation: line and commits it before other work (PKG-043,
+LOOP-139).
+
 **Submission.** The file the agent writes for one decision in Jev mode:
 one question, its context, the decision, its alternatives, and the
 decision in logical notation (AUTO-011 to AUTO-013).

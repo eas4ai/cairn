@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { writeFileSync, mkdtempSync, readFileSync, chmodSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo, cairn, review, passing, failing, head, commit } from "./helpers.mjs";
@@ -127,4 +128,15 @@ test("twenty built records cost one git call to resolve, not twenty (DEC-023)", 
   const calls = readFileSync(log, "utf8").trim().split("\n");
   assert.equal(calls.filter((c) => /^rev-parse --verify /.test(c)).length, 0, "no per-entry rev-parse: " + calls.join(" | "));
   assert.equal(calls.filter((c) => c === "cat-file --batch-check").length, 1, "one batch call: " + calls.join(" | "));
+});
+
+test("an ambiguous Realized by identifier is the repair that says lengthen it, not a build (LOOP-113, DEC-023)", () => {
+  const root = repo({ ".cairn/mechanisms/m": passing("R-001", "R-002") });
+  // Two blob contents whose object ids share seven hex characters, found in memory, then written so the prefix is ambiguous in this repository.
+  const blob = (c) => createHash("sha1").update(`blob ${Buffer.byteLength(c)}\0${c}`).digest("hex"), seen = new Map();
+  let pair = null;
+  for (let i = 0; !pair; i++) { const c = `ambiguity ${i}\n`, h = blob(c), p = h.slice(0, 7); if (seen.has(p)) pair = [seen.get(p), c, p]; else seen.set(p, c); }
+  for (const c of pair.slice(0, 2)) assert.equal(spawnSync("git", ["hash-object", "-w", "--stdin"], { cwd: root, input: c, encoding: "utf8" }).status, 0);
+  writeFileSync(join(root, "docs/decisions/amb.md"), `# Amb\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${pair[2]} did it\n`); commit(root, "an ambiguous entry");
+  const r = wake(root); assert.match(r.stdout, /^Resolvable: repair docs\/decisions\/amb\.md\n  Realized by identifier [0-9a-f]{7} is ambiguous; lengthen it \(LOOP-113\)/, r.stdout + r.stderr);
 });

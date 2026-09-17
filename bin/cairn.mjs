@@ -332,8 +332,8 @@ function resolveCommits(root, ids) {
   const out = new Map();
   if (!ids.length) return out;
   const r = spawnSync("git", ["cat-file", "--batch-check"], { cwd: root, encoding: "utf8", maxBuffer: Infinity, input: ids.map((id) => `${id}^{commit}\n`).join("") });
-  const lines = r.error || r.status !== 0 ? [] : r.stdout.trimEnd().split("\n");
-  ids.forEach((id, i) => out.set(id, / commit \d+$/.test(lines[i] ?? "") ? "commit" : / ambiguous$/.test(lines[i] ?? "") ? "ambiguous" : "missing"));
+  const lines = r.error || r.status !== 0 ? [] : r.stdout.trimEnd().split("\n"), ambiguous = new Set([...(r.stderr ?? "").matchAll(/short object ID (\S+) is ambiguous/g)].map((m) => m[1]));   // git says so on stderr, and prints missing
+  ids.forEach((id, i) => out.set(id, ambiguous.has(id) ? "ambiguous" : / commit \d+$/.test(lines[i] ?? "") ? "commit" : "missing"));
   return out;
 }
 function decisionVerdict(root) {

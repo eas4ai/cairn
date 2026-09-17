@@ -801,19 +801,23 @@ function independentGap(root, slug, rv) {
   if (String(f.commitment ?? "").trim() !== slug) return again(`${name} names commitment ${f.commitment || "none"}, not ${slug}`);
   if (!commitOf(f.commit)) return again(`${name} names ${f.commit || "no commit"}, which is not a commit`);
   if (commitOf(f.commit) !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
-  const examined = asList(f.examined).filter((x) => x !== "[]").map(String);
-  if (!examined.length) return repair(`${name} needs a nonempty examined: list`);
+  const seen = listOf(text, "examined"), examined = seen.entries.map(String);
+  if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`);
   // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/m, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
-  const listed = findingsOf(text);
-  if (listed === null) return repair(`${name} needs findings: as a list of - entries, or findings: [] for none, above any heading`);
+  const list = listOf(text, "findings");
+  const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
+    : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}`
+    : list.below ? "holds a finding under a heading, where the loop does not read it"
+    : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
+  if (wrong) return repair(`${name} ${wrong}`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
-  const report = listed.map(norm);
+  const report = list.entries.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
   // Each finding n is carried by the one review line that cites (independent <report commit> n) and nothing else, and begins with its words (LOOP-020).
   const reviewText = committed(own) ?? "", short = at.slice(0, 7), mark = (n) => `(independent ${short} ${n})`;
   // Only the citations that end a line carry; a citation inside a finding's own words is words (LOOP-020).
-  const lines = (findingsOf(reviewText) ?? []).map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi, tail = (l) => l.match(/(?:\s*\(independent [0-9a-f]{7,40}\s+\d+\))+\s*$/i)?.[0] ?? "";
+  const lines = listOf(reviewText, "findings").entries.map(String), cite = /\(independent ([0-9a-f]{7,40})\s+(\d+)\)/gi, tail = (l) => l.match(/(?:\s*\(independent [0-9a-f]{7,40}\s+\d+\))+\s*$/i)?.[0] ?? "";
   const pairs = (l) => new Set([...tail(l).matchAll(cite)].map((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}`));
   for (const [i, words] of report.entries()) {
     const n = i + 1, key = `${short} ${n}`, hits = lines.filter((l) => pairs(l).has(key)), stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
@@ -826,32 +830,51 @@ function independentGap(root, slug, rv) {
   return null;
 }
 // A findings list the loop reads only in part: a blank line, an unread bullet, or a finding after a heading (LOOP-086, LOOP-020).
-// The findings list, read from the record's text: every bullet after findings:
-// up to the first heading, blank lines between entries allowed, a wrapped line
-// joined to its entry. A list after a heading stays unread (LOOP-071), so a
-// decoy section cannot replace a finding. null when findings: is absent.
-function findingsOf(text) {
-  const head = withoutFences(String(text ?? "")).join("\n").split(/\n(?= {0,3}#)/)[0], m = /^findings:[ \t]*(.*)$/m.exec(head);
-  if (!m) return null;
-  if (m[1].trim() === "[]") return [];
-  const out = m[1].trim() ? [m[1].trim()] : [];
+// A record's list, read from its text: the entries under key:, above the first
+// heading. Any bullet or number is an entry; a line indented under an entry, or
+// a bullet nested beneath it, belongs to that entry; blank lines between entries
+// are nothing. A line the reader cannot read as an entry stops the list and is
+// named, so no entry is silently dropped (LOOP-086, LOOP-020). A list after a
+// heading stays unread (LOOP-071), unless nothing above it was read.
+function listOf(text, key) {
+  const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
+  const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
+  if (!m) return { missing: true, entries: [] };
+  const value = m[1].trim();
+  if (value === "[]") return { entries: [], empty: true };
+  const entries = value ? [value] : [];
+  let indent = null, blank = false, unread = null;
   for (const line of head.slice(m.index + m[0].length).split("\n")) {
-    if (!line.trim()) continue;
-    const item = /^[ \t]*[-*+][ \t]+(\S[\s\S]*)$/.exec(line);
-    if (item) { out.push(item[1].trim()); continue; }
-    if (/^[ \t]+\S/.test(line) && out.length) { out[out.length - 1] += ` ${line.trim()}`; continue; }
+    if (!line.trim()) { blank = true; continue; }
+    const item = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/.exec(line);
+    if (item) {
+      if (indent === null) indent = item[1].length;
+      if (item[1].length > indent && entries.length) entries[entries.length - 1] += ` ${item[2].trim()}`;
+      else entries.push(item[2].trim());
+      blank = false; continue;
+    }
+    if (/^[ \t]+\S/.test(line) && entries.length && !blank) { entries[entries.length - 1] += ` ${line.trim()}`; continue; }
+    if (!entries.length || /^\s*(?:open|resolved):/i.test(line)) unread = line.trim();
     break;
   }
-  return out;
+  // A finding under a heading, with nothing above it, is not prose: the loop would read the record in part.
+  const below = !entries.length && !unread && /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+(?:open|resolved):/im.test(whole.slice(head.length));
+  return { entries, value: value || null, unread, below };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
   if (!existsSync(p)) return null;
   const text = read(p), f = recordFields(text);
   // The header the gate reads: commit, a nonempty examined list, a findings list (LOOP-108).
-  const missing = !f.commit ? "commit: names the commit the review examined" : !asList(f.examined).filter((x) => x !== "[]").length ? "examined: needs a nonempty list of what the review examined (LOOP-020)" : findingsOf(text) === null ? "findings: is missing; write findings: [] when there are none (LOOP-086)" : null;
+  const ex = listOf(text, "examined"), fin = listOf(text, "findings");
+  const missing = !f.commit ? "commit: names the commit the review examined"
+    : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
+    : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
+    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}; write each finding as a - entry (LOOP-086)`
+    : fin.below ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list (LOOP-086)"
+    : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${/^ {0,3}#{1,6}[ \t]/m.test(text) && /^(?:examined|findings):/m.test(text) ? "; the fields sit under a heading and the header ends at the first heading" : ""} (LOOP-108)` } };
-  const list = findingsOf(text), findings = list ?? [];
+  const findings = fin.entries;
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
   const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
   const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,

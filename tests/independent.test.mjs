@@ -59,9 +59,9 @@ test("each finding is carried by the one line citing its number and beginning wi
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, again (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /finding 1 is not carried: 2 review lines cite \(independent [0-9a-f]{7} 1\)/);
   assert.match(carried(["resolved: the gate, fixed (independent #1)", "resolved: the gate, the parser and the message are wrong. fixed (independent #2)"], ["the gate", "the gate, the parser and the message are wrong"]), /^Done: /);
   const repairs = /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n/;
-  for (const tail of ["", "\n## Findings\n\nfindings:\n  - a defect\n"])   // findings: absent, or only after a heading, where the loop does not read it
+  for (const tail of ["", "\n## Findings\n\nfindings:\n  - a defect\n", "findings: none\n", "findings:\n  a defect\n"])   // absent, only after a heading, a scalar value, or a line that is not an entry
     assert.match(handReport(root, `examined:\n  - x at ${head(root)}\n${tail}`), repairs, tail);   // built at each call, so the report names the commit it is written at
-  for (const tail of ["findings:\n\n  - a defect\n", "findings: none\n", "findings:\n  - a\n    defect\n", "findings:\n- a defect\n"])   // a blank line, a value on the line, a wrapped entry, an unindented bullet: each is read
+  for (const tail of ["findings:\n\n  - a defect\n", "findings:\n  - a\n    defect\n", "findings:\n- a defect\n", "findings:\n  1. a defect\n"])   // a blank line, a wrapped entry, an unindented bullet, a number: each is read
     assert.match(handReport(root, `examined:\n  - x at ${head(root)}\n${tail}`), /^Resolvable: review first\n.*finding 1 is not carried/, tail);
   assert.match(handReport(root, `examined:\n  - x at ${head(root).toUpperCase()}\nfindings: []\n\n- tried x\n  and y\n`, { at: head(root).toUpperCase() }), /^Done: /, "capitals, and prose after the findings list");
   assert.match(handReport(root, `examined:\r\n  - x at ${head(root)}\r\nfindings: []\r\n`), /^Done: /, "CRLF");
@@ -138,4 +138,22 @@ test("the findings list is read from the record's text: blank lines between entr
   assert.match(write(reviewWith(carry(1, "one"), "examined:\n  - x\n\n  - y\n"), reportWith("  - one\n", `examined:\n  - x at ${at}\n\n  - y\n`)), /^Done: /, "a blank line inside examined: loses no findings");
   assert.match(write(`${reviewWith(carry(1, "one"))}\n## Notes\n\nfindings:\n  - open: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a list after a heading stays unread (LOOP-071)");
   assert.match(write(reviewWith(carry(1, "one")), reportWith("  - one\n\n- I also read the tests.\n")), /finding 2 is not carried/, "a bullet under findings: is a finding, prose belongs in examined:");
+});
+
+test("the reader reads a numbered or nested list and a blank line in examined:, and names a line it cannot read rather than reading nothing (LOOP-086, LOOP-020)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const s = head(root).slice(0, 7), at = head(root);
+  const write = (review, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), review); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const report = (findings, examined = `examined:\n  - x at ${at}\n`) => `commitment: first\ncommit: ${at}\nreviewer: r\n${examined}findings:\n${findings}`;
+  const own = (findings, examined = "examined:\n  - x\n") => `commitment: first\ncommit: ${at}\n${examined}findings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  assert.match(write(own(carry(1, "one") + carry(2, "two")), report("  1. one\n  2. two\n")), /^Done: /, "a numbered report list is read");
+  assert.match(write(own(carry(1, "one")), report("  1. one\n  2. two\n")), /finding 2 is not carried/, "and every entry of it");
+  assert.match(write(own(carry(1, "one reproduced in a scratch clone")), report("  - one\n    - reproduced in a scratch clone\n")), /^Done: /, "a nested detail belongs to its entry");
+  assert.match(write(own(carry(1, "one")), report("  - one\n", `examined:\n\n  - x at ${at}\n`)), /^Done: /, "a report examined: list after a blank line is read");
+  assert.match(write(own(carry(1, "one"), "examined:\n\n  - x\n"), report("  - one\n")), /^Done: /, "a review examined: list after a blank line is read");
+  assert.match(write(own("  REM-002: an unbulleted finding\nStatus: in progress\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry: "REM-002/, "an unbulleted review finding is named, not read as nothing");
+  assert.match(write(own("  - resolved: one, fixed (independent " + s + " 1)\n"), report("  REM-002: an unbulleted finding\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*cannot read as an entry: "REM-002/, "and the same in the report");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n\n## Findings\n\n- open: a real defect I found\n`, report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a finding under a heading with nothing above it");
 });

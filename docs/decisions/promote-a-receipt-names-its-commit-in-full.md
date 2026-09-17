@@ -13,4 +13,4 @@ Promotes .cairn/backlog/receipts-record-an-abbreviated-commit-id.md, captured 20
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 6e50d5bf4d223cfdd450604f4876044c1482b8e4 A receipt records the full commit identifier; older short forms are still read (LOOP-136)

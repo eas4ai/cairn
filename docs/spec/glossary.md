@@ -13,6 +13,11 @@ Agreed by the promotion decision that names it, one agreed by
 deference by the decision that records the ruling, and its Status:
 line names that decision.
 
+**Autonomous mode.** The mode, set by CAIRN_AUTONOMOUS=1 in the
+environment the harness starts with, in which the agent decides and
+records what the developer's mode escalates, except a change to the
+specification (AUTO-001, AUTO-004).
+
 **Backlog.** Ideas captured during the loop that fit inside the
 current specification and are not yet promoted into a commitment. The
 scope valve writes here. At Done, the loop promotes from here without
@@ -35,6 +40,9 @@ that the agent's recommendation stands for a named scope of work
 unless review changes it substantively. A requirement agreed that
 way carries `by deference <decision slug>` (SPEC-002).
 
+**Developer's mode.** The mode with neither CAIRN_AUTONOMOUS nor
+JEV_ENGINE set to 1: escalations go to the developer (AUTO-001).
+
 **Escalation.** A decision the loop parks because only the developer can
 make it. Durable on disk, and the loop's resume point.
 
@@ -47,6 +55,12 @@ or by the promotion or deference decision that names it.
 
 **Freshness.** Whether evidence still describes the current requirement,
 its falsifier, and the code checked against them.
+
+**Jev mode.** The mode, set by JEV_ENGINE=1, in which each autonomous
+decision is judged by Jev before it is accepted (AUTO-001, AUTO-014).
+
+**Judgment.** Jev's answer to one submission: the option it chose, its
+confidence, and whether it passed the threshold (AUTO-014, AUTO-015).
 
 **Kernel.** The files under bin/ that Cairn executes: the command,
 its parser, and the hooks, together under the PKG-004 ceiling. The
@@ -77,6 +91,13 @@ roadmap file, never in a filename.
 
 **Routine.** The decision level the agent settles without a record.
 Defined in decisions.md.
+
+**Submission.** The file the agent writes for one decision in Jev mode:
+one question, its context, the decision, its alternatives, and the
+decision in logical notation (AUTO-011 to AUTO-013).
+
+**Threshold.** The committed confidence at or above which a judgment
+passes; 0.70 until calibration sets it (AUTO-015).
 
 **Untracked file.** A file in the working tree that Git does not track.
 It is not a change under way: the wake names no record for it, and check

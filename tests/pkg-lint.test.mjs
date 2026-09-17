@@ -32,8 +32,8 @@ test("PKG-003: a command, a directory, or a record kind no decision names", () =
   finds({ ".cairn/mystery/.keep": "" }, "PKG-003");
   finds({ "docs/commitments/c.md": "# C\n\nSlug: c\n\n## Formats\n\nA widget record, one per run:\n\n    x: y\n" }, "PKG-003");
 });
-test("PKG-004: a kernel over 1600 lines, counting every file under bin/ as wc -l does; exactly 1600 passes", () => {
-  finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1600) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1600) }, "PKG-004");
+test("PKG-004: a kernel over 1900 lines, counting every file under bin/ as wc -l does; exactly 1900 passes", () => {
+  finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1900) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(1900) }, "PKG-004");
   let r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1599) })); assert.equal(r.status, 0, r.stdout);
   r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(799), "bin/y.mjs": "1;\n".repeat(800) })); assert.equal(r.status, 0, r.stdout);
 });

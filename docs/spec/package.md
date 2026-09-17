@@ -40,9 +40,14 @@ cemented, and it was cemented anyway. A command, a record kind, and a
 directory are what a concept is when it has entered the code.
 
 [PKG-004] The kernel, the files under bin/ that Cairn executes at run
-time, MUST NOT exceed 1600 lines in total.
-Falsifier: the line count of the files under bin/ exceeds 1600.
-Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+time, MUST NOT exceed 1900 lines in total.
+Falsifier: the line count of the files under bin/ exceeds 1900.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text set 1600 lines, and the
+kernel stood at 1590 when autonomous and Jev mode were specified; the
+mode check, the decision in place of an escalation, and the Jev call
+and its template need room the old ceiling did not leave.
 
 Revised 2026-09-15 on the developer's direction after the second
 audit. The ceiling of 1500 was set when the kernel held about 1200

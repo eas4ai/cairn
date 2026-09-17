@@ -232,10 +232,16 @@ the agent for rewriting.
 Falsifier: the developer receives an escalation longer than the format
 permits.
 
-[LOOP-013] The agent MUST deliver a Blocking escalation to the developer
-even when it cannot be stated in the format.
-Falsifier: a decision the agent classified Blocking is decided by the
-agent because the escalation failed the format check.
+[LOOP-013] In the developer's mode, the agent MUST deliver a Blocking
+escalation to the developer even when it cannot be stated in the
+format.
+Falsifier: in the developer's mode, a decision the agent classified
+Blocking is decided by the agent because the escalation failed the
+format check.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text had no mode; in autonomous
+and Jev mode a Blocking decision is the agent's (AUTO-004).
 
 The format check governs how an escalation is written, never whether the
 developer sees it. A gate protecting the developer's attention must not
@@ -1015,12 +1021,18 @@ Status: Agreed 2026-09-14
 
 [LOOP-090] When a promoted commitment needs a change LOOP-089 forbids,
 the agent MUST escalate before building it. The agent MUST record the
-item under next-iteration with the reason.
+item under next-iteration with the reason. In autonomous or Jev mode,
+the agent MUST supersede the promotion instead of escalating.
 Falsifier: a commit inside a promoted commitment's footprint changes an
 Agreed requirement's digest or the working agreement file, and no
 escalation raised inside that commitment names every changed
-requirement on its Concerns line.
-Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+requirement on its Concerns line, or in autonomous or Jev mode no
+decision supersedes the promotion.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text escalated in every mode.
+The change still goes to next-iteration and is never decided or judged
+(AUTO-005).
 
 Revised 2026-09-15 on the developer's direction after the second
 audit (D2): the falsifier said "names that commitment", the reading
@@ -1062,15 +1074,19 @@ not in a capture file that lets the commitment report Done.
 
 [LOOP-092] The agent MUST NOT capture work the current commitment
 includes to the backlog or next-iteration. When the agent cannot
-complete such work, the agent MUST escalate with the evidence of the
-problem.
+complete such work, the agent MUST escalate, or in autonomous or Jev
+mode decide, with the evidence of the problem.
 Falsifier: a file added under .cairn/backlog/ or .cairn/next-iteration/
 by a commit inside the commitment's footprint names a requirement of
 that commitment on its Surfaced from: or Changes: line, carries no
-Outside because: line, and no escalation raised inside the commitment
-names the file or, for a next-iteration item, the requirement its
-Changes: line names on its Concerns line.
-Status: Agreed 2026-09-15 by deference the-second-audit-is-remediated-on-the-developer-s-direction
+Outside because: line, and no escalation raised inside the commitment,
+or in autonomous or Jev mode no decision recorded inside it, names the
+file or, for a next-iteration item, the requirement its Changes: line
+names on its Concerns line.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text said "the agent MUST
+escalate with the evidence of the problem" (AUTO-004).
 
 Revised 2026-09-15 on the developer's direction after the second
 audit (D2): the falsifier said "no escalation names the file", the

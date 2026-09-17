@@ -37,9 +37,16 @@ decisions need.
 alternative.
 Falsifier: a decision record exists with no level.
 
-[DEC-002] The agent MUST stop for the developer only at Blocking.
-Falsifier: the agent stops for a decision it had a recommendation for,
-that was cheap to reverse, and that was inside the commitment.
+[DEC-002] In the developer's mode, the agent MUST stop for the
+developer only at Blocking.
+Falsifier: in the developer's mode, the agent stops for a decision it
+had a recommendation for, that was cheap to reverse, and that was
+inside the commitment.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text said "The agent MUST stop
+for the developer only at Blocking." In autonomous and Jev mode the
+agent decides at Blocking too (AUTO-004).
 
 [DEC-003] The agent MUST write a decision record at Judged and above.
 Falsifier: a decision with a real alternative and a reversal cost appears
@@ -53,9 +60,13 @@ Falsifier: the loop pauses for a decision it classified Consequential.
 new passing evidence, the agent MUST classify the next decision about
 it Blocking.
 Falsifier: a requirement's evidence history shows a fourth attempt,
-as DEC-017 and DEC-018 count attempts, with no escalation raised
-since the third.
-Status: Agreed 2026-09-15 by deference audit-found-contract-defects-are-repaired-on-the-developer-s-direction
+as DEC-017 and DEC-018 count attempts, with no escalation raised, or
+in autonomous or Jev mode no decision recorded, since the third.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first falsifier said "with no
+escalation raised since the third"; in autonomous and Jev mode a
+recorded decision takes the escalation's place (AUTO-004).
 
 Revised 2026-09-15 on the developer's direction after the audit. The
 first falsifier counted failing records; DEC-017 and DEC-018 count
@@ -233,11 +244,16 @@ including a return to an earlier failed digest, counts once. The
 first record of a requirement is its baseline; neither it nor a later
 return to its digest is an attempt.
 
-[DEC-019] The agent MUST escalate a failure that no change inside the
-footprint can address.
+[DEC-019] The agent MUST escalate, or in autonomous or Jev mode
+decide, a failure that no change inside the footprint can address.
 Falsifier: a requirement fails three times at one inputs digest, no
-declared input changes after, and no escalation names it.
-Status: Agreed 2026-09-05
+declared input changes after, and no escalation names it, or in
+autonomous or Jev mode no decision names it.
+Status: Agreed 2026-09-17
+
+Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text said "The agent MUST
+escalate a failure that no change inside the footprint can address"
+(AUTO-004).
 
 Counting an attempt by inputs means a failure whose cause is outside
 the repository, host cache state on the second adoption, is zero

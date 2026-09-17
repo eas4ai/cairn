@@ -55,6 +55,7 @@ stopping to re-establish it.
 | loop.md | LOOP | The loop: on-disk state, wake, verdicts, escalation, freshness. |
 | decisions.md | DEC | The decision scale, decision records, supersession, the experience log. |
 | package.md | PKG | Distribution, the no-infrastructure rule, the complexity budget. |
+| autonomy.md | AUTO | Autonomous and Jev mode: who sets the mode, deciding instead of escalating, and the Jev judgment. |
 | roadmap.md | -- | The ordered commitments. Not normative. |
 
 ## Status of this specification

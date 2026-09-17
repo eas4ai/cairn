@@ -5,10 +5,10 @@
 //   node scripts/release.mjs <major.minor.patch>
 // It refuses a version that is not an increase, a missing changelog entry,
 // an existing tag, a version file that disagrees, a dirty tree, and a loop
-// not at Done; the changelog entry is committed before the release. Exit 3 with one line on refusal; nothing is written before every
+// not at Done; an uncommitted changelog entry is committed with the release. Exit 3 with one line on refusal; nothing is written before every
 // check passes.
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,12 +33,21 @@ const texts = FILES.map((f) => [f, read(f)]);
 // The version field in any JSON spacing, so a compact manifest is read like a pretty one (PKG-042).
 const field = () => new RegExp(`"version"\\s*:\\s*"${current.replace(/\./g, "\\.")}"`, "g");
 for (const [f, t] of texts) if ((t.match(field()) ?? []).length !== 1) refuse(`${f} does not carry "version": "${current}" exactly once`);
-const dirty = git("status", "--porcelain", "--untracked-files=no").split("\n").filter(Boolean);
-if (dirty.length) refuse(`the tree is dirty: ${dirty.map((l) => l.slice(3)).join(", ")}; commit or stash before a release`);
-const w = spawnSync(process.execPath, [KERNEL, "wake", "--root", root], { encoding: "utf8" });
+// An uncommitted CHANGELOG.md joins the release commit; any other dirty file is refused (PKG-040).
+const dirty = git("status", "--porcelain", "--untracked-files=no").split("\n").filter(Boolean).map((l) => l.slice(3));
+const others = dirty.filter((p) => p !== "CHANGELOG.md"), pending = dirty.includes("CHANGELOG.md");
+if (others.length) refuse(`the tree is dirty: ${others.join(", ")}; commit or stash before a release (an uncommitted CHANGELOG.md joins the release commit)`);
+// Done is judged with the changelog as committed, so its pending entry is not named record; a backup in the Git directory survives an interruption.
+const backup = join(root, git("rev-parse", "--git-path", "cairn-release-changelog.md").trim());
+if (existsSync(backup)) refuse(`an interrupted release left the changelog entry in ${backup}; restore CHANGELOG.md from it and remove it`);
+const committedLog = pending ? git("show", "HEAD:./CHANGELOG.md") : null;
+if (pending) { writeFileSync(backup, log); writeFileSync(join(root, "CHANGELOG.md"), committedLog); }
+let w;
+try { w = spawnSync(process.execPath, [KERNEL, "wake", "--root", root], { encoding: "utf8" }); }
+finally { if (pending) { writeFileSync(join(root, "CHANGELOG.md"), log); unlinkSync(backup); } }
 if (!/^Done: /.test(w.stdout ?? "")) refuse(`the loop is not at Done: ${(w.stdout || w.stderr || "").trim().split("\n")[0]}`);
 for (const [f, t] of texts) writeFileSync(join(root, f), t.replace(field(), (m) => m.replace(`"${current}"`, `"${next}"`)));   // only the quoted version changes
-git("add", "--", ...FILES);
+git("add", "--", ...FILES, ...(pending ? ["CHANGELOG.md"] : []));
 git("commit", "-q", "-m", `Release ${next}`);
 git("tag", "-a", `v${next}`, "-m", entry.replace(/^## /, ""));   // git drops lines that start with # from a tag message
 process.stdout.write(`release: ${next} committed as ${git("rev-parse", "--short", "HEAD").trim()} and tagged v${next}\nrelease: next, the version files are declared inputs: cairn check --stale, the review, then git push origin main v${next}\n`);

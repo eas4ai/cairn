@@ -11,11 +11,12 @@ mirror it, and a test keeps them equal.
 1. Be at Done: `cairn wake` says so. A release is a complete
    commitment, never work in flight.
 2. Write the entry in CHANGELOG.md, headed `## X.Y.Z - YYYY-MM-DD`,
-   and commit it; the changelog is a declared input, so the loop
-   asks for that commit before it says Done again.
+   and leave it uncommitted: the release commit carries it, so the
+   release costs one check and one review.
 3. Run `node scripts/release.mjs X.Y.Z` from the checkout root. It
-   refuses, in one line and with nothing written, a dirty tree, a
-   version that is not an increase, a missing changelog entry, an
+   refuses, in one line and with nothing written, a tree dirty in any
+   file but CHANGELOG.md, a commit the project's attribution policy
+   forbids, a version that is not an increase, a missing changelog entry, an
    existing tag, a version file that disagrees, or a loop not at
    Done. Then it sets the version in the five files, commits
    `Release X.Y.Z`, and tags `vX.Y.Z` with the entry as the message.

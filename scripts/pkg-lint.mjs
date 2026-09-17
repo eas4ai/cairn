@@ -76,8 +76,8 @@ for (const p of present.filter(text)) { const t = read(p); const m = /[^\x00-\x7
 // PKG-009: the kernel imports nothing from tests
 if (/from\s+["'][^"']*\btests\//.test(kernel)) f.push("PKG-009: the kernel imports from tests/");
 
-// PKG-012: no network, no model vendor
-if (/\bfetch\s*\(|https?:\/\/|node:https?\b|\banthropic\b|\bopenai\b/i.test(kernel)) f.push("PKG-012: the kernel makes a network call or names a model vendor");
+// PKG-012: no model call: a request, or a model vendor's client library; a vendor's name in text is not a call
+if (/\bfetch\s*\(|https?:\/\/|node:https?\b|["'](?:@anthropic-ai\/[^"']*|openai|@google\/generative-ai)["']/i.test(kernel)) f.push("PKG-012: the kernel makes a network call or imports a model client");
 
 // PKG-013: no deferral language, outside quotes and code
 const DEFER = /\b(v1|version one|version 1|mvp|phase (two|2)|later (version|release|phase|milestone)|future (release|version)|next release|coming soon|not yet supported|postpone[ds]?|for now)\b/i;

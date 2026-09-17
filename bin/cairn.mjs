@@ -866,11 +866,23 @@ function stopVerdict(root) {
   const n = names.find((x) => !("Explanation" in fields(read(join(root, path(x))))) || loose.some((p) => p === path(x) || (p.endsWith("/") && path(x).startsWith(p))));
   return n ? { verdict: "Resolvable", action: `explain ${path(n)}`, why: "the stop hook let a stop through after three refusals with no progress; add an Explanation: line saying why the agent stopped, and commit the record (PKG-043, LOOP-139)" } : null;
 }
+// A project that forbids AI attribution rewords a commit before it leaves the machine (PKG-045).
+const AI = "(?:claude|anthropic|codex|openai|copilot|gemini)";
+const ATTRIBUTION = new RegExp(`^(?:co-authored-by:[^\\n]*\\b${AI}\\b|claude-session:|[^\\n]*generated with[^\\n]*\\b${AI}\\b)`, "im");
+function attributionVerdict(root) {
+  const p = join(root, ".cairn", "policy");
+  if (!existsSync(p) || String(fields(read(p)).attribution ?? "").trim() !== "forbidden") return null;
+  const r = git(root, "log", "--reverse", "--format=%H%x00%B%x01", "HEAD", "--not", "--remotes");
+  const hit = r.status !== 0 ? null : r.stdout.split("\x01").map((s) => s.replace(/^\n/, "").split("\0")).find(([sha, body]) => sha && ATTRIBUTION.test(body ?? ""));
+  return hit ? { verdict: "Resolvable", action: `reword ${hit[0]}`, why: ".cairn/policy forbids AI attribution, and this commit, on no remote-tracking branch, carries an attribution line; rewrite its message without it, then wake (PKG-045)" } : null;
+}
 function wakeVerdict(root) {
   const owner = checkOwner(root);
   if (owner) return owner;
   const stopped = stopVerdict(root);
   if (stopped) return stopped;
+  const attributed = attributionVerdict(root);
+  if (attributed) return attributed;
   const ip = join(root, ".cairn", "in-progress");
   const pending = reconcile(root, ip);
   if (pending) return pending;

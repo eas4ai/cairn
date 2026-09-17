@@ -64,10 +64,13 @@ test("the release script refuses a bad version, no increase, a dirty tree, a mis
   writeFileSync(join(root, ".codex-plugin/plugin.json"), manifest("9.9.9")); refused(root, /codex-plugin\/plugin\.json does not carry/, "0.2.0"); git(root, "checkout", "--", ".codex-plugin/plugin.json");
   writeFileSync(join(root, ".cairn/in-progress"), "action: implement\ntarget: R-001\nbase: x\nstarted: now\n"); refused(root, /not at Done: Resolvable: reconcile/, "0.2.0"); unlinkSync(join(root, ".cairn/in-progress"));
   writeFileSync(join(root, "CHANGELOG.md"), readFileSync(join(root, "CHANGELOG.md"), "utf8").replace("# Changelog\n", "# Changelog\n\n## 0.3.0 - 2026-09-16\n\n- Next.\n"));
-  refused(root, /dirty.*CHANGELOG\.md/, "0.3.0");   // the entry is committed first: the changelog is a declared input
-  commit(root, "the 0.3.0 entry"); cairn(root, "check"); review(root); commit(root, "green again");
-  const r = release(root, "0.3.0"); assert.equal(r.status, 0, r.stderr + r.stdout);
+  writeFileSync(join(root, "src/other"), "changed\n"); refused(root, /dirty: src\/other;/, "0.3.0"); git(root, "checkout", "--", "src/other");
+  const backup = join(root, git(root, "rev-parse", "--git-path", "cairn-release-changelog.md").stdout.trim());
+  writeFileSync(backup, "an entry\n"); refused(root, /interrupted release left the changelog entry/, "0.3.0"); unlinkSync(backup);
+  const r = release(root, "0.3.0"); assert.equal(r.status, 0, r.stderr + r.stdout);   // the uncommitted entry joins the release commit (PKG-040)
   assert.equal(git(root, "status", "--porcelain", "--untracked-files=no").stdout, ""); assert.equal(git(root, "cat-file", "-t", "v0.3.0").stdout.trim(), "tag");
+  assert.match(git(root, "show", "--name-only", "--format=", "HEAD").stdout, /^CHANGELOG\.md$/m, "the release commit carries the changelog");
+  assert.match(git(root, "show", "HEAD:CHANGELOG.md").stdout, /^## 0\.3\.0 - 2026-09-16$/m);
 });
 
 test("a version file written as compact JSON is released, and nothing else in any version file changes (PKG-042)", () => {
@@ -82,4 +85,11 @@ test("a version file written as compact JSON is released, and nothing else in an
   for (const f of ["package.json", ".claude-plugin/plugin.json", ".codex-plugin/plugin.json"]) assert.equal(readFileSync(join(root, f), "utf8"), manifest("0.2.0"), f);
   assert.equal(readFileSync(join(root, ".claude-plugin/marketplace.json"), "utf8"), `{ "name": "cairn", "plugins": [{ "name": "cairn", "source": "./", "version": "0.2.0" }] }\n`);
   assert.equal(git(root, "tag", "-l", "v0.2.0").stdout.trim(), "v0.2.0");
+});
+
+test("with attribution forbidden, the release script refuses an unpushed commit carrying an AI attribution line (PKG-045)", () => {
+  const root = fixture();
+  writeFileSync(join(root, ".cairn/policy"), "attribution: forbidden\n"); commit(root, "the policy");
+  git(root, "commit", "-q", "--allow-empty", "-m", "Work\n\nClaude-Session: https://claude.ai/code/session_x");
+  refused(root, /not at Done: Resolvable: reword [0-9a-f]{40}/, "0.2.0");
 });

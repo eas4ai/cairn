@@ -45,7 +45,12 @@ test("PKG-006: a skill step naming a vendor's product, in either order, across a
 });
 test("PKG-008: a non-ASCII character in a tracked text file", () => finds({ "docs/n.md": "caf\u00e9\n" }, "PKG-008"));
 test("PKG-009: the kernel importing from tests", () => finds({ "bin/x.mjs": '// cairn wake\nimport { h } from "../tests/helpers.mjs";\n' }, "PKG-009"));
-test("PKG-012: a network call or a model vendor in the kernel", () => { finds({ "bin/x.mjs": "// cairn wake\nawait fetch(u);\n" }, "PKG-012"); finds({ "bin/x.mjs": "// cairn wake\n// anthropic\n" }, "PKG-012"); });
+test("PKG-012: a network call or a model client in the kernel, but not a vendor's name in text", () => {
+  finds({ "bin/x.mjs": "// cairn wake\nawait fetch(u);\n" }, "PKG-012");
+  finds({ "bin/x.mjs": '// cairn wake\nimport Anthropic from "@anthropic-ai/sdk";\n' }, "PKG-012"); finds({ "bin/x.mjs": '// cairn wake\nimport OpenAI from "openai";\n' }, "PKG-012");
+  const ok = lint(repo({ "bin/x.mjs": "// cairn wake\nconst trailer = /co-authored-by:.*(claude|anthropic|openai)/i;\n" }));
+  assert.equal(ok.status, 0, ok.stdout);
+});
 test("PKG-013: deferral language, but not in code, quotes, or a rule", () => {
   finds({ "docs/spec/s.md": "# S\n\nStatus: Agreed\n\nThis ships in v1; the rest comes in a later release.\n" }, "PKG-013");
   for (const phrase of ["a future version", "not yet supported", "coming soon", "the next release", "a later milestone"]) finds({ "docs/spec/s.md": `# S\n\nStatus: Agreed\n\nThat is ${phrase}.\n` }, "PKG-013");

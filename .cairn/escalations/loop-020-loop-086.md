@@ -11,3 +11,7 @@ Reply: ok | instead | ask. If this isn't clear, ask me to explain it another way
 Concerns: LOOP-020 LOOP-086
 Raised: 2026-09-17T22:33:47.833Z
 Raised after: LOOP-020=119 LOOP-086=110
+Answer: ok
+Answered: 2026-09-17T22:38:41.189Z
+Answered after: LOOP-020=119 LOOP-086=110
+Answered order: 5

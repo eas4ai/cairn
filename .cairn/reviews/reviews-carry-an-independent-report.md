@@ -1,6 +1,8 @@
 commitment: reviews-carry-an-independent-report
-commit: 8efe6c02
+commit: 74848eb4
 examined:
+  - re-examined at 74848eb4 after the twenty-fifth round's fixes, with a twenty-sixth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It rebuilt all six fixes as records and confirmed them, then read every one of the 68 committed reviews through the reader: 60 accepted, 8 refused. It found four: one silent, two blocked, one wording. Carried below.
+  - my own probes at 74848eb4: a singular "Finding" and an all-caps "FINDINGS" title, both named; a findings heading inside a fence, correctly invisible; bullets after a rule with no heading, named as unreadable; and an empty findings-titled section, accepted. No finding of my own this round.
   - re-examined at 8efe6c02 after the twenty-fourth round's fixes, with a twenty-fifth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. All seven fixes hold. It found five: one silent, four blocked. Carried below.
   - my own probes at 8efe6c02: the rewritten fence stripper against specification parsing, where a closed fence still hides its example requirement and an unterminated one no longer hides every line after it, and a fenced example inside a review body, still hidden. One finding of my own, recorded below.
   - re-examined at 3ba15a82 after the twenty-third round's fixes and the developer's ok on the buried-finding limit, with a twenty-fourth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. All six fixes hold. It found seven: two silent, four blocked, one wording. Carried below.
@@ -174,6 +176,10 @@ findings:
   - resolved: The Done message still says "the review at <commit> is clean" and does not mention the independent report, so the success message does not show that LOOP-020's new condition was checked. This comes from reading the code. Resolved: Done now says the review and its independent report are clean (17185e73)
   - resolved: tests/independent.test.mjs covers only well-formed reports. None of the cases above is tested (missing or misplaced findings, uncommitted report, prefix or wrapped findings, bad commit value, other commitment, open: prefix). Resolved: tests/independent.test.mjs gains a case for each finding above, and failed on the kernel before this fix (17185e73)
   - resolved: a margin rule directly under a field line was joined to that field as a continuation, so a record with --- under its commit: line had an unreadable commit and was refused with LOOP-058, which names neither the line nor the cause; found while resolving the two above and resolved at 1fa3d06b: the header parser skips a rule and keeps reading the fields below it.
+  - open: A heading whose title names findings still hides content in its subsections: a report with findings: [], ## Findings, ### 1. The gate drops an entry and one prose line reaches Done with nothing named, because the section scan gives a findings-naming heading only the lines before its first subheading; a rule after the first content line does the same (independent 74848eb 1)
+  - open: A heading whose title merely mentions findings is refused although every finding is in the list: ## How I reached the findings above is refused with "has content under the heading", and this repository's own committed review freshness-and-scope-guidance-agree.md is refused for its ## Documentation review finding section, while the only repairs named change the reviewer's words (independent 74848eb 2)
+  - open: AGENTS.md and docs/manual.md still say the loop refuses only a bullet that begins open: or resolved: and any list under a findings-naming heading, while the kernel refuses a table row or a paragraph there as well, so an agent writing to the agreement cannot predict the refusal (independent 74848eb 3)
+  - open: An empty report is told to add a commitment: line and then thrown away: once that line is the file's whole content the next wake answers "names no commit, which is not a commit; start a new reviewer", so the named repair does not make the record acceptable (independent 74848eb 4)
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -391,3 +397,32 @@ bullet with every title.
 All six are resolved in 70292c06, each with a test that fails on the kernel
 or the lint before it. The suite is 524 tests, all passing, and both
 lints are clean.
+
+## Review at 74848eb4, 2026-09-17
+
+The twenty-sixth reviewer rebuilt each of the twenty-fifth round's six
+fixes as a concrete record and confirmed all six, then read every one of
+the 68 committed reviews through the reader: 60 accepted, 8 refused, and
+the eighth is new. Its four findings split the section rule that shipped
+in 70292c06 down the middle. One is silent: the rule scans only the lines
+before a heading's first subheading, so findings written under `### 1.`
+below a `## Findings` heading are invisible again, and a record the
+previous kernel refused now reaches Done. Two are blocked: a heading that
+merely mentions findings in its title, such as "How I reached the findings
+above", is refused although every finding is in the list, and this
+repository's own committed review freshness-and-scope-guidance-agree.md is
+among the records that refusal now catches; and an empty report is told to
+add a `commitment:` line, after which the next wake discards it. One is
+wording: the agreement and the manual still describe the narrower rule the
+kernel had before 70292c06.
+
+The pattern of this round is the pattern of the last: the fix for a silent
+loss took ground in one direction and gave it back in another, because the
+judgement is over prose that carries no marks. That argument is already
+captured for the developer in
+.cairn/next-iteration/reviews-and-reports-are-written-in-a-form-the-loop-reads.md.
+
+I found nothing of my own this round. My probes at 74848eb4 -- a singular
+"Finding" title, an all-caps "FINDINGS" title, a findings heading inside a
+fence, bullets after a rule with no heading, and an empty findings-titled
+section -- all behaved as the rule intends.

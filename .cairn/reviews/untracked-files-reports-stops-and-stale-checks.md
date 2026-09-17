@@ -1,6 +1,7 @@
 commitment: untracked-files-reports-stops-and-stale-checks
-commit: 29e4b25e
+commit: 6d8ad450
 examined:
+  - re-examined at 6d8ad450: release 0.5.0 cut by scripts/release.mjs as one commit tagged v0.5.0, setting the version in package.json and the four plugin manifests; every mechanism re-run on the version files and pass
   - re-examined at 29e4b25e: the only declared input that changed is CHANGELOG.md, which adds the 0.5.0 entry describing this commitment's four changes and the upgrade; no code changed, every mechanism re-run and pass
   - completion review at c0f00d63: every requirement passes on fresh evidence and the full suite passes at 490. Each new test failed on the kernel and hook at 8c5c087 and passes now, except the LOOP-138 test, which reads the template committed with the agreement.
   - this morning's situation, rerun on a scratch clone of this repository: an untracked folder of drafts under docs/ and an untracked image leave the wake at the commitment's real next action; the stop hook blocks the first stop with that verdict and, given stop_hook_active true, prints the verdict and returns no decision. A tracked edit to docs/manual.md still makes the wake name record, and the hook blocks it once and gives way on the second stop.

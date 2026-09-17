@@ -7,6 +7,35 @@ record shape or document meaning; a minor adds or revises
 requirements, verdicts or record shapes and still reads earlier
 records; a major changes what earlier records mean.
 
+## 0.6.0 - 2026-09-17
+
+- The stop hook no longer lets a stop through because the harness says
+  it already refused once; that let an agent quit by ignoring one
+  refusal. It refuses while the agent can act (PKG-018).
+- The stop hook judges with the kernel that wrote the latest evidence
+  when that kernel is on disk: the command on PATH, the link, the
+  project's own bin/cairn.mjs, or its own. A newer checkout's receipts
+  are no longer called stale by an older command on PATH (PKG-033,
+  PKG-021).
+- The refusal says that an agent that cannot act raises an escalation
+  and stops (PKG-044).
+- After three refusals of the same verdict in one session with nothing
+  committed or edited in between, the fourth stop goes through: the
+  harness shows the developer a message naming the verdict, and the
+  hook writes a stop record under `.cairn/stops/` (PKG-043).
+- The wake names `explain <path>` for a stop record with no
+  `Explanation:` line or not yet committed, ahead of every action but
+  waiting for a live check (LOOP-139). The working agreement has the
+  move.
+- Specified, not yet built: autonomous mode and Jev mode
+  (docs/spec/autonomy.md, AUTO-001 to AUTO-018). The kernel ceiling
+  is 1900 lines (PKG-004).
+
+Upgrading: nothing is rewritten. Copy the template's `explain` move into
+a project's AGENTS.md when it is next written. The hook keeps its
+refusal count in the Git directory, so a fresh clone starts at zero. The
+kernel changed, so every mechanism re-runs once.
+
 ## 0.5.0 - 2026-09-17
 
 - A file Git does not track is no longer a change under way: a draft,

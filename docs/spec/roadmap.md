@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: defects-are-fixed-without-a-promotion
+Current: reviews-carry-an-independent-report
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.

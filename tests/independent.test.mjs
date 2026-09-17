@@ -118,3 +118,18 @@ test("a report written or changed on disk but not committed is named commit, nev
   writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings: []\n`);
   assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n/, "a new report not yet committed is named commit, not a new reviewer");
 });
+
+test("a findings list broken by a blank line, an unread bullet or a heading is a repair, in the review and in the report (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const s = head(root).slice(0, 7), at = head(root);
+  const write = (review, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), review); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const reportWith = (findings) => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}`;
+  const reviewWith = (findings) => `commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${findings}`;
+  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`), reportWith("  - one\n\n  - two\n")), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*a blank line inside findings: ends the list/, "the report's list");
+  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n\n  - resolved: two, fixed (independent ${s} 2)\n`), reportWith("  - one\n  - two\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*a blank line inside findings: ends the list/, "the review's list");
+  assert.match(write(reviewWith("  - open: the gate never reads this\n"), reportWith("  - one\n")), /^Resolvable: resolve first/, "an open finding is read when the list is unbroken");
+  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n  * resolved: two, fixed (independent ${s} 2)\n`), reportWith("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*a bullet the loop does not read/, "an unread bullet");
+  assert.match(write(`${reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`)}\n## Notes\n\n- open: a decoy after the heading\n`, reportWith("  - one\n")), /^Done: /, "a list after a heading is ignored, as LOOP-071 requires");
+  assert.match(write(reviewWith(`  - resolved: one, fixed (independent ${s} 1)\n`), reportWith("  - one\n")), /^Done: /, "unbroken lists pass");
+});

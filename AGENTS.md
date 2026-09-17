@@ -117,8 +117,9 @@ above the first heading:
       - open: <defect>
       - resolved: <defect, and how>
 
-`findings:` may be an empty list, never absent. Prose follows the
-header.
+`findings:` may be an empty list, never absent, and is one unbroken
+list of `- ` entries above any heading: a blank line inside it ends it.
+Prose follows the header.
 
 Check execution has a separate working-tree lock. When wake names
 `cairn-check.lock`, wait for a live owner. If the owner is dead or the

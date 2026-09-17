@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: the-wake-resolves-every-realized-by-entry-in-one-git-call
+Current: a-git-that-cannot-start-is-a-refusal-never-a-verdict
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -577,3 +577,11 @@ backlog items: the wake spawned one git process per Realized by entry
 of every live record, and the stop hook wakes at every stop. Adds
 DEC-023; one batch call answers for all of them.
 [Commitment](../commitments/the-wake-resolves-every-realized-by-entry-in-one-git-call.md).
+
+## A git that cannot start is a refusal, never a verdict
+
+Promoted on 2026-09-17 from an observation during the kernel review
+commitments: a git that never started read as a git that said no, or
+as a stack trace, and three one-off test failures fit that shape.
+Adds LOOP-137; the refusal is one line, and nothing is recorded.
+[Commitment](../commitments/a-git-that-cannot-start-is-a-refusal-never-a-verdict.md).

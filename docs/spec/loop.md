@@ -1609,3 +1609,18 @@ identifier to git, and an ambiguous one fails them, so a requirement
 whose text never changed is sent back for a mechanism review. The
 full identifier never becomes ambiguous. Older receipts keep their
 form and git resolves it while it is unique.
+
+[LOOP-137] When git cannot be started, the loop MUST refuse with one
+line naming the cause and a nonzero exit. The refusal MUST NOT print
+a verdict, record evidence, or write a record.
+Falsifier: with a git on PATH that cannot be executed, wake prints a
+verdict or a stack trace, or check records a receipt.
+Status: Agreed 2026-09-17 by promotion promote-a-git-that-cannot-start-is-a-refusal-never-a-verdict
+
+Promoted 2026-09-17 during the kernel review commitments. The git
+helper returned the spawn result and most callers read only its exit
+status or its output, so a git that never started, under load or by
+absence, read as a git that said no, or crashed with a stack trace.
+Three one-off test failures on one day each fit that shape and none
+said so. A spawn failure is the kernel's own failure, and the kernel
+names it the way it names an unreadable record (LOOP-107).

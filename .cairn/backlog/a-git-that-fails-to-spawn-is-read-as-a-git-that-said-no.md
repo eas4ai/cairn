@@ -1,6 +1,7 @@
 # A git that fails to spawn is read as a git that said no
 
 Surfaced from: unstated
+Promoted to: a-git-that-cannot-start-is-a-refusal-never-a-verdict (2026-09-17, by promote-a-git-that-cannot-start-is-a-refusal-never-a-verdict)
 Outside because: an observation of the test suite under load during the kernel review commitments of 2026-09-17, outside every falsifier of the current commitment; the developer directed that review findings enter the backlog
 Captured: 2026-09-17T12:48:10.997Z
 

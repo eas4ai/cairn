@@ -1,5 +1,5 @@
 commitment: record-integrity
-commit: 0b9582a
+commit: f41859a
 examined:
   - the decider vocabulary at the point of writing: each of developer, agent and joint is accepted and stored lowercase; Developer, AGENT, Joint and a padded "  agent  " normalize to the same three; Codex, Shawn, "Shawn and Codex", agents, dev and a whitespace-only value are each a usage error naming all three and DEC-020, with nothing written to docs/decisions/. An empty --decided-by is still the missing-field error, not the vocabulary one, so the two diagnostics do not collide.
   - supersede reaches decide, so it takes the same vocabulary. Attacked: cairn supersede --decided-by Codex exits 3, writes no new record, and leaves the old record unstamped, so a refused decider cannot half-apply a reversal. --decided-by Joint stores joint.
@@ -19,12 +19,12 @@ examined:
   - simulated: a downstream project on the old kernel carrying three records whose placeholder survived realization, as suprnova-directory-starter does. The first wake after the upgrade names a repair rather than the work, once per record. Correct under DEC-021 and undocumented anywhere the developer or the agent would read it.
   - read for the decider vocabulary: docs/manual.md, docs/walkthrough.md, README.md, AGENTS.md, every skill, and the template working agreement new-project writes into a consumer repository. None of them names --decided-by at all, before or after this commit. The vocabulary exists in cairn --help and in the specification only.
 findings:
-  - open: this commit resolves every Realized by entry of every superseded record, which main skipped, so wake costs one git rev-parse per entry more than it did and the cost grows with the reversal history; measured 260ms to 340ms on 100 records with 40 superseded.
-  - open: the refusal names the three deciders and not where the real name goes, so an agent called Codex is told what it may not write without being told that its name belongs in --body.
-  - open: no document a developer or an agent reads names the decider vocabulary; the manual's decision section covers levels and the queue and not this field.
-  - open: nothing tells a project upgrading the kernel that its first wake may name record repairs and that --decided-by has narrowed; CHANGELOG.md has no entry for this work.
-  - open: UNBUILT_LINE escapes parentheses alone, so a future placeholder text containing a regex metacharacter would build a pattern that matches the wrong thing.
-  - open: realize() finds its section with indexOf("## Realized by"), which would match the heading quoted inside a fenced example before the real one.
+  - resolved: this commit resolves every Realized by entry of every superseded record, which main skipped, so wake costs one git rev-parse per entry more than it did and the cost grows with the reversal history; measured 260ms to 340ms on 100 records with 40 superseded. Resolved: a superseded record with no placeholder is skipped before its entries are resolved, so it costs no git at all; re-measured on the same fixture, 345ms to 252ms against main's 249ms (f41859a)
+  - resolved: the refusal names the three deciders and not where the real name goes, so an agent called Codex is told what it may not write without being told that its name belongs in --body. Resolved: the refusal reads "name the person or tool in --body" after the three values (f41859a)
+  - resolved: no document a developer or an agent reads names the decider vocabulary; the manual's decision section covers levels and the queue and not this field. Resolved: the manual's decision section names the three, says they are counted rather than read, says a name or product is one of the three wearing a different word, and says existing records keep what they were written with (f41859a)
+  - resolved: nothing tells a project upgrading the kernel that its first wake may name record repairs and that --decided-by has narrowed; CHANGELOG.md has no entry for this work. Resolved: CHANGELOG.md carries the 0.4.0 entry and a paragraph saying what an upgrade does to a repository that already holds records: nothing is rewritten, a surviving placeholder is named one record per wake, a decider outside the three is refused only at the next write, and every mechanism re-runs once (f41859a)
+  - resolved: UNBUILT_LINE escapes parentheses alone, so a future placeholder text containing a regex metacharacter would build a pattern that matches the wrong thing. Resolved: replaced by a line comparison, hasUnbuilt(), which needs no escaping and drops a CRLF checkout's CR. The escaping attempt itself was wrong and silent: the class [\\] closed early, so nothing was escaped and the pattern matched nothing; two existing DEC-021 tests caught it (f41859a)
+  - resolved: realize() finds its section with indexOf("## Realized by"), which would match the heading quoted inside a fenced example before the real one. Resolved: realize() uses an anchored /^ {0,3}## Realized by[ \t]*$/m search, so a heading quoted in a fenced example is not mistaken for the section (f41859a)
   - resolved: decider() calls trim() on the raw field, and fields() yields an array when Decided by: is written as a list, so cairn reversals crashes on a shape main tallied (reproduced: exit 3, "trim is not a function"). Resolved: decider() reads the field through asList and joins it, so a list-shaped Decided by tallies as the flat form does; tested (0b9582a)
   - resolved: the realization of record-integrity-on-the-developer-s-direction replaced every occurrence of the placeholder string, so the Decision body now says decide writes the 72743f9 commit line under Realized by; the sentence that explains why DEC-021 exists is false. Resolved: the body sentence is restored to quote the placeholder; only the Realized by line names the commit (0b9582a)
   - resolved: a superseded record is skipped before its Realized by section is read, so the placeholder above a resolving entry passes validation there; DEC-021's falsifier names no exemption and a reversal is never deleted (DEC-010). Resolved: the section and its entries are read before the Superseded by skip, and a built record with the placeholder is a repair whether or not it was reversed; an unbuilt superseded record is still never named build; tested (0b9582a)
@@ -65,3 +65,21 @@ in how the record was realized, not in the kernel, and the helper that
 was written the same evening carried the same hazard. All six are
 resolved as one piece of work above, each with a test where a test can
 hold it. No open finding.
+
+## Commitment review at f41859a, 2026-09-17
+
+The developer asked whether this is ready for three projects that run
+it. The pass that answers that question is not the one that attacks the
+new behavior: it asks what an upgrade does to a repository that already
+holds records, and what the new refusal tells an agent that meets it.
+Both had gaps, and the latency regression was mine, introduced by the
+previous round's own fix.
+
+One of these findings is worth remembering past this commitment. The
+escaping I wrote to make the placeholder pattern robust was itself
+broken, and broken silently: the regex compiled, matched nothing, and
+disabled DEC-021 entirely. Only the two tests written a round earlier
+failed. A pattern built from a string is a liability the kernel does not
+need; the line comparison that replaced it cannot fail that way.
+
+No open finding.

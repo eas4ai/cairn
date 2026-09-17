@@ -1,6 +1,7 @@
 # The hooks hang at a root toplevel, hide a failed spawn, and misname a vanished cwd
 
 Surfaced from: PKG-022
+Promoted to: the-hooks-name-the-failure-they-met (2026-09-17, by promote-the-hooks-name-the-failure-they-met)
 Outside because: found by the kernel review the developer requested on 2026-09-17 after this commitment reached Done; every mechanism of the commitment passes, the case lies outside its falsifiers, and the developer directed that review findings enter the backlog
 Captured: 2026-09-17T11:59:29.173Z
 

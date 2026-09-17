@@ -442,3 +442,24 @@ the release; one script keeps the four files agreeing, and the tag
 and the changelog entry make a release findable from Git alone. The
 version files are declared inputs, so their evidence goes stale at
 the release commit, and the loop's next check and review record it.
+
+[PKG-041] A hook MUST name the failure it met. When the working
+directory on standard input does not exist, the line MUST say so and
+name the directory. When a hook entry file cannot start the shared
+hook, the entry MUST print one line on standard error naming the
+cause and exit 0.
+Falsifier: with a cwd on standard input that no longer exists, the
+hook's line says git cannot run; or a hook entry whose shared hook
+file is missing prints nothing or exits nonzero.
+Status: Agreed 2026-09-17 by promotion promote-the-hooks-name-the-failure-they-met
+
+Promoted 2026-09-17 from the kernel review's findings 7, 8 and 10.
+The hook spawned git in the harness's working directory, so a
+directory that had vanished was reported as a git that cannot run,
+and the Muse entry files exited with the child's status or 0, so a
+child that never started was silent. The same work makes the walk
+from the working directory to the Git toplevel end by construction:
+when the toplevel is the filesystem root, dirname("/") is "/", and
+the old loop never ended, a hang PKG-022 already forbids. A
+repository at / cannot be built in a test, so that repair is read,
+not demonstrated.

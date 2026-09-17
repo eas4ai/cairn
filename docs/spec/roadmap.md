@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: an-answer-shaped-as-the-developer-s-waits-for-the-agent-s-reply
+Current: the-hooks-name-the-failure-they-met
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -543,3 +543,12 @@ reply to an ask, any answer was stored as that reply, so a developer
 who refined the question had it presented back as the agent's
 explanation. Adds LOOP-135; the refusal names whose turn it is.
 [Commitment](../commitments/an-answer-shaped-as-the-developer-s-waits-for-the-agent-s-reply.md).
+
+## The hooks name the failure they met
+
+Promoted on 2026-09-17 from the kernel review: a vanished working
+directory was reported as a missing git, a Muse entry whose hook
+could not start exited quietly, and the walk to a toplevel at the
+filesystem root never ended. Adds PKG-041; the walk ends by
+construction.
+[Commitment](../commitments/the-hooks-name-the-failure-they-met.md).

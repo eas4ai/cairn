@@ -1,6 +1,7 @@
 commitment: record-integrity
-commit: f41859a
+commit: 79b8294
 examined:
+  - re-examined at 79b8294: this repository ships as a plugin, and its records named the three projects the audit read. The decision record, the commitment and this review now describe the defect without naming whose it is; the counts and shapes that made the case are unchanged. A spec-lint fixture and a manual host-path example carried one of those names from before this commitment and now use a neutral one. Nothing outside the .git directory names another project.
   - the decider vocabulary at the point of writing: each of developer, agent and joint is accepted and stored lowercase; Developer, AGENT, Joint and a padded "  agent  " normalize to the same three; Codex, Shawn, "Shawn and Codex", agents, dev and a whitespace-only value are each a usage error naming all three and DEC-020, with nothing written to docs/decisions/. An empty --decided-by is still the missing-field error, not the vocabulary one, so the two diagnostics do not collide.
   - supersede reaches decide, so it takes the same vocabulary. Attacked: cairn supersede --decided-by Codex exits 3, writes no new record, and leaves the old record unstamped, so a refused decider cannot half-apply a reversal. --decided-by Joint stores joint.
   - the reading path, on records written by another kernel or another project: Agent and "  agent  " tally as agent 2, Codex as "unrecognized: Codex 1", and a record with no Decided by line as "unrecorded 1". Nothing is dropped and nothing is guessed, so the drift the audit found stays visible in the report that found it (DEC-011). No existing record is rewritten by any command.
@@ -81,5 +82,19 @@ broken, and broken silently: the regex compiled, matched nothing, and
 disabled DEC-021 entirely. Only the two tests written a round earlier
 failed. A pattern built from a string is a liability the kernel does not
 need; the line comparison that replaced it cannot fail that way.
+
+No open finding.
+
+## Commitment review at 79b8294, 2026-09-17
+
+The developer's audit was the evidence for this work, and I wrote where
+it came from into records that ship to whoever installs the plugin. The
+substance of the case never needed the names: seven spellings of three
+deciders and three records contradicting themselves are the finding,
+and they read the same without them.
+
+Worth carrying forward: a record here is a distributed artifact, not a
+working note. What goes in it is what a stranger installing the plugin
+should read.
 
 No open finding.

@@ -13,4 +13,4 @@ Promotes .cairn/backlog/the-hooks-hang-at-a-root-toplevel-hide-a-failed-spawn-an
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 116b124fe36365b14b1d466e5763587ccc471798 The hooks name a vanished working directory and a hook that cannot start; the toplevel walk ends by construction (PKG-041)

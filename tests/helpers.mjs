@@ -74,6 +74,6 @@ export const review = (root, findings = [], report = []) => {
   // The independent report the gate requires, at the same commit (LOOP-020); null leaves it out.
   if (report === null) return;
   const at = head(root);
-  writeFileSync(join(root, ".cairn/reviews/first.independent.md"), `commitment: first\ncommit: ${at}\nreviewer: a fresh reviewer\nexamined:\n  - everything\nfindings:${report.length ? "\n" + report.map((f) => `  - ${f}\n`).join("") : " []\n"}`);
-  git(root, "add", "--", ".cairn/reviews/first.independent.md"); git(root, "commit", "-q", "-m", "independent report", "--", ".cairn/reviews/first.independent.md");   // committed, as the gate reads it
+  writeFileSync(join(root, ".cairn/reviews/first.independent.md"), `commitment: first\ncommit: ${at}\nreviewer: a fresh reviewer\nexamined:\n  - everything at ${at}\nfindings:${report.length ? "\n" + report.map((f) => `  - ${f}\n`).join("") : " []\n"}`);
+  git(root, "add", "--", ".cairn/reviews/first.md", ".cairn/reviews/first.independent.md"); git(root, "commit", "-q", "-m", "review and independent report", "--", ".cairn/reviews/first.md", ".cairn/reviews/first.independent.md");   // committed together, as the gate reads them
 };

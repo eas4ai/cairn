@@ -197,3 +197,19 @@ test("a margin line that only looks like a field never ends a list in silence (L
   assert.match(write(own(carry(1, "one"), `examined:\n  - x\nNote: and the tests\n  - y\n`), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*examined: holds a line/, "the same in examined:");
   assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Notes\n\nNote: I also read the tests.\n"), /^Done: /, "after a heading it is prose");
 });
+
+test("a field name repeated inside a list is named, the report's findings under a heading are named beside a list, and the repair offers the fix that keeps the finding (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const s = head(root).slice(0, 7), at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const report = (findings) => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n${findings}`;
+  const own = (findings) => `commitment: first\ncommit: ${at}\nexamined:\n  - x\nfindings:\n${findings}`;
+  const carry = (n, words) => `  - resolved: ${words}, fixed (independent ${s} ${n})\n`;
+  for (const repeated of ["Examined: also the tests", "Commitment: first", "Commit: 1234567 is what I read"])
+    assert.match(write(own(carry(1, "one") + `${repeated}\n  - open: a real defect\n`), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*cannot read as an entry/, repeated);
+  assert.match(write(own(carry(1, "one")), report(`  - one\nFindings: two\n  - two is broken\n`)), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*cannot read as an entry/, "the same in a report");
+  assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Findings\n\n- two is broken\n"), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*under a heading/, "a report's findings under a heading beside its list");
+  assert.match(write(own(carry(1, "one")), report("  - one\n") + "\n## Notes\n\nI also read the walkthrough.\n"), /^Done: /, "prose under another heading is prose");
+  assert.match(write(own(carry(1, "one")), report("  - one\ntwo lost its dash\n")), /give a finding its own - entry, put a heading above prose/, "the repair offers both fixes");
+});

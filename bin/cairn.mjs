@@ -791,7 +791,7 @@ function independentGap(root, slug, rv) {
   const name = `.cairn/reviews/${slug}.independent.md`, own = `.cairn/reviews/${slug}.md`;
   const committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
   const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
-  const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; keep the reviewer's own words, and put a heading above prose that follows its findings, or ask the reviewer again (LOOP-020)` });
+  const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; keep the reviewer's own words: give a finding its own - entry, put a heading above prose that follows the findings, or ask the reviewer again (LOOP-020)` });
   const loose = dirtyInputs(root, [own, name]);   // the review or the report on disk differs from HEAD: commit it before either is judged
   if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
   const text = committed(name);
@@ -837,16 +837,18 @@ function independentGap(root, slug, rv) {
 // too unless it reads as a finding of its own. Blank lines are nothing. Every
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
-const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i, FIELD = /^(?:commitment|commit|examined|findings|reviewer):(?:[ \t]|$)/i;   // only a field these records use ends a list, so a dropped entry or a note is never mistaken for one
+const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i, FIELD = /^(commitment|commit|examined|findings|reviewer):(?:[ \t]|$)/i;   // only a field these records use ends a list, so a dropped entry or a note is never mistaken for one
 function listOf(text, key) {
   const whole = withoutFences(String(text ?? "")).join("\n"), head = whole.split(/\n(?= {0,3}#)/)[0];
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
+  const above = new Set([...head.slice(0, m.index).matchAll(/^([A-Za-z][A-Za-z _-]*):(?:[ \t]|$)/gm)].map((x) => x[1].toLowerCase().trim()).concat(key));
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
   let indent = null, blank = false, unread = null, dropped = false;
   for (const line of head.slice(m.index + m[0].length).split("\n")) {
     if (!line.trim()) { blank = true; continue; }
-    if (FIELD.test(line)) break;                                   // the next field ends this list
+    const field = FIELD.exec(line);
+    if (field && !above.has(field[1].toLowerCase())) break;        // the next field of the record ends this list; a name already above it is not one
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
     if (item && !(deep && FINDING.test(item[2])) && !empty) {
       if (unread) { dropped = true; continue; }
@@ -861,7 +863,7 @@ function listOf(text, key) {
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim()), titles = [...rest.matchAll(/^ {0,3}#{1,6}[ \t]*(.+)$/gm)].map((x) => x[1]);
-  const heading = below.some((x) => /^open:/i.test(x)) || (!entries.length && !!below.length && (!empty || titles.some((x) => /finding/i.test(x))));
+  const heading = below.some((x) => /^open:/i.test(x)) || (!!below.length && (titles.some((x) => /finding/i.test(x)) || (!entries.length && !empty)));
   return { entries, empty, value: empty ? null : value || null, dropped, heading, unread };
 }
 function reviewOf(root, slug) {

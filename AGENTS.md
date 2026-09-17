@@ -127,7 +127,10 @@ entries are nothing. Every other line inside a list is named by the loop
 rather than read past. Prose goes after a heading, where a finding never
 belongs: a bullet under a heading is read as prose unless it reads as a
 finding, or the record names `findings:` and lists none above it.
-`findings: []` says there are none, and leaves the body's bullets prose. An independent report carries
+`findings: []` says there are none, and leaves the body's bullets prose.
+A heading whose title names findings holds no list: a report's findings
+carry no prefix, so the loop cannot tell them from notes, and every
+finding belongs in the `findings:` list. An independent report carries
 `commitment:`, `commit:`, `examined:` and `findings:` in the same shape.
 
 Check execution has a separate working-tree lock. When wake names

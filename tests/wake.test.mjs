@@ -2,7 +2,9 @@
 // commitment's precedence. Tests spawn the CLI against real temp repos.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdtempSync, readFileSync, chmodSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo, cairn, review, passing, failing, head, commit } from "./helpers.mjs";
@@ -111,4 +113,18 @@ test("the loop never waits on the review queue (DEC-015)", () => {
   const root = repo({ ".cairn/mechanisms/t": passing("R-001", "R-002"), ".cairn/queue/some-decision": "decision: some-decision\nqueued: 2026-09-04T00:00:00Z\n" });
   cairn(root, "check"); review(root);
   assert.equal(wake(root).status, 0);
+});
+
+test("twenty built records cost one git call to resolve, not twenty (DEC-023)", () => {
+  const root = repo({ ".cairn/mechanisms/m": passing("R-001", "R-002") });
+  for (let i = 0; i < 20; i++) writeFileSync(join(root, `docs/decisions/d${i}.md`), `# D${i}\n\nLevel: Judged\nDecided by: agent\nRests on: R-001\nWould be wrong if: never\n\n## Realized by\n\n- ${head(root)} init\n`);
+  commit(root, "twenty built decisions");
+  // A git on PATH that logs each invocation, then runs the real one.
+  const real = spawnSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim(), bin = mkdtempSync(join(tmpdir(), "cairn-git-")), log = join(bin, "calls");
+  writeFileSync(join(bin, "git"), `#!/bin/sh\necho "$@" >> "${log}"\nexec "${real}" "$@"\n`); chmodSync(join(bin, "git"), 0o755);
+  const r = spawnSync(process.execPath, [fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url)), "wake"], { cwd: root, encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout + r.stderr);
+  const calls = readFileSync(log, "utf8").trim().split("\n");
+  assert.equal(calls.filter((c) => /^rev-parse --verify /.test(c)).length, 0, "no per-entry rev-parse: " + calls.join(" | "));
+  assert.equal(calls.filter((c) => c === "cat-file --batch-check").length, 1, "one batch call: " + calls.join(" | "));
 });

@@ -327,29 +327,40 @@ const hasUnbuilt = (section) => section.split("\n").some((l) => l.trim() === UNB
 // entry makes it built, a placeholder left above one is named as a
 // repair, and an identifier a shallow clone or an ambiguous prefix
 // cannot resolve is named as such (DEC-007, DEC-021, LOOP-113).
+// One git call resolves every Realized by entry of every record (DEC-023): the batch echoes one line per input, in order.
+function resolveCommits(root, ids) {
+  const out = new Map();
+  if (!ids.length) return out;
+  const r = spawnSync("git", ["cat-file", "--batch-check"], { cwd: root, encoding: "utf8", maxBuffer: Infinity, input: ids.map((id) => `${id}^{commit}\n`).join("") });
+  const lines = r.error || r.status !== 0 ? [] : r.stdout.trimEnd().split("\n");
+  ids.forEach((id, i) => out.set(id, / commit \d+$/.test(lines[i] ?? "") ? "commit" : / ambiguous$/.test(lines[i] ?? "") ? "ambiguous" : "missing"));
+  return out;
+}
 function decisionVerdict(root) {
   const dir = join(root, "docs", "decisions");
-  for (const n of files(dir)) {
+  const records = files(dir).map((n) => {
     const t = withoutFences(read(join(dir, n))).join("\n"), f = recordFields(t), path = rel(root, join(dir, n));
-    const repair = (why) => ({ verdict: "Resolvable", action: `repair ${path}`, why });
-    const missing = ["Level", "Decided by", "Rests on", "Would be wrong if"].find((k) => !f[k]);
-    if (missing) return repair(`the record lacks its ${missing}: line (DEC-005, LOOP-109)`);
-    if (f.Supersedes && !existsSync(join(dir, `${f.Supersedes}.md`))) return repair(`Supersedes: ${f.Supersedes} names no record under docs/decisions/; a reversal is never deleted (DEC-010, LOOP-109)`);
     const headings = [...t.matchAll(/^ {0,3}## Realized by[ \t]*$/gm)];
     const section = headings.length !== 1 ? "" : t.slice(headings[0].index + headings[0][0].length).split(/^ {0,3}#{1,6}[ \t]/m)[0];
     // A superseded record is never deleted, so its placeholder is held to the same line (DEC-010,
     // DEC-021); with no placeholder there is nothing left to judge and its entries cost nothing.
-    const placeholder = hasUnbuilt(section), superseded = "Superseded by" in f;
+    return { f, path, placeholder: hasUnbuilt(section), superseded: "Superseded by" in f, ids: [...section.matchAll(/^- ([0-9a-f]{7,64})[ \t]+(\S[^\n]*)$/gm)].map((m) => m[1]) };
+  });
+  const resolved = resolveCommits(root, [...new Set(records.filter((x) => !(x.superseded && !x.placeholder)).flatMap((x) => x.ids))]);
+  for (const { f, path, placeholder, superseded, ids } of records) {
+    const repair = (why) => ({ verdict: "Resolvable", action: `repair ${path}`, why });
+    const missing = ["Level", "Decided by", "Rests on", "Would be wrong if"].find((k) => !f[k]);
+    if (missing) return repair(`the record lacks its ${missing}: line (DEC-005, LOOP-109)`);
+    if (f.Supersedes && !existsSync(join(dir, `${f.Supersedes}.md`))) return repair(`Supersedes: ${f.Supersedes} names no record under docs/decisions/; a reversal is never deleted (DEC-010, LOOP-109)`);
     if (superseded && !placeholder) continue;
-    const entries = [...section.matchAll(/^- ([0-9a-f]{7,64})[ \t]+(\S[^\n]*)$/gm)].map((m) => ({ id: m[1], r: git(root, "rev-parse", "--verify", `${m[1]}^{commit}`) }));
     // A resolving entry settles the record, but not while it still says it was never built (DEC-021).
     // The test is a resolving entry, so a shallow clone reaches its own repair below instead (LOOP-113).
-    const built = entries.some((e) => e.r.status === 0);
+    const built = ids.some((id) => resolved.get(id) === "commit");
     if (built && placeholder) return repair(`Realized by holds "${UNBUILT}" above a commit that resolves; remove the placeholder line, which says the decision was never built (DEC-021)`);
     if (built || superseded) continue;
-    if (entries.length && git(root, "rev-parse", "--is-shallow-repository").stdout.trim() === "true") return repair(`Realized by names ${entries[0].id}, which this shallow clone cannot resolve; fetch the history before judging the record (LOOP-113)`);
-    const ambiguous = entries.find((e) => /ambiguous/i.test(e.r.stderr));
-    if (ambiguous) return repair(`Realized by identifier ${ambiguous.id} is ambiguous; lengthen it (LOOP-113)`);
+    if (ids.length && git(root, "rev-parse", "--is-shallow-repository").stdout.trim() === "true") return repair(`Realized by names ${ids[0]}, which this shallow clone cannot resolve; fetch the history before judging the record (LOOP-113)`);
+    const ambiguous = ids.find((id) => resolved.get(id) === "ambiguous");
+    if (ambiguous) return repair(`Realized by identifier ${ambiguous} is ambiguous; lengthen it (LOOP-113)`);
     return { verdict: "Resolvable", action: `build ${path}`, why: `the record needs a resolving commit identifier followed by its subject in Realized by, replacing "${UNBUILT}" rather than sitting under it; the commit or subject is missing (DEC-006, DEC-021)` };
   }
   return null;

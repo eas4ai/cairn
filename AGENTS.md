@@ -202,7 +202,8 @@ context, such as a fresh subagent or session, give it only the
 commitment file, its requirement texts and the commit range, and ask
 it for defects. Keep its report verbatim in
 .cairn/reviews/<slug>.independent.md with the review's commit: line,
-and carry each of its findings into your review as open or resolved.
+commit it, and carry each of its findings into your review as open or
+resolved. A review redone at a later commit needs a new report there.
 
 Merge other branches with `git merge --no-ff` so their commits stay off
 this loop's first-parent history. Cairn checks each of this loop's own

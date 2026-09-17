@@ -13,4 +13,4 @@ Promotes .cairn/backlog/the-release-script-cannot-read-a-compact-json-version-fi
 
 ## Realized by
 
-(none yet: recorded, not built)
+- ab5e655f57081f4f49960fa1878694c2f7012e51 The release script reads a version field in any JSON spacing and changes only the version (PKG-042)

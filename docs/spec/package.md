@@ -463,3 +463,17 @@ when the toplevel is the filesystem root, dirname("/") is "/", and
 the old loop never ended, a hang PKG-022 already forbids. A
 repository at / cannot be built in a test, so that repair is read,
 not demonstrated.
+
+[PKG-042] The release script MUST find a version file's version field
+with any whitespace around its colon. A release MUST change nothing in
+a version file but the version.
+Falsifier: a version file written as compact JSON, `"version":"0.1.0"`,
+makes the script refuse; or a release changes a byte of a version file
+other than the version.
+Status: Agreed 2026-09-17 by promotion promote-the-release-script-reads-a-version-field-in-any-json-spacing
+
+Promoted 2026-09-17 when release 0.4.0 was refused. The script matched
+the literal text `"version": "X"` with one space, and the Muse manifest
+is written compact, as the Muse validator writes it. Every manifest in
+the test fixture had the space, so PKG-040's test passed while no real
+release could be cut.

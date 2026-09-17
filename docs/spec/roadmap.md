@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: a-git-that-cannot-start-is-a-refusal-never-a-verdict
+Current: the-release-script-reads-a-version-field-in-any-json-spacing
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -585,3 +585,10 @@ commitments: a git that never started read as a git that said no, or
 as a stack trace, and three one-off test failures fit that shape.
 Adds LOOP-137; the refusal is one line, and nothing is recorded.
 [Commitment](../commitments/a-git-that-cannot-start-is-a-refusal-never-a-verdict.md).
+
+## The release script reads a version field in any JSON spacing
+
+Promoted on 2026-09-17 when release 0.4.0 was refused: the script
+matched the version field only with a space after the colon, and the
+Muse manifest is compact. Adds PKG-042; the file's formatting is kept.
+[Commitment](../commitments/the-release-script-reads-a-version-field-in-any-json-spacing.md).

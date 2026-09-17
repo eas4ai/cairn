@@ -1,6 +1,7 @@
 # The release script cannot read a compact JSON version field
 
 Surfaced from: PKG-040
+Promoted to: the-release-script-reads-a-version-field-in-any-json-spacing (2026-09-17, by promote-the-release-script-reads-a-version-field-in-any-json-spacing)
 Outside because: found while cutting release 0.4.0 after the current commitment reached Done; the commitment's own falsifiers pass, and the script's refusal blocks the release rather than producing a wrong one
 Captured: 2026-09-17T13:22:53.108Z
 

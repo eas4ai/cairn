@@ -205,8 +205,9 @@ it for defects. Keep its report verbatim in
 commit it. Ask the reviewer to name the commit it examined in its
 examined: list. Carry its finding number n into your review on its own
 line as `open: <its words> (independent <commit> n)` or
-`resolved: <its words>, and how (independent <commit> n)`, where
-<commit> is the first seven characters of the report's commit. A review
+`resolved: <its words>, and how (independent <commit> n)`, with the
+citation last on the line, where <commit> is the first seven characters
+of the report's commit. A review
 redone at a later commit needs a new report there; never edit a report
 to fit.
 

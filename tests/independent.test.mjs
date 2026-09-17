@@ -95,3 +95,13 @@ test("a finding that quotes a citation in its own words is carried by copying it
   writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings: []\n`); commit(root, "a wrapped uncited line, nothing to carry");
   assert.match(wake(root), /^Done: /);
 });
+
+test("a citation that is not last on its line is refused as such, and a finding ending with a citation is carried in the short form (LOOP-020)", () => {
+  const root = repo();
+  const round = (entries, findings) => { const s = head(root).slice(0, 7); review(root, entries.map((e) => e.replace(/#(\d+)/g, `${s} $1`)), findings); commit(root, "a round"); return wake(root); };
+  for (const entry of ["resolved: a defect, fixed (independent #1).", "resolved: a defect (independent #1), fixed in abc1234", "resolved: a defect, fixed (independent #1) (see 0350326)"])
+    assert.match(round([entry], ["a defect"]), /a review line cites \(independent [0-9a-f]{7} 1\) but does not end with it; put the citation last on its line/, entry);
+  const quoting = "the wrap refusal does not hold (independent e69a3c8 2)";
+  assert.match(round([`resolved: ${quoting} (independent #1)`], [quoting]), /^Done: /, "the short form, after a finding that ends with a citation");
+  assert.match(round([`resolved: ${quoting}, fixed (independent #1)`], [quoting]), /^Done: /, "the documented form, as before");
+});

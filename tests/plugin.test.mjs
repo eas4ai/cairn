@@ -43,6 +43,15 @@ test("the hooks file registers session-start and stop against the plugin's own h
   }
 });
 
+test("a Muse hook entry whose shared hook is missing prints one line and exits 0 (PKG-041, PKG-022)", () => {
+  const plugin = mkdtempSync(join(tmpdir(), "cairn-muse-")); cpSync(here("../bin/hooks/"), join(plugin, "bin/hooks"), { recursive: true });   // bin/hook.mjs deliberately absent
+  for (const entry of ["stop", "session-start"]) {
+    const r = spawnSync(process.execPath, [join(plugin, `bin/hooks/${entry}.mjs`)], { cwd: plugin, encoding: "utf8", input: "{}" });
+    assert.equal(r.status, 0, entry + ": " + r.stderr); assert.equal(r.stdout, "", entry + " prints no decision");
+    assert.equal(r.stderr.trim().split("\n").length, 1, entry + ": one line: " + r.stderr); assert.match(r.stderr, /^cairn hook: .*hook\.mjs is missing/, entry + ": " + r.stderr);
+  }
+});
+
 // The registered commands, run as a harness runs them, from a plugin root that is a copy of bin/ elsewhere.
 test("the registered commands print the verdict at session start, link the command into the plugin, and refuse a stop while wake says Resolvable (PKG-038, PKG-021)", () => {
   const root = base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002") });

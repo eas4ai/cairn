@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readlinkSync, lstatSync, mkdirSync, cpSync, writeFileSync, appendFileSync, existsSync, realpathSync, chmodSync, readFileSync } from "node:fs";
+import { mkdtempSync, readlinkSync, lstatSync, mkdirSync, cpSync, writeFileSync, appendFileSync, existsSync, realpathSync, chmodSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as base, cairn, commit, review, fromFile } from "./helpers.mjs";
@@ -18,6 +18,16 @@ const KERNEL = fileURLToPath(new URL("../bin/cairn.mjs", import.meta.url));
 const hook = (mode, cwd, env = {}, event = {}) => spawnSync(process.execPath, [HOOK, mode], { cwd, encoding: "utf8", input: JSON.stringify({ cwd, hook_event_name: mode, ...event }), env: { ...process.env, PATH: BARE, HOME: mkdtempSync(join(tmpdir(), "cairn-home-")), ...env } });
 const repo = () => base({ ".cairn/mechanisms/m": fromFile("R-001", "R-002") });
 const escalate = (root) => cairn(root, "escalate", "--concerns", "R-001", "--question", "q", "--recommend", "x", "--because", "y", "--if-wrong", "z", "--instead", "w");
+
+test("a working directory that no longer exists is named as the failure, and git is not blamed (PKG-041, PKG-022)", () => {
+  const gone = mkdtempSync(join(tmpdir(), "cairn-gone-")); rmSync(gone, { recursive: true });
+  for (const mode of ["stop", "session-start"]) {
+    const r = spawnSync(process.execPath, [HOOK, mode], { cwd: tmpdir(), encoding: "utf8", input: JSON.stringify({ cwd: gone, hook_event_name: mode }), env: { ...process.env, PATH: BARE, HOME: mkdtempSync(join(tmpdir(), "cairn-home-")) } });
+    assert.equal(r.status, 0, mode + ": " + r.stderr); assert.doesNotMatch(r.stdout, /decision/, mode + " must not block");
+    assert.equal(r.stderr.trim().split("\n").length, 1, mode + ": one line: " + r.stderr);
+    assert.match(r.stderr, /^cairn hook: working directory .* does not exist/, mode + ": " + r.stderr); assert.ok(r.stderr.includes(gone)); assert.doesNotMatch(r.stderr, /cannot run git/, mode + ": " + r.stderr);
+  }
+});
 
 test("the stop hook refuses a stop while wake says Resolvable, with the verdict as the reason (PKG-018)", () => {
   const root = repo();

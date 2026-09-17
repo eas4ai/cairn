@@ -22,11 +22,12 @@ const complain = (e) => process.stderr.write(`cairn hook: ${oneLine(e.message ??
 const resolves = (p) => { try { return statSync(p).isFile() ? realpathSync(p) : null; } catch { return null; } };
 // The project: the nearest roadmap at or above cwd, inside the Git working tree (PKG-035).
 const root = (cwd) => {
+  if (!existsSync(cwd)) throw new Error(`working directory ${cwd} does not exist`);   // named before git is blamed for it (PKG-041)
   const r = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
   if (r.error) throw new Error(`cannot run git: ${r.error.message}`);
   if (r.status !== 0) return null;
-  const top = realpathSync(r.stdout.trim());
-  for (let d = realpathSync(cwd); d === top || d.startsWith(top + "/"); d = dirname(d)) if (existsSync(join(d, "docs", "spec", "roadmap.md"))) return d;
+  const top = realpathSync(r.stdout.trim()), inside = (d) => d === top || d.startsWith(top.endsWith("/") ? top : top + "/");
+  for (let d = realpathSync(cwd); inside(d); d = dirname(d)) { if (existsSync(join(d, "docs", "spec", "roadmap.md"))) return d; if (d === dirname(d)) break; }   // ends at the toplevel, or at / when that is the toplevel
   return null;
 };
 // The command the agent runs: cairn on PATH, else the link's target, else this kernel (PKG-021, PKG-033).

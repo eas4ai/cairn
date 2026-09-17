@@ -1,6 +1,14 @@
 commitment: the-stop-hook-holds-without-trapping
-commit: 0213b266
+commit: 9e0ab9a7
 examined:
+  - completion review at 9e0ab9a7: every requirement passes on fresh evidence and the full suite passes at 494. Each of the five new or reversed tests failed on the hook and kernel at 0213b26 and passes now.
+  - this morning's trap, rerun on this repository: the production command on PATH is cairn 0.5.0 at ~/workspace2/cairn, and its own wake here says "run PKG-018, the kernel changed", the staleness the old hook refused every stop on. The new hook with that command first on PATH judges with this checkout's bin/cairn.mjs, whose digest the receipts carry, and gives the checkout's real verdict. The probe's refusal count was removed afterwards.
+  - a project below the Git toplevel, on a scratch repository: the count is written to the outer Git directory, no .git appears in the project, stops one to three are refused, and the fourth goes through with the systemMessage and a stop record under the project's .cairn/stops/.
+  - cheating, attacked: deleting the count file or touching a file resets the count, which only brings more refusals; idling three times gets the stop, but the harness shows the developer the message and the next wake demands an explanation before any other work; deleting an unexplained record before the next wake hides it from the wake, but not from the message the developer already saw. The valve is visible, not preventable, as the review before agreement said.
+  - two sessions stopping at the same moment can overwrite each other's count; a lost count restarts at one, which refuses more, never less.
+  - the fingerprint runs git diff HEAD on every refused stop; a very large uncommitted diff makes each refusal slower, not wrong.
+  - limits: Codex's handling of systemMessage is not verified; the stop record and the next wake hold either way. The explain verdict comes after a live check lock and before an in-progress record, so a stop taken mid-action is explained first and then reconciled.
+  - the package: bin/ is 1631 lines against the 1900 ceiling; pkg-lint and spec-lint clean; the manual's stop hook paragraph and the working agreement's explain move say what the code does.
   - mechanism review of node-test for PKG-018 as revised: tests/hooks.test.mjs line 33 passes stop_hook_active false and expects a block, which the revision keeps; line 192 passes stop_hook_active true and expects the stop to be let through, which the revision now forbids. The test observes the behavior the requirement was revised to remove.
   - mechanism review of node-test for PKG-021 and PKG-033 as revised: the hook tests cover a link to another checkout and a wrapper on PATH, which the revisions keep when no receipt names another kernel. No test writes receipts with one kernel and runs the hook with a different kernel on PATH, so the evidence rule is unobserved, and the hook does not implement it.
   - PKG-043, PKG-044 and LOOP-139 are new; no test observes them and nothing implements them.
@@ -15,3 +23,15 @@ The revisions reverse one behavior the tests pin and add three the
 tests do not reach. All three findings are resolved as one
 implementation action after this record, each new test red on the code
 at this commit and green after.
+
+## Commitment review at 9e0ab9a7, 2026-09-17
+
+The hook now refuses only what the agent can act on, and the test of
+that was this repository itself: the kernel mismatch that produced a
+dozen empty refusals today no longer produces one. The valve is the
+part the developer asked to be cheat-proof, and it is not: an idle
+agent can still stop. What changed is that it cannot stop quietly. The
+message reaches the developer at the moment it happens, and the next
+session starts by explaining it in the history.
+
+No open finding.

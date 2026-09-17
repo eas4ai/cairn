@@ -1,6 +1,7 @@
 commitment: the-release-script-reads-a-version-field-in-any-json-spacing
-commit: 25af927d
+commit: 0ca53012
 examined:
+  - re-examined at 0ca53012: the only declared input that changed is CHANGELOG.md, which adds the PKG-042 line to the 0.4.0 entry; no code changed, every mechanism re-run and pass
   - the failure demonstration before the fix: with the new test in place and scripts/release.mjs at ab5e655's parent, the release of a fixture whose Muse manifest is compact was refused with the same line the real 0.4.0 release printed, '.muse-plugin/plugin.json does not carry "version": "0.1.0" exactly once'; with the change it releases 0.2.0, the compact file stays compact with only the version changed, the three pretty manifests and the marketplace listing are byte for byte what a release should write, and the tag exists. The four release tests pass, and the full suite passes at 486.
   - the real repository, on a scratch clone: the script passed the version-file check on all five real files, which the old script refused, and stopped only at the Done check because this review did not exist yet. A direct count shows each of the five files carries the field exactly once.
   - the match on shapes, probed directly: pretty, compact, a newline after the colon and tabs around it each match once and keep their spacing when rewritten; a minVersion or engine_version key carrying the same value is not matched, because the pattern needs the quote directly before version; a version that differs only in its dots is not matched, since the dots are escaped; a file carrying the field twice matches twice and is refused as before.

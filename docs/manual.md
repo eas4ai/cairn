@@ -214,7 +214,10 @@ cairn answer storage-choice 'Syncing would let a user open a saved draft on anot
 That plain-text form is valid **only when the record is waiting for the
 agent's explanation**. The command decides whose turn it is from the file;
 it does not authenticate the person typing. Your next answer is again `ok`,
-`instead <instruction>`, or `ask <question>`.
+`instead <instruction>`, or `ask <question>`. While the record is still
+waiting for the agent's explanation, an answer in one of those three forms
+is refused and nothing is written, so a refined question cannot be stored
+as the agent's reply; send it after the agent has replied (LOOP-135).
 
 Answers are one line. Quote a question or instruction when typing it in the
 shell. A closed answer cannot be overwritten with another `answer` command.

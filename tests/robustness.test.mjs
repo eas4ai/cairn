@@ -141,3 +141,16 @@ test("record-writing commands refuse to run outside a Cairn repository and write
   }
   assert.deepEqual(readdirSync(plain), []);
 });
+
+test("a git that cannot start is one line and exit 3 from wake and from check, with nothing recorded (LOOP-137)", () => {
+  const root = setup();
+  // A PATH whose only git is a file that cannot be executed, beside node.
+  const bin = mkdtempSync(join(tmpdir(), "cairn-nogit-")); writeFileSync(join(bin, "git"), "not a program\n"); chmodSync(join(bin, "git"), 0o644);
+  const env = { ...process.env, PATH: `${bin}:${join(process.execPath, "..")}` };
+  for (const cmd of ["wake", "check"]) {
+    const r = spawnSync(process.execPath, [CLI, cmd], { cwd: root, encoding: "utf8", env });
+    assert.equal(r.status, 3, cmd + ": " + r.stdout + r.stderr); assert.equal(r.stdout, "", cmd + " printed a verdict: " + r.stdout);
+    assert.equal(r.stderr.trim().split("\n").length, 1, cmd + ": one line: " + r.stderr); assert.match(r.stderr, /^cairn: cannot run git: .*EACCES/, cmd + ": " + r.stderr);
+  }
+  assert.deepEqual(records(root, "R-001"), [], "no receipt"); assert.equal(readdirSync(join(root, ".git")).includes("cairn-check.lock"), false, "no lock left behind");
+});

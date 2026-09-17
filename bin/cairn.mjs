@@ -81,7 +81,9 @@ const sha = (s) => "sha256:" + createHash("sha256").update(s).digest("hex");
 // The kernel that writes a record: the two files that decide verdicts and write (LOOP-023, LOOP-095).
 const version = () => JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;   // one version source, read only when asked (PKG-039)
 const KERNEL_DIGEST = sha(["cairn.mjs", "spec.mjs"].map((f) => readFileSync(new URL(`./${f}`, import.meta.url), "utf8")).join("\n"));
-const git = (root, ...args) => spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: Infinity });
+// Every git call in the kernel: a git that cannot start is the kernel's own failure, one line and exit 3 through main's catch, never a verdict (LOOP-137).
+const gitRun = (root, args, input) => { const r = spawnSync("git", args, { cwd: root, encoding: "utf8", maxBuffer: Infinity, ...(input === undefined ? {} : { input }) }); if (r.error) throw new Error(`cannot run git: ${r.error.message}`); return r; };
+const git = (root, ...args) => gitRun(root, args);
 const headSha = (root) => { const r = git(root, "rev-parse", "--short", "HEAD"); return r.status === 0 ? r.stdout.trim() : null; };
 
 // The roadmap's Current: lines outside fenced examples: the wake and the footprint's walk read them alike (LOOP-104, LOOP-134).
@@ -294,8 +296,7 @@ function promotedContractVerdict(root, c, ctx, agreed) {
   return { verdict: "Resolvable", action: `escalate ${c.slug}`, why: `a promoted commitment changed ${changed.join(", ")} since it began at ${history.began.slice(0, 7)}; a change to an Agreed requirement, its falsifier, or the working agreement is the developer's: move the item to next-iteration with the reason and raise one escalation with --concerns ${ids.join(",")}, and do not build it under the promotion's record (LOOP-089, LOOP-090, LOOP-114)` };
 }
 function changedPaths(root, commits, inputs = [], added = false) {
-  const r = spawnSync("git", ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", ...(added ? ["--diff-filter=A"] : []), "-r", "--relative", "-z", "--", ...inputs],
-    { cwd: root, input: commits, encoding: "utf8", maxBuffer: Infinity });
+  const r = gitRun(root, ["diff-tree", "--stdin", "--no-commit-id", "--name-only", "--no-renames", ...(added ? ["--diff-filter=A"] : []), "-r", "--relative", "-z", "--", ...inputs], commits);
   if (r.error || r.status !== 0) throw new Error("cannot read the commitment's changed paths");
   return [...new Set(r.stdout.split("\0").filter(Boolean))].sort();
 }
@@ -331,7 +332,7 @@ const hasUnbuilt = (section) => section.split("\n").some((l) => l.trim() === UNB
 function resolveCommits(root, ids) {
   const out = new Map();
   if (!ids.length) return out;
-  const r = spawnSync("git", ["cat-file", "--batch-check"], { cwd: root, encoding: "utf8", maxBuffer: Infinity, input: ids.map((id) => `${id}^{commit}\n`).join("") });
+  const r = gitRun(root, ["cat-file", "--batch-check"], ids.map((id) => `${id}^{commit}\n`).join(""));
   const lines = r.error || r.status !== 0 ? [] : r.stdout.trimEnd().split("\n"), ambiguous = new Set([...(r.stderr ?? "").matchAll(/short object ID (\S+) is ambiguous/g)].map((m) => m[1]));   // git says so on stderr, and prints missing
   ids.forEach((id, i) => out.set(id, ambiguous.has(id) ? "ambiguous" : / commit \d+$/.test(lines[i] ?? "") ? "commit" : "missing"));
   return out;
@@ -525,8 +526,7 @@ function workingObjects(root, entries, cache) {
   const missing = entries.filter((e) => !cache.objects.has(e.path));
   const files = missing.filter((e) => fileIdentity(root, e.path, cache, e.mode).mode !== "120000");
   if (files.length) {
-    const r = spawnSync("git", ["hash-object", "--stdin-paths"], { cwd: root, encoding: "utf8", maxBuffer: Infinity,
-      input: files.map((e) => gitPath(prefix(root, cache) + e.path) + "\n").join("") });
+    const r = gitRun(root, ["hash-object", "--stdin-paths"], files.map((e) => gitPath(prefix(root, cache) + e.path) + "\n").join(""));
     if (r.error || r.status !== 0) throw new Error(`cannot apply Git input conversion: ${r.stderr || r.error?.message}`);
     const oids = r.stdout.trim().split("\n");
     if (oids.length !== files.length || oids.some((oid) => !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(oid))) throw new Error("invalid Git input conversion result");
@@ -547,8 +547,7 @@ function committedInputsDigest(root, inputs, cache = inputCache()) {
 }
 function gitObjectsAvailable(root, entries) {
   if (!entries.length) return true;
-  const r = spawnSync("git", ["cat-file", "--batch-check"], { cwd: root, encoding: "utf8", maxBuffer: Infinity,
-    input: entries.map((e) => e.oid + "\n").join("") });
+  const r = gitRun(root, ["cat-file", "--batch-check"], entries.map((e) => e.oid + "\n").join(""));
   if (r.error || r.status !== 0) return false;
   const lines = r.stdout.trimEnd().split("\n");
   return lines.length === entries.length && lines.every((line, i) => {

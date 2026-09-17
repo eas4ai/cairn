@@ -13,4 +13,4 @@ Promotes .cairn/backlog/answer-during-the-agent-s-turn-stores-any-caller-s-text-
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 5f685b0db9eac71b85b710af6f74e07d5c2a749f A developer-shaped answer during the agent's turn is refused by name (LOOP-135)

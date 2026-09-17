@@ -700,6 +700,19 @@ function runReceipts(root) {
   runCache = { root, entries };
   return entries;
 }
+// Why a defect item does not yet count as fixed, or null (LOOP-140).
+function unfixed(root, f) {
+  const req = String(f["Surfaced from"] ?? "").trim(), sha = String(f["Fixed by"] ?? "").trim().split(/\s/)[0];
+  if (!sha) return `the defect in ${req} carries no Fixed by: line`;
+  const commit = git(root, "rev-parse", "--verify", "-q", `${sha}^{commit}`).stdout.trim();
+  if (!commit) return `Fixed by: ${sha} does not resolve to a commit`;
+  const parent = git(root, "rev-parse", "--verify", "-q", `${commit}^`).stdout.trim(), after = requirementSet(root, commit), before = parent ? requirementSet(root, parent).texts : new Map();
+  const changed = [...after.agreed].find((r) => after.texts.get(r)?.digest !== before.get(r)?.digest);
+  if (changed) return `Fixed by: ${sha} changes the Agreed requirement ${changed}, so it is a promotion or a next-iteration item, not a fix`;
+  const latest = history(root, req).at(-1);
+  if (!latest || latest.result !== "pass" || git(root, "merge-base", "--is-ancestor", commit, latest.commit).status !== 0) return `${req} has no passing evidence at or after ${sha}`;
+  return null;
+}
 function history(root, req) {
   const dir = join(root, ".cairn", "evidence", req);
   const legacy = list(dir).filter((n) => RECEIPT_NAME.test(n)).map((n) => {
@@ -968,7 +981,12 @@ function wakeVerdict(root) {
   // Done only when nothing remains the agent may decide (LOOP-087, LOOP-091).
   const complete = `every requirement in ${c.slug} has current passing evidence and the review at ${rv.commit} is clean`;
   const items = (dir, keep) => files(join(root, ".cairn", dir)).filter((n) => keep(fields(read(join(root, ".cairn", dir, n))))).map((n) => n.replace(/\.md$/, ""));
-  const candidates = items("backlog", (f) => !("Promoted to" in f));
+  // A defect is fixed, not promoted, and before any promotion (LOOP-087, LOOP-140).
+  for (const n of items("backlog", (f) => String(f.Defect ?? "").trim() === "yes")) {
+    const why = unfixed(root, fields(read(join(root, ".cairn", "backlog", `${n}.md`))));
+    if (why) return { verdict: "Resolvable", action: `fix .cairn/backlog/${n}.md`, why: `${complete}; ${why}; write a test that fails, make it pass, commit, check, and add Fixed by: <sha> (LOOP-140)` };
+  }
+  const candidates = items("backlog", (f) => !("Promoted to" in f) && String(f.Defect ?? "").trim() !== "yes");
   if (candidates.length) return { verdict: "Resolvable", action: "promote", why: `${complete}; the backlog holds ${candidates.length} item(s) to promote: ${candidates.join(", ")}; choose one by judgment, record the promotion decision with --promotes, write its requirement and commitment, and move Current: (LOOP-087)` };
   // Next-iteration is the next feature specification, the developer's to open; Done says how many wait (LOOP-091).
   const waiting = items("next-iteration", (f) => !("Promoted to" in f));
@@ -1347,13 +1365,14 @@ function answer(root, slug, reply) {
 function backlog(root, o) {
   if (!o.title || !o.body) return usage("backlog: missing --title or --body");
   const next = !!o["next-iteration"];
+  if (o.defect && (next || !o.from || !requirementSet(root).agreed.has(o.from))) return usage("backlog: --defect needs --from naming the Agreed requirement whose text already forbids the defect, and no --next-iteration (LOOP-140)");
   if (next && !o.changes) return usage("backlog: --next-iteration needs --changes naming the Agreed requirement or the working agreement the idea would change (LOOP-093)");
   const dir = join(root, ".cairn", next ? "next-iteration" : "backlog");
   mkdirSync(dir, { recursive: true });
   const slug = slugify(o.title), path = join(dir, `${slug}.md`);
   if (!slug) return usage("backlog: the title has no letters or digits to name the item (LOOP-128)");
   if (existsSync(path)) return usage(`backlog: ${rel(root, path)} exists; the backlog never overwrites (LOOP-016)`);
-  const source = next ? `Changes: ${o.changes}` : `Surfaced from: ${o.from ?? "unstated"}`;
+  const source = next ? `Changes: ${o.changes}` : `Surfaced from: ${o.from ?? "unstated"}${o.defect ? "\nDefect: yes" : ""}`;
   const outside = o.outside ? `Outside because: ${o.outside}\n` : "";
   writeFileSync(path, `# ${o.title}\n\n${source}\n${outside}Captured: ${new Date().toISOString()}\n\n${o.body}\n`);
   process.stdout.write(`captured ${rel(root, path)}\n`);
@@ -1412,7 +1431,7 @@ Commands:
   answer SLUG ok | instead TEXT | ask TEXT
     Answer an escalation. An ask keeps it open for an explanation.
     After an ask, the agent uses answer SLUG "EXPLANATION" to reply.
-  backlog --title TEXT --body TEXT [--from REQ] [--outside TEXT]
+  backlog --title TEXT --body TEXT [--from REQ] [--outside TEXT] [--defect]
     Capture an idea that fits inside the specification. --outside states
     why an idea surfaced from one of the commitment's own requirements
     is not its work (LOOP-092). The loop promotes from here at Done.
@@ -1458,7 +1477,7 @@ async function main() {
       help: { type: "boolean", short: "h" }, version: { type: "boolean" }, scope: { type: "boolean" }, keep: { type: "boolean" },
       root: { type: "string" }, title: { type: "string" }, level: { type: "string" }, "decided-by": { type: "string" },
       "rests-on": { type: "string" }, "wrong-if": { type: "string" }, body: { type: "string" }, supersedes: { type: "string" }, cause: { type: "string" },
-      from: { type: "string" }, stale: { type: "boolean" }, promotes: { type: "string" }, "next-iteration": { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
+      from: { type: "string" }, stale: { type: "boolean" }, promotes: { type: "string" }, "next-iteration": { type: "boolean" }, defect: { type: "boolean" }, changes: { type: "string" }, outside: { type: "string" }, history: { type: "string" }, concerns: { type: "string" }, question: { type: "string" }, recommend: { type: "string" }, because: { type: "string" }, "if-wrong": { type: "string" }, instead: { type: "string" } } });
   } catch (e) { return usage(e.message); }
   if (a.values.help) return help();
   if (a.values.version) { try { process.stdout.write(`cairn ${version()}\n`); return 0; } catch (e) { return usage(`cannot read the version beside the kernel: ${e.message}`); } }

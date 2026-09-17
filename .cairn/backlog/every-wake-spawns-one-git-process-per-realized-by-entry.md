@@ -1,6 +1,7 @@
 # Every wake spawns one git process per Realized-by entry
 
 Surfaced from: DEC-021
+Promoted to: the-wake-resolves-every-realized-by-entry-in-one-git-call (2026-09-17, by promote-the-wake-resolves-every-realized-by-entry-in-one-git-call)
 Outside because: found by the kernel review the developer requested on 2026-09-17 after this commitment reached Done; every mechanism of the commitment passes, the case lies outside its falsifiers, and the developer directed that review findings enter the backlog
 Captured: 2026-09-17T11:59:29.208Z
 

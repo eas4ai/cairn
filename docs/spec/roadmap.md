@@ -6,7 +6,7 @@ Order lives here. Filenames carry meaning, never sequence. Each section
 states the contract as it stood on its date; where a later commitment
 revised it, the section says so in one line.
 
-Current: a-receipt-names-its-commit-in-full
+Current: the-wake-resolves-every-realized-by-entry-in-one-git-call
 
 LOOP-020, review before completion, and every PKG requirement apply to
 every commitment rather than to one.
@@ -569,3 +569,11 @@ seven-character commit identifier, unique only when written, so an
 old receipt could stop resolving and send an unchanged requirement
 back for review. Adds LOOP-136; older receipts are still read.
 [Commitment](../commitments/a-receipt-names-its-commit-in-full.md).
+
+## The wake resolves every Realized-by entry in one git call
+
+Promoted on 2026-09-17 from the kernel review, the last of its eight
+backlog items: the wake spawned one git process per Realized by entry
+of every live record, and the stop hook wakes at every stop. Adds
+DEC-023; one batch call answers for all of them.
+[Commitment](../commitments/the-wake-resolves-every-realized-by-entry-in-one-git-call.md).

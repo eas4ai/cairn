@@ -135,6 +135,20 @@ both, and the one a reader reaches first is an accident of order. A
 section holding the placeholder alone is not this defect: that record is
 exactly what it says it is.
 
+[DEC-023] The wake MUST resolve the Realized by entries of every
+decision record through one git invocation per wake, not one per
+entry.
+Falsifier: with git wrapped to log its invocations, a wake over
+twenty built records invokes git once per entry to resolve them.
+Status: Agreed 2026-09-17 by promotion promote-the-wake-resolves-every-realized-by-entry-in-one-git-call
+
+Promoted 2026-09-17 from the kernel review's finding 9. The wake ran
+git rev-parse --verify for every entry of every live record, eagerly,
+about seventy processes per wake on this repository and one more for
+every decision recorded, and the stop hook runs wake at every stop.
+One git cat-file --batch-check answers for every entry at once, in
+input order, and says missing or ambiguous where rev-parse said so.
+
 ## Supersession
 
 [DEC-008] A decision record that supersedes another MUST name its

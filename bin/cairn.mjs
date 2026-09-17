@@ -861,7 +861,7 @@ function listOf(text, key) {
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim()), titles = [...rest.matchAll(/^ {0,3}#{1,6}[ \t]*(.+)$/gm)].map((x) => x[1]);
-  const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) || (!entries.length && !!below.length);   // a finding-shaped entry under a heading, or the record's only list
+  const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) || (!entries.length && !empty && !!below.length);   // a finding-shaped entry under a heading, or the only list of a record that did not declare findings: []
   return { entries, empty, value: empty ? null : value || null, dropped, heading, unread };
 }
 function reviewOf(root, slug) {

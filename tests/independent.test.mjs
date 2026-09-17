@@ -179,7 +179,8 @@ test("a line the reader cannot read is named whenever an entry follows it, in th
   assert.match(write(own(carry(1, "one")), report("  - one\ntwo lost its dash\n")), repairsReport, "an unindented line that lost its dash is named");
   assert.match(write(own(carry(1, "one") + "  - open: a defect\nStatus: in progress\n"), report("  - one\n")), /^Resolvable: resolve first/, "a real open finding is still read");
   assert.match(write(own(carry(1, "one reproduced in a clone")), report("  - one\n    - reproduced in a clone\n")), /^Done: /, "a nested detail still joins its entry");
-  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), repairsReport, "a report's findings under a heading");
+  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n\n## Findings\n\n1. one is broken\n2. two is broken\n`), /^Done: /, "a report that declares findings: [] is taken at its word and its body read as prose, the stated limit; a findings: line with no entries above such a list is still named");
+  assert.match(write(own(carry(1, "one")), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n\n## Findings\n\n1. one is broken\n`), repairsReport, "a report that names findings: and lists none above a heading list is named");
 });
 
 test("a margin line that only looks like a field never ends a list in silence (LOOP-086, LOOP-020)", () => {
@@ -226,4 +227,14 @@ test("a Reviewer: line inside a list is named, and an honest record with a findi
   assert.match(write(own(carry(1, "one"), "\n## Findings from earlier rounds\n\n- the parser dropped wrapped lines, fixed long ago\n"), report("  - one\n")), /^Done: /, "a findings-titled heading with prose bullets is read as prose");
   assert.match(write(own(carry(1, "one")), report("  - one\n", "\n## How I reproduced the findings\n\n- a scratch clone\n- a stub API\n")), /^Done: /, "and the same in a report");
   assert.match(write(own(carry(1, "one"), "\n## Open\n\n- open: a defect still unfixed\n"), report("  - one\n")), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a finding-shaped bullet under a heading is still named");
+});
+
+test("a record that declares findings: [] keeps a bulleted body as prose, as this repository's own reviews are written (LOOP-086, LOOP-020)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const body = "\n## Attacked\n\n- the empty-name case before the fix and after it\n- 1500 declared inputs, timed\n";
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${body}`), /^Done: /, "both records declare no findings and carry a bulleted body");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n${body}`, `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "a findings: line with no entries and a list below it is still named");
 });

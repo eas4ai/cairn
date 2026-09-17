@@ -21,11 +21,12 @@ const escalate = (root) => cairn(root, "escalate", "--concerns", "R-001", "--que
 
 test("a working directory that no longer exists is named as the failure, and git is not blamed (PKG-041, PKG-022)", () => {
   const gone = mkdtempSync(join(tmpdir(), "cairn-gone-")); rmSync(gone, { recursive: true });
-  for (const mode of ["stop", "session-start"]) {
-    const r = spawnSync(process.execPath, [HOOK, mode], { cwd: tmpdir(), encoding: "utf8", input: JSON.stringify({ cwd: gone, hook_event_name: mode }), env: { ...process.env, PATH: BARE, HOME: mkdtempSync(join(tmpdir(), "cairn-home-")) } });
+  const file = join(mkdtempSync(join(tmpdir(), "cairn-file-")), "a-file"); writeFileSync(file, "x\n");   // exists, but is not a directory
+  for (const cwd of [gone, file]) for (const mode of ["stop", "session-start"]) {
+    const r = spawnSync(process.execPath, [HOOK, mode], { cwd: tmpdir(), encoding: "utf8", input: JSON.stringify({ cwd, hook_event_name: mode }), env: { ...process.env, PATH: BARE, HOME: mkdtempSync(join(tmpdir(), "cairn-home-")) } });
     assert.equal(r.status, 0, mode + ": " + r.stderr); assert.doesNotMatch(r.stdout, /decision/, mode + " must not block");
     assert.equal(r.stderr.trim().split("\n").length, 1, mode + ": one line: " + r.stderr);
-    assert.match(r.stderr, /^cairn hook: working directory .* does not exist/, mode + ": " + r.stderr); assert.ok(r.stderr.includes(gone)); assert.doesNotMatch(r.stderr, /cannot run git/, mode + ": " + r.stderr);
+    assert.match(r.stderr, /^cairn hook: working directory .* does not exist or is not a directory/, mode + ": " + r.stderr); assert.ok(r.stderr.includes(cwd)); assert.doesNotMatch(r.stderr, /cannot run git/, mode + ": " + r.stderr);
   }
 });
 

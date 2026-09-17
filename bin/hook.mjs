@@ -20,9 +20,10 @@ const input = () => { try { const v = process.stdin.isTTY ? {} : JSON.parse(read
 const oneLine = (s) => String(s).replace(/\s+/g, " ").trim();
 const complain = (e) => process.stderr.write(`cairn hook: ${oneLine(e.message ?? e)}\n`);
 const resolves = (p) => { try { return statSync(p).isFile() ? realpathSync(p) : null; } catch { return null; } };
+const isDir = (p) => { try { return statSync(p).isDirectory(); } catch { return false; } };
 // The project: the nearest roadmap at or above cwd, inside the Git working tree (PKG-035).
 const root = (cwd) => {
-  if (!existsSync(cwd)) throw new Error(`working directory ${cwd} does not exist`);   // named before git is blamed for it (PKG-041)
+  if (!isDir(cwd)) throw new Error(`working directory ${cwd} does not exist or is not a directory`);   // named before git is blamed for it (PKG-041)
   const r = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf8" });
   if (r.error) throw new Error(`cannot run git: ${r.error.message}`);
   if (r.status !== 0) return null;

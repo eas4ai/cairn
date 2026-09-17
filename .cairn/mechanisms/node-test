@@ -225,6 +225,7 @@ requirements:
   - PKG-039
   - PKG-040
   - PKG-041
+  - PKG-042
   - DEC-020
   - DEC-021
   - DEC-022

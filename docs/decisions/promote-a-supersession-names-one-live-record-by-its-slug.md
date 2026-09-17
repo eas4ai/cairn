@@ -13,4 +13,4 @@ Promotes .cairn/backlog/decide-supersedes-validates-neither-the-slug-nor-a-prior
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 56b80db128818ca90c7c6f7a689f0dbb6333bb71 A supersession names one live record by its slug; a second stamp is refused (DEC-022)

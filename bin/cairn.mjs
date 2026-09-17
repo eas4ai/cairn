@@ -788,22 +788,24 @@ function evidenceError(root, receipt, outputs) {
 }
 // The review is not the builder's alone: an independent report, committed, for this commitment, at the review's commit, every finding carried (LOOP-020).
 function independentGap(root, slug, rv) {
-  const name = `.cairn/reviews/${slug}.independent.md`, repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why} (LOOP-020)` });
-  const shown = git(root, "show", `HEAD:./${name}`);
-  if (shown.status !== 0) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and no independent report is committed at ${name}; start a reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report there with the review's commit: line (LOOP-020)` };
-  const f = recordFields(shown.stdout), header = shown.stdout.split(/\n(?= {0,3}#)/)[0];
-  const commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };
-  if (String(f.commitment ?? "").trim() !== slug) return repair(`${name} names commitment ${f.commitment || "none"}, not ${slug}`);
-  if (!commitOf(f.commit)) return repair(`${name} names commit ${f.commit || "none"}, which is not a commit`);
-  if (commitOf(f.commit) !== commitOf(rv.commit)) return repair(`${name} is at ${f.commit} and the review examined ${rv.commit}; the report must be at the review's commit`);
+  const name = `.cairn/reviews/${slug}.independent.md`, committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
+  const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
+  const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; put the reviewer's own words in this form without changing them, or ask the reviewer again (LOOP-020)` });
+  const text = committed(name);
+  if (text === null) return again(`no independent report is committed at ${name}`);
+  const f = recordFields(text), commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };
+  if (String(f.commitment ?? "").trim() !== slug) return again(`${name} names commitment ${f.commitment || "none"}, not ${slug}`);
+  if (!commitOf(f.commit) || commitOf(f.commit) !== commitOf(rv.commit)) return again(`${name} was written at ${f.commit || "no commit"} and the review examined ${rv.commit}; a review redone at a later commit needs a new report there`);
   if (!asList(f.examined).filter((x) => x !== "[]").length) return repair(`${name} needs a nonempty examined: list`);
-  if (f.findings !== "[]" && !Array.isArray(f.findings)) return repair(`${name} needs findings: as a list of one-line entries, or findings: [] for none, above any heading`);
-  if (/^findings:[^\n]*\n(?:\s*-\s[^\n]*\n)*[ \t]+(?!-\s)\S/m.test(header + "\n")) return repair(`${name} has a finding that wraps onto a second line; keep each finding on one line`);
+  if (f.findings !== "[]" && !Array.isArray(f.findings)) return repair(`${name} needs findings: as a list of one-line entries, or findings: [], above any heading`);
+  const block = (text.match(/^findings:[^\n]*\n((?:[ \t]+\S[^\n]*\n?)*)/m)?.[1] ?? "").split("\n").filter(Boolean);   // the findings list, up to a blank or unindented line
+  if (block.some((l) => !/^\s*-\s/.test(l))) return repair(`${name} has a finding that wraps onto a second line; keep each finding on one line`);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
-  const report = f.findings === "[]" ? [] : f.findings.map(norm), carried = asList(recordFields(read(join(root, ".cairn", "reviews", `${slug}.md`))).findings).map(norm);
+  const report = f.findings === "[]" ? [] : f.findings.map(norm);
   if (report.some((x) => !x)) return repair(`${name} has an empty finding`);
-  const missing = report.find((x) => !carried.some((t) => t === x || (t.startsWith(x) && /^[.;:,]?\s+Resolved:/.test(t.slice(x.length)))));   // equal, or followed only by its resolution
-  return missing ? { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding is not in it as open or resolved: ${missing} (LOOP-020)` } : null;
+  const carried = asList(recordFields(committed(`.cairn/reviews/${slug}.md`) ?? read(join(root, ".cairn", "reviews", `${slug}.md`))).findings).map(norm);
+  const missing = report.find((x) => !carried.some((t) => t === x || (t.startsWith(x) && /^\s*[,.;:(\u2013\u2014-]/.test(t.slice(x.length)))));   // its text, then punctuation and how
+  return missing ? { verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, but the independent report's finding is not in it: ${missing}; carry it as open: <its text> or resolved: <its text>, and how (LOOP-020)` } : null;
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);

@@ -480,6 +480,14 @@ evidence for the commitment and its inherited requirements, and a current
 review with no open finding. The agent is instructed to review what the
 mechanisms could miss and record what it examined.
 
+The review alone is not enough. Beside it, Cairn requires an independent
+report at `.cairn/reviews/<slug>.independent.md`, written by a reviewer
+started without the build's context and committed unchanged. It names the
+same commit as the review, and the review must answer each of its findings
+on one line. Cairn cannot tell whether that reviewer really lacked the
+context; it checks that the report exists, names this commitment and
+commit, and that nothing it raised went unanswered.
+
 Ask for a completion report that answers:
 
 > What can I do now? What changed? What was tested? What did the review
@@ -517,6 +525,7 @@ silently changing what you agreed to build.
 | `record` names a path. | A tracked declared input has uncommitted changes and no `.cairn/in-progress` record names the action. Ask the agent to write the record for the work under way, or to commit the change. A file Git does not track is never named here; check still refuses to run beside one until it is committed or ignored. |
 | `declare` names a requirement. | No mechanism speaks for it yet. Ask the agent to write a declaration naming the command, every path it reads, and the requirement. |
 | `resolve` names a commitment. | Its review holds an open finding. Ask the agent to fix it as its own work and mark it resolved in the review. |
+| `review` names a commitment. | The review is missing or stale, or its independent report is missing, at another commit, or holds a finding the review does not answer. Ask the agent to start a reviewer with none of the build's context and commit its report unchanged beside the review. |
 | `review mechanism APP-001` appears. | The agreement changed, or its earlier text is unavailable. Ask the agent to compare the check with the current requirement and explain any mismatch. |
 | `implement` follows an unverified result. | Ask why the run established no verdict. Do not assume the product failed an assertion that never ran. |
 | `scope` names a file. | Read the complete path list below it. Correct an incomplete declaration when justified, request explicit approval to keep exact correct work, or restore accidental work and request acknowledgment as described below. |

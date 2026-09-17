@@ -797,7 +797,14 @@ function independentGap(root, slug, rv) {
   if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
   const text = committed(name);
   if (text === null) return again(`no independent report is committed at ${name}`);
-  const f = recordFields(text), commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };
+  const f = recordFields(text);
+  // Fields the header never reached, because a heading or prose sits above them: the report is honest and repairable, never a reason for a new reviewer (LOOP-020, LOOP-108).
+  const whole = withoutFences(text).join("\n"), says = (k, s) => new RegExp(`^${k}[ \t]*:`, "m").test(s);
+  const hidden = ["commitment", "commit", "examined", "findings"].filter((k) => says(k, whole) && !says(k, headerOf(whole)));   // named in the record, but below its first heading
+  const blocked = f.commitment === undefined && says("commitment", whole);   // the first field, unread: a line above it is neither a field nor a heading
+  if (hidden.length || blocked) return repair(`${name} ${hidden.length ? `names ${hidden.join(" and ")} below a heading, where the header ends` : "does not read its commitment:, because the line above it is neither a field nor a heading"}`, "move the record's fields to the top, each on its own line, above any heading or prose, and change none of the reviewer's words");
+  if (String(f.commitment ?? "").trim() !== slug && String(f.commitment ?? "").trim().startsWith(slug)) return repair(`${name} reads its commitment as ${displayPath(String(f.commitment).trim())}, because the line below it joined the field`, "keep each field on its own line, with prose after a heading, and change none of the reviewer's words");
+  const commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };
   const at = commitOf(rv.commit);
   if (String(f.commitment ?? "").trim() !== slug) return again(`${name} names commitment ${f.commitment || "none"}, not ${slug}`);
   if (!commitOf(f.commit)) return again(`${name} names ${f.commit || "no commit"}, which is not a commit`);
@@ -843,7 +850,7 @@ function independentGap(root, slug, rv) {
 // other line inside the list is named, wherever it sits, so nothing is read in
 // part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, FIELD = /^[ \t]*[A-Za-z][A-Za-z0-9 _-]*:/;   // a heading is hashed, or underlined with = or -- under its own text, which a field line is not
+const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, FIELD = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // a heading is hashed, or underlined with = or -- under its own text; only the record's own fields are not that
 // The header: the record above its first heading, of either form (LOOP-108).
 function headerOf(whole) {
   const lines = whole.split("\n");
@@ -868,6 +875,7 @@ function listOf(text, key) {
   let indent = null, blank = false, unread = null, dropped = false;
   for (const line of head.slice(m.index + m[0].length).split("\n")) {
     if (!line.trim()) { blank = true; continue; }
+    if (SETEXT.test(line) && !/^[ \t]/.test(line)) continue;   // a rule at the margin separates, as it does in the header (LOOP-108)
     if (key === "examined" && /^findings:/.test(line)) break;   // the field as the kernel reads it, however it is spaced: a Findings: line is named, never a silent end (LOOP-086)
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
     if (item && !(deep && FINDING.test(item[2])) && !empty) {
@@ -908,7 +916,7 @@ function reviewOf(root, slug) {
   const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;
   const open = findings.filter((x) => /^open:/.test(x));
   const repair = malformed ? { verdict: "Resolvable", action: `repair ${rel(root, p)}`,
-    why: `${malformed}; use list entries 'open: <description>' or 'resolved: <description>' with a nonempty description, or leave findings empty when there are no findings (LOOP-086). Preserve unresolved issues as open findings.` } : null;
+    why: `${malformed}; use list entries 'open: <description>' or 'resolved: <description>' with a nonempty description, or write findings: [] when there are none (LOOP-086). Preserve unresolved issues as open findings.` } : null;
   return { commit: f.commit ?? null, open, repair };
 }
 

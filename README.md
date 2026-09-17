@@ -86,6 +86,9 @@ current(m, r)  :=  ev.inputs = H(inputs(m) at HEAD)
                    and ev.req = H(text(r))
 reviewed(c)    :=  review(c) exists, naming its examined commit
                    and what it examined
+                   and report(c) exists, committed, naming c and the
+                   review's commit, with every finding it raises
+                   carried in review(c) by its number
                    and no text(r) changed since the review, for r in reqs(c)
                    and no declared input changed since the examined commit
                    and for all f in findings(c): open(f) or resolved(f),
@@ -107,7 +110,10 @@ records it names; e is an escalation and d a decision record; ev is
 the latest evidence record of m for r; H is a content digest;
 inputs(m) at HEAD are the declared inputs as committed, decl(m) the
 declaration, and text(r) the requirement's text. review(c) is the
-review record for c and findings(c) the findings it lists; m is a
+review record for c and findings(c) the findings it lists; report(c) is
+the independent report beside it, written by a reviewer with none of the
+build's context, and carried means the review answers its finding n on
+one line ending in that finding's citation; m is a
 mechanism, and its result line is the pass or fail line it prints for
 r, if any. candidate(m) is the declared inputs, the declaration, and
 the requirement texts, as committed; exit(m) is the command's exit

@@ -1,16 +1,23 @@
 // Shared specification grammar. A requirement is one contiguous paragraph;
 // its Status overrides the file header. Fenced examples are not requirements.
+// A fenced block is not content. Only a fence that closes hides its lines: an
+// opening fence with no close stays text, so nothing below it disappears
+// (LOOP-086).
 export function withoutFences(text) {
-  let fence = null;
-  return text.split(/\r?\n/).map((line) => {
-    if (fence) {
-      if (new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(line)) fence = null;
-      return "";
+  const lines = text.split(/\r?\n/), out = lines.slice();
+  let open = null;
+  for (let i = 0; i < lines.length; i++) {
+    if (open) {
+      if (new RegExp(`^ {0,3}${open.mark[0]}{${open.mark.length},}\\s*$`).test(lines[i])) {
+        for (let j = open.at; j <= i; j++) out[j] = "";
+        open = null;
+      }
+      continue;
     }
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (m) { fence = m[1]; return ""; }
-    return line;
-  });
+    const m = /^ {0,3}(`{3,}|~{3,})/.exec(lines[i]);
+    if (m) open = { mark: m[1], at: i };
+  }
+  return out;
 }
 
 export function parseSpec(text) {

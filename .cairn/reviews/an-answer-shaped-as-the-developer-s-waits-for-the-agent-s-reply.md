@@ -7,7 +7,7 @@ examined:
   - the documents: the manual's escalation section says the plain form is valid only while the record waits for the agent's explanation, and now says a developer-shaped answer in that state is refused and nothing is written; cairn --help already says the agent replies with the same command, and needs no change for the refusal.
   - the package: every mechanism re-run after the kernel change and the manual sentence, every requirement pass; bin/ is 1564 lines against the 1600 ceiling.
 findings:
-  - open: the agent-turn guard matches ok, instead and ask case-sensitively, so a developer who refines with "Ask B" during the agent's turn still has it stored as the agent's reply; the guard should match the three words regardless of case while the developer's own turn keeps its exact forms
+  - resolved: the agent-turn guard matches ok, instead and ask case-sensitively, so a developer who refines with "Ask B" during the agent's turn still has it stored as the agent's reply; the guard should match the three words regardless of case while the developer's own turn keeps its exact forms. Resolved: the guard's pattern carries the i flag and the developer-turn pattern does not; the test adds Ask B, OK and Instead use C to the refused shapes (352ab10)
 
 ## Commitment review at 53b9e12, 2026-09-17
 
@@ -18,3 +18,6 @@ developer's turn stays strict on purpose: escalationTurn reads a
 lowercase ask as the open question, and loosening what the developer
 may write would change what closes an escalation. Only the refusal on
 the agent's side needs to be case-blind.
+
+Resolved after the record: the guard is case-blind on the agent's side
+only. No open finding.

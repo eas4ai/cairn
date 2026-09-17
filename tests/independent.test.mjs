@@ -105,3 +105,16 @@ test("a citation that is not last on its line is refused as such, and a finding 
   assert.match(round([`resolved: ${quoting} (independent #1)`], [quoting]), /^Done: /, "the short form, after a finding that ends with a citation");
   assert.match(round([`resolved: ${quoting}, fixed (independent #1)`], [quoting]), /^Done: /, "the documented form, as before");
 });
+
+test("a report written or changed on disk but not committed is named commit, never judged as the committed one (LOOP-020)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  writeFileSync(reportFile(root), readFileSync(reportFile(root), "utf8").replace("findings: []", "findings:\n  - a real defect"));
+  assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n/, "an uncommitted edit with a finding");
+  commit(root, "the edit, committed");
+  assert.match(wake(root), /finding 1 is not carried/, "once committed, the finding is judged");
+  review(root); commit(root, "clean again");
+  writeFileSync(join(root, ".cairn/reviews/first.md"), `commitment: first\ncommit: ${head(root)}\nexamined:\n  - again\nfindings: []\n`); commit(root, "the review redone");
+  writeFileSync(reportFile(root), `commitment: first\ncommit: ${head(root)}\nreviewer: r\nexamined:\n  - x at ${head(root)}\nfindings: []\n`);
+  assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n/, "a new report not yet committed is named commit, not a new reviewer");
+});

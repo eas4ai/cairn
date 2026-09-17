@@ -792,7 +792,8 @@ function independentGap(root, slug, rv) {
   const committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
   const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
   const repair = (why) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; put the reviewer's own words in this form without changing them, or ask the reviewer again (LOOP-020)` });
-  if (dirtyInputs(root, [own]).length) return { verdict: "Resolvable", action: `commit ${own}`, why: "the review differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)" };
+  const loose = dirtyInputs(root, [own, name]);   // the review or the report on disk differs from HEAD: commit it before either is judged
+  if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
   const text = committed(name);
   if (text === null) return again(`no independent report is committed at ${name}`);
   const f = recordFields(text), commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };

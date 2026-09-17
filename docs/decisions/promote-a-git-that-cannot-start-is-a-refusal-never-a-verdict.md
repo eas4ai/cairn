@@ -13,4 +13,4 @@ Promotes .cairn/backlog/a-git-that-fails-to-spawn-is-read-as-a-git-that-said-no.
 
 ## Realized by
 
-(none yet: recorded, not built)
+- ab0e33222ba82000d25972d5ea112eb91feb20ac A git that cannot start is one line and exit 3 from every command, through one spawn helper (LOOP-137)

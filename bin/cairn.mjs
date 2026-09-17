@@ -858,9 +858,19 @@ function withAnswer(root, w) {
   if (answered) w.why += `; answered ${answered.name}: ${answered.Answer}`;
   return w;
 }
+// A stop the hook let through without progress is the next session's first business (PKG-043, LOOP-139).
+function stopVerdict(root) {
+  const names = list(join(root, ".cairn", "stops")).filter((n) => n.endsWith(".md"));
+  if (!names.length) return null;
+  const loose = dirtyInputs(root, [".cairn/stops"]), path = (n) => `.cairn/stops/${n}`;
+  const n = names.find((x) => !("Explanation" in fields(read(join(root, path(x))))) || loose.some((p) => p === path(x) || (p.endsWith("/") && path(x).startsWith(p))));
+  return n ? { verdict: "Resolvable", action: `explain ${path(n)}`, why: "the stop hook let a stop through after three refusals with no progress; add an Explanation: line saying why the agent stopped, and commit the record (PKG-043, LOOP-139)" } : null;
+}
 function wakeVerdict(root) {
   const owner = checkOwner(root);
   if (owner) return owner;
+  const stopped = stopVerdict(root);
+  if (stopped) return stopped;
   const ip = join(root, ".cairn", "in-progress");
   const pending = reconcile(root, ip);
   if (pending) return pending;

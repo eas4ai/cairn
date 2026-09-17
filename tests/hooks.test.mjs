@@ -5,10 +5,11 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readlinkSync, lstatSync, mkdirSync, cpSync, writeFileSync, appendFileSync, existsSync, realpathSync, chmodSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readlinkSync, lstatSync, mkdirSync, cpSync, writeFileSync, appendFileSync, existsSync, realpathSync, chmodSync, readFileSync, rmSync, readdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as base, cairn, commit, review, fromFile } from "./helpers.mjs";
+const stops = (root) => { try { return readdirSync(join(root, ".cairn/stops")); } catch { return []; } };
 
 const HOOK = fileURLToPath(new URL("../bin/hook.mjs", import.meta.url));
 // A PATH with git and the shell but no cairn: the machine's own command must not judge these fixtures (PKG-033).
@@ -189,9 +190,50 @@ test("with git absent the hooks say so in one line and block nothing (PKG-022)",
   assert.equal(r.status, 0); assert.equal(r.stderr.trim().split("\n").length, 1, r.stderr);
 });
 
-test("the stop hook gives way once it has refused: stop_hook_active true prints the verdict and returns no block decision (PKG-018)", () => {
+test("stop_hook_active true no longer lets a Resolvable stop through: the hook still refuses (PKG-018)", () => {
   const root = repo();
-  const r = hook("stop", root, {}, { stop_hook_active: true });
+  const r = hook("stop", root, {}, { stop_hook_active: true, session_id: "flag" });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /^Resolvable: run R-001/, r.stdout); assert.doesNotMatch(r.stdout, /"decision"/, r.stdout);
+  assert.equal(JSON.parse(r.stdout).decision, "block", r.stdout);
+});
+
+test("receipts written by the project's own kernel are judged with it, not with a different cairn on PATH (PKG-033, PKG-021)", () => {
+  const root = repo();
+  mkdirSync(join(root, "bin")); for (const f of ["cairn.mjs", "spec.mjs"]) cpSync(fileURLToPath(new URL(`../bin/${f}`, import.meta.url)), join(root, "bin", f));
+  appendFileSync(join(root, "bin/cairn.mjs"), "// the project's own kernel, a different digest\n");
+  const project = (...a) => spawnSync(process.execPath, [join(root, "bin/cairn.mjs"), ...a], { cwd: root, encoding: "utf8" });
+  project("check");
+  const own = project("wake").stdout.split("\n")[0];
+  assert.match(own, /^Resolvable: review first/, own);
+  const path = mkdtempSync(join(tmpdir(), "cairn-path-")); symlinkSync(KERNEL, join(path, "cairn"));   // this checkout's kernel on PATH
+  const r = hook("stop", root, { PATH: `${path}:${BARE}` }, { session_id: "kernel" });
+  assert.equal(r.status, 0, r.stderr);
+  const reason = JSON.parse(r.stdout).reason;
+  assert.doesNotMatch(reason, /kernel changed/, reason); assert.equal(reason.split("\n")[0], own);
+});
+
+test("the fourth stop on an unchanged verdict, commit and tree goes through with a message and a stop record; each refusal names cairn escalate (PKG-043, PKG-044)", () => {
+  const root = repo();
+  for (let i = 1; i <= 3; i++) { const out = JSON.parse(hook("stop", root, {}, { session_id: "s1" }).stdout); assert.equal(out.decision, "block", `refusal ${i}`); assert.match(out.reason, /raise an escalation with cairn escalate and stop/); }
+  assert.deepEqual(stops(root), [], "no record before the valve");
+  const r = hook("stop", root, {}, { session_id: "s1" });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout); assert.equal(out.decision, undefined, r.stdout);
+  assert.match(out.systemMessage, /three refusals with no progress: Resolvable: run R-001/, r.stdout);
+  assert.equal(stops(root).length, 1);
+  assert.match(readFileSync(join(root, ".cairn/stops", stops(root)[0]), "utf8"), /^Verdict: Resolvable: run R-001$/m);
+});
+
+test("progress resets the count, a commit or an edited file alike, and each session counts on its own (PKG-043)", () => {
+  const root = repo();
+  const blocks = (s) => JSON.parse(hook("stop", root, {}, { session_id: s }).stdout).decision === "block";
+  assert.ok(blocks("s1")); assert.ok(blocks("s1")); assert.ok(blocks("s1"));
+  writeFileSync(join(root, "notes.txt"), "the agent is working\n");                     // an edit to the tree
+  assert.ok(blocks("s1"), "an edit restarts the count");
+  assert.ok(blocks("s1")); assert.ok(blocks("s1"));
+  writeFileSync(join(root, ".cairn/backlog/an-idea.md"), "# An idea\n\nSurfaced from: R-001\nCaptured: 2026-09-17T00:00:00Z\n\nx\n"); commit(root, "a commit");
+  assert.ok(blocks("s1"), "a commit restarts the count");
+  assert.ok(blocks("s1")); assert.ok(blocks("s1"));
+  assert.ok(blocks("s2"), "another session starts its own count");
+  assert.equal(blocks("s1"), false, "the fourth unchanged refusal in s1 goes through");
 });

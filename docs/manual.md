@@ -686,9 +686,15 @@ take the same two commands, `node <checkout>/bin/hook.mjs session-start` and
 events. The stop hook runs `cairn wake` when the agent tries to stop and
 refuses the stop, with the verdict as the reason, only while the verdict is
 Resolvable. At Escalate or Done, outside a Cairn project, or on any error it
-lets the agent stop. When the harness says the stop was already refused
-once, the hook prints the verdict and lets the agent stop, so a verdict
-only you can act on never traps the session. The hooks are optional: the working agreement is the path an
+lets the agent stop. It judges with the kernel that wrote the latest
+evidence when that kernel is on disk, so a newer checkout's receipts are
+not called stale by an older command on PATH. The refusal tells the
+agent that, when it cannot act, it raises an escalation and stops. If
+the same verdict is refused three times in a session with nothing
+committed or edited in between, the fourth stop goes through: the
+harness shows you a message naming the verdict, the hook writes a stop
+record under `.cairn/stops/`, and the next wake names `explain` for it
+until the agent adds an `Explanation:` line and commits it. The hooks are optional: the working agreement is the path an
 agent takes without them.
 
 Skills live in your agent's skill directory. The plugin carries them; the

@@ -1,7 +1,7 @@
 // Bad records are repairs, and no state traps the loop (LOOP-102 to LOOP-113).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync, chmodSync, readFileSync, unlinkSync, mkdtempSync, readdirSync } from "node:fs";
+import { mkdirSync, writeFileSync, chmodSync, readFileSync, unlinkSync, mkdtempSync, readdirSync, appendFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -153,4 +153,18 @@ test("a git that cannot start is one line and exit 3 from wake and from check, w
     assert.equal(r.stderr.trim().split("\n").length, 1, cmd + ": one line: " + r.stderr); assert.match(r.stderr, /^cairn: cannot run git: .*EACCES/, cmd + ": " + r.stderr);
   }
   assert.deepEqual(records(root, "R-001"), [], "no receipt"); assert.equal(readdirSync(join(root, ".git")).includes("cairn-check.lock"), false, "no lock left behind");
+});
+
+test("an unexplained or uncommitted stop record is named explain before any other action; explained and committed, the wake moves on (LOOP-139)", () => {
+  const root = setup();
+  mkdirSync(join(root, ".cairn/stops"), { recursive: true });
+  const rec = join(root, ".cairn/stops/20260917T000000000Z.md");
+  writeFileSync(rec, "# A stop allowed without progress\n\nSession: s\nVerdict: Resolvable: run R-001\n");
+  assert.match(wake(root).stdout, /^Resolvable: explain \.cairn\/stops\/20260917T000000000Z\.md\n/, "untracked and unexplained");
+  commit(root, "the record, unexplained");
+  assert.match(wake(root).stdout, /^Resolvable: explain /, "committed but unexplained");
+  appendFileSync(rec, "Explanation: waited for the developer's answer to a question the loop does not model\n");
+  assert.match(wake(root).stdout, /^Resolvable: explain /, "explained but not committed");
+  commit(root, "explained");
+  assert.match(wake(root).stdout, /^Resolvable: run R-001/);
 });

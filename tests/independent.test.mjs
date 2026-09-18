@@ -562,3 +562,35 @@ test("every line outside the findings list is read for the prefix, and a finding
   assert.match(write(`commitment: first\ncommit: ${at} (HEAD at the time)\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*carries more than the commit/, "the review's wordy commit: line");
   assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open: a finding inside examined:\nfindings: []\n`), /move it into the findings: list/, "a finding inside examined: names the move");
 });
+
+test("markup is whatever precedes the first letter, a row is a row wherever its pipes sit, and each message names the move (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  const carried = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - see the table below\n${extra}`;
+  const ownCarries = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: see the table below, fixed (independent ${s} 1)\n${extra}`;
+  // Everything before the first letter is markup, so none of these hides a finding.
+  for (const line of ["- - open: a defect nobody names", "- 1. open: a defect nobody names", "(2) open: a defect nobody names", "- [^1]: open: a defect nobody names", "<!-- open: a defect nobody names -->", "* > 3) open: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
+  }
+  // A row is a row wherever its pipes sit.
+  const loose = "\n## Findings\n\nwhat | where\n--- | ---\nopen: the gate never reads this row | listOf\n";
+  assert.doesNotMatch(write(ownCarries(), carried(loose)), /^Done: /, "a table without outer pipes under a findings-naming heading");
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n    open: the gate joins this row | to the entry above\nfindings: []\n`), /^Done: /, "and inside examined:");
+  // Honest text keeps its prose: the keyword needs its colon next.
+  for (const line of ["## Open questions", "- 1. opened: the file and read it", "| what | where |\n|---|---|\n| the reader | listOf |"])
+    assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line.split("\n")[0]}`);
+  // A prefix line in the header is named where it is, with the move offered.
+  const stray = write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nopen: the gate accepts a finding above the list\nexamined:\n  - x at ${at}\nfindings: []\n`);
+  assert.match(stray, /above the findings: list/, "the header case is named where it is");
+  assert.match(stray, /move that line into the findings: list/, "and the move is offered");
+  // A field written after the list is told where the field goes.
+  assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nexamined:\n  - x at ${at}\nfindings: []\nreviewer: a fresh session\n`), /move that field above examined:/, "a field after the findings list");
+  // A record committed but missing from the tree is restored, not discarded.
+  rmSync(reportFile(root));
+  assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n.*restore it/, "a deleted report names restoration");
+});

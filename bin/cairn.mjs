@@ -803,7 +803,7 @@ function independentGap(root, slug, rv) {
   const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and tell it the record form: commitment:, commit:, examined: and findings: at the top, one - entry per line, every finding in the findings: list and none under a heading. Commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
   const repair = (why, fix) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; keep the reviewer's own words: ${fix ?? "give a finding its own - entry, put a heading above prose that follows the findings, or ask the reviewer again"} (LOOP-020)` });
   const loose = dirtyInputs(root, [own, name]);   // the review or the report on disk differs from HEAD: commit it before either is judged
-  if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
+  if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; ${existsSync(join(root, loose[0])) ? "commit it" : "restore it from HEAD, or commit its deletion and start a new reviewer"}, so the review and its independent report are judged in one state (LOOP-020)` };
   const text = committed(name);
   if (text === null) return again(`no independent report is committed at ${name}`);
   const f = recordFields(text);
@@ -855,7 +855,7 @@ function independentGap(root, slug, rv) {
   const asEntry = "write each as a - entry under examined:, and change none of the reviewer's words";
   if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`, asEntry);
   if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text) ?? asEntry);
-  // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
+  // A reviewer names the commit it examined; a report written for an earlier review cannot (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
   // A heading that names findings cannot be repaired without retitling the reviewer's
@@ -863,11 +863,12 @@ function independentGap(root, slug, rv) {
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
+    : list.stray ? `says ${displayPath(list.stray.trim())} above the findings: list, where the loop does not read it`
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
     : list.heading ? "says open: or resolved: under a heading, where the loop does not read it, and every finding belongs in the findings: list above the first heading. The loop hides an example only inside a fence"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
-  const advice = list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
+  const advice = list.stray ? "move that line into the findings: list, keeping its words" : list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
     : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and quotes an example of the shape inside a fence" : null;
   if (wrong) return repair(`${name} ${wrong}`, advice);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -899,19 +900,17 @@ function independentGap(root, slug, rv) {
   if (beyond !== undefined) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review cites ${mark(beyond)}, and the report holds ${report.length} finding${report.length === 1 ? "" : "s"}; cite only the findings the report made, and write your own findings on their own lines with no citation (LOOP-020)` };
   return null;
 }
-// A findings list the loop reads only in part: a blank line, an unread bullet, or a finding after a heading (LOOP-086, LOOP-020).
-// A record's list, read from its text: the entries under key:, which end at the
-// next field, the first heading, or the record's end. Any bullet or number is an
-// entry; a line indented under one joins it, and a bullet nested beneath it does
-// too unless it reads as a finding of its own. Blank lines are nothing. Every
-// other line inside the list is named, wherever it sits, so nothing is read in
-// part in silence (LOOP-086, LOOP-020). Prose belongs after a heading.
+// A record's list, read from its text: the entries under key:, which end at the next
+// field, the first heading, or the record's end. Any bullet or number is an entry; a line
+// indented under one joins it, and so does a bullet nested beneath it unless it reads as a
+// finding. Blank lines are nothing, and every other line inside the list is named.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const CLAIM = /^(?:open|resolved)[ \t]*:/i, LEAD = /^[ \t>#]*(?:(?:[-*+]|\d+[.)])[ \t]+)?(?:\[[ xX]?\][ \t]*)?[ \t"'(\[]*/;
-// What a line says, not how it is marked up: a quote marker, a heading's hashes, a list
-// marker, a task box, a quotation mark, emphasis or a tag round the word, a table cell and
-// a space before the colon all still say open: (LOOP-086).
-const saysFinding = (line) => (/^[ \t>]*\|/.test(line) ? String(line).split("|") : [String(line)]).some((cell) => CLAIM.test(cell.replace(/<[^>]*>/g, "").replace(/[*_~`]/g, "").replace(LEAD, "")));
+const CLAIM = /^(?:open|resolved)[ \t]*:/i;
+// What a line says, not how it is marked up: everything before the first letter is markup
+// -- quote markers, hashes, list markers, brackets, a task box, a quotation mark, an emoji,
+// a footnote marker -- as are emphasis and tags round the word. A row is read cell by cell,
+// wherever its pipes sit, and a space may stand before the colon (LOOP-086).
+const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(c.replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, "").replace(/^[^A-Za-z]+/, "")))
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 // The header: the record above its first heading, of either form (LOOP-108).
 function headerOf(whole) {
@@ -919,8 +918,7 @@ function headerOf(whole) {
   let title = true;   // one leading title, hashed at any level or underlined, is the record's own (LOOP-108)
   for (let i = 0; i < lines.length; i++) {
     if (ATX.test(lines[i])) { if (title) { title = false; continue; } return lines.slice(0, i).join("\n"); }
-    // An underline makes the line above it a heading, unless that line is a list
-    // entry or one of the record's own fields (LOOP-108).
+    // An underline makes a heading of the line above, unless that line is an entry or a field (LOOP-108).
     const under = i && SETEXT.test(lines[i]) && lines[i - 1].trim() && !/^[ \t]/.test(lines[i - 1]) && !ENTRY.test(lines[i - 1]) && !OWN.test(lines[i - 1]);
     if (under) { if (title) { title = false; continue; } return lines.slice(0, i - 1).join("\n"); }
     if (lines[i].trim() && !(i + 1 < lines.length && SETEXT.test(lines[i + 1]))) title = false;   // a line an underline follows may yet be that title
@@ -929,11 +927,14 @@ function headerOf(whole) {
 }
 // A line inside a list that names a field: the fields are out of order, or the line is a stray the writer must bullet or remove (LOOP-108).
 const entryFix = (unread, text) => {
-  if (saysFinding(String(unread ?? ""))) return "move it into the findings: list, and change none of the reviewer's words";
-  if (!/^(?:examined|findings):/i.test(String(unread ?? ""))) return null;
-  const e = String(text).search(/^examined:/m), f = String(text).search(/^findings:/m);
-  return e >= 0 && f >= 0 && f < e ? "write examined: above findings:, both above the first heading"
-    : "write that line as a - entry or take it out of the list; the fields are examined: then findings:, each named once";
+  const u = String(unread ?? "");
+  if (saysFinding(u)) return "move it into the findings: list, and change none of the reviewer's words";
+  if (/^(?:examined|findings):/i.test(u)) {
+    const e = String(text).search(/^examined:/m), f = String(text).search(/^findings:/m);
+    return e >= 0 && f >= 0 && f < e ? "write examined: above findings:, both above the first heading"
+      : "write that line as a - entry or take it out of the list; the fields are examined: then findings:, each named once";
+  }
+  return /^[A-Za-z][\w -]*:/.test(u.trim()) ? "move that field above examined:, and change none of the reviewer's words" : null;
 };
 function listOf(text, key) {
   const whole = withoutFences(String(text ?? "")).join("\n"), head = headerOf(whole);
@@ -961,7 +962,7 @@ function listOf(text, key) {
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
   const above = head.slice(0, m.index).split("\n");   // the header above the list: a finding there was read as an unknown field
-  const claimed = body.some(saysFinding) || above.some(saysFinding);   // a line that says open: is a finding wherever it sits, whatever marks it up
+  const stray = above.find(saysFinding) ?? null, claimed = body.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
   // The body's sections, each under its own heading, hashed or underlined: what a
   // heading holds is read against that heading's own title, never another's (LOOP-086).
   const lines = rest.split("\n"), sections = [];
@@ -976,15 +977,14 @@ function listOf(text, key) {
     const next = sections.slice(k + 1).find((t) => t.level <= sec.level);
     sec.span = lines.slice(sec.at + 1, next ? next.at : lines.length);
   }
-  // A heading whose title names findings holds nothing at all, and the title is not
-  // narrowed to its first word: no rule tells "More findings" from a section that only
-  // mentions them, so the loop refuses in the open rather than lose one (LOOP-086).
+  // Such a heading holds nothing at all, and the title is not narrowed to its first word:
+  // no rule tells "More findings" from a section about them, so the loop refuses in the open.
   const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
   // Beside a list that holds entries such a section is elaboration and may hold prose.
-  const content = (l) => ENTRY.test(l) || saysFinding(l) || /^[ \t>]*\|/.test(l);   // a list, a claim or a table row there could be a finding the list never declared
+  const content = (l) => ENTRY.test(l) || saysFinding(l) || l.includes("|");   // a list, a claim or a table row there could be a finding the list never declared
   const named = entries.length ? hits.find((s) => s.span.some(content)) : hits[0];
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
-  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread };
+  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
@@ -1012,6 +1012,7 @@ function reviewOf(root, slug) {
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
     : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
+    : fin.stray ? `says ${displayPath(fin.stray.trim())} above the findings: list, where the loop does not read it; move that line into the findings: list (LOOP-086)`
     : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings in its title, where the loop reads no finding; keep every finding in the header's list, and title a section of notes something else (LOOP-086)`
     : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"

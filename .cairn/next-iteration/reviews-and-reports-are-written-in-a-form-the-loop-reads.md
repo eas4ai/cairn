@@ -146,3 +146,13 @@ The ceiling moved with the work. The files under bin/ stood at 1900 in
 round 33 and stand at 1872 now, because giving the prefix to one list cost
 less code than the rules it replaced. The constraint is real but no longer
 the blocker; the canonical record is still the fix.
+
+One piece of dead code belongs with this item rather than in the backlog.
+The reader still declares a constant beside ENTRY, at bin/cairn.mjs line
+909, that neither the kernel nor the tests ever reads: the last trace of
+the rule round 34 replaced when the prefix was given to the findings list
+alone. Round 39 found it. It is not a commitment of its own -- there is no
+requirement to draft for deleting an unused declaration, and PKG-004 is
+not violated at 1872 of 1900 -- and the canonical record proposed above
+rewrites this reader and removes the constant with it. Delete it with that
+work.

@@ -12,4 +12,4 @@ The developer directed it in these words: 'set the package cveiling to 2000'. PK
 
 ## Realized by
 
-(none yet: recorded, not built)
+- edb4460a Raise the kernel ceiling to 2000 and drop the 0.6.0 bullet from the 0.7.0 notes

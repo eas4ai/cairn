@@ -8,7 +8,7 @@ History: PKG-004 has moved before: 1500 to 1600 on 2026-09-15 on the developer's
 
 ## Decision
 
-The developer directed it in these words: 'set the package cveiling to 2000'. PKG-004 capped the files under bin/ at 1900 and they stood at exactly 1900. Rounds 31 to 34 of the independent-report gate each paid for their fix by deleting comment, which is why two committed records disagreed about the kernel's size and the reader is denser than it should be. The requirement's text and falsifier now say 2000, scripts/pkg-lint.mjs enforces 2000, and its test checks that 2000 lines pass and 2001 fail. This does not authorise growth: the waiting next-iteration item still proposes a canonical record that would remove more reader code than it adds, and the extra 100 lines are room to write the existing reader plainly, not budget for new rules.
+The developer directed it in these words: 'set the package cveiling to 2000'. PKG-004 capped the files under bin/ at 1900 and they stood at exactly 1900. Every fix after the thirtieth round of the independent-report gate paid for itself by deleting comment, because the kernel stood at the whole of the ceiling from that round on, which is why two committed records disagreed about the kernel's size and the reader is denser than it should be. The requirement's text and falsifier now say 2000, scripts/pkg-lint.mjs enforces 2000, and its test checks that 2000 lines pass and 2001 fail. This does not authorise growth: the waiting next-iteration item still proposes a canonical record that would remove more reader code than it adds, and the extra 100 lines are room to write the existing reader plainly, not budget for new rules.
 
 ## Realized by
 

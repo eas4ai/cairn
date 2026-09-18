@@ -50,6 +50,8 @@ test("PKG-008: a non-ASCII character in a tracked text file", () => finds({ "doc
 test("PKG-009: the kernel importing from tests", () => finds({ "bin/x.mjs": '// cairn wake\nimport { h } from "../tests/helpers.mjs";\n' }, "PKG-009"));
 test("PKG-012: a network call or a model client in the kernel, but not a vendor's name in text", () => {
   finds({ "bin/x.mjs": "// cairn wake\nawait fetch(u);\n" }, "PKG-012");
+  // The text checks read the same kernel as the line count: a file in a subdirectory of bin/ is scanned too (PKG-038).
+  finds({ "bin/hooks/stop.mjs": "await fetch(u);\n" }, "PKG-012");
   finds({ "bin/x.mjs": '// cairn wake\nimport Anthropic from "@anthropic-ai/sdk";\n' }, "PKG-012"); finds({ "bin/x.mjs": '// cairn wake\nimport OpenAI from "openai";\n' }, "PKG-012");
   const ok = lint(repo({ "bin/x.mjs": "// cairn wake\nconst trailer = /co-authored-by:.*(claude|anthropic|openai)/i;\n" }));
   assert.equal(ok.status, 0, ok.stdout);

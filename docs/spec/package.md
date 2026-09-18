@@ -46,11 +46,14 @@ Status: Agreed 2026-09-18
 
 Revised 2026-09-18 on the developer's direction to raise the package
 ceiling to 2000; the decision record carries their words. The kernel
-stood at exactly 1900, the whole of the old ceiling, and rounds 31 to 34
-of the independent-report gate each paid for their fix by trimming
-comment rather than by writing the clearest code. The waiting next-iteration item said the ceiling had
-become a constraint on the work itself; this raises it to 2000 and
-leaves 100 lines of room.
+had stood at exactly 1900, the whole of the old ceiling, since the
+thirtieth round of the independent-report gate, so every fix after it
+had to remove as much as it added and was paid for by trimming comment
+rather than by writing the clearest code. That is measured from the
+tracked files under bin/ at each of those commits, not counted from the
+records, which disagreed. The waiting next-iteration item said the
+ceiling had become a constraint on the work itself; this raises it to
+2000 and leaves 100 lines of room.
 
 Revised 2026-09-17, confirmed by the developer ("approved") on 2026-09-17 in the next-iteration phase. The first text set 1600 lines, and the
 kernel stood at 1590 when autonomous and Jev mode were specified; the

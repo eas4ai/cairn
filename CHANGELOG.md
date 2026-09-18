@@ -13,9 +13,9 @@ Five fixes the developer confirmed after asking what made Cairn a
 frustration, and a raised kernel ceiling to give them room.
 
 - The kernel ceiling is 2000 lines, raised from 1900 (PKG-004). The
-  files under bin/ stood at exactly 1900, so the fixes of rounds 31 to
-  34 were paid for by trimming comment; the new ceiling leaves room to
-  write the reader plainly.
+  files under bin/ had stood at exactly 1900 since the thirtieth review
+  round, so every fix after it was paid for by trimming comment; the new
+  ceiling leaves room to write the reader plainly.
 - A defect an Agreed requirement already forbids is captured with
   `cairn backlog --defect` and worked under the current commitment:
   wake names `fix <item>`, and the item carries its fixing commit.

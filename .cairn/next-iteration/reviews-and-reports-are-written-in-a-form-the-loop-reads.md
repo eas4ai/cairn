@@ -142,16 +142,20 @@ the gate is guessing what the reviewer meant. A canonical record removes
 the guess and the message together: there is nothing to prescribe when the
 writer's tool cannot produce the unreadable shape.
 
-The ceiling moved with the work. The files under bin/ reached 1900 in
-round 33 and stand at 1900 now, because giving the prefix to one list
-cost less code than the rules it replaced, and what that saved has since
-been spent. Until 2026-09-18 that was the whole of the ceiling, so each
-change of this class had to remove as much as it added. The developer
-raised the ceiling to 2000 that day, which buys 100 lines and no more.
-This paragraph has been wrong twice: it claimed 1872 lines until the
-fortieth report checked it, and it still said there was no headroom after
-the ceiling rose, which the forty-first report caught. The number now
-comes from pkg-lint, not from a report.
+The ceiling moved with the work. Measured from the tracked files under
+bin/ at each round's fix, the kernel reached 1900 at the thirtieth
+round's fix 1376ec71 and stood there through every later round: the one
+change that bought room was round 34's 601f567a, which gave the prefix
+to the findings list alone and took bin/ to 1896, and the rounds after
+it spent that again. Until 2026-09-18 that was the whole of the ceiling,
+so each change of this class had to remove as much as it added. The
+developer raised the ceiling to 2000 that day, which buys 100 lines and
+no more. This paragraph has been wrong three times, each time because a
+number was copied from a report or another record instead of being
+measured: it claimed 1872 lines, then claimed there was no headroom
+after the ceiling rose, then dated the kernel reaching the ceiling three
+rounds late and credited it to a change that came afterwards. Every
+figure in it is now measured from the repository.
 
 Two dead declarations in the reader are gone, and this item no longer
 waits on them. The constant beside ENTRY that round 39 found, and the

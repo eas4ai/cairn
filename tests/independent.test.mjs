@@ -650,3 +650,36 @@ test("a label before the prefix is markup too, and a divider hides no finding (L
   for (const line of ["- Blocked: the gate refuses an honest entry", "- Note: opened the file and read it"])
     assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
 });
+
+test("only the findings list itself is exempt from the sweep, and a label of any shape is markup (LOOP-020, LOOP-071, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const carried = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${extra}`;
+  const ownCarries = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${extra}`;
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  const F = "```", D = "~~~~~~~~~~~~~~~~~~~~~~~~";
+  // Nothing after the list is exempt, with or without a heading below it.
+  assert.doesNotMatch(write(ownCarries(), carried(`\n${F}\n- open: the second real defect\n${F}\n`)), /^Done: /, "a fenced finding below the list, before any heading");
+  assert.doesNotMatch(write(ownCarries(), carried(`\n${D}\n\n- open: the second real defect\n\n${D}\n`)), /^Done: /, "a divider round a finding, with no heading at all");
+  assert.doesNotMatch(write(ownCarries(`\n${D}\n\n- open: my own unresolved defect\n\n${D}\n`), carried()), /^Done: /, "and the same in the review");
+  assert.doesNotMatch(write(ownClean(), clean(`\n${F}\n- open: the only real defect\n${F}\n`)), /^Done: /, "a fenced finding below an empty list");
+  // A fence that quotes the field does not move the exempt span above itself.
+  assert.doesNotMatch(write(ownCarries(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n${F}\nfindings:\n  - open: the second real defect\n${F}\nfindings:\n  - the gate drops an entry\n`), /^Done: /, "a quoted field above the real list");
+  // The list's own entries stay exempt, so an honest record still reads.
+  assert.match(write(ownCarries(), carried()), /^Done: /, "a clean pair still reaches Done");
+  assert.match(write(ownCarries("\n## Notes\n\nWhat I read.\n"), carried()), /^Done: /, "and prose under a heading is still prose");
+  // A label of any length, a second label and a bracketed tag are all markup.
+  for (const line of ["- Note: Blocked: open: a defect nobody names", "- Blocked, and the message is also wording and long: open: a defect nobody names", "- [silent] open: a defect nobody names", "- LOOP-086: open: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
+  }
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - Note: Blocked: open: the second real defect\nfindings: []\n`), /^Done: /, "and inside examined:");
+  // Honest text with a colon keeps its prose.
+  for (const line of ["- What I read: the tests, the walkthrough and the manual", "- Note: nothing was broken", "I checked whether a line that says open: is read wherever it sits."])
+    assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // The advice no longer names a fence as cover.
+  assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n- open: a defect nobody names\n`)), /inside a fence/, "no message offers a fence as cover");
+});

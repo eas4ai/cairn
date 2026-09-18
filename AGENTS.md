@@ -150,12 +150,14 @@ way. A fence keeps a quoted field out of the
 record's metadata, as LOOP-071 asks, and hides no finding from the
 sweep: a line that says the prefix is read wherever it sits, fence or
 no fence, because pairing markers cannot be told from prose that begins
-with one. So describe the prefix rather than quoting it outside the
-findings list, and do not write a rating or a field name before it: a
-label such as `Blocked:` is markup like any other, and the line is
-still read as a finding. A table row is read cell by cell, wherever its
-pipes sit, so a table written without outer pipes hides nothing. Only a fence hides such a line, so
-quote an example inside one; an indented code block does not hide it.
+with one. So describe the prefix rather than writing it at the start of
+any line outside the findings list, and put no rating, tag or field name
+before it: a label such as `Blocked:`, `[silent]` or a sentence ending in
+a colon is markup like any other, and the line is still read as a
+finding. A table row is read cell by cell, wherever its pipes sit, so a
+table written without outer pipes hides nothing. Only the findings
+list's own lines are exempt from that reading, so nothing below the list
+is cover either.
 A section holds its subsections, so a findings-naming heading is judged
 over everything under it down to the next heading at its own level. A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,

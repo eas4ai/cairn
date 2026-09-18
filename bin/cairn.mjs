@@ -865,10 +865,10 @@ function independentGap(root, slug, rv) {
     : list.stray ? `says ${displayPath(list.stray.trim())} above the findings: list, where the loop does not read it`
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
-    : list.heading ? "says open: or resolved: under a heading, where the loop does not read it, and every finding belongs in the findings: list above the first heading. The loop hides an example only inside a fence"
+    : list.heading ? "says open: or resolved: under a heading, where the loop does not read it, and every finding belongs in the findings: list above the first heading. No fence hides such a line, so the prefix is described rather than quoted"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
   const advice = list.stray ? "move that line into the findings: list, keeping its words" : list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
-    : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and quotes an example of the shape inside a fence" : null;
+    : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and describes the prefix rather than writing it at the start of another line" : null;
   if (wrong) return repair(`${name} ${wrong}`, advice);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
   const report = list.entries.map(norm);
@@ -909,10 +909,11 @@ const CLAIM = /^(?:open|resolved)[ \t]*:/i;
 // -- quote markers, hashes, list markers, brackets, a task box, a quotation mark, an emoji,
 // a footnote marker -- as are emphasis and tags round the word. A row is read cell by cell,
 // wherever its pipes sit, and a space may stand before the colon (LOOP-086).
-const MARK = /^(?:[^A-Za-z([]+|\[[ xX]?\]|\[\^[^\]]*\][ \t]*:?|\(?(?:[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)]|[([])/;   // one unit of markup, letters and all
+const MARK = /^(?:[^A-Za-z([]+|\[[^\]:]*\][ \t]*:?|\(?(?:[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)]|[([])/;   // one unit of markup, letters and all
 const bare = (c) => { let t = String(c).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, ""), was; do { was = t; t = t.replace(MARK, ""); } while (t !== was); return t; };
-const label = (t) => t.replace(/^[^:]{0,40}:[ \t]*/, "");   // a rating or field name a reviewer writes before the prefix
-const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(bare(c)) || CLAIM.test(bare(label(bare(c)))))
+const label = (t) => t.replace(/^[^:]*:[ \t]*/, "");
+const says = (c) => { for (let t = bare(c), i = 0; i < 4; i++) { if (CLAIM.test(t)) return true; const next = bare(label(t)); if (next === t) return false; t = next; } return false; };
+const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some(says);
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -942,9 +943,10 @@ function listOf(text, key) {
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
-  let indent = null, blank = false, unread = null, dropped = false;
-  for (const line of head.slice(m.index + m[0].length).split("\n")) {
+  let indent = null, blank = false, unread = null, dropped = false, last = 0;
+  for (const [n, line] of head.slice(m.index + m[0].length).split("\n").entries()) {
     if (!line.trim()) { blank = true; continue; }
+    if (ENTRY.test(line) || /^[ \t]+\S/.test(line)) last = n;   // how far the list reaches: only its own lines are exempt from the sweep (LOOP-086)
     if (SETEXT.test(line) && !/^[ \t]/.test(line)) continue;   // a rule at the margin separates, as it does in the header (LOOP-108)
     if (key === "examined" && /^findings:/.test(line)) break;   // the field as the kernel reads it, however it is spaced: a Findings: line is named, never a silent end (LOOP-086)
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
@@ -959,12 +961,10 @@ function listOf(text, key) {
     if (unread) { dropped = dropped || !!item; continue; }
     unread = item ? item[2].trim() : line.trim();
   }
-  // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
-  const raw = String(text ?? "").replace(/\r\n/g, "\n"), mine = headerOf(raw), at = new RegExp(`^${key}:`, "m").exec(mine);   // its own header, which no fence can stretch
-  const own = raw.split("\n"), from = at ? mine.slice(0, at.index).split("\n").length - 1 : head.slice(0, m.index).split("\n").length - 1;
-  const above = own.slice(0, from), tail = own.slice(at ? mine.split("\n").length : head.split("\n").length);
+  const own = String(text ?? "").replace(/\r\n/g, "\n").split("\n"), from = head.slice(0, m.index).split("\n").length - 1;
+  const above = own.slice(0, from), tail = own.slice(from + 1 + last);   // everything but the list's own lines is swept
   const stray = above.find(saysFinding) ?? null, claimed = tail.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
   // The body's sections, each under its own heading, hashed or underlined: what a
   // heading holds is read against that heading's own title, never another's (LOOP-086).
@@ -1016,7 +1016,7 @@ function reviewOf(root, slug) {
     : fin.stray ? `says ${displayPath(fin.stray.trim())} above the findings: list, where the loop does not read it; move that line into the findings: list (LOOP-086)`
     : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings in its title, where the loop reads no finding; keep every finding in the header's list, and title a section of notes something else (LOOP-086)`
     : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"
-    : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"
+    : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, which no fence hides (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
   if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${headerOf(withoutFences(text).join("\n")).length < text.trimEnd().length && /^(?:examined|findings):/m.test(text.slice(headerOf(withoutFences(text).join("\n")).length)) ? "; the fields sit under a heading and the header ends at the first heading, hashed or underlined" : ""}${/\(LOOP-\d+\)\s*$/.test(missing) ? "" : " (LOOP-108)"}` } };
   const findings = fin.entries;

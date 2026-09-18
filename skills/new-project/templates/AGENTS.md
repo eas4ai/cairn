@@ -141,11 +141,14 @@ Outside the `findings:` list the loop reads a bullet under a heading as
 prose, and refuses only what it can recognise: a line that says `open:`
 or `resolved:`, wherever in the record it sits and whatever marks it up.
 Every line outside that list is read, the header above it included, and
-a heading's own text counts as a line. Everything before the line's
-first letter is markup, not cover -- quote markers, hashes, list
-markers, brackets, a task box, a quotation mark, an emoji, a footnote
-marker -- as are emphasis and tags round the word, and a space may
-stand before the colon. A table row is read cell by cell, wherever its
+a heading's own text counts as a line. Every marker before the words is
+markup, not cover -- quote markers, hashes, list markers of any kind,
+a task box whether or not it is checked, brackets, a quotation mark, an
+emoji, a footnote marker -- as are emphasis and tags round the word, and
+a space may stand before the colon. A field's own value is read the same
+way. A fence hides its lines only when the marker stands alone on its
+line, or with one language word: prose that merely begins with three
+backticks is prose, and hides nothing. A table row is read cell by cell, wherever its
 pipes sit, so a table written without outer pipes hides nothing. Only a fence hides such a line, so
 quote an example inside one; an indented code block does not hide it.
 A section holds its subsections, so a findings-naming heading is judged

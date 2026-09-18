@@ -1,8 +1,7 @@
 // Shared specification grammar. A requirement is one contiguous paragraph;
 // its Status overrides the file header. Fenced examples are not requirements.
-// A fenced block is not content. Only a fence that closes hides its lines: an
-// opening fence with no close stays text, so nothing below it disappears
-// (LOOP-086).
+// A fenced block is not content. Only a fence that closes hides its lines, and only a
+// marker alone on its line, or with one language word, opens one (LOOP-086).
 export function withoutFences(text) {
   const lines = text.split(/\r?\n/), out = lines.slice();
   let open = null;
@@ -14,7 +13,7 @@ export function withoutFences(text) {
       }
       continue;
     }
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(lines[i]);
+    const m = /^ {0,3}(`{3,}|~{3,})[ \t]*[^\s`~]*[ \t]*$/.exec(lines[i]);   // a fence opens on its own line, or with one language word: prose that merely begins with the marker is prose (LOOP-086)
     if (m) open = { mark: m[1], at: i };
   }
   return out;

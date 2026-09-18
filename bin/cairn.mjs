@@ -809,7 +809,7 @@ function independentGap(root, slug, rv) {
   const f = recordFields(text);
   const commitOf = (v) => { const s = String(v ?? "").trim().toLowerCase(); return /^[0-9a-f]{7,64}$/.test(s) ? git(root, "rev-parse", "--verify", "-q", `${s}^{commit}`).stdout.trim() : ""; };
   const at = commitOf(rv.commit);
-  // Fields the header never reached, because a heading or prose sits above them: the report is honest and repairable, never a reason for a new reviewer (LOOP-020, LOOP-108).
+  // Fields the header never reached: the report is honest and repairable (LOOP-020, LOOP-108).
   const whole = withoutFences(text).join("\n"), says = (k, s) => new RegExp(`^${k}:`, "m").test(s);   // the field exactly as the kernel reads it; another spelling is named as one
   const top = headerOf(whole);
   const early = { examined: listOf(text, "examined"), findings: listOf(text, "findings") };   // what the lists hold, to say which field the record is short of
@@ -910,12 +910,13 @@ const CLAIM = /^(?:open|resolved)[ \t]*:/i;
 // -- quote markers, hashes, list markers, brackets, a task box, a quotation mark, an emoji,
 // a footnote marker -- as are emphasis and tags round the word. A row is read cell by cell,
 // wherever its pipes sit, and a space may stand before the colon (LOOP-086).
-const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(c.replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, "").replace(/^[^A-Za-z]+/, "")))
+const MARK = /^(?:[^A-Za-z([]+|\[[ xX]?\]|\[\^[^\]]*\][ \t]*:?|\(?(?:[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)]|[([])/;   // one unit of markup, letters and all
+const bare = (c) => { let t = String(c).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, ""), was; do { was = t; t = t.replace(MARK, ""); } while (t !== was); return t; };
+const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(bare(c)) || CLAIM.test(bare(String(c).replace(/^[A-Za-z][\w -]*:/, ""))))
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
-// The header: the record above its first heading, of either form (LOOP-108).
-function headerOf(whole) {
+function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
-  let title = true;   // one leading title, hashed at any level or underlined, is the record's own (LOOP-108)
+  let title = true;   // one leading title, hashed at any level or underlined, is the record's own
   for (let i = 0; i < lines.length; i++) {
     if (ATX.test(lines[i])) { if (title) { title = false; continue; } return lines.slice(0, i).join("\n"); }
     // An underline makes a heading of the line above, unless that line is an entry or a field (LOOP-108).
@@ -1017,7 +1018,7 @@ function reviewOf(root, slug) {
     : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"
     : fin.heading ? "a finding sits under a heading, where the loop does not read it; keep the findings in the header's list. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence (LOOP-086)"
     : !fin.empty && fin.value ? `findings: ${displayPath(fin.value)} is not a list; write each finding as a - entry, or findings: [] for none (LOOP-086)` : null;
-  if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${headerOf(withoutFences(text).join("\n")).length < text.trimEnd().length && /^(?:examined|findings):/m.test(text.slice(headerOf(withoutFences(text).join("\n")).length)) ? "; the fields sit under a heading and the header ends at the first heading, hashed or underlined" : ""} (LOOP-108)` } };
+  if (missing) return { commit: f.commit ?? null, open: [], repair: { verdict: "Resolvable", action: `repair ${rel(root, p)}`, why: `${missing}${headerOf(withoutFences(text).join("\n")).length < text.trimEnd().length && /^(?:examined|findings):/m.test(text.slice(headerOf(withoutFences(text).join("\n")).length)) ? "; the fields sit under a heading and the header ends at the first heading, hashed or underlined" : ""}${/\(LOOP-\d+\)\s*$/.test(missing) ? "" : " (LOOP-108)"}` } };
   const findings = fin.entries;
   const invalid = findings.findIndex((x) => !/^(?:open|resolved):\s*\S/.test(x));
   const malformed = invalid >= 0 ? `finding ${invalid + 1} is unrecognized: ${displayPath(findings[invalid])}` : null;

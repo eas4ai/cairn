@@ -594,3 +594,33 @@ test("markup is whatever precedes the first letter, a row is a row wherever its 
   rmSync(reportFile(root));
   assert.match(wake(root), /^Resolvable: commit \.cairn\/reviews\/first\.independent\.md\n.*restore it/, "a deleted report names restoration");
 });
+
+test("a marker that contains a letter is still a marker, and a fence opens only on its own line (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  const F = "```";
+  // A checked box, a lettered or roman marker and a parenthesised letter are markup like any other.
+  for (const line of ["- [x] open: a defect nobody names", "- [X] open: a defect nobody names", "a) open: a defect nobody names", "i. open: a defect nobody names", "- (x) open: a defect nobody names", "iv) open: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
+  }
+  // A finding in the report's examined: list or header, written with a checked box, is named too.
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - [x] open: a defect nobody names\nfindings: []\n`), /^Done: /, "a checked box inside examined:");
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\n- [x] open: a defect nobody names\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Done: /, "and in the header");
+  // A finding hidden in a field's own value is named.
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: open: a defect nobody names\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Done: /, "a finding as a field's value");
+  // A fence opens on a line of its own, or with one word: prose that begins with the marker hides nothing.
+  const prose = `\n## Notes\n\n${F} opens a fence, and the next such line closes it.\n\n## Findings\n\n- open: a defect nobody names\n\n${F}\ncairn: R-001: pass\n${F}\n`;
+  assert.doesNotMatch(write(ownClean(), clean(prose)), /^Done: /, "a finding between a prose marker and a real fence");
+  assert.doesNotMatch(write(ownClean(prose), clean()), /^Done: /, "and the same in the review");
+  // A real fence still hides its example, with or without a language word.
+  assert.match(write(ownClean(), clean(`\n## Notes\n\n${F}\n- open: an example\n${F}\n`)), /^Done: /, "a bare fence");
+  assert.match(write(ownClean(), clean(`\n## Notes\n\n${F}text\n- open: an example\n${F}\n`)), /^Done: /, "and one with a language word");
+  // No repair names its requirement twice.
+  const twice = write(ownClean(`\n## Notes\n\n- open: a defect of my own\n`), clean());
+  assert.doesNotMatch(twice, /\(LOOP-\d+\)[^\n]*\(LOOP-\d+\)/, "one requirement tag per message");
+});

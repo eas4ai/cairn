@@ -495,9 +495,12 @@ findings, judged over its subsections as well. A fence keeps a quoted field out 
 metadata, but hides no finding. The prefix belongs to that list alone, so
 describe it rather than writing it: a line anywhere else in the record that
 carries it is read as a finding, whatever marks it up or punctuates it. Keep
-no fence inside either list, write each field once and at the margin, put
-every entry under a field, and expect a report that breaks these to be
-written again rather than edited. Such
+no fence inside either list, write each field once and at the margin, and
+put every entry under a field. A report that breaks one of these is
+refused rather than read in part, and the loop names the repair: those
+four are mended in place, keeping the reviewer's own words. Only a report
+that carries the prefix outside its list is written again rather than
+repaired, because the agent may not move or reword a reviewer's words. Such
 a heading holds nothing, whatever the record's `findings:` list says,
 because a bullet, a table row, a paragraph or a subsection under it could
 each be a finding. The loop refuses it beside a declared-empty list and

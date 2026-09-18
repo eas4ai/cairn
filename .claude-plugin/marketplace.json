@@ -6,7 +6,7 @@
     {
       "name": "cairn",
       "source": "./",
-      "version": "0.7.0",
+      "version": "0.6.0",
       "description": "The referee for agent-led software development: reads the repository, names the next action.",
       "category": "development",
       "keywords": ["agent", "specification", "requirements", "review", "hooks"]

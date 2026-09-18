@@ -73,3 +73,42 @@ Two limits are recorded rather than closed, on the developer's ruling of
 
 Twenty-eight rounds are now carried, with 103 findings from the reports
 and 163 entries counting the builder's own.
+
+Rounds 27 to 32 settle the argument. Every one of those six rounds found
+at least one silent loss, and 15 of the 19 silent losses across the whole
+commitment were created by the previous round's own fix. The sequence is
+worth reading as one story, because it is the same story six times:
+
+- round 28: the reader recognised a finding only in the exact markup it
+  expected, so a blockquote marker, a task box, emphasis, a table cell
+  and a bare paragraph each hid one
+- round 29: every region the reader did not sweep was a hiding place, the
+  header above the list included, and a finding written as its own
+  heading was invisible
+- round 30: the fix enumerated markup, so a second list marker, a number
+  in parentheses, an emoji and an HTML comment walked past it; the answer
+  was to stop enumerating and read the line from its first letter
+- round 31: that rule made every marker containing a letter into cover,
+  the plainest being a checked task box, and fence markers paired by
+  position let a prose line beginning with three backticks blank the
+  findings below it
+- round 32: the fence rule then lost findings in both directions at once,
+  in six opener and closer shapes, and a decorative divider used twice
+  was a closed fence; the answer was structural, not another rule -- the
+  findings sweep stopped reading the fence-stripped text at all
+- round 33 is under way at the seam that answer created
+
+The lesson for the specification is not that the rules were wrong. Each
+was right about the case in front of it. It is that a finding in a
+Markdown record has no mark of its own, so every rule is a guess about
+which line a human meant as a finding, and each guess creates the next
+round's hiding place. A canonical record the loop writes and reads ends
+the class: a finding would be a field, not a bullet whose meaning depends
+on the markup before it, the heading above it and the fence around it.
+
+One practical constraint has also arrived. PKG-004 caps the kernel at
+1900 lines, and it now sits at exactly 1900. Rounds 31, 32 and 33 each
+paid for their fixes by trimming comment. The next round of this class
+needs either a larger ceiling, which is an Agreed requirement and so the
+developer's, or the canonical records proposed above, which would remove
+more reader code than they add.

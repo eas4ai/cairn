@@ -161,3 +161,13 @@ not violated at 1900 of 1900, though there is no headroom left -- and the
 canonical record proposed above
 rewrites this reader and removes the constant with it. Delete it with that
 work.
+
+Round 40 added one more shape of the same kind, and it is the sharpest
+argument yet for the canonical record. A report with a stray bullet on the
+line below its commit field is sent back for a whole new reviewer, while
+the identical bullet one line lower is repaired in place with every word
+kept. The reader already carries the gentler repair, for a commit line
+that carries more than the commit, but it is missed when the stray bullet
+joins the value with no space, because the first whitespace-separated word
+is then not a commit either. An honest reviewer's report is discarded over
+a space. A record the loop writes cannot produce the shape at all.

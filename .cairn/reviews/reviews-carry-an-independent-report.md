@@ -15,7 +15,7 @@ examined:
   - re-examined at 7f3032b2 after the twenty-eighth round's fixes, with a twenty-ninth independent report from a new subagent working read-only in its own clone, briefed to the developer's ruling that only a silent loss is fixed. It built twenty-six record pairs, read all 68 files in .cairn/reviews/ through the reader (62 accepted, 6 refused, every refusal older than this commitment), and recorded a control beside each silent case. It found eight: six silent, one blocked, one wording. Carried below.
   - my own probes at 7f3032b2: eleven markup shapes through the new helper. Capitals, a doubly nested quote marker, underscores and a numbered entry are named; "- opened: the file" and "- resolved issues: none of them mattered" are correctly left as prose. Three silent losses of my own, recorded below, and two exotic misses not worth a rule: an escaped prefix, which renders as text, and a definition-list line whose colon sits on the next line.
   - re-examined at 35a9ca09 after the twenty-seventh round's fixes, with a twenty-eighth independent report from a new subagent working read-only in its own clone. The developer had ruled that only a silent loss would be fixed from this round, so the reviewer was asked to hunt silent losses first and report the rest briefly. It built thirty-eight record pairs, confirmed all five of the round's changes where it could reach them, and found eleven: four silent, three blocked, four wording. Carried below.
-  - my own probes at 35a9ca09: an open: bullet nested two levels deep behind earlier bullets, and as a numbered entry, both named; a bullet under a findings heading beside a list that holds entries, refused, and prose there, accepted; two leading titles, a title after prose, a setext title and a title above a deeper heading, each refused; a title inside a fence, invisible; a report short of commit: only and of examined: only. One finding of my own, blocked, recorded below.
+  - my own probes at 35a9ca09: a prefixed bullet nested two levels deep behind earlier bullets, and as a numbered entry, both named; a bullet under a findings heading beside a list that holds entries, refused, and prose there, accepted; two leading titles, a title after prose, a setext title and a title above a deeper heading, each refused; a title inside a fence, invisible; a report short of commit: only and of examined: only. One finding of my own, blocked, recorded below.
   - a regression sweep at 35a9ca09: all 67 committed reviews read through the current reader, 61 accepted and 6 refused, every refusal for a reason that predates this commitment (four with a verification: line inside examined:, two listing - none under findings:). freshness-and-scope-guidance-agree.md, refused at a84cc814 for its findings-naming section, is accepted again, which confirms the twenty-seventh round's second fix on a real record.
   - re-examined at a84cc814 after the twenty-sixth round's fix, with a twenty-seventh independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It built twenty-four record pairs, confirmed the previous round's fixes and this round's three changes, and found eight: one silent, four blocked, three wording. Carried below.
   - my own probes at a84cc814: a findings heading inside a closed fence and inside a four-space code block, both invisible; "## What I found" with a bulleted finding, Done, which is the accepted limit; a "- Findings:" list item, not a heading; the review's own "## Review at <sha>" section; and a report whose only body is a rule. One finding of my own, wording, recorded below. I also read every committed review: only freshness-and-scope-guidance-agree.md carries a heading whose title names findings, and none carries an underlined one.
@@ -334,7 +334,7 @@ as nothing.
 
 Twelfth round. Reading loosely and naming little is the same silent drop
 by another route: a line the reader cannot read must be named whenever
-anything follows it, and a report has no open: prefix to recognise.
+anything follows it, and a report has no prefix to recognise.
 
 ## Review at 52010049, 2026-09-17
 
@@ -554,7 +554,7 @@ The four silent losses are one fault seen four ways: the reader recognises
 a finding only in the exact shape it expects. A blockquote marker, a task
 checkbox, bold around the prefix, a space before the colon, an HTML list
 item, a table cell and a bare paragraph under a findings-naming heading all
-hide a line that plainly says `open:`. The second of them is mine: the
+hide a line that plainly says the prefix. The second of them is mine: the
 twenty-seventh round's rule, which judges a findings-naming heading against
 the record's own list, switched the protection off exactly when the list
 holds entries. Each is fixed by recognising the shape rather than the
@@ -568,7 +568,7 @@ of any level or form is read past and the message names the fix, a
 every uncarried finding and every missing field is named at once instead of
 one per wake. The remaining limits are written into the item in
 next-iteration: an indented code block that quotes the finding shape is
-read as a live finding, and a `resolved:` line needs no account of how it
+read as a live finding, and a resolved line needs no account of how it
 was resolved, which is discipline rather than a boundary, as the agreement
 says of Cairn generally.
 
@@ -598,7 +598,7 @@ One blocked finding is recorded as a limit under the developer's ruling of
 refused, because table cells are read for it. Keeping that is the price of
 not losing a finding written as a table row, which the twenty-eighth round
 found; the agreement says a fence is the only cover, and a reviewer's
-summary table should not begin a cell with open: or resolved:.
+summary table should not begin a cell with the prefix.
 
 ## Review at 356e94fc, 2026-09-18
 

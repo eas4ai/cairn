@@ -468,12 +468,12 @@ test("a recognisable finding under a heading is named wherever it sits, a findin
   assert.match(write(ownClean(buried), clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "and the review's own");
   // A findings-titled section is elaboration when the record's own list holds entries, and the silent-loss shape only when it declares none.
   for (const title of ["Findings in detail", "No findings", "Summary of findings review process"])
-    assert.match(write(ownCarries(), carried(`\n## ${title}\n\nWhat I mean by the finding above.\n`)), /^Done: /, `${title} beside a list that holds entries`);
+    assert.match(write(ownCarries(), carried(`\n## ${title}\n\nWhat I mean by the finding above.\n`)), /^Resolvable: review first\n.*the heading/, `${title} is refused beside any list`);
   assert.match(write(ownClean(), clean("\n## Findings\n\nThe gate drops an entry.\n")), /^Resolvable: review first\n.*the heading "Findings"/, "and the same title above a list that declares none is refused");
   // The repair completes: moving the findings into the list leaves the heading acceptable.
   const said = write(ownClean(), clean("\n## Findings\n\n- open: the gate mis-reads a heading title\n"));
   assert.match(said, /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*under a heading/, "findings shaped as entries under a heading are a repair");
-  assert.match(write(ownCarries("\n## Findings\n"), carried("\n## Findings\n")), /^Done: /, "and the record is acceptable once they are in the list");
+  assert.match(write(ownCarries("\n## What I read\n"), carried("\n## What I read\n")), /^Done: /, "and the record is acceptable once they are in the list and the section is titled otherwise");
   // A report short of the one field the kernel cannot supply is replaced once, never repaired first.
   const two = write(ownClean(), `reviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`);
   assert.match(two, /^Resolvable: review first\n.*carries no commitment: or commit: line/, "a report short of both scalar fields");
@@ -503,7 +503,7 @@ test("a line that says open: is a finding however it is marked up, and one leadi
     assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
   }
   // Beside a list that holds entries, a findings-naming heading may hold prose, but not a finding in any shape.
-  assert.match(write(ownCarries(), carried("\n## Findings in detail\n\nWhat I mean by the finding above.\n")), /^Done: /, "elaboration is still prose");
+  assert.match(write(ownCarries(), carried("\n## Findings in detail\n\nWhat I mean by the finding above.\n")), /^Resolvable: review first\n.*the heading/, "a findings-naming heading holds nothing, whatever the list holds");
   for (const body of ["open: a second defect the loop never names", "| 2 | open: a second defect the loop never names |", "> open: a second defect the loop never names"]) {
     assert.doesNotMatch(write(ownCarries(), carried(`\n## Findings\n\n${body}\n`)), /^Done: /, `a finding under a findings heading beside entries: ${body}`);
     assert.doesNotMatch(write(ownCarries(`\n## Findings\n\n${body}\n`), carried()), /^Done: /, `and in the review: ${body}`);
@@ -548,7 +548,7 @@ test("every line outside the findings list is read for the prefix, and a finding
     assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
   }
   // Honest text keeps its prose: the prefix needs its colon.
-  for (const line of ["## Open questions", "- opened: the file and read it", "- resolved issues: none of them mattered"])
+  for (const line of ["## Open questions", "- opened: the file and read it", "- unresolved issues remain"])
     assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
   // An indented line joined into an examined entry is read for the prefix, as a bulleted one is.
   for (const line of ["    **open:** the gate absorbs this into the entry above", "    open : the gate absorbs this into the entry above"])
@@ -557,7 +557,7 @@ test("every line outside the findings list is read for the prefix, and a finding
   assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n### The second one\n\n- the gate accepts a second defect in a subsection\n")), /^Done: /, "a bullet in a subsection");
   assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n| what | where |\n|---|---|\n| the gate never reads this row | listOf |\n")), /^Done: /, "a table under the heading");
   assert.doesNotMatch(write(ownCarries(`\n## Findings in detail\n\n### The second one\n\n- my own second defect\n`), carried()), /^Done: /, "and the same in the review");
-  assert.match(write(ownCarries(), carried("\n## Findings in detail\n\nWhat I mean by the finding above.\n\n## Method\n\n- I read the kernel\n")), /^Done: /, "while a sibling section keeps its bullets and elaboration stays prose");
+  assert.match(write(ownCarries(), carried("\n## Method\n\n- I read the kernel\n")), /^Done: /, "while a sibling section keeps its bullets");
   // The messages name the move the writer must make, and blame no line that joined nothing.
   assert.match(write(`commitment: first\ncommit: ${at} (HEAD at the time)\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*carries more than the commit/, "the review's wordy commit: line");
   assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open: a finding inside examined:\nfindings: []\n`), /move it into the findings: list/, "a finding inside examined: names the move");
@@ -678,8 +678,35 @@ test("only the findings list itself is exempt from the sweep, and a label of any
   }
   assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - Note: Blocked: open: the second real defect\nfindings: []\n`), /^Done: /, "and inside examined:");
   // Honest text with a colon keeps its prose.
-  for (const line of ["- What I read: the tests, the walkthrough and the manual", "- Note: nothing was broken", "I checked whether a line that says open: is read wherever it sits."])
+  for (const line of ["- What I read: the tests, the walkthrough and the manual", "- Note: nothing was broken", "I checked whether such a line is read wherever it sits."])
     assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
   // The advice no longer names a fence as cover.
   assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n- open: a defect nobody names\n`)), /inside a fence/, "no message offers a fence as cover");
+});
+
+test("the prefix belongs to the findings list alone: anywhere else in a record it is a finding (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const ownC = (x = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${x}`;
+  const rep = (x = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${x}`;
+  const F = "```", D = "~~~~~~~~~~~~~~~~~~~~~~~~";
+  // A fence inside the list is not part of the list, so nothing hides there.
+  assert.doesNotMatch(write(ownC(), rep(`${F}\n- open: the second real defect\n${F}\n  - the gate drops another entry\n`)), /^Done: /, "a fence between two entries");
+  assert.doesNotMatch(write(ownC(), rep(`${F}\n## Findings\n- open: one\n- open: two\n| open: three |\n${F}\n`)), /^Done: /, "a fence holding several findings inside the list");
+  assert.doesNotMatch(write(ownC(`${F}\n- open: my own unresolved defect\n${F}\n`), rep()), /^Done: /, "and the same in the review");
+  // A label needs no colon of its own, and no number of labels hides the prefix.
+  for (const line of ["- Finding 3 - open: a defect nobody names", "- Note open: a defect nobody names", "- a: b: c: d: open: a defect nobody names", "- a: b: c: d: e: f: open: a defect nobody names", "The sweep reads a line that says open: wherever it sits."]) {
+    assert.doesNotMatch(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownC(`\n## Notes\n\n${line}\n`), rep()), /^Done: /, `in the review: ${line}`);
+  }
+  // A heading that names findings holds nothing, whatever the list holds.
+  assert.doesNotMatch(write(ownC(), rep("\n## Further findings\n\nThe gate accepts a second defect written here as prose.\n")), /^Done: /, "prose under a findings-naming heading beside a nonempty list");
+  // A word that merely contains the prefix is not the prefix.
+  for (const line of ["- opened: the file and read it", "- unresolved issues remain in the walkthrough", "- What I read: the tests and the manual", "- the open questions are listed in the roadmap"])
+    assert.match(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // Only the list's own lines are exempt, and a clean pair still reads.
+  assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
+  assert.doesNotMatch(write(ownC(), rep(`\n${D}\n- open: the second real defect\n${D}\n`)), /^Done: /, "a divider round a finding after the list");
 });

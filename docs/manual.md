@@ -492,8 +492,9 @@ before the words is markup, a checked task box included, and a table row is
 read cell by cell wherever its pipes sit -- the header above the list and a heading's own text
 included, and a heading whose title names
 findings, judged over its subsections as well. A fence keeps a quoted field out of the
-metadata, but hides no finding, so describe the prefix rather than writing
-it at the start of a line, and put no rating, tag or field name before it. Such
+metadata, but hides no finding, The prefix belongs to that list alone, so
+describe it rather than writing it: a line anywhere else in the record that
+carries it is read as a finding, whatever marks it up. Such
 a heading holds nothing when the record's `findings:` list declares none,
 because a bullet, a table row, a paragraph or a subsection under it could
 each be a finding; beside a list that holds entries it may hold prose but

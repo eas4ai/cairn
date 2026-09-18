@@ -904,16 +904,11 @@ function independentGap(root, slug, rv) {
 // indented under one joins it, and so does a bullet nested beneath it unless it reads as a
 // finding. Blank lines are nothing, and every other line inside the list is named.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const CLAIM = /^(?:open|resolved)[ \t]*:/i;
-// What a line says, not how it is marked up: everything before the first letter is markup
-// -- quote markers, hashes, list markers, brackets, a task box, a quotation mark, an emoji,
-// a footnote marker -- as are emphasis and tags round the word. A row is read cell by cell,
-// wherever its pipes sit, and a space may stand before the colon (LOOP-086).
-const MARK = /^(?:[^A-Za-z([]+|\[[^\]:]*\][ \t]*:?|\(?(?:[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)]|[([])/;   // one unit of markup, letters and all
-const bare = (c) => { let t = String(c).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, ""), was; do { was = t; t = t.replace(MARK, ""); } while (t !== was); return t; };
-const label = (t) => t.replace(/^[^:]*:[ \t]*/, "");
-const says = (c) => { for (let t = bare(c), i = 0; i < 4; i++) { if (CLAIM.test(t)) return true; const next = bare(label(t)); if (next === t) return false; t = next; } return false; };
-const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some(says);
+const CLAIM = /\b(?:open|resolved)[ \t]*:/i;
+// The prefix belongs to the findings list alone: anywhere else in a record it is a finding,
+// so no marker, label, tag, table cell, heading or fence can be cover for one. Only the
+// list's own lines are exempt, and a word that merely contains it is not it (LOOP-086).
+const saysFinding = (l) => CLAIM.test(String(l).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, "").replace(/[*_~`]/g, ""));
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -943,10 +938,10 @@ function listOf(text, key) {
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
-  let indent = null, blank = false, unread = null, dropped = false, last = 0;
+  let indent = null, blank = false, unread = null, dropped = false; const kept = new Set();
   for (const [n, line] of head.slice(m.index + m[0].length).split("\n").entries()) {
     if (!line.trim()) { blank = true; continue; }
-    if (ENTRY.test(line) || /^[ \t]+\S/.test(line)) last = n;   // how far the list reaches: only its own lines are exempt from the sweep (LOOP-086)
+    if (ENTRY.test(line) || /^[ \t]+\S/.test(line)) kept.add(n);   // the list's own lines, the only ones exempt from the sweep (LOOP-086)
     if (SETEXT.test(line) && !/^[ \t]/.test(line)) continue;   // a rule at the margin separates, as it does in the header (LOOP-108)
     if (key === "examined" && /^findings:/.test(line)) break;   // the field as the kernel reads it, however it is spaced: a Findings: line is named, never a silent end (LOOP-086)
     const item = ENTRY.exec(line), deep = item && indent !== null && item[1].length > indent;
@@ -964,7 +959,8 @@ function listOf(text, key) {
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
   const own = String(text ?? "").replace(/\r\n/g, "\n").split("\n"), from = head.slice(0, m.index).split("\n").length - 1;
-  const above = own.slice(0, from), tail = own.slice(from + 1 + last);   // everything but the list's own lines is swept
+  const skip = new Set([from, ...[...kept].map((n) => from + n)]);   // the key line and the list's own lines
+  const above = own.slice(0, from), tail = own.filter((l, n) => n > from && !skip.has(n));   // everything but the list's own lines is swept
   const stray = above.find(saysFinding) ?? null, claimed = tail.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
   // The body's sections, each under its own heading, hashed or underlined: what a
   // heading holds is read against that heading's own title, never another's (LOOP-086).
@@ -983,7 +979,7 @@ function listOf(text, key) {
   const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
   // Beside a list that holds entries such a section is elaboration and may hold prose.
   const content = (l) => ENTRY.test(l) || saysFinding(l) || l.includes("|");   // a list, a claim or a table row there could be a finding the list never declared
-  const named = entries.length ? hits.find((s) => s.span.some(content)) : hits[0];
+  const named = hits[0];   // such a heading holds nothing, whatever the list holds
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
   return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray };
 }

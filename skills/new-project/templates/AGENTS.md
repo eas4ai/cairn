@@ -139,12 +139,15 @@ record never declared. A report refused for such a heading is written
 again, never retitled, because retitling changes the reviewer's words.
 Outside the `findings:` list the loop reads a bullet under a heading as
 prose, and refuses only what it can recognise: a line that says `open:`
-or `resolved:`, wherever in the body it sits and whatever marks it up.
-A quote marker, a task box, emphasis round the prefix, an HTML list
-item, a table cell and a space before the colon are all markup, not
-cover: the loop reads what the line says. Only a fence hides such a
-line, so quote an example inside one; an indented code block does not
-hide it. A finding written as ordinary prose, with no `open:` or
+or `resolved:`, wherever in the record it sits and whatever marks it up.
+Every line outside that list is read, the header above it included, and
+a heading's own text counts as a line. A quote marker, a heading's
+hashes, a task box, a quotation mark, emphasis or a tag round the word,
+a table cell and a space before the colon are all markup, not cover:
+the loop reads what the line says. Only a fence hides such a line, so
+quote an example inside one; an indented code block does not hide it.
+A section holds its subsections, so a findings-naming heading is judged
+over everything under it down to the next heading at its own level. A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,
 and nothing names it. Say so when you brief a reviewer. One leading
 title above the fields, hashed at any level or underlined, is the

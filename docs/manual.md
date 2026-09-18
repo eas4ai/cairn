@@ -487,8 +487,9 @@ same commit as the review, and the review must answer each of its findings
 on one line. Cairn reads those findings only from the report's `findings:`
 list. A bullet under a heading is prose, and Cairn refuses only
 what it can recognise there: a line that says `open:` or `resolved:`,
-wherever in the body it sits and whatever marks it up, and a heading whose
-title names findings. Only a fence hides such a line; an indented code
+wherever in the record it sits and whatever marks it up, the header above
+the list and a heading's own text included, and a heading whose title names
+findings, judged over its subsections as well. Only a fence hides such a line; an indented code
 block does not, so quote an example of the shape inside a fence. Such
 a heading holds nothing when the record's `findings:` list declares none,
 because a bullet, a table row, a paragraph or a subsection under it could

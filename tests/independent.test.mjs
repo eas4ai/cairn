@@ -350,7 +350,7 @@ test("a report for another commitment or commit is replaced even when its fields
   assert.match(write(`I reviewed the work.\n\ncommitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*does not read commit:, although the line is there, because a line above it is neither a field nor a heading/, "the review's fields below prose");
   assert.match(write(`# Review\n\ncommitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Done: /, "one leading title above the review's fields is the record's own");
   assert.match(write(`# Review\n\n## Fields\n\ncommitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*names commit and examined and findings below a heading/, "the review's fields below a second heading");
-  assert.match(write(`commitment: first\ncommit: ${at}\nI read the tests too.\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*reads its commit: as .*because the line below it joined the field/, "a line that joins the review's commit value");
+  assert.match(write(`commitment: first\ncommit: ${at}\nI read the tests too.\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*reads its commit: as .*because that line carries more than the commit, or the line below it joined the field/, "a line that joins the review's commit value");
 });
 
 test("an underline makes a heading of the line above it unless that line is an entry or the record's own field, an unread field is named where it sits, a field spelled another way is named, and the findings-titled repair names retitling (LOOP-020, LOOP-086, LOOP-108)", () => {
@@ -527,4 +527,38 @@ test("a line that says open: is a finding however it is marked up, and one leadi
   const all = wake(root);
   assert.match(all, /findings 1, 2 and 3 are not carried/, "three uncarried findings in one message");
   assert.match(write(ownClean(), `commit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n`), /carries no commitment: or findings: line/, "two missing lines in one message");
+});
+
+test("every line outside the findings list is read for the prefix, and a findings-naming section is judged over its subsections (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  const carried = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${extra}`;
+  const ownCarries = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${extra}`;
+  // The header above the findings list is swept too: a finding there was read as an unknown field.
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nopen: the gate accepts a finding above examined:\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Done: /, "a finding in the report's header");
+  assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\n  - open: the gate accepts a finding above examined:\nexamined:\n  - x at ${at}\nfindings: []\n`), /^Done: /, "written there as a bullet");
+  assert.doesNotMatch(write(`commitment: first\ncommit: ${at}\nopen: my own unnamed defect\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Done: /, "and in the review's own header");
+  // The markup inside the prefix is markup too.
+  for (const line of ["- **open**: the prefix is bolded as a word", "- <b>open</b>: the prefix is tagged as a word", '- "open: the prefix is quoted"', "- (open: the prefix is parenthesised)", "### open: the finding is its own heading", "#### 3. open: numbered as a heading"]) {
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
+  }
+  // Honest text keeps its prose: the prefix needs its colon.
+  for (const line of ["## Open questions", "- opened: the file and read it", "- resolved issues: none of them mattered"])
+    assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // An indented line joined into an examined entry is read for the prefix, as a bulleted one is.
+  for (const line of ["    **open:** the gate absorbs this into the entry above", "    open : the gate absorbs this into the entry above"])
+    assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n${line}\nfindings: []\n`), /^Done: /, `joined into examined: ${line.trim()}`);
+  // A findings-naming section is judged over its subsections and its tables.
+  assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n### The second one\n\n- the gate accepts a second defect in a subsection\n")), /^Done: /, "a bullet in a subsection");
+  assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n| what | where |\n|---|---|\n| the gate never reads this row | listOf |\n")), /^Done: /, "a table under the heading");
+  assert.doesNotMatch(write(ownCarries(`\n## Findings in detail\n\n### The second one\n\n- my own second defect\n`), carried()), /^Done: /, "and the same in the review");
+  assert.match(write(ownCarries(), carried("\n## Findings in detail\n\nWhat I mean by the finding above.\n\n## Method\n\n- I read the kernel\n")), /^Done: /, "while a sibling section keeps its bullets and elaboration stays prose");
+  // The messages name the move the writer must make, and blame no line that joined nothing.
+  assert.match(write(`commitment: first\ncommit: ${at} (HEAD at the time)\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*carries more than the commit/, "the review's wordy commit: line");
+  assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open: a finding inside examined:\nfindings: []\n`), /move it into the findings: list/, "a finding inside examined: names the move");
 });

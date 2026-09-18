@@ -459,8 +459,8 @@ The twenty-seventh reviewer built twenty-four record pairs and found eight
 defects. One is silent, and it is older than this commitment's recent
 rounds: `below` in `listOf` collects the body's bullets with one regular
 expression whose `(\S[\s\S]*)$` swallows the rest of the document into a
-single match, so only the first bullet in the body was ever tested for
-`open:` or `resolved:`. A recognisable finding written behind any earlier
+single match, so only the first bullet in the body was ever tested for the
+prefix a finding carries. A recognisable finding written behind any earlier
 bullet reached Done with nothing named, in a report and in the agent's own
 review alike. The agreement promises the loop refuses what it can
 recognise, so this is a broken promise rather than the accepted prose

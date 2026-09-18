@@ -906,7 +906,7 @@ function independentGap(root, slug, rv) {
 // A record's list: the entries under key:, ending at the next field, the first heading or
 // the record's end. A bullet or number is an entry; an indented line under one joins it,
 // and every other line inside the list is named rather than read past.
-const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
+const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/;
 const CLAIM = /\b(?:open|resolved)[^A-Za-z]{0,4}:/i;
 // The prefix belongs to the findings list alone: elsewhere in a record it is a finding,
 // whatever punctuation or markup stands round it; a word containing it is not it.
@@ -942,9 +942,9 @@ function listOf(text, key) {
   const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(head);
   if (!m) return { missing: true, entries: [] };
   const value = m[1].trim(), empty = value === "[]", entries = value && !empty ? [value] : [];
-  let indent = null, blank = false, unread = null, dropped = false; const kept = new Set();
+  let indent = null, unread = null, dropped = false; const kept = new Set();
   for (const [n, line] of head.slice(m.index + m[0].length).split("\n").entries()) {
-    if (!line.trim()) { blank = true; continue; }
+    if (!line.trim()) continue;   // a blank line between entries is nothing (LOOP-086)
     if (ENTRY.test(line) || /^[ \t]+\S/.test(line)) kept.add(n);   // the list's own lines, the only ones exempt from the sweep (LOOP-086)
     if (SETEXT.test(line) && !/^[ \t]/.test(line)) continue;   // a rule at the margin separates, as it does in the header (LOOP-108)
     if (key === "examined" && /^findings:/.test(line)) break;   // the field as the kernel reads it, however it is spaced: a Findings: line is named, never a silent end (LOOP-086)
@@ -954,9 +954,9 @@ function listOf(text, key) {
       if (unread) { dropped = true; continue; }
       if (deep && entries.length) entries[entries.length - 1] += ` ${item[2].trim()}`;
       else { if (indent === null) indent = item[1].length; entries.push(item[2].trim()); }
-      blank = false; continue;
+      continue;
     }
-    if (!item && !unread && /^[ \t]+\S/.test(line) && entries.length && !saysFinding(line)) { entries[entries.length - 1] += ` ${line.trim()}`; blank = false; continue; }   // a blank line before it is nothing (LOOP-086)
+    if (!item && !unread && /^[ \t]+\S/.test(line) && entries.length && !saysFinding(line)) { entries[entries.length - 1] += ` ${line.trim()}`; continue; }   // a blank line before it is nothing (LOOP-086)
     if (unread) { dropped = dropped || !!item; continue; }
     unread = item ? item[2].trim() : line.trim();
   }

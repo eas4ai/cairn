@@ -44,11 +44,11 @@ time, MUST NOT exceed 2000 lines in total.
 Falsifier: the line count of the files under bin/ exceeds 2000.
 Status: Agreed 2026-09-18
 
-Revised 2026-09-18 on the developer's direction ("set the package
-ceiling to 2000"). The kernel stood at exactly 1900, the whole of the
-old ceiling, and the last twelve review rounds of the independent-report
-gate each paid for their fix by trimming comment rather than by writing
-the clearest code. The waiting next-iteration item said the ceiling had
+Revised 2026-09-18 on the developer's direction to raise the package
+ceiling to 2000; the decision record carries their words. The kernel
+stood at exactly 1900, the whole of the old ceiling, and rounds 31 to 34
+of the independent-report gate each paid for their fix by trimming
+comment rather than by writing the clearest code. The waiting next-iteration item said the ceiling had
 become a constraint on the work itself; this raises it to 2000 and
 leaves 100 lines of room.
 

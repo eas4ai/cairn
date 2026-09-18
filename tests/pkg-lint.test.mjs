@@ -36,6 +36,9 @@ test("PKG-004: a kernel over 2000 lines, counting every file under bin/ as wc -l
   finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(2000) }, "PKG-004"); finds({ "bin/run.sh": "x\n".repeat(2000) }, "PKG-004");
   let r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1999) })); assert.equal(r.status, 0, r.stdout);
   r = lint(repo({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(999), "bin/y.mjs": "1;\n".repeat(1000) })); assert.equal(r.status, 0, r.stdout);
+  // What is counted, not just the threshold: a file in a subdirectory of bin/ is kernel too (PKG-038), and wc -l counts an unterminated last line.
+  finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1000), "bin/hooks/stop.mjs": "1;\n".repeat(1000) }, "PKG-004");
+  finds({ "bin/x.mjs": "// cairn wake\n" + "1;\n".repeat(1999) + "1;" }, "PKG-004");
 });
 test("PKG-006: a skill step naming a vendor's product, in either order, across a wrapped list item (PKG-027)", () => {
   finds({ "skills/s/SKILL.md": "Then run Claude Code to finish.\n" }, "PKG-006");

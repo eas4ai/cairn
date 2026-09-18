@@ -142,26 +142,26 @@ the gate is guessing what the reviewer meant. A canonical record removes
 the guess and the message together: there is nothing to prescribe when the
 writer's tool cannot produce the unreadable shape.
 
-The ceiling moved with the work. The files under bin/ stood at 1900 in
-round 33 and stand at 1900 now, the ceiling itself, because what giving the
-prefix to one list saved has since been spent
-less code than the rules it replaced. The constraint was real and binding: the files under bin/ sat at the whole
-of the old ceiling, so each change of this class had to remove as much as
-it added. The developer raised the ceiling to 2000 on 2026-09-18, which
-buys 100 lines and no more. Corrected on 2026-09-18
-after the fortieth report found this file claiming 1872; the number came
-from the thirty-ninth report and was never checked here.
+The ceiling moved with the work. The files under bin/ reached 1900 in
+round 33 and stand at 1900 now, because giving the prefix to one list
+cost less code than the rules it replaced, and what that saved has since
+been spent. Until 2026-09-18 that was the whole of the ceiling, so each
+change of this class had to remove as much as it added. The developer
+raised the ceiling to 2000 that day, which buys 100 lines and no more.
+This paragraph has been wrong twice: it claimed 1872 lines until the
+fortieth report checked it, and it still said there was no headroom after
+the ceiling rose, which the forty-first report caught. The number now
+comes from pkg-lint, not from a report.
 
-One piece of dead code belongs with this item rather than in the backlog.
-The reader still declares a constant beside ENTRY, at bin/cairn.mjs line
-909, that neither the kernel nor the tests ever reads: the last trace of
-the rule round 34 replaced when the prefix was given to the findings list
-alone. Round 39 found it. It is not a commitment of its own -- there is no
-requirement to draft for deleting an unused declaration, and PKG-004 is
-not violated at 1900 of 1900, though there is no headroom left -- and the
-canonical record proposed above
-rewrites this reader and removes the constant with it. Delete it with that
-work.
+Two dead declarations in the reader are gone, and this item no longer
+waits on them. The constant beside ENTRY that round 39 found, and the
+local in listOf that round 41 found, were both written and never read:
+the last traces of rules the gate stopped applying when the prefix was
+given to the findings list alone. They were deferred while the kernel
+sat at the whole of the old ceiling; once the developer raised it, the
+argument for deferring them was gone, and they were deleted. What remains
+for this item is the canonical record itself, which would replace this
+reader rather than tidy it.
 
 Round 40 added one more shape of the same kind, and it is the sharpest
 argument yet for the canonical record. A report with a stray bullet on the

@@ -13,9 +13,9 @@ Five fixes the developer confirmed after asking what made Cairn a
 frustration, and a raised kernel ceiling to give them room.
 
 - The kernel ceiling is 2000 lines, raised from 1900 (PKG-004). The
-  files under bin/ stood at exactly 1900, so every fix of the last
-  twelve review rounds was paid for by trimming comment; the new
-  ceiling leaves room to write the reader plainly.
+  files under bin/ stood at exactly 1900, so the fixes of rounds 31 to
+  34 were paid for by trimming comment; the new ceiling leaves room to
+  write the reader plainly.
 - A defect an Agreed requirement already forbids is captured with
   `cairn backlog --defect` and worked under the current commitment:
   wake names `fix <item>`, and the item carries its fixing commit.
@@ -46,7 +46,7 @@ frustration, and a raised kernel ceiling to give them room.
   (escalation loop-020-loop-086), a heading whose title names findings
   is refused even when every finding is listed, and an honest line that
   begins with the prefix outside the list is refused, which is the price
-  of never losing one (escalation loop-020).
+  of never losing one (escalation loop-020-2).
 
 ## 0.6.0 - 2026-09-17
 

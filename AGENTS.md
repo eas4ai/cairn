@@ -133,10 +133,12 @@ record's own list says and whatever sits beneath it: a bullet, a
 numbered line, a table row, a paragraph or a subsection under it could
 each be a finding the loop cannot tell from a note, and a list that
 already holds entries gives the loop no way to know this section adds
-none. So such a title is one to avoid, not a section to fill carefully;
-write the elaboration under a heading that does not name findings. A
-report refused for such a heading is written again, never retitled,
-because retitling changes the reviewer's words.
+none. Its title alone refuses it, so an empty one is refused like any
+other, and nothing beneath it is read. Such a title is one to avoid,
+not a section to fill carefully; write the elaboration under a heading
+that does not name findings. A report refused for such a heading is
+written again, never retitled, because retitling changes the
+reviewer's words.
 Outside the `findings:` list the loop reads a bullet under a heading as
 prose, and refuses only what it can recognise: a line that says `open:`
 or `resolved:`, wherever in the record it sits and whatever marks it up.
@@ -171,8 +173,7 @@ words. Write each field at the margin: an indented `examined:` or
 `findings:` joins the list above it and its entries are read as that
 list's. Put every entry under one of those fields: a bullet written
 above them belongs to no list and joins the field above it.
-Nothing under such a heading is read at all: its title alone refuses it,
-so an empty one is refused like any other. A finding written as ordinary prose, with no `open:` or
+A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,
 and nothing names it. Say so when you brief a reviewer. One leading
 title above the fields, hashed at any level or underlined, is the

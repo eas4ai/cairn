@@ -3,6 +3,7 @@
 Level: Consequential
 Decided by: agent
 Supersedes: complexity-ceiling-1500-lines
+Superseded by: the-kernel-ceiling-rises-to-2000-lines
 Cause: an unforeseen condition occurred
 Rests on: PKG-004
 Would be wrong if: the kernel grows past 1600 lines without a further audit-driven need, or a reviewer finds that the lines added since 1500 duplicate paths the kernel already had

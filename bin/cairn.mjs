@@ -974,14 +974,13 @@ function listOf(text, key) {
   for (let i = 0; i < lines.length; i++) {
     const hashed = /^ {0,3}(#{1,6})[ \t]*(.+?)[ \t]*#*[ \t]*$/.exec(lines[i]);   // a closing run of hashes is not part of the title
     const under = i + 1 < lines.length && SETEXT.test(lines[i + 1]) && lines[i].trim() && !/^[ \t]/.test(lines[i]) && !ENTRY.test(lines[i]);
-    if (hashed || under) { sections.push({ title: (hashed ? hashed[2] : lines[i]).trim(), level: hashed ? hashed[1].length : /^ {0,3}=/.test(lines[i + 1]) ? 1 : 2, at: i, body: [] }); if (under) i++; continue; }
-    if (sections.length) sections[sections.length - 1].body.push(lines[i]);
+    if (hashed || under) { sections.push((hashed ? hashed[2] : lines[i]).trim()); if (under) i++; }
   }
   // Such a heading holds nothing, and no rule tells "More findings" from a section about them.
-  const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
+  const hits = sections.filter((t) => /\bfindings?\b/i.test(t));
   const named = hits[0];   // such a heading holds nothing, whatever the list holds
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
-  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray, walled, again };
+  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named ?? null, unread, stray, walled, again };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);

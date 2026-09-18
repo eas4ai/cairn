@@ -2,9 +2,11 @@
 
 Level: Consequential
 Decided by: developer
+Supersedes: the-complexity-ceiling-is-1600-lines
+Cause: the stated condition occurred
 Rests on: PKG-004
 Would be wrong if: the kernel grows toward 2000 lines without the record reader getting simpler, so the next ceiling is asked for within a few commitments rather than the reader being replaced by the canonical record the next-iteration item proposes
-History: PKG-004 has moved before: 1500 to 1600 on 2026-09-15 on the developer's direction after the second audit, and 1600 to 1900 on 2026-09-17 confirmed by the developer in the next-iteration phase. This is its third rise.
+History: PKG-004 has moved before: 1500 to 1600 on 2026-09-15 on the developer's direction after the second audit, and 1600 to 1900 on 2026-09-17 confirmed by the developer in the next-iteration phase. This is its third rise. It supersedes the-complexity-ceiling-is-1600-lines, which was the live record for the ceiling and said 1600; the 1600 to 1900 move was made in a next-iteration phase and left no record, so that record stood two moves out of date. Recorded as a supersession on 2026-09-18 after the forty-sixth report found the two live records disagreeing, which is DEC-008's falsifier.
 
 ## Decision
 

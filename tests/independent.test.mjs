@@ -502,7 +502,7 @@ test("a line that says open: is a finding however it is marked up, and one leadi
     assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
     assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
   }
-  // Beside a list that holds entries, a findings-naming heading may hold prose, but not a finding in any shape.
+  // A findings-naming heading is refused beside a list that holds entries, as it is beside one that declares none.
   assert.match(write(ownCarries(), carried("\n## Findings in detail\n\nWhat I mean by the finding above.\n")), /^Resolvable: review first\n.*the heading/, "a findings-naming heading holds nothing, whatever the list holds");
   for (const body of ["open: a second defect the loop never names", "| 2 | open: a second defect the loop never names |", "> open: a second defect the loop never names"]) {
     assert.doesNotMatch(write(ownCarries(), carried(`\n## Findings\n\n${body}\n`)), /^Done: /, `a finding under a findings heading beside entries: ${body}`);
@@ -529,7 +529,7 @@ test("a line that says open: is a finding however it is marked up, and one leadi
   assert.match(write(ownClean(), `commit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n`), /carries no commitment: or findings: line/, "two missing lines in one message");
 });
 
-test("every line outside the findings list is read for the prefix, and a findings-naming section is judged over its subsections (LOOP-020, LOOP-086)", () => {
+test("every line outside the findings list is read for the prefix, and a findings-naming heading is refused for its title alone (LOOP-020, LOOP-086)", () => {
   const root = repo();
   review(root); commit(root, "reviewed");
   const at = head(root), s = at.slice(0, 7);
@@ -553,7 +553,7 @@ test("every line outside the findings list is read for the prefix, and a finding
   // An indented line joined into an examined entry is read for the prefix, as a bulleted one is.
   for (const line of ["    **open:** the gate absorbs this into the entry above", "    open : the gate absorbs this into the entry above"])
     assert.doesNotMatch(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n${line}\nfindings: []\n`), /^Done: /, `joined into examined: ${line.trim()}`);
-  // A findings-naming section is judged over its subsections and its tables.
+  // A findings-naming title is refused wherever it sits, including as a subsection.
   assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n### The second one\n\n- the gate accepts a second defect in a subsection\n")), /^Done: /, "a bullet in a subsection");
   assert.doesNotMatch(write(ownCarries(), carried("\n## Findings in detail\n\n| what | where |\n|---|---|\n| the gate never reads this row | listOf |\n")), /^Done: /, "a table under the heading");
   assert.doesNotMatch(write(ownCarries(`\n## Findings in detail\n\n### The second one\n\n- my own second defect\n`), carried()), /^Done: /, "and the same in the review");

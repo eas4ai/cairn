@@ -138,13 +138,17 @@ hold prose, but never a list: a list there could carry a finding the
 record never declared. A report refused for such a heading is written
 again, never retitled, because retitling changes the reviewer's words.
 Outside the `findings:` list the loop reads a bullet under a heading as
-prose, and refuses only what it can recognise: a bullet that begins
-`open:` or `resolved:`, wherever in the body it sits, and a
-findings-naming heading as above. A finding written as ordinary prose
-under a heading that does not name them is read as a note, and nothing
-names it. Say so when you brief a reviewer. One leading `# ` title above
-the fields is the record's own and is read past; any other heading ends
-the header. An independent report carries
+prose, and refuses only what it can recognise: a line that says `open:`
+or `resolved:`, wherever in the body it sits and whatever marks it up.
+A quote marker, a task box, emphasis round the prefix, an HTML list
+item, a table cell and a space before the colon are all markup, not
+cover: the loop reads what the line says. Only a fence hides such a
+line, so quote an example inside one; an indented code block does not
+hide it. A finding written as ordinary prose, with no `open:` or
+`resolved:`, under a heading that does not name them is read as a note,
+and nothing names it. Say so when you brief a reviewer. One leading
+title above the fields, hashed at any level or underlined, is the
+record's own and is read past; the next heading ends the header. An independent report carries
 `commitment:`, `commit:`, `examined:` and `findings:` in the same shape.
 
 Check execution has a separate working-tree lock. When wake names

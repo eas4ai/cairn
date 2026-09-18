@@ -112,3 +112,37 @@ paid for their fixes by trimming comment. The next round of this class
 needs either a larger ceiling, which is an Agreed requirement and so the
 developer's, or the canonical records proposed above, which would remove
 more reader code than they add.
+
+Rounds 34 to 39 closed the class by the structural route rather than by
+another rule. Round 34 gave the prefix to the findings list alone: a line
+carrying it anywhere else in a record is a finding, whatever marks it up.
+That one sentence deleted the markup stripper, the label rule and the
+marker table, and the kernel briefly shrank. Rounds 35 to 38 narrowed the
+reading to a single predicate and tested it at scale: 240,000 generated
+record shapes and 21,450 spellings of the prefix, which found exactly one
+silent class left, an HTML element round the word with other markup in the
+gap, closed by reading each line five ways. Round 39 built about 360
+committed record pairs, swept a finding-shaped bullet through all 47 line
+positions of a rich report and a rich review, and generated 200 further
+report shapes at random. It found no silent loss.
+
+What rounds 34 to 39 leave behind is a different defect of the same
+origin, and it is the reason the canonical record still matters. The gate
+now refuses the unreadable record reliably, but it must then tell the
+agent what to do, and it cannot know which party the fault belongs to. So
+it sometimes prescribes a repair only the reviewer could honestly make:
+writing entries under an empty examined field asks the agent to author
+another party's observations; declaring a report empty when the report
+names its defect in prose asks the agent to overwrite the reviewer's
+meaning; an indented header is answered about the wrong field; and a
+reviewer who writes that it found nothing, in words, inside its findings
+list is told to carry that non-finding. Each is a message, not a lost
+finding, and each exists only because a finding has no mark of its own and
+the gate is guessing what the reviewer meant. A canonical record removes
+the guess and the message together: there is nothing to prescribe when the
+writer's tool cannot produce the unreadable shape.
+
+The ceiling moved with the work. The files under bin/ stood at 1900 in
+round 33 and stand at 1872 now, because giving the prefix to one list cost
+less code than the rules it replaced. The constraint is real but no longer
+the blocker; the canonical record is still the fix.

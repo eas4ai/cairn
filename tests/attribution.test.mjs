@@ -2,7 +2,7 @@
 // unpushed commit whose message carries an attribution line (PKG-045).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { writeFileSync, mkdtempSync } from "node:fs";
+import { writeFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { repo as base, cairn, commit, git, passing } from "./helpers.mjs";
@@ -20,6 +20,19 @@ test("with attribution forbidden, an unpushed commit carrying an AI attribution 
   const remote = mkdtempSync(join(tmpdir(), "cairn-remote-")); git(remote, "init", "-q", "--bare");
   git(root, "remote", "add", "origin", remote); git(root, "push", "-q", "origin", "main");
   assert.match(wake(root), /^Resolvable: run R-001/, "on a remote-tracking branch: not named");
+});
+
+test("rewording yields to explaining a stop record, and is named once that record is explained (PKG-045, LOOP-139)", () => {
+  const root = repo();
+  writeFileSync(join(root, ".cairn/policy"), "attribution: forbidden\n"); commit(root, "the policy");
+  const stop = ".cairn/stops/20260918T000000000Z.md";
+  mkdirSync(join(root, ".cairn/stops"), { recursive: true });
+  writeFileSync(join(root, stop), "# A stop\n\nSession: s\nStopped: 2026-09-18T00:00:00.000Z\nCommit: c\nRefusals: 3\nVerdict: Resolvable: run R-001\n");
+  git(root, "add", "-A"); const sha = empty(root, "Some work\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>");
+  assert.match(wake(root), new RegExp(`^Resolvable: explain ${stop}\\n`), "the unexplained stop record is named first");
+  writeFileSync(join(root, stop), "# A stop\n\nSession: s\nStopped: 2026-09-18T00:00:00.000Z\nCommit: c\nRefusals: 3\nVerdict: Resolvable: run R-001\nExplanation: the reviewer had not reported.\n");
+  commit(root, "explain the stop");
+  assert.match(wake(root), new RegExp(`^Resolvable: reword ${sha}\\n`), "then the attributed commit is named");
 });
 
 test("each attribution form is caught, a prose mention is not, and the oldest attributed commit is named first (PKG-045)", () => {

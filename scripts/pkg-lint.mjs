@@ -56,9 +56,9 @@ for (const p of present.filter((p) => p.startsWith("docs/commitments/"))) {
   }
 }
 
-// PKG-004: the kernel under 1900 lines, each file counted as wc -l counts it, plus an unterminated last line
+// PKG-004: the kernel under 2000 lines, each file counted as wc -l counts it, plus an unterminated last line
 const lines = present.filter((p) => p.startsWith("bin/")).reduce((n, p) => { const s = read(p); return n + (s.match(/\n/g) ?? []).length + (s && !s.endsWith("\n") ? 1 : 0); }, 0);
-if (lines > 1900) f.push(`PKG-004: kernel is ${lines} lines`);
+if (lines > 2000) f.push(`PKG-004: kernel is ${lines} lines`);
 
 // PKG-006: no skill step names one vendor's product as the way to do it; a paragraph is one unit (PKG-027)
 for (const p of present.filter((p) => p.startsWith("skills/"))) {

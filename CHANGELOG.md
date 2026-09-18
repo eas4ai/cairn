@@ -10,13 +10,12 @@ records; a major changes what earlier records mean.
 ## 0.7.0 - 2026-09-18
 
 Five fixes the developer confirmed after asking what made Cairn a
-frustration, and the stop hook that prompted the question.
+frustration, and a raised kernel ceiling to give them room.
 
-- The stop hook no longer traps a session. It judges with the cairn the
-  agent runs, chosen by the kernel that wrote the latest evidence, and
-  it lets a stop through after three refusals that meet no progress. The
-  valve writes `.cairn/stops/<time>.md` and the next wake names
-  `explain <path>`, so a stop is recorded rather than silent.
+- The kernel ceiling is 2000 lines, raised from 1900 (PKG-004). The
+  files under bin/ stood at exactly 1900, so every fix of the last
+  twelve review rounds was paid for by trimming comment; the new
+  ceiling leaves room to write the reader plainly.
 - A defect an Agreed requirement already forbids is captured with
   `cairn backlog --defect` and worked under the current commitment:
   wake names `fix <item>`, and the item carries its fixing commit.

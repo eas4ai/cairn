@@ -5,3 +5,13 @@ Outside because: the ceiling is an Agreed requirement's own number, so only the 
 Captured: 2026-09-18T04:59:56.977Z
 
 PKG-004 caps every file under bin/ at 1900 lines, and the kernel sits at exactly 1900. Rounds 31, 32, 33 and 34 of reviews-carry-an-independent-report each paid for their fixes by trimming comment, which is the wrong currency: the comments are what explain a reader whose rules are subtle. The record-reading code is what filled the ceiling, and the canonical records proposed in reviews-and-reports-are-written-in-a-form-the-loop-reads would remove more of it than they add, so the two decisions belong together. The choice is the developer's: raise the ceiling, adopt canonical records and let the reader shrink, or accept that further work on this class trades comment for code.
+
+Answered on 2026-09-18. The developer directed the ceiling to 2000 ("set
+the package cveiling to 2000"), and PKG-004, scripts/pkg-lint.mjs and its
+test now say 2000; the decision is recorded as
+docs/decisions/the-kernel-ceiling-rises-to-2000-lines.md. Only the number
+is answered. The second half of this item stands: record reading is what
+fills the kernel, and the canonical record proposed in
+reviews-and-reports-are-written-in-a-form-the-loop-reads would remove more
+reader code than it adds. The extra 100 lines are room to write the
+existing reader plainly, not budget for new rules.

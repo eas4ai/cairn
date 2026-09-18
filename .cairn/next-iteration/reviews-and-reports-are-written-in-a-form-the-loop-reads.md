@@ -145,9 +145,10 @@ writer's tool cannot produce the unreadable shape.
 The ceiling moved with the work. The files under bin/ stood at 1900 in
 round 33 and stand at 1900 now, the ceiling itself, because what giving the
 prefix to one list saved has since been spent
-less code than the rules it replaced. The constraint is real and binding: the files under bin/ are at the ceiling,
-so the next change of this class must remove as much as it adds, or the
-ceiling must be raised, which is the developer's. Corrected on 2026-09-18
+less code than the rules it replaced. The constraint was real and binding: the files under bin/ sat at the whole
+of the old ceiling, so each change of this class had to remove as much as
+it added. The developer raised the ceiling to 2000 on 2026-09-18, which
+buys 100 lines and no more. Corrected on 2026-09-18
 after the fortieth report found this file claiming 1872; the number came
 from the thirty-ninth report and was never checked here.
 

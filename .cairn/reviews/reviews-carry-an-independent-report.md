@@ -1,6 +1,9 @@
 commitment: reviews-carry-an-independent-report
-commit: a84cc814
+commit: 35a9ca09
 examined:
+  - re-examined at 35a9ca09 after the twenty-seventh round's fixes, with a twenty-eighth independent report from a new subagent working read-only in its own clone. The developer had ruled that only a silent loss would be fixed from this round, so the reviewer was asked to hunt silent losses first and report the rest briefly. It built thirty-eight record pairs, confirmed all five of the round's changes where it could reach them, and found eleven: four silent, three blocked, four wording. Carried below.
+  - my own probes at 35a9ca09: an open: bullet nested two levels deep behind earlier bullets, and as a numbered entry, both named; a bullet under a findings heading beside a list that holds entries, refused, and prose there, accepted; two leading titles, a title after prose, a setext title and a title above a deeper heading, each refused; a title inside a fence, invisible; a report short of commit: only and of examined: only. One finding of my own, blocked, recorded below.
+  - a regression sweep at 35a9ca09: all 67 committed reviews read through the current reader, 61 accepted and 6 refused, every refusal for a reason that predates this commitment (four with a verification: line inside examined:, two listing - none under findings:). freshness-and-scope-guidance-agree.md, refused at a84cc814 for its findings-naming section, is accepted again, which confirms the twenty-seventh round's second fix on a real record.
   - re-examined at a84cc814 after the twenty-sixth round's fix, with a twenty-seventh independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It built twenty-four record pairs, confirmed the previous round's fixes and this round's three changes, and found eight: one silent, four blocked, three wording. Carried below.
   - my own probes at a84cc814: a findings heading inside a closed fence and inside a four-space code block, both invisible; "## What I found" with a bulleted finding, Done, which is the accepted limit; a "- Findings:" list item, not a heading; the review's own "## Review at <sha>" section; and a report whose only body is a rule. One finding of my own, wording, recorded below. I also read every committed review: only freshness-and-scope-guidance-agree.md carries a heading whose title names findings, and none carries an underlined one.
   - re-examined at 74848eb4 after the twenty-fifth round's fixes, with a twenty-sixth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It rebuilt all six fixes as records and confirmed them, then read every one of the 68 committed reviews through the reader: 60 accepted, 8 refused. It found four: one silent, two blocked, one wording. Carried below.
@@ -191,6 +194,18 @@ findings:
   - resolved: the fix clause attached to a report repair was generic and, for a findings-under-a-heading repair, told the agent both to keep the reviewer's words and to reword a note. An examined: problem is now answered about examined:, and a report is asked for again rather than reworded, fixed in c355cdc9 (independent a84cc81 7)
   - resolved: every review <slug> message and the AGENTS.md brief now name the record form the gate enforces -- the four fields at the top, one entry per line, every finding in the findings: list, no section titled with the word findings -- so a replacement reviewer is not set up to fail the same way, fixed in c355cdc9 (independent a84cc81 8)
   - resolved: my own, wording: the message quoted an ATX title with its closing hashes, so "## Findings ##" was reported as the heading "Findings ##". The title capture now stops before a closing run of hashes, fixed in c355cdc9
+  - open: a bullet inside a blockquote is invisible to the whole reader, so a finding written as "> - open: ..." reaches Done with nothing named, in a report and in the review alike, because ENTRY anchors on indentation and > is not indentation (independent 35a9ca0 1)
+  - open: beside a non-empty findings: list, a heading whose title names findings may carry a whole finding as long as it is not a bullet: the same section is refused when findings: declares none, so the protection is switched off by the entries it is meant to complete. My own change of the twenty-seventh round caused this (independent 35a9ca0 2)
+  - open: a bullet that begins open: at the top level of the examined: list is absorbed as an examined entry and Done is reached, although one indent deeper the loop names it, because FINDING is consulted only on the nested branch (independent 35a9ca0 3)
+  - open: the prefix is recognised only as the literal start of a bullet's text, so "- [ ] open:", "- **open:**", "- open :" and an HTML list item each reach Done, while the review's own list catches the bold form; the reader is stricter inside the list than in the body it sweeps (independent 35a9ca0 4)
+  - open: headerOf reads past exactly one "# " title, so a "## " title, two titles, a title after one line of prose and a setext title are each refused with a repair that cannot be carried out as written, since the fields already sit at the top and the only fix is changing the reviewer's heading (independent 35a9ca0 5)
+  - open: a commit: value with a parenthetical costs a whole new reviewer: "commit: 35a9ca09 (the commit the review names)" is answered "names ..., which is not a commit", while the review's own two-word commit: value is answered with a repair that explains itself (independent 35a9ca0 6)
+  - open: a report that quotes the finding shape in an indented code block is refused, and the message names only a fence as the safe way to quote it, although a four-space block renders as code exactly as a fence does (independent 35a9ca0 7)
+  - open: a report short of commitment: and findings: is sent round two repairs, although the branch above says what the record is short of is said once (independent 35a9ca0 8)
+  - open: a resolved: carry needs no resolution: the report's words plus the citation alone reach Done, while the gate's own message and AGENTS.md ask for "resolved: <its words>, and how" (independent 35a9ca0 9)
+  - open: uncarried findings are named one per round, so a report's three uncarried findings cost three wakes to learn about when one message could list them (independent 35a9ca0 10)
+  - open: the fix clause attached to a report repair still does not match the fault it follows, and the findings-under-a-heading repair pairs "keep the reviewer's own words" with an instruction to ask for different words in one sentence (independent 35a9ca0 11)
+  - open: my own, blocked: a leading title written in setext form, "Report" over "======", is not read past, so a record whose only fault is an underlined title is refused and the only fix is deleting the reviewer's title
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -471,3 +486,34 @@ refused. That is the rule I will write.
 
 Three are wording, and one of them is mine: an ATX title keeps its closing
 hashes when the message quotes it.
+
+## Review at 35a9ca09, 2026-09-18
+
+The developer ruled on 2026-09-18, answering escalation loop-020, that only
+a silent loss is fixed from this round: a case where a real finding
+disappears from the gate and nothing is named. A blocked or wording finding
+is recorded as a named limit instead, so 0.7.0 can ship. The twenty-eighth
+reviewer was briefed to that ruling and found four silent losses, three
+blocked cases and four wording faults, in thirty-eight built records.
+
+The four silent losses are one fault seen four ways: the reader recognises
+a finding only in the exact shape it expects. A blockquote marker, a task
+checkbox, bold around the prefix, a space before the colon, an HTML list
+item, a table cell and a bare paragraph under a findings-naming heading all
+hide a line that plainly says `open:`. The second of them is mine: the
+twenty-seventh round's rule, which judges a findings-naming heading against
+the record's own list, switched the protection off exactly when the list
+holds entries. Each is fixed by recognising the shape rather than the
+markup around it.
+
+The three blocked cases and four wording faults are recorded as limits
+under the developer's ruling, except where a message says something false,
+which is fixed with the same commit at no cost in rounds: a leading title
+of any level or form is read past and the message names the fix, a
+`commit:` value with a parenthetical is repaired rather than discarded, and
+every uncarried finding and every missing field is named at once instead of
+one per wake. The remaining limits are written into the item in
+next-iteration: an indented code block that quotes the finding shape is
+read as a live finding, and a `resolved:` line needs no account of how it
+was resolved, which is discipline rather than a boundary, as the agreement
+says of Cairn generally.

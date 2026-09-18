@@ -491,7 +491,7 @@ wherever in the record it sits and whatever marks it up -- every marker
 before the words is markup, a checked task box included, and a table row is
 read cell by cell wherever its pipes sit -- the header above the list and a heading's own text
 included, and a heading whose title names
-findings, judged over its subsections as well. A fence keeps a quoted field out of the
+findings, which its title alone refuses. A fence keeps a quoted field out of the
 metadata, but hides no finding. The prefix belongs to that list alone, so
 describe it rather than writing it: a line anywhere else in the record that
 carries it is read as a finding, whatever marks it up or punctuates it. Keep

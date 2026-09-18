@@ -171,8 +171,8 @@ words. Write each field at the margin: an indented `examined:` or
 `findings:` joins the list above it and its entries are read as that
 list's. Put every entry under one of those fields: a bullet written
 above them belongs to no list and joins the field above it.
-A section holds its subsections, so a findings-naming heading is judged
-over everything under it down to the next heading at its own level. A finding written as ordinary prose, with no `open:` or
+Nothing under such a heading is read at all: its title alone refuses it,
+so an empty one is refused like any other. A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,
 and nothing names it. Say so when you brief a reviewer. One leading
 title above the fields, hashed at any level or underlined, is the

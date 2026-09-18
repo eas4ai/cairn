@@ -16,6 +16,18 @@ frustration, and a raised kernel ceiling to give them room.
   files under bin/ stood at 1900 on the day it rose, the whole of the old
   ceiling, so no change to the kernel could add a line without removing
   one; the new ceiling leaves room to write the reader plainly.
+- The working agreement no longer promises something the loop refuses. A
+  heading whose title names findings is refused whatever the record's
+  `findings:` list holds, and AGENTS.md and the project template now say
+  so; put elaboration under a heading that does not name findings. A
+  reviewer briefed from the old text wrote a report the loop rejected
+  (LOOP-020).
+- `reword` yields to `explain`. Both PKG-045 and LOOP-139 claimed the
+  slot ahead of every action but a live check, so a commit that was both
+  unexplained and attributed broke one of them whichever the wake named.
+  PKG-045 now says it comes after explaining a stop record, which is what
+  the kernel already did; the attribution is named on the next wake
+  (PKG-045).
 - A defect an Agreed requirement already forbids is captured with
   `cairn backlog --defect` and worked under the current commitment:
   wake names `fix <item>`, and the item carries its fixing commit.

@@ -979,7 +979,6 @@ function listOf(text, key) {
   }
   // Such a heading holds nothing, and no rule tells "More findings" from a section about them.
   const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
-  // Beside a list that holds entries such a section is elaboration and may hold prose.
   const named = hits[0];   // such a heading holds nothing, whatever the list holds
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
   return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray, walled, again };

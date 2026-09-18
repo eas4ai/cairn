@@ -553,16 +553,26 @@ Git directory, which a fresh clone lacks and the next stop rebuilds
 
 [PKG-045] When .cairn/policy carries attribution: forbidden, the wake
 MUST name rewording, ahead of every action but waiting for a live
-check, a commit on no remote-tracking branch whose message carries an
-AI attribution line. The release script MUST refuse such a commit. An
-AI attribution line is a Co-Authored-By trailer naming Claude,
-Anthropic, Codex, OpenAI, Copilot or Gemini, a Claude-Session trailer,
-or a Generated with line naming one of them.
+check and explaining a stop record, a commit on no remote-tracking
+branch whose message carries an AI attribution line. The release
+script MUST refuse such a commit. An AI attribution line is a
+Co-Authored-By trailer naming Claude, Anthropic, Codex, OpenAI,
+Copilot or Gemini, a Claude-Session trailer, or a Generated with line
+naming one of them.
 Falsifier: with the policy set, an unpushed commit carries
-Co-Authored-By: Claude and the wake names another action, or the
-release script cuts a release; or without the policy, or with the
-commit already on a remote-tracking branch, the wake names reword.
-Status: Agreed 2026-09-17
+Co-Authored-By: Claude and the wake names an action other than
+rewording, waiting for a live check, or explaining a stop record; or
+the release script cuts such a commit; or without the policy, or with
+the commit already on a remote-tracking branch, the wake names reword.
+Status: Agreed 2026-09-18
+
+Revised 2026-09-18 on the developer's direction to settle the conflict
+("and settle 3"). The first text put rewording ahead of every action
+but a live check, and LOOP-139 says the same of explaining a stop
+record, so a commit that was both unexplained and attributed met one
+falsifier whichever the kernel named. The kernel names explaining
+first, so this text yields to it. Nothing escapes: attribution is
+named on the next wake, once the stop record is explained.
 
 Specified 2026-09-17, confirmed by the developer ("confirmed") on 2026-09-17 in the next-iteration phase. On 2026-09-17 twenty-three commits
 carrying Co-Authored-By and Claude-Session trailers reached a public

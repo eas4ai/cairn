@@ -128,15 +128,15 @@ rather than read past. Prose goes after a heading, where a finding never
 belongs: a bullet under a heading is read as prose unless it reads as a
 finding, or the record names `findings:` and lists none above it.
 `findings: []` says there are none, and leaves the body's bullets prose.
-A heading whose title names the word findings is judged against the
-record's own list. When `findings:` declares none, such a heading holds
-nothing at all: a bullet, a numbered line, a table row, a paragraph or a
-subsection under it could each be a finding the loop cannot tell from a
-note, so the heading is refused whatever sits beneath it. When
-`findings:` holds entries, that section is read as elaboration and may
-hold prose, but never a list: a list there could carry a finding the
-record never declared. A report refused for such a heading is written
-again, never retitled, because retitling changes the reviewer's words.
+A heading whose title names the word findings is refused, whatever the
+record's own list says and whatever sits beneath it: a bullet, a
+numbered line, a table row, a paragraph or a subsection under it could
+each be a finding the loop cannot tell from a note, and a list that
+already holds entries gives the loop no way to know this section adds
+none. So such a title is one to avoid, not a section to fill carefully;
+write the elaboration under a heading that does not name findings. A
+report refused for such a heading is written again, never retitled,
+because retitling changes the reviewer's words.
 Outside the `findings:` list the loop reads a bullet under a heading as
 prose, and refuses only what it can recognise: a line that says `open:`
 or `resolved:`, wherever in the record it sits and whatever marks it up.

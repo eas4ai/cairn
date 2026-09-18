@@ -12,3 +12,11 @@ not contract text and is listed under documents:, so correcting it costs a
 check and not a review round. AGENTS.md and the template copy still carry
 it, and still need the developer. Until they are changed, the manual and
 the agreement disagree, and the manual is the one that matches the code.
+
+Answered on 2026-09-18. The developer directed the fix after asking why the
+agreement had not been corrected. AGENTS.md and skills/new-project/templates/
+AGENTS.md now say the heading is refused whatever the findings list holds,
+the two copies are byte-identical, the stale comment in bin/cairn.mjs is
+deleted, and the decision is recorded as
+docs/decisions/the-working-agreement-matches-the-gate-on-a-heading-that-names-findings.md.
+Nothing of this item is left waiting.

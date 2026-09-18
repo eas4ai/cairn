@@ -1,6 +1,8 @@
 commitment: reviews-carry-an-independent-report
-commit: 7f3032b2
+commit: 356e94fc
 examined:
+  - re-examined at 356e94fc after the twenty-ninth round's rewrite, with a thirtieth independent report from a new subagent working read-only in its own clone, briefed to the developer's ruling and to use the accepted limits as controls. It built about thirty record pairs, re-verified the carry and citation rules, the commit comparison, an uncommitted and a deleted record, and LOOP-032 freshness, and read all 68 files in .cairn/reviews/ (62 accepted, 6 refused, every refusal older than this commitment). It found five: two silent, one blocked, two wording. Carried below.
+  - my own probes at 356e94fc: thirteen further markup shapes. A bullet nested three deep, a hard line break before the prefix, an HTML comment ahead of it, a link wrapped round it, a details block and a bullet after a bare rule are all named, and a sentence using the word mid-line, a heading titled "Open questions", an ordinary table and a fenced example all stay prose. One marginal silent gap of my own, recorded below; a full-width colon is left alone deliberately, since the project ships ASCII only. I also measured the kernel against PKG-004: 1899 lines of 1900, so every fix this round is line-neutral or pays for itself in trimmed comment.
   - re-examined at 7f3032b2 after the twenty-eighth round's fixes, with a twenty-ninth independent report from a new subagent working read-only in its own clone, briefed to the developer's ruling that only a silent loss is fixed. It built twenty-six record pairs, read all 68 files in .cairn/reviews/ through the reader (62 accepted, 6 refused, every refusal older than this commitment), and recorded a control beside each silent case. It found eight: six silent, one blocked, one wording. Carried below.
   - my own probes at 7f3032b2: eleven markup shapes through the new helper. Capitals, a doubly nested quote marker, underscores and a numbered entry are named; "- opened: the file" and "- resolved issues: none of them mattered" are correctly left as prose. Three silent losses of my own, recorded below, and two exotic misses not worth a rule: an escaped prefix, which renders as text, and a definition-list line whose colon sits on the next line.
   - re-examined at 35a9ca09 after the twenty-seventh round's fixes, with a twenty-eighth independent report from a new subagent working read-only in its own clone. The developer had ruled that only a silent loss would be fixed from this round, so the reviewer was asked to hunt silent losses first and report the rest briefly. It built thirty-eight record pairs, confirmed all five of the round's changes where it could reach them, and found eleven: four silent, three blocked, four wording. Carried below.
@@ -217,6 +219,12 @@ findings:
   - resolved: an honest outcome table whose cell begins with the prefix is refused, with no repair the agent may make. Recorded as a named limit under the developer's ruling of 2026-09-18 (escalation loop-020): keeping it is the price of not losing a finding written as a table row, which the twenty-eighth round found, and the agreement says a fence is the only cover (independent 7f3032b 7)
   - resolved: the review's commit: message blamed a line below that joined nothing, and a finding inside examined: was told to be written as an entry it already was. The commit: message now names both causes and says to keep only the commit on that line, and a finding-shaped line in a list is told to move into the findings: list, fixed in 7c35392b (independent 7f3032b 8)
   - resolved: my own, silent: a bullet whose prefix is wrapped in quotation marks or parentheses reached Done, as did a finding written as its own heading. All three are named now, fixed in 7c35392b
+  - open: the prefix helper strips at most one list marker and a fixed set of lead characters, so "- - open: X", "- 1. open: X", "(2) open: X", a bullet with an emoji before the prefix and a prefix inside an HTML comment all reach Done with the finding lost, in the review as well as the report (independent 356e94f 1)
+  - open: a table row counts as a row only when the line begins with a pipe, so a table written without outer pipes is invisible to the whole gate: findings in such a table under a findings-naming heading reach Done, and such a row inside examined: is joined in silence to the entry above it (independent 356e94f 2)
+  - open: a field the reviewer writes after the findings list, the reviewer: line included, is refused as an unreadable findings entry, and the advice never says to move that field above examined: (independent 356e94f 3)
+  - open: a report committed but missing from the working tree is named for commit, and committing that deletion throws the report away, while the message never says to restore the file (independent 356e94f 4)
+  - open: a prefix line in the record's own header is refused with a message saying it sits under a heading, which is not where it is, and the fix offered is a whole new report rather than moving that one line into the list (independent 356e94f 5)
+  - open: my own, silent: a footnote definition, "[^1]: open: ...", reaches Done, because the leading-marker strip removes the bracket but not the marker after it
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -556,3 +564,26 @@ refused, because table cells are read for it. Keeping that is the price of
 not losing a finding written as a table row, which the twenty-eighth round
 found; the agreement says a fence is the only cover, and a reviewer's
 summary table should not begin a cell with open: or resolved:.
+
+## Review at 356e94fc, 2026-09-18
+
+The thirtieth reviewer re-verified the parts of the gate that predate this
+round -- the carry and citation rules, the commit comparison, an
+uncommitted and a deleted record, and freshness -- and found each behaving
+as its requirement says. Its two silent findings are both about the same
+mistake in my own fix: I enumerated the markup I could think of instead of
+saying what markup is. A second list marker, a number in parentheses, an
+emoji and an HTML comment each defeat a fixed set; a table written without
+outer pipes defeats a test that asks for a leading pipe.
+
+The answer is to stop enumerating. Everything before the keyword that is
+not a letter is markup, so the line is read from its first letter, and a
+row is a row wherever its pipes sit. That is one rule instead of a list,
+and it closes my own footnote case with it.
+
+Two wording faults say something worth keeping: a message must name where
+a line actually is, and a repair must name the move the writer can make.
+A prefix line in the header is now named as being above the list, with the
+move into the list offered, and a field written after the list is told to
+go above examined:. A report committed but missing from the tree is told
+to be restored, not silently discarded.

@@ -165,8 +165,12 @@ Keep no fence inside the `examined:` or `findings:` list, because a
 fence blanks its lines before the list is read, and write `findings:`
 once: a second one below the list holds entries the loop never reads.
 Both are refused rather than read in part, and a report that carries
-the prefix outside its list is written again, never repaired, because
-the agent may not move or reword a reviewer's words.
+the prefix outside its list is written again, never repaired, wherever
+that line sits, because the agent may not move or reword a reviewer's
+words. Write each field at the margin: an indented `examined:` or
+`findings:` joins the list above it and its entries are read as that
+list's. Put every entry under one of those fields: a bullet written
+above them belongs to no list and joins the field above it.
 A section holds its subsections, so a findings-naming heading is judged
 over everything under it down to the next heading at its own level. A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,

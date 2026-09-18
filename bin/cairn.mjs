@@ -149,9 +149,8 @@ function requirementChange(root, req, m, latest, ctx, h = []) {
 }
 const revisionVerdict = (req, m, digest, reason) => ({ verdict: "Resolvable", action: `review mechanism ${req}`, why: `${reason}; inspect ${m} and record findings without changing code; fix any mismatch as a separate action, then add reviewed: list entry "${req} ${digest}" to .cairn/mechanisms/${m} and commit before check (LOOP-059)` });
 
-// Files changed by commits since the commitment began: since the commit
-// that wrote its Current: line. The footprint is the union of its
-// mechanisms' declared inputs plus Cairn's own records.
+// Files changed since the commitment began, from the commit that wrote its Current: line.
+// The footprint is the union of its mechanisms' declared inputs plus Cairn's own records.
 const histories = new Map();   // one reading per process: HEAD does not move while the kernel runs
 function scopeHistory(root, slug) {
   if (histories.has(slug)) return histories.get(slug);
@@ -847,6 +846,9 @@ function independentGap(root, slug, rv) {
   if (!commitOf(f.commit) && commitOf(first) === at) return repair(`${name} reads its commit: as ${displayPath(String(f.commit).trim())}, because the line carries more than the commit`, "keep only the commit on its commit: line, and change none of the reviewer's words");
   if (!commitOf(f.commit)) return again(`${name} names ${f.commit || "no commit"}, which is not a commit`);
   if (commitOf(f.commit) !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
+  const list = listOf(text, "findings");
+  const off = list.stray ?? (list.heading === "shaped" ? "" : null);   // the prefix outside the list, wherever it sits: the agent may not move it
+  if (off !== null) return again(`${name} says ${off ? displayPath(off.trim()) : "the finding prefix"} outside its findings: list, where the loop reads it as a finding, and moving or rewording it would change the reviewer's words`);
   const seen = listOf(text, "examined"), examined = seen.entries.map(String);
   const asEntry = "write each as a - entry under examined:, and change none of the reviewer's words";
   if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`, asEntry);
@@ -854,9 +856,6 @@ function independentGap(root, slug, rv) {
   if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text) ?? asEntry);
   // A reviewer names the commit it examined; a report written for an earlier review cannot (LOOP-020).
   if (!withoutFences(text).join("\n").replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
-  const list = listOf(text, "findings");
-  const off = list.stray ?? (list.heading === "shaped" ? "" : null);   // the prefix outside the list, wherever it sits: the agent may not move it
-  if (off !== null) return again(`${name} says ${off ? displayPath(off.trim()) : "the finding prefix"} outside its findings: list, where the loop reads it as a finding, and moving or rewording it would change the reviewer's words`);
   // A heading that names findings cannot be repaired without retitling the reviewer's
   // own section, which this gate forbids: the answer is a report written again (LOOP-020).
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
@@ -868,6 +867,11 @@ function independentGap(root, slug, rv) {
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
     : list.heading ? "says open: or resolved: under a heading, where the loop does not read it, and every finding belongs in the findings: list above the first heading. No fence hides such a line, so the prefix is described rather than quoted"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
+  const bent = /^[ \t]+(?:examined|findings)[ \t]*:/m.exec(withoutFences(text).join("\n"));
+  if (bent) return repair(`${name} indents ${displayPath(bent[0].trim())}, so it joins the list above it and its entries are read as that list's`, "write each field at the margin, and change none of the reviewer's words");
+  const lead = headerOf(withoutFences(text).join("\n")).split("\n"), upto = lead.findIndex((l) => /^(?:examined|findings)[ \t]*:/.test(l));
+  const orphan = lead.slice(0, upto < 0 ? lead.length : upto).find((l) => ENTRY.test(l));   // a bullet above the first list belongs to none
+  if (orphan) return repair(`${name} writes ${displayPath(orphan.trim())} above its lists, where it belongs to none and joins the field above it`, "put each entry under examined: or findings:, and change none of the reviewer's words");
   const advice = list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
     : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and describes the prefix rather than writing it at the start of another line" : null;
   if (wrong) return repair(`${name} ${wrong}`, advice);
@@ -907,8 +911,8 @@ const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:ope
 const CLAIM = /\b(?:open|resolved)[^A-Za-z]{0,4}:/i;
 // The prefix belongs to the findings list alone: elsewhere in a record it is a finding,
 // whatever punctuation or markup stands round it; a word containing it is not it.
-const saysFinding = (l) => { const t = String(l).replace(/&#0*58;|&#x0*3a;|&colon;/gi, ":").replace(/<!--|-->/g, " ").replace(/[*_~`]/g, "");
-  return CLAIM.test(t.replace(/<[^>]*>/g, "")) || CLAIM.test(t.replace(/[<>]/g, "")); };
+const saysFinding = (l) => { const t = String(l).replace(/&#0*58;|&#x0*3a;|&colon;/gi, ":").replace(/&[#\w]+;/g, " ").replace(/[*_~`]/g, "");
+  return [t.replace(/<!--[\s\S]*?-->/g, " "), t.replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, ""), t.replace(/[<>]/g, "")].some((x) => CLAIM.test(x)); };
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -960,7 +964,8 @@ function listOf(text, key) {
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
   const own = String(text ?? "").replace(/\r\n/g, "\n").split("\n"), from = head.slice(0, m.index).split("\n").length - 1;
   const skip = new Set([from, ...[...kept].map((n) => from + n)]);   // the key line and the list's own lines
-  const walled = own.slice(from, head.split("\n").length).some((l) => /^ {0,3}(?:`{3,}|~{3,})/.test(l)), last = Math.max(...skip);
+  const ends = key === "examined" ? own.findIndex((l, n) => n > from && /^[ \t]*findings[ \t]*:/.test(l)) : -1, last = Math.max(...skip);   // a list ends where the next field begins
+  const walled = own.slice(from, ends < 0 ? head.split("\n").length : ends).some((l) => /^ {0,3}(?:`{3,}|~{3,})/.test(l));
   const again = whole.split("\n").some((l, n) => n > last && new RegExp(`^${key}:`).test(l));   // a fence blanks entries before the list is read, and a second field below it holds a list the loop never reads (LOOP-071)
   const above = own.slice(0, from), tail = own.filter((l, n) => n > from && !skip.has(n));   // everything but the list's own lines is swept
   const stray = above.find(saysFinding) ?? null, claimed = tail.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
@@ -972,14 +977,9 @@ function listOf(text, key) {
     if (hashed || under) { sections.push({ title: (hashed ? hashed[2] : lines[i]).trim(), level: hashed ? hashed[1].length : /^ {0,3}=/.test(lines[i + 1]) ? 1 : 2, at: i, body: [] }); if (under) i++; continue; }
     if (sections.length) sections[sections.length - 1].body.push(lines[i]);
   }
-  for (const [k, sec] of sections.entries()) {   // a section holds its subsections (LOOP-086)
-    const next = sections.slice(k + 1).find((t) => t.level <= sec.level);
-    sec.span = lines.slice(sec.at + 1, next ? next.at : lines.length);
-  }
   // Such a heading holds nothing, and no rule tells "More findings" from a section about them.
   const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
   // Beside a list that holds entries such a section is elaboration and may hold prose.
-  const content = (l) => ENTRY.test(l) || saysFinding(l) || l.includes("|");   // a list, a claim or a table row there could be a finding the list never declared
   const named = hits[0];   // such a heading holds nothing, whatever the list holds
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
   return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray, walled, again };

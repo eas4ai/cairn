@@ -560,7 +560,7 @@ test("every line outside the findings list is read for the prefix, and a finding
   assert.match(write(ownCarries(), carried("\n## Method\n\n- I read the kernel\n")), /^Done: /, "while a sibling section keeps its bullets");
   // The messages name the move the writer must make, and blame no line that joined nothing.
   assert.match(write(`commitment: first\ncommit: ${at} (HEAD at the time)\nexamined:\n  - the work\nfindings: []\n`, clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*carries more than the commit/, "the review's wordy commit: line");
-  assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open: a finding inside examined:\nfindings: []\n`), /move it into the findings: list/, "a finding inside examined: names the move");
+  assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\n  - open: a finding inside examined:\nfindings: []\n`, clean()), /move it into the findings: list/, "a finding inside the review's examined: names the move");
 });
 
 test("markup is whatever precedes the first letter, a row is a row wherever its pipes sit, and each message names the move (LOOP-020, LOOP-086)", () => {
@@ -766,4 +766,31 @@ test("a numbered prefix is still the prefix, and each message names the action i
   assert.doesNotMatch(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - the kernel\nfindings:\n  - the gate drops an entry\n\n## Notes\n\n${F}\ngit show ${at}\n${F}\n`), /^Done: /, "a commit named only inside a fence");
   // A carry needs the finding's words, not a prefix of a longer word.
   assert.doesNotMatch(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entryway, not a finding (independent ${s} 1)\n`, rep()), /^Done: /, "a longer word is not the finding's words");
+});
+
+test("a comment or an entity is not a gap, a field belongs at the margin, and a bullet belongs to a list (LOOP-020, LOOP-086, LOOP-108)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const ownC = (x = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${x}`;
+  const rep = (x = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${x}`;
+  // A comment or a character reference between the word and the colon is a gap, not cover.
+  for (const line of ["- open <!-- two words -->: a defect nobody names", "- open&nbsp;: a defect nobody names", "- open&#32;: a defect nobody names", "- resolved <!-- x -->: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownC(`\n## Notes\n\n${line}\n`), rep()), /^Done: /, `in the review: ${line}`);
+  }
+  // An indented findings field is named, and never answered with the empty-list form.
+  const bent = write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  findings:\n  - the gate drops an entry\n`);
+  assert.doesNotMatch(bent, /^Done: /, "an indented findings field");
+  assert.doesNotMatch(bent, /findings: \[\]/, "and the empty-list form is not offered");
+  // A bullet in the header belongs to a list, or it is named.
+  assert.doesNotMatch(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\n  - a bullet belonging to no list\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n`), /^Done: /, "a bullet above the examined list");
+  // A fence is named for the list it is in.
+  const F = "```";
+  assert.match(write(ownC(), rep(`${F}\n  - quoted\n${F}\n`)), /fence inside its findings: list/, "a fence after the findings entries names the findings list");
+  // A prefixed bullet inside examined names a new report, like every other prefixed line.
+  assert.match(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open: a defect nobody names\nfindings:\n  - the gate drops an entry\n`), /^Resolvable: review first\n/, "a prefixed bullet inside examined names a new report");
+  // A clean pair still reads.
+  assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
 });

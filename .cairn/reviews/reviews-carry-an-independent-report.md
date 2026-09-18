@@ -1,6 +1,8 @@
 commitment: reviews-carry-an-independent-report
-commit: 74848eb4
+commit: a84cc814
 examined:
+  - re-examined at a84cc814 after the twenty-sixth round's fix, with a twenty-seventh independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It built twenty-four record pairs, confirmed the previous round's fixes and this round's three changes, and found eight: one silent, four blocked, three wording. Carried below.
+  - my own probes at a84cc814: a findings heading inside a closed fence and inside a four-space code block, both invisible; "## What I found" with a bulleted finding, Done, which is the accepted limit; a "- Findings:" list item, not a heading; the review's own "## Review at <sha>" section; and a report whose only body is a rule. One finding of my own, wording, recorded below. I also read every committed review: only freshness-and-scope-guidance-agree.md carries a heading whose title names findings, and none carries an underlined one.
   - re-examined at 74848eb4 after the twenty-fifth round's fixes, with a twenty-sixth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. It rebuilt all six fixes as records and confirmed them, then read every one of the 68 committed reviews through the reader: 60 accepted, 8 refused. It found four: one silent, two blocked, one wording. Carried below.
   - my own probes at 74848eb4: a singular "Finding" and an all-caps "FINDINGS" title, both named; a findings heading inside a fence, correctly invisible; bullets after a rule with no heading, named as unreadable; and an empty findings-titled section, accepted. No finding of my own this round.
   - re-examined at 8efe6c02 after the twenty-fourth round's fixes, with a twenty-fifth independent report from a new subagent working read-only in its own clone, rating each finding silent, blocked or wording. All seven fixes hold. It found five: one silent, four blocked. Carried below.
@@ -180,6 +182,15 @@ findings:
   - resolved: A heading whose title merely mentions findings is refused although every finding is in the list, and the repair named changed the reviewer's words. The contradiction is fixed in abd40f09: a report with such a heading is written again, in one step, and never retitled to fit. The refusal itself is kept deliberately, because no rule over a title tells "More findings" from "What the findings mean", and narrowing the title to its first word reopened the silent loss of finding 1 in my own test; this repository's own review freshness-and-scope-guidance-agree.md stays refused if it is ever read as a current review, and the agreement now tells a reviewer to title its other sections something that does not name findings (independent 74848eb 2)
   - resolved: AGENTS.md and docs/manual.md still described the narrower rule the kernel had before 70292c06, so an agent writing to the agreement could not predict the refusal. Both now say that such a heading is refused for its title alone, whatever sits beneath it, that a report carrying one is written again rather than retitled, and that the loop cannot tell one findings-naming title from another, fixed in abd40f09; AGENTS.md and its template stay byte-identical (independent 74848eb 3)
   - resolved: An empty report was told to add a commitment: line and then thrown away on the next wake. A report carrying none of commitment:, commit:, examined: or findings: now names a new reviewer once, with "is empty" for a blank file, fixed in abd40f09 (independent 74848eb 4)
+  - open: a bullet that begins open: or resolved: under a body heading is recognised only when it is the first bullet in the body; any bullet before it hides it and the wake reaches Done with nothing named, because below in listOf matches ENTRY whose (\S[\s\S]*)$ swallows the rest of the document into one match. The same loss applies to the agent's own review under LOOP-086 (independent a84cc81 1)
+  - open: a report whose findings: list the loop reads and the review carries is still refused, and a new reviewer demanded, for the title of an explanatory section such as ## Findings in detail or ## No findings, although the loop read every finding from the header list (independent a84cc81 2)
+  - open: the answer to a report whose findings sit under ## Findings as - open: bullets is a repair the next wake throws away: moving them into the findings: list leaves the now-empty heading, which is refused for its title alone, and only deleting the reviewer's heading gets past it. Which of the two answers such a heading gets also depends on whether a bullet under it happens to begin open: (independent a84cc81 3)
+  - open: a report that carries some but not all of the four fields gets a repair first and a new-reviewer demand second: a report with examined: and findings: but neither commitment: nor commit: is told to add the commitment: line, and the next wake answers that it names no commit (independent a84cc81 4)
+  - open: a report or review that opens with an ordinary Markdown title is refused, and the repair asks for the reviewer's heading to be removed while saying to change none of the reviewer's words: recordFields skips one leading # title and reads the scalar fields past it, while headerOf ends the header at the same line and loses examined: and findings: (independent a84cc81 5)
+  - open: the "carries no record" message states something false whenever one of the four fields is present but empty: a report holding only a bare examined: is told that none of the fields is a field at its top (independent a84cc81 6)
+  - open: the fix clause attached to a report repair is generic and, in one case, self-contradictory: an examined: problem is answered with findings-shaped advice, and the findings-under-a-heading repair says both to keep the reviewer's own words and to reword a note in one sentence (independent a84cc81 7)
+  - open: every review <slug> message and AGENTS.md brief the replacement reviewer with the commitment, its requirement texts and the commit range, and neither names the record form the gate enforces, so the replacement can fail in exactly the same way at the cost of a full round (independent a84cc81 8)
+  - open: my own, wording: the message quotes an ATX title with its closing hashes, so "## Findings ##" is reported as the heading "Findings ##", which is not what the reviewer wrote
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -426,3 +437,37 @@ I found nothing of my own this round. My probes at 74848eb4 -- a singular
 "Finding" title, an all-caps "FINDINGS" title, a findings heading inside a
 fence, bullets after a rule with no heading, and an empty findings-titled
 section -- all behaved as the rule intends.
+
+## Review at a84cc814, 2026-09-17
+
+The twenty-seventh reviewer built twenty-four record pairs and found eight
+defects. One is silent, and it is older than this commitment's recent
+rounds: `below` in `listOf` collects the body's bullets with one regular
+expression whose `(\S[\s\S]*)$` swallows the rest of the document into a
+single match, so only the first bullet in the body was ever tested for
+`open:` or `resolved:`. A recognisable finding written behind any earlier
+bullet reached Done with nothing named, in a report and in the agent's own
+review alike. The agreement promises the loop refuses what it can
+recognise, so this is a broken promise rather than the accepted prose
+limit.
+
+Four are blocked, and three of those are the same fault in different
+clothes: an answer the record cannot satisfy. A complete report is
+discarded for the title of an explanatory section although every finding
+was read from its list; a repair that moves findings out of a
+findings-titled heading leaves the empty heading, which the next wake
+refuses; a report short of two fields is told to add one and then thrown
+away; and a report that opens with a Markdown title is told to keep the
+reviewer's words while the only fix is deleting the reviewer's title.
+
+The fourth blocked finding decides the question the twenty-sixth round
+left open. I refused a findings-naming heading for its title alone,
+choosing a visible refusal over a silent loss. The reviewer shows the
+choice was too broad in one direction and unnecessary in the other: when
+the record's own `findings:` list holds entries, a section titled about
+the findings is elaboration, and refusing it buys nothing; when the list
+declares none, such a section is the silent-loss shape and must be
+refused. That is the rule I will write.
+
+Three are wording, and one of them is mine: an ATX title keeps its closing
+hashes when the message quotes it.

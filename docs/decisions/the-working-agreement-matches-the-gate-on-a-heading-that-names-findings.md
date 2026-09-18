@@ -12,4 +12,4 @@ The developer directed it after asking why the agreement had not been fixed. AGE
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 0e51c3c8 Settle both contract defects: the agreement matches the gate, and reword yields to explain

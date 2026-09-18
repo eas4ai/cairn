@@ -12,4 +12,4 @@ The developer directed it in these words: 'and settle 3'. PKG-045 said rewording
 
 ## Realized by
 
-(none yet: recorded, not built)
+- 0e51c3c8 Settle both contract defects: the agreement matches the gate, and reword yields to explain

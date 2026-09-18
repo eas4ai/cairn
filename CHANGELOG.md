@@ -7,6 +7,59 @@ record shape or document meaning; a minor adds or revises
 requirements, verdicts or record shapes and still reads earlier
 records; a major changes what earlier records mean.
 
+## 0.7.0 - 2026-09-18
+
+Five fixes the developer confirmed after asking what made Cairn a
+frustration, and a raised kernel ceiling to give them room.
+
+- The kernel ceiling is 2000 lines, raised from 1900 (PKG-004). The
+  files under bin/ stood at 1900 on the day it rose, the whole of the old
+  ceiling, so no change to the kernel could add a line without removing
+  one; the new ceiling leaves room to write the reader plainly.
+- The working agreement no longer promises something the loop refuses. A
+  heading whose title names findings is refused whatever the record's
+  `findings:` list holds, and AGENTS.md and the project template now say
+  so; put elaboration under a heading that does not name findings. A
+  reviewer briefed from the old text wrote a report the loop rejected
+  (LOOP-020).
+- `reword` yields to `explain`. Both PKG-045 and LOOP-139 claimed the
+  slot ahead of every action but a live check, so a commit that was both
+  unexplained and attributed broke one of them whichever the wake named.
+  PKG-045 now says it comes after explaining a stop record, which is what
+  the kernel already did; the attribution is named on the next wake
+  (PKG-045).
+- A defect an Agreed requirement already forbids is captured with
+  `cairn backlog --defect` and worked under the current commitment:
+  wake names `fix <item>`, and the item carries its fixing commit.
+- A mechanism declaration may list `documents:`. A change to one of
+  them leaves the commitment's review current, so a documentation edit
+  costs a check and not a review round. The release script accepts an
+  uncommitted CHANGELOG.md and commits it with the release.
+- A revised requirement outside the current commitment no longer blocks
+  it: the mechanism review the revision asks for is named for the
+  commitment's own requirements.
+- A project may forbid AI attribution in its own commits. With
+  `attribution: forbidden` in `.cairn/policy`, wake names
+  `reword <sha>` for an unpushed commit whose message carries it.
+- No commitment is Done on the builder's review alone. An independent
+  report, written by a reviewer with none of the build's context, sits
+  at `.cairn/reviews/<slug>.independent.md`, names the same commit as
+  the review, and every finding it raises is answered on one line of
+  the review. More than thirty review rounds of this feature hardened
+  the record reader, and its rule is now one sentence: a line that says
+  `open:` or `resolved:` is a finding wherever it sits in the record,
+  whatever marks it up, and only the findings list's own lines are
+  exempt. Markers, labels, tags, table cells, headings and fences are
+  markup, not cover. A fence still keeps a quoted field out of the
+  metadata, as LOOP-071 asks, but hides no finding, because pairing
+  fence markers cannot be told from prose that begins with one.
+  Limits are recorded rather than hidden: a finding written as ordinary
+  prose under a heading that does not name findings is read as a note
+  (escalation loop-020-loop-086), a heading whose title names findings
+  is refused even when every finding is listed, and an honest line that
+  begins with the prefix outside the list is refused, which is the price
+  of never losing one (escalation loop-020-2).
+
 ## 0.6.0 - 2026-09-17
 
 - The stop hook no longer lets a stop through because the harness says

@@ -1,6 +1,8 @@
 commitment: reviews-carry-an-independent-report
-commit: 35a9ca09
+commit: 7f3032b2
 examined:
+  - re-examined at 7f3032b2 after the twenty-eighth round's fixes, with a twenty-ninth independent report from a new subagent working read-only in its own clone, briefed to the developer's ruling that only a silent loss is fixed. It built twenty-six record pairs, read all 68 files in .cairn/reviews/ through the reader (62 accepted, 6 refused, every refusal older than this commitment), and recorded a control beside each silent case. It found eight: six silent, one blocked, one wording. Carried below.
+  - my own probes at 7f3032b2: eleven markup shapes through the new helper. Capitals, a doubly nested quote marker, underscores and a numbered entry are named; "- opened: the file" and "- resolved issues: none of them mattered" are correctly left as prose. Three silent losses of my own, recorded below, and two exotic misses not worth a rule: an escaped prefix, which renders as text, and a definition-list line whose colon sits on the next line.
   - re-examined at 35a9ca09 after the twenty-seventh round's fixes, with a twenty-eighth independent report from a new subagent working read-only in its own clone. The developer had ruled that only a silent loss would be fixed from this round, so the reviewer was asked to hunt silent losses first and report the rest briefly. It built thirty-eight record pairs, confirmed all five of the round's changes where it could reach them, and found eleven: four silent, three blocked, four wording. Carried below.
   - my own probes at 35a9ca09: an open: bullet nested two levels deep behind earlier bullets, and as a numbered entry, both named; a bullet under a findings heading beside a list that holds entries, refused, and prose there, accepted; two leading titles, a title after prose, a setext title and a title above a deeper heading, each refused; a title inside a fence, invisible; a report short of commit: only and of examined: only. One finding of my own, blocked, recorded below.
   - a regression sweep at 35a9ca09: all 67 committed reviews read through the current reader, 61 accepted and 6 refused, every refusal for a reason that predates this commitment (four with a verification: line inside examined:, two listing - none under findings:). freshness-and-scope-guidance-agree.md, refused at a84cc814 for its findings-naming section, is accepted again, which confirms the twenty-seventh round's second fix on a real record.
@@ -206,6 +208,15 @@ findings:
   - resolved: uncarried findings were named one per round. Every uncarried finding is now named in one message, with its reason and its words, fixed in 9ada401f (independent 35a9ca0 10)
   - resolved: the fix clause attached to a report repair did not match the fault, and one sentence asked for the reviewer's words to be kept and changed at once. Each fault now carries its own advice, and the findings-under-a-heading message says only that a fence hides an example, fixed in 9ada401f (independent 35a9ca0 11)
   - resolved: my own, blocked: a leading title written in setext form was not read past, so a record whose only fault was an underlined title was refused. Both parsers now read past one leading title in either form, fixed in 9ada401f
+  - open: a line that says the finding prefix in the header above the examined: line is read by no sweep, so a report and a review both reach Done with the finding named nowhere: the body sweep covers only text after the header, and each list reads only the lines after its own key line (independent 7f3032b 1)
+  - open: the helper misses a prefix whose emphasis or HTML closes after the keyword, so "- **open**: ..." and "- <b>open</b>: ..." reach Done while "- **open:** ..." is refused (independent 7f3032b 2)
+  - open: a finding written as its own heading, "### open: ...", is read by no sweep, because the leading run of hashes is not stripped and a heading's title is tested only for the word findings (independent 7f3032b 3)
+  - open: the join that folds an indented line into the entry above it tests the strict prefix rather than the helper, so an indented "**open:** ..." or "open : ..." is swallowed into an examined entry and reaches Done, which contradicts the claim that examined: holds no finding at any indent (independent 7f3032b 4)
+  - open: a bullet in a subsection of a findings-naming heading, or after a rule inside it, reaches Done beside a non-empty list, because the sections parser gives those lines to the subsection and the findings-naming section's own body looks empty (independent 7f3032b 5)
+  - open: a table under a findings-naming heading reaches Done beside a non-empty list, because the test there asks for a list entry or a colon-prefixed claim and a table row is neither (independent 7f3032b 6)
+  - open: an honest outcome table in the report body is refused as a hidden finding with no repair available, because table cells are tested for the prefix and a summary table of cases and outcomes is a natural way for a reviewer to report (independent 7f3032b 7)
+  - open: the review's commit: line carrying extra text is blamed on a line below that joined nothing, where a report in the same shape is given the accurate reason, and a bulleted finding inside examined: is told to be written as a - entry although it already is one, so neither message names the move into findings: (independent 7f3032b 8)
+  - open: my own, silent: a bullet whose prefix is wrapped in quotation marks or parentheses reaches Done, and so does a finding written as its own heading, which the reviewer found independently as its third finding
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -517,3 +528,31 @@ next-iteration: an indented code block that quotes the finding shape is
 read as a live finding, and a `resolved:` line needs no account of how it
 was resolved, which is discipline rather than a boundary, as the agreement
 says of Cairn generally.
+
+## Review at 7f3032b2, 2026-09-18
+
+The twenty-ninth reviewer found six silent losses, and they say something
+the previous rounds only implied: the reader sweeps the body and the two
+lists, and every region it does not sweep is a place a finding can sit.
+The worst is the header above the examined: line, which no sweep covers at
+all, so a line naming a defect there is read as an unknown field and
+dropped. A finding written as its own heading is invisible for the same
+reason: a heading is neither a bullet nor a swept line. A prefix bolded as
+a word rather than with the colon inside the emphasis, an indented
+continuation joined into an examined entry, a bullet in a subsection of a
+findings-naming section, and a table under that section are four more of
+the same shape: the rule was written for the case in front of it, not for
+the region.
+
+The answer is to sweep the record rather than its parts: every line
+outside the findings list is read for the prefix, however it is marked up,
+and a findings-naming section is judged over its whole span, subsections
+and tables included. Three of my own probes found the same class before
+the report arrived, and the two overlap on the heading case.
+
+One blocked finding is recorded as a limit under the developer's ruling of
+2026-09-18: an honest outcome table whose cell begins with the prefix is
+refused, because table cells are read for it. Keeping that is the price of
+not losing a finding written as a table row, which the twenty-eighth round
+found; the agreement says a fence is the only cover, and a reviewer's
+summary table should not begin a cell with open: or resolved:.

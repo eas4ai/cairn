@@ -143,9 +143,13 @@ the guess and the message together: there is nothing to prescribe when the
 writer's tool cannot produce the unreadable shape.
 
 The ceiling moved with the work. The files under bin/ stood at 1900 in
-round 33 and stand at 1872 now, because giving the prefix to one list cost
-less code than the rules it replaced. The constraint is real but no longer
-the blocker; the canonical record is still the fix.
+round 33 and stand at 1900 now, the ceiling itself, because what giving the
+prefix to one list saved has since been spent
+less code than the rules it replaced. The constraint is real and binding: the files under bin/ are at the ceiling,
+so the next change of this class must remove as much as it adds, or the
+ceiling must be raised, which is the developer's. Corrected on 2026-09-18
+after the fortieth report found this file claiming 1872; the number came
+from the thirty-ninth report and was never checked here.
 
 One piece of dead code belongs with this item rather than in the backlog.
 The reader still declares a constant beside ENTRY, at bin/cairn.mjs line
@@ -153,6 +157,7 @@ The reader still declares a constant beside ENTRY, at bin/cairn.mjs line
 the rule round 34 replaced when the prefix was given to the findings list
 alone. Round 39 found it. It is not a commitment of its own -- there is no
 requirement to draft for deleting an unused declaration, and PKG-004 is
-not violated at 1872 of 1900 -- and the canonical record proposed above
+not violated at 1900 of 1900, though there is no headroom left -- and the
+canonical record proposed above
 rewrites this reader and removes the constant with it. Delete it with that
 work.

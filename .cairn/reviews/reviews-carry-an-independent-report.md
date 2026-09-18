@@ -594,3 +594,27 @@ A prefix line in the header is now named as being above the list, with the
 move into the list offered, and a field written after the list is told to
 go above examined:. A report committed but missing from the tree is told
 to be restored, not silently discarded.
+
+## Review at 606d046c, 2026-09-18
+
+The thirty-first reviewer did what none before it did: instead of guessing
+shapes, it swept a finding-shaped line through every line position of two
+rich records for nine markup shapes, and reported that outside a fence
+there is no region the reader misses. That makes its two silent findings
+rules rather than gaps, and it is the first evidence that the region
+question is closed.
+
+Both rules were mine. Reading a line from its first letter turned every
+marker that contains a letter into cover, and the plainest of those is a
+checked task box, which the helper's own comment claimed to strip. Pairing
+fence markers by position let a prose line beginning with three backticks
+open a fence and blank the findings below it, a shape this project invites
+by telling reviewers to quote examples inside fences. Markup is now
+stripped a unit at a time, and a fence opens only on a line of its own or
+with one language word.
+
+The kernel is at its agreed ceiling of 1900 lines, so both fixes were paid
+for by trimming comment, and the ceiling is now a real constraint on this
+class of work. Raising it changes an Agreed requirement, so it is the
+developer's, and it waits in next-iteration with the record-format item
+that would end the class altogether.

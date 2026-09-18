@@ -20,3 +20,29 @@ canonical records proposed above: the loop would read only what it
 wrote, and a finding could not be a bullet whose meaning depends on its
 heading's title.
 
+
+Rounds 24 to 26 made the trade explicit, and it is the reason to change
+the format rather than the rule. Each of those three rounds found a
+silent loss, and each was created by the previous round's fix: an
+unterminated fence blanked every line after it (round 24), a table or a
+paragraph under a findings-titled heading was read as prose (round 25),
+and the section rule that closed that case gave the heading only the
+lines above its first subheading, so a finding under a subsection was
+invisible again (round 26).
+
+Round 26 then reached the wall directly. Its second finding asked for
+the refusal to be narrowed, because a heading titled "How I reached the
+findings above" is refused although every finding is in the list, and
+this repository's own review freshness-and-scope-guidance-agree.md is
+refused for its "Documentation review finding" section. Narrowing the
+title to its first word was tried and reverted: no rule over a title
+tells "More findings" from "What the findings mean", so the loop must
+either refuse both in the open or lose a finding in silence. It refuses.
+That is a permanent cost of reading prose, paid by every honest reviewer
+who titles a section with the word, and it disappears the moment the
+loop reads only records it wrote itself.
+
+Twenty-six rounds are now carried in the review, with 83 findings from
+the reports and 141 entries once the builder's own are counted, and no
+downward trend. The cost is not the kernel's complexity; it is that each
+new reviewer writes in a shape the last rule did not anticipate.

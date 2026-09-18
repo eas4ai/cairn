@@ -794,3 +794,28 @@ test("a comment or an entity is not a gap, a field belongs at the margin, and a 
   // A clean pair still reads.
   assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
 });
+
+test("an element round the word and markup in the gap is still the prefix, and no repair asks for what the record already does (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const ownC = (x = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${x}`;
+  const rep = (x = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${x}`;
+  // An element round the word, with any other markup in the gap, is still the prefix.
+  for (const line of ["- <em>open</em> <!-- two words -->: a defect nobody names", "- <b>resolved</b>&nbsp;: a defect nobody names", "- open <span>x</span>: a defect nobody names", "- <i>open</i><!--c-->: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownC(`\n## Notes\n\n${line}\n`), rep()), /^Done: /, `in the review: ${line}`);
+  }
+  // Honest prose that merely contains an element keeps its prose.
+  for (const line of ["- the open <b>source</b> tooling list: three of them", "- opened <!-- a note -->: the file"])
+    assert.match(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // A prefixed bullet inside the list is answered like every other, and never told to move where it is.
+  const nested = write(ownC(), rep("    - open: a second defect nested under the first\n"));
+  assert.doesNotMatch(nested, /move it into the findings: list/, "no repair asks for what the record already does");
+  // A report that names defects is never told to declare itself empty.
+  const none = write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n\n## Notes\n\n- open: a defect nobody names\n`);
+  assert.doesNotMatch(none, /findings: \[\]/, "a report that names defects is not told to declare none");
+  // A clean pair still reads.
+  assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
+});

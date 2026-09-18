@@ -28,9 +28,8 @@ import { fileURLToPath } from "node:url";
 
 // ------------------------------------------------------------ reading
 
-// Flat "Key: value" text. A "- item" line joins a list under the last
-// key; an unindented non-key line before the first blank line continues
-// the last value. Headings and blank lines end value continuation.
+// Flat "Key: value" text. A "- item" line joins a list under the last key; an unindented
+// non-key line before the first blank line continues the last value, which a heading ends.
 const FIELD_LINE = /^([A-Za-z][A-Za-z0-9 _-]*):(?:\s+(.*))?$/;
 const LINE_BREAK = /[\r\n\u2028\u2029]/;
 function fields(text) {
@@ -308,9 +307,8 @@ function changedPaths(root, commits, inputs = [], added = false) {
   return [...new Set(r.stdout.split("\0").filter(Boolean))].sort();
 }
 
-// Every decision record with its header fields. A record's domain is the
-// set of requirement prefixes in its Rests on: line; one that rests on
-// prose alone is in the domain "unspecified".
+// Every decision record with its header fields. A record's domain is the The domain of a decision is the set of requirement
+// prefixes in its Rests on: line; one that rests on prose alone is "unspecified".
 function decisions(root) {
   const dir = join(root, "docs", "decisions");
   return files(dir).map((n) => {
@@ -853,13 +851,14 @@ function independentGap(root, slug, rv) {
   const asEntry = "write each as a - entry under examined:, and change none of the reviewer's words";
   if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`, asEntry);
   if (seen.walled) return repair(`${name} holds a fence inside its examined: list, where every line is blanked before the list is read`, "take the fence out, and change none of the reviewer's words");
-  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text) ?? asEntry);
+  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text, "examined") ?? asEntry);
   // A reviewer names the commit it examined; a report written for an earlier review cannot (LOOP-020).
   if (!withoutFences(text).join("\n").replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   // A heading that names findings cannot be repaired without retitling the reviewer's
   // own section, which this gate forbids: the answer is a report written again (LOOP-020).
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
-  const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
+  const names = saysFinding(withoutFences(text).join("\n"));   // one that names defects is never told to declare none
+  const wrong = list.missing ? `needs findings: as a list of - entries${names ? "" : ", or findings: [] for none"}, above any heading`
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
     : list.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read"
     : list.again ? "writes findings: a second time below its list, where the loop reads no entry"
@@ -872,7 +871,7 @@ function independentGap(root, slug, rv) {
   const lead = headerOf(withoutFences(text).join("\n")).split("\n"), upto = lead.findIndex((l) => /^(?:examined|findings)[ \t]*:/.test(l));
   const orphan = lead.slice(0, upto < 0 ? lead.length : upto).find((l) => ENTRY.test(l));   // a bullet above the first list belongs to none
   if (orphan) return repair(`${name} writes ${displayPath(orphan.trim())} above its lists, where it belongs to none and joins the field above it`, "put each entry under examined: or findings:, and change none of the reviewer's words");
-  const advice = list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
+  const advice = list.missing ? (names ? "ask the reviewer for a report whose findings: list holds the defects it names" : `add "findings: []" when the reviewer found none, and change none of the reviewer's words`) : list.unread ? entryFix(list.unread, text, "findings")
     : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and describes the prefix rather than writing it at the start of another line" : null;
   if (wrong) return repair(`${name} ${wrong}`, advice);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -912,7 +911,8 @@ const CLAIM = /\b(?:open|resolved)[^A-Za-z]{0,4}:/i;
 // The prefix belongs to the findings list alone: elsewhere in a record it is a finding,
 // whatever punctuation or markup stands round it; a word containing it is not it.
 const saysFinding = (l) => { const t = String(l).replace(/&#0*58;|&#x0*3a;|&colon;/gi, ":").replace(/&[#\w]+;/g, " ").replace(/[*_~`]/g, "");
-  return [t.replace(/<!--[\s\S]*?-->/g, " "), t.replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, ""), t.replace(/[<>]/g, "")].some((x) => CLAIM.test(x)); };
+  const gone = t.replace(/<!--[\s\S]*?-->/g, " ");   // every way markup can be meant: the word is still the word
+  return [gone, gone.replace(/<[^>]*>/g, ""), gone.replace(/<[^>]*>[^<]*<\/[^>]*>/g, " "), t.replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, ""), t.replace(/[<>]/g, "")].some(CLAIM.test.bind(CLAIM)); };
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -927,9 +927,9 @@ function headerOf(whole) {   // the record above its first heading, of either fo
   return whole;
 }
 // A line inside a list that names a field: the fields are out of order, or the line is a stray the writer must bullet or remove (LOOP-108).
-const entryFix = (unread, text) => {
+const entryFix = (unread, text, key) => {
   const u = String(unread ?? "");
-  if (saysFinding(u)) return "move it into the findings: list, and change none of the reviewer's words";
+  if (saysFinding(u)) return key === "findings" ? "give that line its own entry at the list's own indent, and change none of the reviewer's words" : "move it into the findings: list, and change none of the reviewer's words";
   if (/^(?:examined|findings):/i.test(u)) {
     const e = String(text).search(/^examined:/m), f = String(text).search(/^findings:/m);
     return e >= 0 && f >= 0 && f < e ? "write examined: above findings:, both above the first heading"
@@ -1007,10 +1007,10 @@ function reviewOf(root, slug) {
     : !f.commit ? "commit: names the commit the review examined"
     : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
     : ex.walled ? "holds a fence inside its examined: list, where every line is blanked before the list is read; take the fence out (LOOP-086)"
-    : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(ex.unread, text) ?? "write each as a - entry"} (LOOP-020)`
+    : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(ex.unread, text, "examined") ?? "write each as a - entry"} (LOOP-020)`
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
-    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
+    : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text, "findings") ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
     : fin.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read; take the fence out (LOOP-086)"
     : fin.again ? "writes findings: a second time below its list, where the loop reads no entry; keep one list (LOOP-086)"
     : fin.stray ? `says ${displayPath(fin.stray.trim())} above the findings: list, where the loop does not read it; move that line into the findings: list (LOOP-086)`

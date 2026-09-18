@@ -1,6 +1,7 @@
 commitment: reviews-carry-an-independent-report
-commit: 962a52fa
+commit: 3833b02a
 examined:
+  - re-examined at 3833b02a, the release round, with a thirty-ninth independent report from a new subagent working read-only in its own clone. It built about 360 record pairs and put each through wake: 50 report shapes an honest reviewer would write plus 200 generated from the same vocabulary, each beside a review carrying nothing, and every one was named; a position sweep inserting a plainly prefixed bullet at each of the 47 line positions of a rich report and a rich review, and every one was named, so outside a fence it found no region the reader neither reads nor sweeps; 20 review shapes holding a real unfixed finding beside a clean report, all named but the one limit accepted on 2026-09-18; the file states of both records, the commit comparison in six spellings, and the carry and citation rules in 15 shapes. It reports no silent loss: every shape either kept the finding or named something. It found five, all wording, and one of the five is dead code rather than a message. Carried below.
   - re-examined at 962a52fa after the comment, indented-field and stray-bullet fixes, with a thirty-eighth independent report from a new subagent working read-only in its own clone. It ran the widest verification of the commitment: 240,000 generated record shapes through the kernel's own list reader, 120,000 reports and 120,000 reviews, each with a finding-shaped line inserted at a random position in one of up to nineteen spellings, and 21,450 spellings of the prefix itself across 22 wrappings and thirteen gaps at fifteen positions. No shape lost a finding without naming something except the one class in its first finding. It found three: one silent and narrow, two wording. Carried below.
   - my own probes at 962a52fa: thirteen shapes against the three-way reading, twelve correct, and one silent miss of my own, a tag pair with content between the word and the colon. The report's first finding is the same class from the other side, an element round the word with markup in the gap, so both are closed by the same change.
   - re-examined at 0735b118 after the numbered-prefix fix, with a thirty-seventh independent report from a new subagent working read-only in its own clone. It screened about 3,600 report shapes and 1,100 review shapes through the kernel's own list reader, inserting a finding-shaped line in 42 markup spellings at every line position of seven report templates and 20 spellings at every position of five review templates, then confirmed the survivors by wake with a control for each. It reports the carry and citation rules sound and no unread region in the header but one. It found seven: three silent, four wording. Carried below.
@@ -290,6 +291,11 @@ findings:
   - resolved: a prefixed line inside the findings list was told to move into the list it already sits in. Each list now gives the advice that fits it: inside findings, take its own entry at the list's indent; inside examined, move into the findings list, fixed in c133f0a7 (independent 962a52f 2)
   - resolved: a report with no findings field was told it could declare itself empty although it plainly named defects. When the reader can see the prefix in the record, the empty-list form is no longer offered and the reviewer is asked for a report that lists them, fixed in c133f0a7 (independent 962a52f 3)
   - resolved: my own, silent: a tag pair with content between the word and the colon hid the finding, the mirror of the report's first finding. Both are closed by the five readings, fixed in c133f0a7
+  - open: a report that says in words that it found nothing is counted as a finding and must be carried, so an agent following the message literally records as a finding something the reviewer never found; the declared-empty form is the shape that reaches Done (wording) (independent 3833b02 1)
+  - open: the guard that stops the gate telling an agent to declare a report empty recognises only the finding prefix, so a report whose defect is a plain bullet under a heading titled Results is told to add the declared-empty form and the defect goes unnamed (wording) (independent 3833b02 2)
+  - open: a report whose examined field is present but holds no entry is answered with a repair telling the agent to write each entry under it, which asks the agent to author the reviewer's own observations; the kernel's own comment says a field only the reviewer can write is a new report (wording) (independent 3833b02 3)
+  - open: the kernel's message for an indented field is unreachable when the indented field is the examined one, so an indented header is never told that it is indented and is instead answered about its commit line or asked for a new reviewer (wording) (independent 3833b02 4)
+  - open: bin/cairn.mjs line 909 declares a second constant beside ENTRY that nothing in the kernel or the tests ever reads, dead code in the record reader while PKG-004 caps the files under bin/ at 1900 lines and they stand at 1872 (wording) (independent 3833b02 5)
 
 ## Review at b2a1ea27, 2026-09-17
 
@@ -676,3 +682,47 @@ for by trimming comment, and the ceiling is now a real constraint on this
 class of work. Raising it changes an Agreed requirement, so it is the
 developer's, and it waits in next-iteration with the record-format item
 that would end the class altogether.
+
+## Review at 3833b02a, 2026-09-18
+
+The release round. The thirty-ninth reviewer is the first to report no
+silent loss: no shape it built lost a finding with nothing named. It
+tested that claim two ways the earlier rounds did not. It swept a
+finding-shaped bullet through every line position of a rich report and a
+rich review, 47 positions in all, and each one was named, so outside a
+fence there is no region of either record that the reader neither reads
+nor sweeps. It then generated 200 report shapes at random from the same
+vocabulary of markers, indents, titles, rules, wrappings and line endings
+that earlier rounds explored one at a time, and all 200 were named.
+
+Its five findings are all about what a message tells the agent to do next,
+not about a finding that vanishes. Three of them are the same defect seen
+from three sides: when the gate refuses a record it sometimes prescribes a
+repair that only the reviewer could honestly make. Telling an agent to
+write entries under an empty examined field asks it to author another
+party's observations; telling it to declare a report empty when the report
+plainly names a defect in prose asks it to overwrite the reviewer's
+meaning; and an indented header is answered about the wrong field
+altogether. In each case the gate is right to refuse and wrong about the
+remedy, and in each case the honest remedy is the one the kernel already
+knows for a record only its writer can fix: ask for the report again.
+
+The first finding is the mirror image. A reviewer who writes that it found
+nothing, in words, inside the findings list is told to carry that non-
+finding, and an agent that obeys leaves a review claiming a defect nobody
+reported. The declared-empty form is the shape that reaches Done, and the
+reviewer brief says so, but the message does not.
+
+All four are message defects, and the fifth is a dead constant left in the
+record reader by an earlier round. None of them produces a wrong Done on
+an honest report: they cost a round, or they record a limit inaccurately.
+Under the developer's ruling of 2026-09-18 on escalation loop-020, only a
+silent loss is fixed inside this commitment; these are recorded as named
+limits and captured for the next one, where the record-format item already
+waits and would end the class.
+
+The verification this round is the strongest the commitment has had: about
+360 committed record pairs put through wake, each acceptance paired with a
+control that differs in one detail, the whole 67-record review history read
+again with the same 58 accepted and 9 refused as before, and the test suite
+run twice in a pristine clone with no flake.

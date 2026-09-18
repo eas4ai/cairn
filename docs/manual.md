@@ -492,16 +492,17 @@ before the words is markup, a checked task box included, and a table row is
 read cell by cell wherever its pipes sit -- the header above the list and a heading's own text
 included, and a heading whose title names
 findings, judged over its subsections as well. A fence keeps a quoted field out of the
-metadata, but hides no finding, The prefix belongs to that list alone, so
+metadata, but hides no finding. The prefix belongs to that list alone, so
 describe it rather than writing it: a line anywhere else in the record that
 carries it is read as a finding, whatever marks it up or punctuates it. Keep
 no fence inside either list, write each field once and at the margin, put
 every entry under a field, and expect a report that breaks these to be
 written again rather than edited. Such
-a heading holds nothing when the record's `findings:` list declares none,
+a heading holds nothing, whatever the record's `findings:` list says,
 because a bullet, a table row, a paragraph or a subsection under it could
-each be a finding; beside a list that holds entries it may hold prose but
-not a list. A report refused for it is written again rather than retitled. A
+each be a finding. The loop refuses it beside a declared-empty list and
+beside a list that holds entries alike, so a title that names findings is
+a title to avoid, not a section to fill carefully. A report refused for it is written again rather than retitled. A
 finding written as ordinary prose under a heading that does not name them is
 read as a note, and nothing names it, so tell a reviewer the record form:
 every finding in the `findings:` list, and no section titled with the word

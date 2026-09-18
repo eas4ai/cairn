@@ -25,7 +25,7 @@ function repo(files = {}) {
 const finds = (files, req) => { const r = lint(repo(files)); assert.equal(r.status, 1, r.stdout); assert.match(r.stdout, new RegExp(`^${req}:`, "m")); };
 
 test("a clean package passes", () => { const r = lint(repo()); assert.equal(r.status, 0, r.stdout); });
-test("PKG-001: a dependency, or a service manifest", () => { finds({ "package.json": '{"dependencies":{"left-pad":"1"}}' }, "PKG-001"); finds({ "Dockerfile": "FROM x\n" }, "PKG-001"); });
+test("PKG-001: a dependency, or a service manifest", () => { finds({ "package.json": '{"dependencies":{"left-pad":"1"}}' }, "PKG-001"); finds({ "Dockerfile": "FROM x\n" }, "PKG-001"); finds({ "docker-compose.yml": "services:\n" }, "PKG-001"); finds({ "Procfile": "web: x\n" }, "PKG-001"); });
 test("PKG-002: ignoring evidence or other durable state, by directory or by extension", () => { finds({ ".gitignore": ".cairn/evidence/\n.cairn/queue/\n" }, "PKG-002"); finds({ ".gitignore": "*.out\n*.err\n" }, "PKG-002"); });
 test("PKG-003: a command, a directory, or a record kind no decision names", () => {
   finds({ "bin/x.mjs": "// cairn wake\n// cairn frobnicate\n" }, "PKG-003");
@@ -52,6 +52,10 @@ test("PKG-012: a network call or a model client in the kernel, but not a vendor'
   finds({ "bin/x.mjs": "// cairn wake\nawait fetch(u);\n" }, "PKG-012");
   // The text checks read the same kernel as the line count: a file in a subdirectory of bin/ is scanned too (PKG-038).
   finds({ "bin/hooks/stop.mjs": "await fetch(u);\n" }, "PKG-012");
+  // Every alternative the check recognises, so narrowing it is observed: a bare URL, the node: clients, and each model client.
+  finds({ "bin/x.mjs": "// cairn wake\nconst u = \"https://api.example.com/v1\";\n" }, "PKG-012");
+  finds({ "bin/x.mjs": '// cairn wake\nimport https from "node:https";\n' }, "PKG-012");
+  finds({ "bin/x.mjs": '// cairn wake\nimport g from "@google/generative-ai";\n' }, "PKG-012");
   finds({ "bin/x.mjs": '// cairn wake\nimport Anthropic from "@anthropic-ai/sdk";\n' }, "PKG-012"); finds({ "bin/x.mjs": '// cairn wake\nimport OpenAI from "openai";\n' }, "PKG-012");
   const ok = lint(repo({ "bin/x.mjs": "// cairn wake\nconst trailer = /co-authored-by:.*(claude|anthropic|openai)/i;\n" }));
   assert.equal(ok.status, 0, ok.stdout);

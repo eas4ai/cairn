@@ -857,6 +857,7 @@ function independentGap(root, slug, rv) {
   // A reviewer names the commit it examined; a report written for an earlier review cannot (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
+  if (list.stray) return again(`${name} says ${displayPath(list.stray.trim())} outside its findings: list, where the loop reads it as a finding, and moving or rewording it would change the reviewer's words`);
   // A heading that names findings cannot be repaired without retitling the reviewer's
   // own section, which this gate forbids: the answer is a report written again (LOOP-020).
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
@@ -864,12 +865,11 @@ function independentGap(root, slug, rv) {
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
     : list.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read, so an entry there is no entry at all"
     : list.again ? "writes findings: a second time below its list, where the loop reads no entry"
-    : list.stray ? `says ${displayPath(list.stray.trim())} above the findings: list, where the loop does not read it`
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
     : list.heading ? "says open: or resolved: under a heading, where the loop does not read it, and every finding belongs in the findings: list above the first heading. No fence hides such a line, so the prefix is described rather than quoted"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
-  const advice = list.stray ? "move that line into the findings: list, keeping its words" : list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
+  const advice = list.missing ? `add "findings: []" when the reviewer found none, and change none of the reviewer's words` : list.unread ? entryFix(list.unread, text)
     : list.heading ? "ask the reviewer for a report that lists every finding under findings:, and describes the prefix rather than writing it at the start of another line" : null;
   if (wrong) return repair(`${name} ${wrong}`, advice);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();

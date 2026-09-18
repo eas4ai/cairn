@@ -586,8 +586,8 @@ test("markup is whatever precedes the first letter, a row is a row wherever its 
     assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line.split("\n")[0]}`);
   // A prefix line in the header is named where it is, with the move offered.
   const stray = write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nopen: the gate accepts a finding above the list\nexamined:\n  - x at ${at}\nfindings: []\n`);
-  assert.match(stray, /above the findings: list/, "the header case is named where it is");
-  assert.match(stray, /move that line into the findings: list/, "and the move is offered");
+  assert.match(stray, /outside its findings: list/, "the header case is named where it is");
+  assert.match(stray, /^Resolvable: review first\n/, "and a report the agent may not reword is written again");
   // A field written after the list is told where the field goes.
   assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nexamined:\n  - x at ${at}\nfindings: []\nreviewer: a fresh session\n`), /move that field above examined:/, "a field after the findings list");
   // A record committed but missing from the tree is restored, not discarded.

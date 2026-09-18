@@ -128,20 +128,23 @@ rather than read past. Prose goes after a heading, where a finding never
 belongs: a bullet under a heading is read as prose unless it reads as a
 finding, or the record names `findings:` and lists none above it.
 `findings: []` says there are none, and leaves the body's bullets prose.
-A heading whose title names the word findings holds nothing at all: a
-report's findings carry no prefix, so a bullet, a numbered line, a table
-row, a paragraph or a subsection under it could each be a finding the
-loop cannot tell from a note. Such a heading is refused for its title
-alone, whatever sits beneath it, and a report that carries one is written
-again rather than retitled, because retitling changes the reviewer's
-words. Title a section of notes something that does not name findings.
-The loop cannot tell "More findings" from "What the findings mean", so it
-refuses both in the open rather than lose a finding in silence. Outside
-the `findings:` list the loop reads a bullet under a heading as prose,
-and refuses only what it can recognise: a bullet that begins `open:` or
-`resolved:`, and any heading whose title names findings. A finding
-written as ordinary prose under a heading that does not name them is
-read as a note, and nothing names it. Say so when you brief a reviewer. An independent report carries
+A heading whose title names the word findings is judged against the
+record's own list. When `findings:` declares none, such a heading holds
+nothing at all: a bullet, a numbered line, a table row, a paragraph or a
+subsection under it could each be a finding the loop cannot tell from a
+note, so the heading is refused whatever sits beneath it. When
+`findings:` holds entries, that section is read as elaboration and may
+hold prose, but never a list: a list there could carry a finding the
+record never declared. A report refused for such a heading is written
+again, never retitled, because retitling changes the reviewer's words.
+Outside the `findings:` list the loop reads a bullet under a heading as
+prose, and refuses only what it can recognise: a bullet that begins
+`open:` or `resolved:`, wherever in the body it sits, and a
+findings-naming heading as above. A finding written as ordinary prose
+under a heading that does not name them is read as a note, and nothing
+names it. Say so when you brief a reviewer. One leading `# ` title above
+the fields is the record's own and is read past; any other heading ends
+the header. An independent report carries
 `commitment:`, `commit:`, `examined:` and `findings:` in the same shape.
 
 Check execution has a separate working-tree lock. When wake names
@@ -224,7 +227,11 @@ A finding is resolved as its own work, after the review is recorded.
 Before the review is complete, start a reviewer with none of your
 context, such as a fresh subagent or session, give it only the
 commitment file, its requirement texts and the commit range, and ask
-it for defects. Keep its report verbatim in
+it for defects. Tell it the record form its report must take, above:
+the four fields at the top, one entry per line, every finding in the
+findings: list, and no section titled with the word findings. A report
+the loop cannot read costs a whole round, and the reviewer cannot guess
+the form. Keep its report verbatim in
 .cairn/reviews/<slug>.independent.md with the review's commit: line,
 commit it. Ask the reviewer to name the commit it examined in its
 examined: list. Carry its finding number n into your review on its own

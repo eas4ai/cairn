@@ -798,7 +798,7 @@ function evidenceError(root, receipt, outputs) {
 function independentGap(root, slug, rv) {
   const name = `.cairn/reviews/${slug}.independent.md`, own = `.cairn/reviews/${slug}.md`;
   const committed = (p) => { const r = git(root, "show", `HEAD:./${p}`); return r.status === 0 ? r.stdout.replace(/\r\n/g, "\n") : null; };
-  const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
+  const again = (why) => ({ verdict: "Resolvable", action: `review ${slug}`, why: `the review is current, and ${why}; start a new reviewer with none of the build's context, give it the commitment, its requirement texts and the commit range, and tell it the record form: commitment:, commit:, examined: and findings: at the top, one - entry per line, every finding in the findings: list and none under a heading. Commit its report at ${name}; never edit a reviewer's report to fit (LOOP-020)` });
   const repair = (why, fix) => ({ verdict: "Resolvable", action: `repair ${name}`, why: `${why}; keep the reviewer's own words: ${fix ?? "give a finding its own - entry, put a heading above prose that follows the findings, or ask the reviewer again"} (LOOP-020)` });
   const loose = dirtyInputs(root, [own, name]);   // the review or the report on disk differs from HEAD: commit it before either is judged
   if (loose.length) return { verdict: "Resolvable", action: `commit ${loose[0]}`, why: `${loose[0]} differs from its committed version; commit it, so the review and its independent report are judged in one state (LOOP-020)` };
@@ -828,8 +828,16 @@ function independentGap(root, slug, rv) {
   // the record's own, not the reviewer's words. A report for another commit is
   // replaced first, so the repair is never asked for a record that is then thrown
   // away (LOOP-020).
-  const bare = f.commitment === undefined && f.commit === undefined && !early.examined.entries.length && early.findings.missing;
-  if (bare) return again(text.trim() ? `${name} carries no record: none of commitment:, commit:, examined: or findings: is a field at its top` : `${name} is empty`);
+  // What the record is short of, said once: a line the agent may add is a repair, and a
+  // field only the reviewer can write is a new report. A repair that the next wake would
+  // refuse is never named (LOOP-020).
+  const lacking = ["commitment", "commit", "examined", "findings"].filter((k) => k === "examined" ? !early.examined.entries.length : k === "findings" ? early.findings.missing : f[k] === undefined);
+  const empty = lacking.filter((k) => k === "examined" && !early.examined.missing);
+  if (!text.trim()) return again(`${name} is empty`);
+  if (lacking.length > 1 && lacking.includes("commit")) {
+    const absent = lacking.filter((k) => !empty.includes(k));
+    return again(`${name} carries no ${absent.map((k) => `${k}:`).join(" or ")} line${empty.length ? `, and ${empty.map((k) => `${k}:`).join(" and ")} is there and holds no entry` : ""}`);
+  }
   if (f.commitment === undefined) {
     const mine = commitOf(f.commit);
     if (mine && mine !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
@@ -840,8 +848,9 @@ function independentGap(root, slug, rv) {
   if (!commitOf(f.commit)) return again(`${name} names ${f.commit || "no commit"}, which is not a commit`);
   if (commitOf(f.commit) !== at) return again(`${name} names commit ${f.commit} and the review names ${rv.commit}; they must name the same commit, and a review redone at a later commit needs a new report there`);
   const seen = listOf(text, "examined"), examined = seen.entries.map(String);
-  if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`);
-  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text));
+  const asEntry = "write each as a - entry under examined:, and change none of the reviewer's words";
+  if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`, asEntry);
+  if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text) ?? asEntry);
   // A reviewer given the commit range names the commit it examined; a report written for an earlier review cannot, outside its commit: line (LOOP-020).
   if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
@@ -852,7 +861,7 @@ function independentGap(root, slug, rv) {
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
-    : list.heading ? "holds findings under a heading, where the loop does not read them; move them into the findings: list above the first heading. If those lines are notes, reword a note that begins open: or resolved:, and put an example inside a fence"
+    : list.heading ? "holds findings under a heading, where the loop does not read them; they belong in the findings: list above the first heading. If those lines are notes, ask the reviewer for a report whose notes do not begin open: or resolved:, or that puts such an example inside a fence"
     : !list.empty && list.value ? `findings: ${displayPath(list.value)} is not a list` : null;
   if (wrong) return repair(`${name} ${wrong}`, list.unread ? entryFix(list.unread, text) : list.heading === "named" ? "ask the reviewer for a report that lists every finding under findings:, and titles a section of notes something else" : null);
   const norm = (s) => String(s).replace(/^(?:open|resolved):\s*/i, "").replace(/\s+/g, " ").trim();
@@ -889,8 +898,10 @@ const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:
 // The header: the record above its first heading, of either form (LOOP-108).
 function headerOf(whole) {
   const lines = whole.split("\n");
+  let title = true;   // one leading "# " title is the record's own, as recordFields reads it (LOOP-108)
   for (let i = 0; i < lines.length; i++) {
-    if (ATX.test(lines[i])) return lines.slice(0, i).join("\n");
+    if (ATX.test(lines[i])) { if (title && /^ {0,3}# /.test(lines[i])) { title = false; continue; } return lines.slice(0, i).join("\n"); }
+    if (lines[i].trim()) title = false;
     // An underline makes the line above it a heading, unless that line is a list
     // entry or one of the record's own fields (LOOP-108).
     if (i && SETEXT.test(lines[i]) && lines[i - 1].trim() && !/^[ \t]/.test(lines[i - 1]) && !ENTRY.test(lines[i - 1]) && !OWN.test(lines[i - 1])) return lines.slice(0, i - 1).join("\n");
@@ -927,12 +938,12 @@ function listOf(text, key) {
   }
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
-  const below = [...rest.matchAll(new RegExp(ENTRY.source, "gm"))].map((x) => x[2].trim());
+  const below = rest.split("\n").map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines, so one match swallowed the body (LOOP-086)
   // The body's sections, each under its own heading, hashed or underlined: what a
   // heading holds is read against that heading's own title, never another's (LOOP-086).
   const lines = rest.split("\n"), sections = [];
   for (let i = 0; i < lines.length; i++) {
-    const hashed = /^ {0,3}#{1,6}[ \t]*(.+)$/.exec(lines[i]);
+    const hashed = /^ {0,3}#{1,6}[ \t]*(.+?)[ \t]*#*[ \t]*$/.exec(lines[i]);   // a closing run of hashes is not part of the title
     const under = i + 1 < lines.length && SETEXT.test(lines[i + 1]) && lines[i].trim() && !/^[ \t]/.test(lines[i]) && !ENTRY.test(lines[i]);
     if (hashed || under) { sections.push({ title: (hashed ? hashed[1] : lines[i]).trim(), body: [] }); if (under) i++; continue; }
     if (sections.length) sections[sections.length - 1].body.push(lines[i]);
@@ -943,7 +954,8 @@ function listOf(text, key) {
   // The title is not narrowed to its first word: "More findings" carries findings
   // as readily as "Findings", and no rule over a title tells either from a section
   // that only mentions them, so the loop refuses in the open rather than lose one.
-  const named = sections.find((s) => /\bfindings?\b/i.test(s.title));
+  const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
+  const named = entries.length ? hits.find((s) => s.body.some((l) => ENTRY.test(l))) : hits[0];   // beside a list that holds entries such a section is elaboration, and only a list under it could be a finding
   const heading = below.some((x) => /^(?:open|resolved):/i.test(x)) ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
   return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread };
 }

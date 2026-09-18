@@ -486,14 +486,16 @@ started without the build's context and committed unchanged. It names the
 same commit as the review, and the review must answer each of its findings
 on one line. Cairn reads those findings only from the report's `findings:`
 list. A bullet under a heading is prose, and Cairn refuses only
-what it can recognise there: a bullet that begins `open:` or `resolved:`, and
-any heading whose title names findings. Such a heading is refused for its
-title alone, whatever sits beneath it, because a bullet, a table row, a
-paragraph or a subsection under it could each be a finding; a report that
-carries one is written again rather than retitled. A finding written as ordinary
-prose under a heading that does not name them is read as a note, and nothing
-names it, so tell a reviewer to put every finding in the list and to title
-its other sections something that does not name findings. The developer accepted that limit on 2026-09-17, in escalation
+what it can recognise there: a bullet that begins `open:` or `resolved:`,
+wherever in the body it sits, and a heading whose title names findings. Such
+a heading holds nothing when the record's `findings:` list declares none,
+because a bullet, a table row, a paragraph or a subsection under it could
+each be a finding; beside a list that holds entries it may hold prose but
+not a list. A report refused for it is written again rather than retitled. A
+finding written as ordinary prose under a heading that does not name them is
+read as a note, and nothing names it, so tell a reviewer the record form:
+every finding in the `findings:` list, and no section titled with the word
+findings. The developer accepted that limit on 2026-09-17, in escalation
 loop-020-loop-086, and the record format change that would end it waits in
 next-iteration. Cairn cannot tell whether that reviewer really lacked the
 context; it checks that the report exists, names this commitment and

@@ -464,7 +464,7 @@ test("a recognisable finding under a heading is named wherever it sits, a findin
   const ownCarries = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${extra}`;
   // A bullet the loop can recognise is named wherever it sits in the body, not only when it is the body's first bullet.
   const buried = "\n## Method\n\n- I read the kernel\n\n## What I saw\n\n- open: a second defect the loop never names\n";
-  assert.match(write(ownClean(), clean(buried)), /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*under a heading/, "a report's open: bullet behind an earlier bullet");
+  assert.match(write(ownClean(), clean(buried)), /^Resolvable: review first\n.*outside its findings: list/, "a report's prefixed bullet behind an earlier bullet names a new report");
   assert.match(write(ownClean(buried), clean()), /^Resolvable: repair \.cairn\/reviews\/first\.md\n.*under a heading/, "and the review's own");
   // A findings-titled section is elaboration when the record's own list holds entries, and the silent-loss shape only when it declares none.
   for (const title of ["Findings in detail", "No findings", "Summary of findings review process"])
@@ -472,7 +472,7 @@ test("a recognisable finding under a heading is named wherever it sits, a findin
   assert.match(write(ownClean(), clean("\n## Findings\n\nThe gate drops an entry.\n")), /^Resolvable: review first\n.*the heading "Findings"/, "and the same title above a list that declares none is refused");
   // The repair completes: moving the findings into the list leaves the heading acceptable.
   const said = write(ownClean(), clean("\n## Findings\n\n- open: the gate mis-reads a heading title\n"));
-  assert.match(said, /^Resolvable: repair \.cairn\/reviews\/first\.independent\.md\n.*under a heading/, "findings shaped as entries under a heading are a repair");
+  assert.match(said, /^Resolvable: review first\n.*outside its findings: list/, "findings written under a heading name a new report, since the agent may not move them");
   assert.match(write(ownCarries("\n## What I read\n"), carried("\n## What I read\n")), /^Done: /, "and the record is acceptable once they are in the list and the section is titled otherwise");
   // A report short of the one field the kernel cannot supply is replaced once, never repaired first.
   const two = write(ownClean(), `reviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n`);
@@ -737,4 +737,33 @@ test("the prefix is what a line says however it is punctuated, and no fence or s
   assert.match(write(ownC(), `#Independent report\n\n${rep()}`), /^Done: /, "a hashed title with no space");
   // A clean pair still reads.
   assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
+});
+
+test("a numbered prefix is still the prefix, and each message names the action it means (LOOP-020, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const ownC = (x = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${x}`;
+  const rep = (x = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${x}`;
+  const F = "```";
+  // A reviewer that numbers its findings still writes the prefix.
+  for (const line of ["- open 2: a defect nobody names", "- resolved 10: a defect nobody names", "- open #3: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownC(`\n## Notes\n\n${line}\n`), rep()), /^Done: /, `in the review: ${line}`);
+  }
+  assert.doesNotMatch(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n  - open 2: a defect nobody names\nfindings:\n  - the gate drops an entry\n`), /^Done: /, "and inside examined:");
+  // A year in brackets is still prose: the gap is four characters, not a sentence.
+  for (const line of ["- open (2024): a year in the roadmap", "- the API is open. Next: the CLI", "- open/closed: a dichotomy"])
+    assert.match(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // A fence inside the examined list hides no entry.
+  assert.doesNotMatch(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\n${F}\n  - a quoted entry\n${F}\nfindings:\n  - the gate drops an entry\n`), /^Done: /, "a fence inside the report's examined list");
+  // A report is written again, never repaired, wherever its prefixed line sits.
+  const under = write(ownC(), rep(`\n## Notes\n\n- open: a defect nobody names\n`));
+  assert.match(under, /^Resolvable: review first\n/, "a prefixed line under a heading names a new report");
+  assert.doesNotMatch(under, /^Resolvable: repair/, "and never a repair the gate forbids");
+  // The commit must be named where the reviewer wrote it, not inside a quoted block.
+  assert.doesNotMatch(write(ownC(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - the kernel\nfindings:\n  - the gate drops an entry\n\n## Notes\n\n${F}\ngit show ${at}\n${F}\n`), /^Done: /, "a commit named only inside a fence");
+  // A carry needs the finding's words, not a prefix of a longer word.
+  assert.doesNotMatch(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entryway, not a finding (independent ${s} 1)\n`, rep()), /^Done: /, "a longer word is not the finding's words");
 });

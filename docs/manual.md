@@ -495,7 +495,8 @@ findings, judged over its subsections as well. A fence keeps a quoted field out 
 metadata, but hides no finding, The prefix belongs to that list alone, so
 describe it rather than writing it: a line anywhere else in the record that
 carries it is read as a finding, whatever marks it up or punctuates it. Keep
-no fence inside the list, and write the field once. Such
+no fence inside either list, write the field once, and expect a report that
+breaks these to be written again rather than edited. Such
 a heading holds nothing when the record's `findings:` list declares none,
 because a bullet, a table row, a paragraph or a subsection under it could
 each be a finding; beside a list that holds entries it may hold prose but

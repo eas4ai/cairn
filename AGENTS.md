@@ -159,10 +159,14 @@ heading and inside a fence alike. No marker, label, tag or fence is
 cover, and neither is punctuation round the word itself: brackets,
 quotation marks, an entity for the colon or an unusual space all still
 say it. A word that merely contains the prefix, such as "opened" or
-"unresolved", is not it. Keep no fence inside the `findings:` list,
-because a fence blanks its lines before the list is read, and write
-`findings:` once: a second one below the list holds entries the loop
-never reads. Both are refused rather than read in part.
+"unresolved", is not it. A number between the word and its
+colon is punctuation too, so a numbered finding is still a finding.
+Keep no fence inside the `examined:` or `findings:` list, because a
+fence blanks its lines before the list is read, and write `findings:`
+once: a second one below the list holds entries the loop never reads.
+Both are refused rather than read in part, and a report that carries
+the prefix outside its list is written again, never repaired, because
+the agent may not move or reword a reviewer's words.
 A section holds its subsections, so a findings-naming heading is judged
 over everything under it down to the next heading at its own level. A finding written as ordinary prose, with no `open:` or
 `resolved:`, under a heading that does not name them is read as a note,

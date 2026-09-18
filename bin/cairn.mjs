@@ -251,10 +251,9 @@ function scopeVerdict(root, c, mechs) {
   const first = /[\s\x00-\x1f\x7f-\x9f]/.test(paths[0]) ? displayPath(paths[0]) : paths[0];
   return { verdict: "Resolvable", action: `scope ${first}`, why: `${paths.length} unresolved scope paths changed since the commitment began and no mechanism declares them (LOOP-035):\n${paths.map((p) => `  - ${displayPath(p)}`).join("\n")}\n  Declare missing inputs that belong to the agreement. To keep correct committed work outside it, use cairn escalate --scope --keep --concerns LOOP-035 with the decision fields for explicit approval of that exact history. For accidental work, capture it in the backlog, restore the paths to the commitment's activation tree, commit, and use cairn escalate --scope --concerns LOOP-035. Commit the developer's ok before checking. Retention needs fresh checks and review; neither approval grants future changes. An instead answer supplies direction, not an automatic exception.` };
 }
-// Neither capture directory is deferral (LOOP-092): an item added inside
-// the footprint from one of the commitment's own requirements carries the
-// agent's reason it is outside, or an escalation names it. A
-// next-iteration item names what it would change (LOOP-093).
+// Neither capture directory is deferral (LOOP-092): an item added inside the footprint
+// from one of the commitment's own requirements carries the agent's reason it is outside,
+// or an escalation names it; a next-iteration item names what it would change (LOOP-093).
 // The paths a commitment's own commits added under the named directories.
 const addedPaths = (root, commits, ...dirs) => changedPaths(root, commits, dirs, true);
 // An escalation covers a capture or a contract change only when this commitment raised it; an older one, from any commitment, names the requirement by coincidence (LOOP-114, LOOP-119).
@@ -288,9 +287,8 @@ function captureVerdict(root, c) {
   }
   return null;
 }
-// A promoted commitment stays inside the specification (LOOP-089): a
-// change to an Agreed requirement or the working agreement since it
-// began is the developer's, so the agent escalates (LOOP-090).
+// A promoted commitment carries the item's own requirements only: a change to an Agreed
+// requirement or the working agreement since it began is the developer's (LOOP-090).
 function promotedContractVerdict(root, c, ctx, agreed) {
   if (!c.promoted) return null;
   const history = scopeHistory(root, c.slug);
@@ -333,11 +331,10 @@ const UNBUILT = "(none yet: recorded, not built)";
 // Whitespace around the line, and a CR from a CRLF checkout, are not part of it.
 const hasUnbuilt = (section) => section.split("\n").some((l) => l.trim() === UNBUILT);
 
-// A decision record is read whole: its header (DEC-005, LOOP-109), its
-// predecessor (DEC-010), and its Realized by section, where a resolving
-// entry makes it built, a placeholder left above one is named as a
-// repair, and an identifier a shallow clone or an ambiguous prefix
-// cannot resolve is named as such (DEC-007, DEC-021, LOOP-113).
+// A decision record is read whole: its header (DEC-005, LOOP-109), its predecessor
+// (DEC-010), and its Realized by section, where a resolving entry makes it built, a
+// placeholder above one is a repair, and an identifier no clone can resolve is named
+// as such (DEC-007, DEC-021, LOOP-113).
 // One git call resolves every Realized by entry of every record (DEC-023): the batch echoes one line per input, in order.
 function resolveCommits(root, ids) {
   const out = new Map();
@@ -853,17 +850,19 @@ function independentGap(root, slug, rv) {
   const seen = listOf(text, "examined"), examined = seen.entries.map(String);
   const asEntry = "write each as a - entry under examined:, and change none of the reviewer's words";
   if (!examined.length) return repair(`${name} needs a nonempty examined: list${seen.unread ? `; this line is not an entry: ${displayPath(seen.unread)}` : ""}`, asEntry);
+  if (seen.walled) return repair(`${name} holds a fence inside its examined: list, where every line is blanked before the list is read`, "take the fence out, and change none of the reviewer's words");
   if (seen.unread) return repair(`${name} examined: holds a line the loop cannot read as an entry: ${displayPath(seen.unread)}${seen.dropped ? ", and the entries after it are unread" : ""}`, entryFix(seen.unread, text) ?? asEntry);
   // A reviewer names the commit it examined; a report written for an earlier review cannot (LOOP-020).
-  if (!text.replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
+  if (!withoutFences(text).join("\n").replace(/^commit:[^\n]*\n/gm, "").toLowerCase().includes(at.slice(0, 7))) return again(`${name} does not name commit ${at.slice(0, 7)} anywhere but its commit: line, so it was not written for this review; ask the reviewer to name the commit it examined, in its examined: list`);
   const list = listOf(text, "findings");
-  if (list.stray) return again(`${name} says ${displayPath(list.stray.trim())} outside its findings: list, where the loop reads it as a finding, and moving or rewording it would change the reviewer's words`);
+  const off = list.stray ?? (list.heading === "shaped" ? "" : null);   // the prefix outside the list, wherever it sits: the agent may not move it
+  if (off !== null) return again(`${name} says ${off ? displayPath(off.trim()) : "the finding prefix"} outside its findings: list, where the loop reads it as a finding, and moving or rewording it would change the reviewer's words`);
   // A heading that names findings cannot be repaired without retitling the reviewer's
   // own section, which this gate forbids: the answer is a report written again (LOOP-020).
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
-    : list.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read, so an entry there is no entry at all"
+    : list.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read"
     : list.again ? "writes findings: a second time below its list, where the loop reads no entry"
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
@@ -885,7 +884,7 @@ function independentGap(root, slug, rv) {
     const n = i + 1, key = `${short} ${n}`, hits = lines.filter((l) => pairs(l).has(key)), stem = words.toLowerCase().replace(/[.!?;:,]+$/, "");
     const anywhere = lines.some((l) => [...l.matchAll(cite)].some((m) => `${m[1].toLowerCase().slice(0, 7)} ${Number(m[2])}` === key));
     // Its words first, so a citation the finding itself quotes is words; the carrying citation ends what follows them.
-    const text = hits.length === 1 ? norm(hits[0]) : "", rest = text.toLowerCase().startsWith(stem) ? text.slice(stem.length) : null;
+    const text = hits.length === 1 ? norm(hits[0]) : "", at2 = text.toLowerCase().startsWith(stem) && !/\w/.test(text.charAt(stem.length)) ? stem.length : -1, rest = at2 < 0 ? null : text.slice(at2);
     const why = !hits.length ? (anywhere ? `a review line cites ${mark(n)} but does not end with it; put the citation last on its line, and keep notes out of the findings list, since a line indented under a finding joins it` : `no review line cites ${mark(n)}`) : hits.length > 1 ? `${hits.length} review lines cite ${mark(n)}` : rest === null ? "its review line does not begin with its words" : [...pairs(rest)].filter((k) => k.startsWith(`${short} `)).length > 1 ? "its review line cites another finding of this report too" : null;
     if (why) missed.push({ n, why, words });
   }
@@ -905,9 +904,9 @@ function independentGap(root, slug, rv) {
 // the record's end. A bullet or number is an entry; an indented line under one joins it,
 // and every other line inside the list is named rather than read past.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const CLAIM = /\b(?:open|resolved)[^A-Za-z0-9]{0,4}:/i;
-// The prefix belongs to the findings list alone: anywhere else in a record it is a finding,
-// whatever punctuation or markup stands round it. A word that merely contains it is not it.
+const CLAIM = /\b(?:open|resolved)[^A-Za-z]{0,4}:/i;
+// The prefix belongs to the findings list alone: elsewhere in a record it is a finding,
+// whatever punctuation or markup stands round it; a word containing it is not it.
 const saysFinding = (l) => { const t = String(l).replace(/&#0*58;|&#x0*3a;|&colon;/gi, ":").replace(/<!--|-->/g, " ").replace(/[*_~`]/g, "");
   return CLAIM.test(t.replace(/<[^>]*>/g, "")) || CLAIM.test(t.replace(/[<>]/g, "")); };
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
@@ -1007,6 +1006,7 @@ function reviewOf(root, slug) {
     : value && /\s/.test(value) ? `it reads its commit: as ${displayPath(value)}, because that line carries more than the commit, or the line below it joined the field; keep only the commit on it, with prose after a heading`
     : !f.commit ? "commit: names the commit the review examined"
     : ex.missing || !ex.entries.length ? `examined: needs a nonempty list of what the review examined${ex.unread ? `; this line is not an entry: ${displayPath(ex.unread)}` : ""} (LOOP-020)`
+    : ex.walled ? "holds a fence inside its examined: list, where every line is blanked before the list is read; take the fence out (LOOP-086)"
     : ex.unread ? `examined: holds a line the loop cannot read as an entry: ${displayPath(ex.unread)}${ex.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(ex.unread, text) ?? "write each as a - entry"} (LOOP-020)`
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null

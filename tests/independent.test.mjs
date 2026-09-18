@@ -394,7 +394,7 @@ test("an underlined heading that names findings holds no list either, an untermi
   // An unterminated fence hides nothing below it.
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: one, fixed (independent ${s} 1)\n${fence}\n  - open: a real defect nobody has resolved\n`, clean("").replace("findings: []", "findings:\n  - one")), /^Resolvable: (?:resolve first|repair)/, "an open finding below an unterminated fence is not lost");
   assert.match(write(ownClean(), `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the wake does something wrong\n${fence}\n  - the wake accepts a review whose commit line is empty\n`), /^Resolvable: /, "and a report's second finding below one is not lost");
-  assert.match(write(ownClean(`\n## Notes\n\n${fence}\nfindings:\n  - open: an example of a malformed list\n${fence}\n`), clean()), /^Done: /, "while a closed fence still hides its example");
+  assert.match(write(ownClean(`\n## Notes\n\n${fence}\nfindings:\n  - a quoted example of a malformed list\n${fence}\n`), clean()), /^Done: /, "while a closed fence still hides a quoted field");
   // A field name inside an indented note is not a spelling of the field.
   assert.match(write(`commitment: first\ncommit: ${at}\nexamined:\n  - the work\n    commitment: the slug the record names\nfindings: []\n`, clean()), /^Done: /, "an indented note that mentions a field name");
   // A report short of its commitment: line is repaired, not discarded.
@@ -617,10 +617,36 @@ test("a marker that contains a letter is still a marker, and a fence opens only 
   const prose = `\n## Notes\n\n${F} opens a fence, and the next such line closes it.\n\n## Findings\n\n- open: a defect nobody names\n\n${F}\ncairn: R-001: pass\n${F}\n`;
   assert.doesNotMatch(write(ownClean(), clean(prose)), /^Done: /, "a finding between a prose marker and a real fence");
   assert.doesNotMatch(write(ownClean(prose), clean()), /^Done: /, "and the same in the review");
-  // A real fence still hides its example, with or without a language word.
-  assert.match(write(ownClean(), clean(`\n## Notes\n\n${F}\n- open: an example\n${F}\n`)), /^Done: /, "a bare fence");
-  assert.match(write(ownClean(), clean(`\n## Notes\n\n${F}text\n- open: an example\n${F}\n`)), /^Done: /, "and one with a language word");
+  // A fence keeps a quoted field out of the metadata, and hides no finding from the sweep.
+  assert.match(write(ownClean(), clean(`\n## Notes\n\n${F}\nfindings:\n  - a quoted example\n${F}\n`)), /^Done: /, "a quoted field inside a fence");
+  for (const open of [F, `${F}text`, `${F}console session`, `  ${F}`])
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${open}\n- open: a defect nobody names\n${F}\n`)), /^Done: /, `the prefix inside a fence opened with ${JSON.stringify(open)}`);
   // No repair names its requirement twice.
   const twice = write(ownClean(`\n## Notes\n\n- open: a defect of my own\n`), clean());
   assert.doesNotMatch(twice, /\(LOOP-\d+\)[^\n]*\(LOOP-\d+\)/, "one requirement tag per message");
+});
+
+test("a label before the prefix is markup too, and a divider hides no finding (LOOP-020, LOOP-071, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const clean = (extra = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings: []\n${extra}`;
+  const ownClean = (extra = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n${extra}`;
+  // A reviewer asked to rate its findings writes a label before the prefix.
+  for (const line of ["- Blocked: open: a defect nobody names", "- silent: open: a defect nobody names", "> Note: open: a defect nobody names", "| Note: open: a defect nobody names |", "- **Blocked:** open: a defect nobody names", "- Note (1): open: a defect nobody names", "- Finding #1: open: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${line}`);
+    assert.doesNotMatch(write(ownClean(`\n## Notes\n\n${line}\n`), clean()), /^Done: /, `in the review: ${line}`);
+  }
+  // A decorative divider is not a fence the sweep respects.
+  const divider = "~~~~~~~~~~~~~~~~~~~~~~~~";
+  assert.doesNotMatch(write(ownClean(), clean(`\n${divider}\n\n## What I found\n\n- open: a defect nobody names\n\n${divider}\n`)), /^Done: /, "a tilde divider used twice in the report");
+  assert.doesNotMatch(write(ownClean(`\n${divider}\n\n## Later\n\n- open: my own unresolved defect\n\n${divider}\n`), clean()), /^Done: /, "and in the review");
+  // A stray marker leaves no gap: an unpaired opener and a lone closer both hide nothing.
+  const F = "```";
+  assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\n${F}console session\noutput\n${F}\n\n## Findings\n\n- open: a defect nobody names\n\n${F}console\nmore output\n${F}\n`)), /^Done: /, "a finding between two quoted blocks");
+  assert.doesNotMatch(write(ownClean(), clean(`\n## Notes\n\noutput pasted with the opener forgotten\n${F}\n\n- open: a defect nobody names\n\n${F}\n`)), /^Done: /, "a finding between two stray closers");
+  // An honest label that is not a finding keeps its prose.
+  for (const line of ["- Blocked: the gate refuses an honest entry", "- Note: opened the file and read it"])
+    assert.match(write(ownClean(), clean(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
 });

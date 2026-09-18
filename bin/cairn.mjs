@@ -76,7 +76,6 @@ function recordFields(text) {
   }
   return fields(kept.join("\n"));
 }
-// A record the kernel cannot read is named as a repair, never an error exit (LOOP-107).
 const read = (p) => { try { return readFileSync(p, "utf8"); } catch (e) { e.record = p; throw e; } };
 const list = (dir) => { try { return existsSync(dir) ? readdirSync(dir).filter((n) => !n.startsWith(".")).sort() : []; } catch (e) { e.record = dir; throw e; } };
 // The regular files of a record kind: slug-named `.md` records, or declarations, which carry no extension (LOOP-103).
@@ -912,7 +911,8 @@ const CLAIM = /^(?:open|resolved)[ \t]*:/i;
 // wherever its pipes sit, and a space may stand before the colon (LOOP-086).
 const MARK = /^(?:[^A-Za-z([]+|\[[ xX]?\]|\[\^[^\]]*\][ \t]*:?|\(?(?:[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)]|[([])/;   // one unit of markup, letters and all
 const bare = (c) => { let t = String(c).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, " ").replace(/[*_~`]/g, ""), was; do { was = t; t = t.replace(MARK, ""); } while (t !== was); return t; };
-const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(bare(c)) || CLAIM.test(bare(String(c).replace(/^[A-Za-z][\w -]*:/, ""))))
+const label = (t) => t.replace(/^[^:]{0,40}:[ \t]*/, "");   // a rating or field name a reviewer writes before the prefix
+const saysFinding = (l) => (String(l).includes("|") ? String(l).split("|") : [String(l)]).some((c) => CLAIM.test(bare(c)) || CLAIM.test(bare(label(bare(c)))))
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -962,8 +962,10 @@ function listOf(text, key) {
   // A list under a heading: a finding there, or the record's only list, is not prose (LOOP-071 keeps a resolved decoy beside a real list unread).
   const rest = key !== "findings" ? "" : whole.slice(head.length);
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
-  const above = head.slice(0, m.index).split("\n");   // the header above the list: a finding there was read as an unknown field
-  const stray = above.find(saysFinding) ?? null, claimed = body.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
+  const raw = String(text ?? "").replace(/\r\n/g, "\n"), mine = headerOf(raw), at = new RegExp(`^${key}:`, "m").exec(mine);   // its own header, which no fence can stretch
+  const own = raw.split("\n"), from = at ? mine.slice(0, at.index).split("\n").length - 1 : head.slice(0, m.index).split("\n").length - 1;
+  const above = own.slice(0, from), tail = own.slice(at ? mine.split("\n").length : head.split("\n").length);
+  const stray = above.find(saysFinding) ?? null, claimed = tail.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
   // The body's sections, each under its own heading, hashed or underlined: what a
   // heading holds is read against that heading's own title, never another's (LOOP-086).
   const lines = rest.split("\n"), sections = [];
@@ -973,13 +975,11 @@ function listOf(text, key) {
     if (hashed || under) { sections.push({ title: (hashed ? hashed[2] : lines[i]).trim(), level: hashed ? hashed[1].length : /^ {0,3}=/.test(lines[i + 1]) ? 1 : 2, at: i, body: [] }); if (under) i++; continue; }
     if (sections.length) sections[sections.length - 1].body.push(lines[i]);
   }
-  // A section holds its subsections: what sits under a deeper heading sits under this one (LOOP-086).
-  for (const [k, sec] of sections.entries()) {
+  for (const [k, sec] of sections.entries()) {   // a section holds its subsections (LOOP-086)
     const next = sections.slice(k + 1).find((t) => t.level <= sec.level);
     sec.span = lines.slice(sec.at + 1, next ? next.at : lines.length);
   }
-  // Such a heading holds nothing at all, and the title is not narrowed to its first word:
-  // no rule tells "More findings" from a section about them, so the loop refuses in the open.
+  // Such a heading holds nothing, and no rule tells "More findings" from a section about them.
   const hits = sections.filter((s) => /\bfindings?\b/i.test(s.title));
   // Beside a list that holds entries such a section is elaboration and may hold prose.
   const content = (l) => ENTRY.test(l) || saysFinding(l) || l.includes("|");   // a list, a claim or a table row there could be a finding the list never declared

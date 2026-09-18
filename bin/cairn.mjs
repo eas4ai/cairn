@@ -53,7 +53,7 @@ function recordFields(text) {
   let titleAllowed = true, continuation = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (/^ {0,3}#{1,6}(?:[ \t]|$)/.test(line)) {
+    if (ATX.test(line)) {
       if (!titleAllowed) break;
       titleAllowed = false;
       continue;
@@ -862,6 +862,8 @@ function independentGap(root, slug, rv) {
   if (list.heading === "named") return again(`${name} writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding, and retitling it would change the reviewer's words`);
   const wrong = list.missing ? "needs findings: as a list of - entries, or findings: [] for none, above any heading"
     : list.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(list.unread)}${list.dropped ? ", and the entries after it are unread" : ""}`
+    : list.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read, so an entry there is no entry at all"
+    : list.again ? "writes findings: a second time below its list, where the loop reads no entry"
     : list.stray ? `says ${displayPath(list.stray.trim())} above the findings: list, where the loop does not read it`
     : list.heading === "named" ? `writes the heading ${displayPath(list.named)}, whose title names findings, where the loop reads no finding; every finding belongs in the findings: list above the first heading`
     : list.heading === "undeclared" ? "names findings: with no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the findings: list"
@@ -899,16 +901,15 @@ function independentGap(root, slug, rv) {
   if (beyond !== undefined) return { verdict: "Resolvable", action: `review ${slug}`, why: `the review cites ${mark(beyond)}, and the report holds ${report.length} finding${report.length === 1 ? "" : "s"}; cite only the findings the report made, and write your own findings on their own lines with no citation (LOOP-020)` };
   return null;
 }
-// A record's list, read from its text: the entries under key:, which end at the next
-// field, the first heading, or the record's end. Any bullet or number is an entry; a line
-// indented under one joins it, and so does a bullet nested beneath it unless it reads as a
-// finding. Blank lines are nothing, and every other line inside the list is named.
+// A record's list: the entries under key:, ending at the next field, the first heading or
+// the record's end. A bullet or number is an entry; an indented line under one joins it,
+// and every other line inside the list is named rather than read past.
 const ENTRY = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(\S[\s\S]*)$/, FINDING = /^(?:open|resolved):/i;
-const CLAIM = /\b(?:open|resolved)[ \t]*:/i;
+const CLAIM = /\b(?:open|resolved)[^A-Za-z0-9]{0,4}:/i;
 // The prefix belongs to the findings list alone: anywhere else in a record it is a finding,
-// so no marker, label, tag, table cell, heading or fence can be cover for one. Only the
-// list's own lines are exempt, and a word that merely contains it is not it (LOOP-086).
-const saysFinding = (l) => CLAIM.test(String(l).replace(/<!--|-->/g, " ").replace(/<[^>]*>/g, "").replace(/[*_~`]/g, ""));
+// whatever punctuation or markup stands round it. A word that merely contains it is not it.
+const saysFinding = (l) => { const t = String(l).replace(/&#0*58;|&#x0*3a;|&colon;/gi, ":").replace(/<!--|-->/g, " ").replace(/[*_~`]/g, "");
+  return CLAIM.test(t.replace(/<[^>]*>/g, "")) || CLAIM.test(t.replace(/[<>]/g, "")); };
 const ATX = /^ {0,3}#/, SETEXT = /^ {0,3}(?:=+|-{2,})[ \t]*$/, OWN = /^[ \t]*(?:commitment|commit|examined|findings|reviewer)[ \t]*:/i;   // the record's own fields, which a heading's underline never belongs to
 function headerOf(whole) {   // the record above its first heading, of either form (LOOP-108)
   const lines = whole.split("\n");
@@ -960,10 +961,11 @@ function listOf(text, key) {
   const body = rest.split("\n"), below = body.map((l) => ENTRY.exec(l)?.[2].trim()).filter(Boolean);   // one bullet per line: ENTRY's tail matches across lines (LOOP-086)
   const own = String(text ?? "").replace(/\r\n/g, "\n").split("\n"), from = head.slice(0, m.index).split("\n").length - 1;
   const skip = new Set([from, ...[...kept].map((n) => from + n)]);   // the key line and the list's own lines
+  const walled = own.slice(from, head.split("\n").length).some((l) => /^ {0,3}(?:`{3,}|~{3,})/.test(l)), last = Math.max(...skip);
+  const again = whole.split("\n").some((l, n) => n > last && new RegExp(`^${key}:`).test(l));   // a fence blanks entries before the list is read, and a second field below it holds a list the loop never reads (LOOP-071)
   const above = own.slice(0, from), tail = own.filter((l, n) => n > from && !skip.has(n));   // everything but the list's own lines is swept
   const stray = above.find(saysFinding) ?? null, claimed = tail.some(saysFinding) || !!stray;   // a line that says open: is a finding wherever it sits
-  // The body's sections, each under its own heading, hashed or underlined: what a
-  // heading holds is read against that heading's own title, never another's (LOOP-086).
+  // The body's sections, each under its own heading, hashed or underlined (LOOP-086).
   const lines = rest.split("\n"), sections = [];
   for (let i = 0; i < lines.length; i++) {
     const hashed = /^ {0,3}(#{1,6})[ \t]*(.+?)[ \t]*#*[ \t]*$/.exec(lines[i]);   // a closing run of hashes is not part of the title
@@ -981,7 +983,7 @@ function listOf(text, key) {
   const content = (l) => ENTRY.test(l) || saysFinding(l) || l.includes("|");   // a list, a claim or a table row there could be a finding the list never declared
   const named = hits[0];   // such a heading holds nothing, whatever the list holds
   const heading = claimed ? "shaped" : named ? "named" : (!entries.length && !empty && !!below.length) ? "undeclared" : "";
-  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray };
+  return { entries, empty, value: empty ? null : value || null, dropped, heading, named: named?.title ?? null, unread, stray, walled, again };
 }
 function reviewOf(root, slug) {
   const p = join(root, ".cairn", "reviews", `${slug}.md`);
@@ -1009,6 +1011,8 @@ function reviewOf(root, slug) {
     : fin.missing ? "findings: is missing; write findings: [] when there are none (LOOP-086)"
     : unrecognized >= 0 || hasOpen ? null
     : fin.unread ? `findings: holds a line the loop cannot read as an entry: ${displayPath(fin.unread)}${fin.dropped ? ", and the entries after it are unread" : ""}; ${entryFix(fin.unread, text) ?? "write each finding as a - entry, and put prose after a heading"} (LOOP-086)`
+    : fin.walled ? "holds a fence inside its findings: list, where every line is blanked before the list is read; take the fence out (LOOP-086)"
+    : fin.again ? "writes findings: a second time below its list, where the loop reads no entry; keep one list (LOOP-086)"
     : fin.stray ? `says ${displayPath(fin.stray.trim())} above the findings: list, where the loop does not read it; move that line into the findings: list (LOOP-086)`
     : fin.heading === "named" ? `the heading ${displayPath(fin.named)} names findings in its title, where the loop reads no finding; keep every finding in the header's list, and title a section of notes something else (LOOP-086)`
     : fin.heading === "undeclared" ? "findings: names no entries above a list the loop does not read; write findings: [] when there are none, or move the findings into the list (LOOP-086)"

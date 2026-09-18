@@ -710,3 +710,31 @@ test("the prefix belongs to the findings list alone: anywhere else in a record i
   assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
   assert.doesNotMatch(write(ownC(), rep(`\n${D}\n- open: the second real defect\n${D}\n`)), /^Done: /, "a divider round a finding after the list");
 });
+
+test("the prefix is what a line says however it is punctuated, and no fence or second field hides an entry (LOOP-020, LOOP-071, LOOP-086)", () => {
+  const root = repo();
+  review(root); commit(root, "reviewed");
+  const at = head(root), s = at.slice(0, 7);
+  const write = (own, report) => { writeFileSync(join(root, ".cairn/reviews/first.md"), own); writeFileSync(reportFile(root), report); commit(root, "records"); return wake(root); };
+  const ownC = (x = "") => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings:\n  - resolved: the gate drops an entry, fixed (independent ${s} 1)\n${x}`;
+  const rep = (x = "") => `commitment: first\ncommit: ${at}\nreviewer: r\nexamined:\n  - x at ${at}\nfindings:\n  - the gate drops an entry\n${x}`;
+  const F = "```";
+  // Punctuation round the word is punctuation, not cover.
+  for (const line of ["- [open]: a defect nobody names", '- "open": a defect nobody names', "- (open): a defect nobody names", "- open&#58; a defect nobody names", "- open" + String.fromCharCode(160) + ": a defect nobody names", "- open" + String.fromCharCode(8203) + ": a defect nobody names", "- <open>: a defect nobody names", "- {resolved}: a defect nobody names"]) {
+    assert.doesNotMatch(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `in the report: ${JSON.stringify(line)}`);
+    assert.doesNotMatch(write(ownC(`\n## Notes\n\n${line}\n`), rep()), /^Done: /, `in the review: ${JSON.stringify(line)}`);
+  }
+  // A word that merely contains it keeps its prose.
+  for (const line of ["- opened: the file and read it", "- the open questions: two of them", "- reopen: it later", "- unresolved: nothing"])
+    assert.match(write(ownC(), rep(`\n## Notes\n\n${line}\n`)), /^Done: /, `honest text: ${line}`);
+  // A fence inside the list hides no entry: the record is refused rather than read in part.
+  assert.doesNotMatch(write(ownC(), rep(`${F}\n  - the gate drops a second entry\n  - the gate drops a third entry\n${F}\n`)), /^Done: /, "a fence inside the report's list");
+  assert.doesNotMatch(write(ownC(`${F}\n  - resolved: something else\n${F}\n`), rep()), /^Done: /, "and inside the review's list");
+  // A second findings field in the body is named, whatever the header's list holds.
+  for (const header of [ownC, () => `commitment: first\ncommit: ${at}\nexamined:\n  - the work\nfindings: []\n`])
+    assert.doesNotMatch(write(header(), rep(`\n## Appendix\n\nfindings:\n  - a real defect the header never lists\n`)), /^Done: /, "a second findings field in the report's body");
+  // A leading title with no space after its hash is read by both parsers.
+  assert.match(write(ownC(), `#Independent report\n\n${rep()}`), /^Done: /, "a hashed title with no space");
+  // A clean pair still reads.
+  assert.match(write(ownC(), rep()), /^Done: /, "a clean pair");
+});

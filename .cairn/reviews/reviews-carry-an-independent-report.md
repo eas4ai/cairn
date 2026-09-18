@@ -286,10 +286,10 @@ findings:
   - resolved: a prefixed line inside examined: or nested under a finding was still answered with a repair the gate forbids, because those tests ran before the one that asks for a new report. The prefix is judged first now, so one answer covers every position, fixed in d137f971 (independent 0735b11 5)
   - resolved: two values were computed on every list read and never used, one of them the last trace of a rule the gate no longer applies. Both are gone, and removing them paid for this round's new lines, fixed in d137f971 (independent 0735b11 6)
   - resolved: the carry's word boundary uses the ASCII word class, so a review line may continue the finding's last word with a letter outside ASCII. Recorded as a named limit under the developer's ruling of 2026-09-18: the reviewer rated it narrow, the words stay on the page, and PKG-008 keeps shipped text ASCII (independent 0735b11 7)
-  - open: the line test loses the word when an HTML element stands round it and other markup stands in the gap before the colon, because each reading covers one but not both (independent 962a52f 1)
-  - open: two positions inside the findings list are still answered with a repair whose words ask for what the record already does, where the same line one position higher asks for a fresh reviewer (independent 962a52f 2)
-  - open: a report with no findings field is told to add the empty-list form even when it plainly names defects, inviting the agent to declare empty a report the reader can see is not (independent 962a52f 3)
-  - open: my own, silent: a tag pair with content between the word and the colon hides the finding, which is the same class as the report's first finding seen from the other side
+  - resolved: the line test lost the word when an HTML element stood round it and other markup stood in the gap, because each reading covered one but not both. A line is read five ways now, so no combination of markups hides the prefix, fixed in c133f0a7 (independent 962a52f 1)
+  - resolved: a prefixed line inside the findings list was told to move into the list it already sits in. Each list now gives the advice that fits it: inside findings, take its own entry at the list's indent; inside examined, move into the findings list, fixed in c133f0a7 (independent 962a52f 2)
+  - resolved: a report with no findings field was told it could declare itself empty although it plainly named defects. When the reader can see the prefix in the record, the empty-list form is no longer offered and the reviewer is asked for a report that lists them, fixed in c133f0a7 (independent 962a52f 3)
+  - resolved: my own, silent: a tag pair with content between the word and the colon hid the finding, the mirror of the report's first finding. Both are closed by the five readings, fixed in c133f0a7
 
 ## Review at b2a1ea27, 2026-09-17
 

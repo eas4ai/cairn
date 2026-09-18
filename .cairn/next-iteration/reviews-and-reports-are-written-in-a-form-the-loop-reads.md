@@ -46,3 +46,30 @@ Twenty-six rounds are now carried in the review, with 83 findings from
 the reports and 141 entries once the builder's own are counted, and no
 downward trend. The cost is not the kernel's complexity; it is that each
 new reviewer writes in a shape the last rule did not anticipate.
+
+Rounds 27 and 28 add the strongest evidence yet, and two accepted
+limits. Round 28 found four silent losses at once, all one fault: the
+reader recognised a finding only in the exact markup it expected, so a
+blockquote marker, a task box, emphasis round the prefix, an HTML list
+item, a table cell, a space before the colon, and a bare paragraph
+under a findings-naming heading each hid a line that plainly said
+"open:". Each was fixed by reading what the line says rather than how it
+is marked up (commit 9ada401f), but the list of shapes has no end: the
+next reviewer's habits are not in it.
+
+Two limits are recorded rather than closed, on the developer's ruling of
+2026-09-18 (escalation loop-020):
+
+- An indented four-space code block that quotes the finding shape is
+  read as a live finding. Only a fence hides an example. Telling a
+  fence from an indented block means implementing Markdown's block
+  structure, which is the argument for canonical records, not against
+  the rule.
+- A "resolved:" carry needs no account of how it was resolved: the
+  report's words plus the citation reach Done. Cairn is a discipline
+  tool, not a security boundary, as the working agreement says, so the
+  gate cannot tell a real resolution from an echo. A canonical record
+  written by the loop could at least require the account as a field.
+
+Twenty-eight rounds are now carried, with 103 findings from the reports
+and 163 entries counting the builder's own.

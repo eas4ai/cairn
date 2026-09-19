@@ -94,85 +94,39 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
 import { readAdr } from '../lib/adr.mjs';
 import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
 
-// Deviation from the plan text: validateSettings (lib/settings.mjs, already committed) requires
-// every typesafeai.* field to be present (a closed-object schema); the plan's partial stub
-// `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
-// when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
-// already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
-// Plan 15: mode and the seven route thresholds are gone (decision 55 -- there is no route mode
-// left to gate); weights/agent_ceiling/confidence_floors replace them. lib/escalate.mjs's
-// escalateWithRoute dispatches on whatever route the `evaluate` function it is given returns, and
-// never read typesafeai.mode at all -- these tests inject a stub `evaluate` directly, so the route
-// below is the stub's own choice, not a live evaluator decision.
-const enabled = { typesafeai: { enabled: true, model: 'jev-1.13.0',
+// Ruling 1 (plan 15, task 3, controller ruling): escalateWithRoute used to dynamic-import
+// lib/evaluate.mjs's old evaluate() and branch on whatever route it returned (developer, agent or
+// capture, injected here through a stub `evaluate` option) -- the router design decisions 55 and
+// 56 superseded (spec section 10). lib/evaluate.mjs is rewritten from scratch on this plan and no
+// longer exports evaluate() at all, so escalateWithRoute no longer accepts an `evaluate` option or
+// branches on a route: it always takes the path this function took before only when typesafeai
+// was disabled -- a plain escalation, no evaluation, regardless of typesafeai.enabled. The five
+// tests below this comment used to test that plumbing (the evaluator-disabled check, an
+// agent-route decision line, a developer-route evaluationSha check, and two capture-route tests);
+// all five depended on the now-removed `evaluate` option, so none is carried forward. The two
+// tests replacing them cover the same surviving contract -- escalateWithRoute always writes a
+// plain escalation -- once with typesafeai off and once with it on, to show enabled no longer
+// selects anything. Plan 16 wires measure() into this path once it exists (this plan's tasks
+// 4-10).
+const typesafeaiEnabled = { typesafeai: { enabled: true, model: 'jev-1.13.0',
   weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
   confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
   min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
-const EV = 'e'.repeat(40);
 
-test('with the evaluator disabled the route is developer and the evaluator is never loaded', async () => {
+test('escalateWithRoute always writes a plain escalation, with no evaluation', async () => {
   const r = await loopRepo();
-  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => { throw new Error('must not be called'); } });
+  const out = await escalateWithRoute(r.cwd, draft());
+  assert.equal(out.route, 'developer');
+  const rec = decodeRecord(await catCommit(r.cwd, out.sha));
+  assert.equal(rec.kind, 'escalation');
+  assert.equal(rec.payload.evaluation, null);
+});
+
+test('escalateWithRoute ignores typesafeai.enabled -- there is no route left to select', async () => {
+  const r = await loopRepo({ settings: typesafeaiEnabled });
+  const out = await escalateWithRoute(r.cwd, draft());
   assert.equal(out.route, 'developer');
   assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).kind, 'escalation');
-});
-
-// Deviation from the plan text: lib/adr.mjs's real appendDecision/prepareLine always validates a
-// non-null decision `evaluation` field against the actual log (validateLine's `sha()` checker
-// calls readLog and requires logShas.has(s)); the plan's fabricated EV = 'e'.repeat(40) is not a
-// record any of these fixtures ever write, so decide(..., 'escalate') would throw "evaluation
-// names a missing record". Using r.startSha (a real record already in the log) instead keeps the
-// test's stated behavior -- the evaluation SHA reaches the decision line -- true against the real
-// validator. The 'developer' route test below stores the evaluation on an escalation record, whose
-// schema (lib/records.mjs) checks only SHA format, not log membership, so EV is left as written there.
-// This test's `route: 'agent'` comes from the stub `evaluate` passed in below, not from
-// `enabled`'s mode: 'shadow' -- see the note on `enabled` above (finding 11).
-test('an evaluation that downgrades writes an ADR decision line naming the evaluation and no escalation record', async () => {
-  const r = await loopRepo({ settings: enabled });
-  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'agent', evaluationSha: r.startSha }) });
-  assert.deepEqual(out, { route: 'agent', sha: r.startSha });
-  const line = (await readAdr(r.cwd)).find((l) => l.kind === 'decision');
-  assert.deepEqual([line.level, line.by, line.title, line.evaluation], ['Consequential', 'agent', draft().question, r.startSha]);
-  assert.equal(escalationsFor(await r.log(), 'first').length, 0);
-});
-
-test('an evaluation that routes to the developer writes the escalation with its evaluation SHA', async () => {
-  const r = await loopRepo({ settings: enabled });
-  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'developer', evaluationSha: EV }) });
-  assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).payload.evaluation, EV);
-});
-
-// Fix round 1 finding 4 (plan 09 review): the capture branch built the item as
-// { slug: d.commitment, source: d.concerns[0], body: d.recommendation }. (a) d.concerns[0] is a
-// concern token, and lib/commitment.mjs's item() requires source to be an Agreed requirement for
-// a backlog item -- any concern that is not a requirement identifier (finding:<sha>#n, cycle,
-// item:<sha>, breach:<sha>, transaction:<sha>, contract:<path>) made item() throw. (b) the item
-// slug was the commitment slug, and item() refuses a taken slug, so at most one capture could
-// ever happen per commitment. Fixed to look for a requirement-kind concern among every concern
-// (not just concerns[0]) and to mint a fresh slug per capture.
-test('the capture route names the item from a requirement concern, with a fresh slug per capture', async () => {
-  const r = await loopRepo({ settings: enabled });
-  const out1 = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) });
-  assert.equal(out1.route, 'capture');
-  const outsideRec1 = decodeRecord(await catCommit(r.cwd, out1.sha));
-  assert.equal(outsideRec1.kind, 'outside');
-  assert.equal(outsideRec1.payload.evaluation, EV);
-  const itemRec1 = decodeRecord(await catCommit(r.cwd, outsideRec1.payload.item));
-  assert.deepEqual([itemRec1.kind, itemRec1.payload.kind, itemRec1.payload.source, itemRec1.payload.body], ['item', 'backlog', 'DEMO-001', draft().recommendation]);
-
-  const out2 = await escalateWithRoute(r.cwd, draft({ question: 'Second capture?' }), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) });
-  const outsideRec2 = decodeRecord(await catCommit(r.cwd, out2.sha));
-  const itemRec2 = decodeRecord(await catCommit(r.cwd, outsideRec2.payload.item));
-  assert.notEqual(itemRec2.target, itemRec1.target);
-});
-
-test('the capture route refuses with its own message when no concern names a requirement', async () => {
-  const r = await loopRepo({ settings: enabled });
-  const rev = await r.review([{ n: 1, text: 'x' }]);
-  await assert.rejects(
-    escalateWithRoute(r.cwd, draft({ concerns: [`finding:${rev}#1`] }), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) }),
-    /capture needs a requirement concern to name as the item's source/,
-  );
 });
 
 test('cairn decide --consequential accepts the same canonical draft and writes the same line without an evaluation', async () => {

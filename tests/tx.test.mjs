@@ -443,3 +443,38 @@ test('Fix round 1 finding 12: recover itself selects the newest command-intent f
   const log = await readLog(cwd);
   assert.equal(log.at(-1).payload.intent, second, 'recovery closed the newest (second) intent, not the stale first one');
 });
+
+test('Fix round 1 finding 7: withTransaction crashed after each write recovers to an identical final state, every store written exactly once', async () => {
+  for (let n = 0; n < 4; n++) {
+    const cwd = await initialized();
+    const snapshotsBefore = await readRef(cwd, 'refs/cairn/snapshots');
+    const headBefore = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
+    const logCountBefore = (await readLog(cwd)).length;
+
+    await assert.rejects(
+      withTransaction(cwd, { command: 'authorize', plan: terminalPlan(), failAfterWrite: n }, null),
+      new RegExp(`^TxError: cairn: simulated crash after write ${n} \\(test only\\)`));
+
+    const log = await readLog(cwd);
+    const intent = log.findLast((r) => r.kind === 'command-intent');
+    assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
+    const r = await recover(cwd, intent.target);
+    assert.equal(r.completed, 'forward', `write ${n}: recovery completes forward`);
+
+    // The final state is identical to an uninterrupted run, and every store was written exactly
+    // once: no duplicate snapshot commit, no doubled log record, no second branch commit -- the
+    // exact scenarios the old hand-built-intent tests never drove (a partial done set, the
+    // 'branch'/'snapshot' adopt-own-write branches, and a genuine snapshot-write crash replay).
+    assert.equal(readFileSync(join(cwd, 'docs/spec/overview.md'), 'utf8'), 'v2\n', `write ${n}: file content`);
+    assert.equal((await readLog(cwd)).filter((x) => x.kind === 'read').length, 1, `write ${n}: exactly one log write`);
+    assert.equal((await readLog(cwd)).length, logCountBefore + 3, `write ${n}: exactly command-intent, read, authorization added`);
+    const snapshotsAfter = await readRef(cwd, 'refs/cairn/snapshots');
+    assert.notEqual(snapshotsAfter, snapshotsBefore, `write ${n}: the snapshot ref advanced`);
+    assert.equal((await catCommit(cwd, snapshotsAfter)).parents[0], snapshotsBefore, `write ${n}: by exactly one commit, not two`);
+    const headAfter = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
+    assert.notEqual(headAfter, headBefore, `write ${n}: HEAD advanced`);
+    const headCommit = await catCommit(cwd, headAfter);
+    assert.equal(headCommit.subject, 'Authorize the specification');
+    assert.equal(headCommit.parents[0], headBefore, `write ${n}: by exactly one commit, not two`);
+  }
+});

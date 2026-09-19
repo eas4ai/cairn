@@ -432,7 +432,46 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
   const w = await wake(p.dir);
   assert.equal(w.exit, 3); assert.match(w.line, /pending (transition|supersession).*existing-project/);
 
+  // Restored per review-1 finding 4: the plan's Task 5 wants the exact, ordered kind sequence
+  // asserted (each entry explained), not only coverage. The sequence below is real, captured by
+  // running this fixture, not the plan's own guessed list; every place it differs from the plan's
+  // literal array is called out in the comment where that difference happens.
   const kinds = await p.kinds();
+  assert.deepEqual(kinds, [
+    // tail(): init, then the fail receipt, then authorize (itself transactional: command-intent
+    // before authorization -- the plan's own list had one command-intent total, not two; see
+    // tail()'s own deviation comment), then start (also transactional).
+    "init", "receipt", "command-intent", "authorization", "command-intent", "start",
+    // work(): the implement check; the fixture-2 backlog item and its outside record; the
+    // add-nan defect item, its fix record, and the confirming check -- fix before its confirming
+    // check, the reverse of the plan's own "receipt, fix" order (see work()'s "at or after"
+    // deviation comment).
+    "receipt", "item", "outside", "item", "fix", "receipt",
+    // work(): the nan-policy escalation, ask, reply, ok.
+    "escalation", "answer", "reply", "answer",
+    // work(): the stray-file scope breach (recorded by the very next state-changing command's own
+    // preflight, before that command's own record), its restore, and its own outside record.
+    "scope-breach", "item", "scope", "outside",
+    // finish(): review, brief, report.
+    "review", "brief", "report",
+    // finish(): re-authorizing before the glossary.md resolution -- transactional, like the first
+    // authorize -- is not in the plan's own list at all (the plan never accounted for the
+    // protected-path re-authorization finish() needs; see finish()'s own deviation comment).
+    "command-intent", "authorization",
+    // finish(): the resolution and its acceptance.
+    "resolution", "acceptance",
+    // finish(): the build check (confirms REQ-001 after the default-export edit).
+    "receipt",
+    // finish(): the second acceptance (examining the realize commit's delta) and done.
+    "acceptance", "done",
+    // promote(): transactional (command-intent), the promotion record, and the successor start.
+    "command-intent", "promotion", "start",
+    // full-loop test: re-attesting the carried-over add-nan fix under fixture-2 (see this test's
+    // own "fix predicate" deviation comment), and the confirming check.
+    "fix", "receipt",
+    // supersede(): transactional (command-intent), then the superseded record.
+    "command-intent", "superseded",
+  ]);
   const written = new Set(kinds);
   for (const k of KINDS) {
     if (EVALUATOR.includes(k) || k === "read") continue;

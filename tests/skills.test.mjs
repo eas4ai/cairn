@@ -48,3 +48,19 @@ test("install-cairn never asks for a project remote", () => {
   const t = skill("install-cairn");
   assert.ok(!/authority_remote|project remote|git remote add/.test(t)); assert.ok(t.includes("~/.local/bin/cairn"));
 });
+
+export const tail = (name) => { const t = skill(name), i = t.indexOf("## Spec-phase tail"); assert.ok(i >= 0, name); return t.slice(i); };
+
+test("new-project follows new-project.dot and spec-phase.dot", () => checkSkill("new-project", ["new-project.dot", "spec-phase.dot"]));
+test("new-project names the four gates in order", () => {
+  const t = skill("new-project"), at = ["Gate 1", "Gate 2", "Gate 3", "Gate 4"].map((g) => t.indexOf(g));
+  assert.ok(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), at);
+});
+test("the AGENTS.md template states a move for every verdict and action", () => {
+  const t = readFileSync(join(ROOT, "skills/new-project/templates/AGENTS.md"), "utf8");
+  for (const v of ["Resolvable", "Waiting", "Done"]) assert.ok(new RegExp("^- " + v + ":", "m").test(t), v);
+  for (const a of ["repair PATH", "recover TRANSACTION", "reconcile ACTION", "scope PATH", "fix ITEM", "record PATH", "commit PATH", "declare REQ", "run REQ", "implement REQ", "escalate REQ", "review mechanism REQ", "capture ITEM", "review SLUG", "report SLUG", "resolve SLUG N", "accept SLUG", "build DECISION", "done SLUG", "promote", "reply SLUG"]) assert.ok(t.includes("`" + a + "`"), a);
+  assert.ok(t.includes("`cairn push`"));
+  for (const gone of ["explain", "present", "reword", "next-iteration", "refus"]) assert.ok(!t.includes(gone), gone);
+  assert.ok(!/[^\x00-\x7f]/.test(t));
+});

@@ -775,3 +775,49 @@ describe('fix round 1 finding 2: the excluded path class reaches the persisted r
     });
   }
 });
+
+// Fix round 1 finding 3: docs/spec/cairn-v2.md section 10 ("Each attempted call records its
+// digest, resolved model, raw outcome, parsed answer and usage before routing") and decision 27
+// ("route mode requires project-specific, policy-matched calibration") -- the API's reported
+// "resolved model" must be checked against the model actually requested (settings.typesafeai.model
+// / request.model), or a response claiming an unrequested model answered could still reach
+// agent-routing (and pollute calibration's would_route === 'agent' denominator). attemptCall now
+// classifies a model mismatch the same way a transport failure is classified: outcome 'failure',
+// failure_class 'model_mismatch', raw omitted (an unverified vendor identity's content is not
+// persisted as if it were a trustworthy response) -- which the envelope's existing 'call' gate
+// already fails closed on, the same as any other unavailable class.
+describe('fix round 1 finding 3: the resolved model is checked against the requested model', () => {
+  // Deviation from the shared `transport(bodies)` helper used elsewhere in this file: it hardcodes
+  // `model: 'jev-1.13.0'` on the returned object regardless of the body text, since none of this
+  // file's other tests needed the two to differ. bin/typesafeai.mjs's real post() derives `.model`
+  // from the parsed response body (`return { status: 200, body: text, model: parsed.model }`); this
+  // helper matches that real behavior so a body claiming a different model actually produces a
+  // mismatched `res.model`, the exact condition attemptCall now checks.
+  const realisticTransport = (bodies) => async () => { const b = bodies.shift(); return { status: 200, body: b, model: JSON.parse(b).model }; };
+  test('an impostor model on the option call fails closed without persisting the response body', async () => {
+    const cwd = await repoWithCommitment();
+    const impostor = optionBody().replace('"model":"jev-1.13.0"', '"model":"jev-9.9.9-IMPOSTOR"');
+    const r = await evaluate(cwd, draft(), { transport: realisticTransport([impostor, ownerBody()]) });
+    assert.equal(r.route, 'developer'); assert.equal(r.would_route, 'developer');
+    assert.equal(r.reason, 'unavailable model_mismatch');
+    const log = await readLog(cwd);
+    const ownerCall = log.findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'owner');
+    assert.equal(ownerCall.payload.outcome, 'not_sent', 'the owner call is never attempted after the option call fails closed');
+    const call = log.findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'option');
+    assert.equal(call.payload.outcome, 'failure');
+    assert.equal(call.payload.failure_class, 'model_mismatch');
+    assert.equal(call.payload.raw, null, 'the impostor response body is never persisted');
+    assert.equal(call.payload.answers, null);
+  });
+  test('an impostor model on the owner call fails closed and never reaches would_route agent', async () => {
+    const cwd = await repoWithCommitment();
+    const impostorOwner = ownerBody(0.95).replace('"model":"jev-1.13.0"', '"model":"jev-9.9.9-IMPOSTOR"');
+    const r = await evaluate(cwd, draft(), { transport: realisticTransport([optionBody(), impostorOwner]) });
+    assert.equal(r.route, 'developer'); assert.equal(r.would_route, 'developer');
+    assert.equal(r.reason, 'unavailable model_mismatch');
+    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'owner');
+    assert.equal(call.payload.outcome, 'failure');
+    assert.equal(call.payload.failure_class, 'model_mismatch');
+    assert.equal(call.payload.raw, null);
+  });
+});

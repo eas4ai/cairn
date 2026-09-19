@@ -1052,7 +1052,9 @@ unbounded stream of newly numbered findings.
 Settings name the exact adversary model each harness accepts and whether it is
 local or remote. `cairn brief` detects the harness adapter from its environment or `--harness`. `cairn
 brief` passes the model string through; it never maps aliases. A null or unknown
-entry means any model, subject to the projection boundary. The report records the actual model and transport. Where a harness
+entry means any model and any transport, subject to the projection boundary;
+`cairn brief` prints this state explicitly, as `model: any` and `transport:
+any`. The report records the actual model and transport. Where a harness
 reports session identity, the report refuses the session that wrote the review.
 
 The kernel cannot prove that a reported model has different blind spots, or

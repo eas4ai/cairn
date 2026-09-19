@@ -271,7 +271,12 @@ const disputeFields = (record, n) => ({
   because: 'hello.txt is in the mechanism inputs.', if_wrong: 'A hidden input goes undeclared.', instead: 'Declare it and re-run.',
 });
 
-test('a dispute names finding N on its exact source record and is settled by the developer\'s final answer', async () => {
+// Fix round 1 finding 5 (plan 09 review, ruling): a dispute is settled ONLY by the developer's
+// ok answer, not by any non-ask final answer. An `instead` answer is the developer declining the
+// agent's reading and directing different work; treating it as "the finding is answered" would
+// close a finding the developer just refused to dismiss. Matches the codebase's only other
+// precedent, lib/scope.mjs's keep disposition, which requires "an escalation answered ok".
+test('a dispute names finding N on its exact source record and is settled only by the developer\'s ok answer', async () => {
   const r = await loopRepo();
   const rev = await r.review([{ n: 1, text: 'reads an undeclared fixture' }, { n: 2, text: 'no test for empty input' }]);
   await assert.rejects(dispute(r.cwd, disputeFields(rev, 3)), /has no finding 3/);
@@ -285,6 +290,15 @@ test('a dispute names finding N on its exact source record and is settled by the
   const log = await r.log();
   assert.equal(disputes(log, rev, 1), sha);
   assert.equal(disputes(log, rev, 2), null);
+});
+
+test('an instead answer keeps the dispute open: it directs the resolution but does not settle it', async () => {
+  const r = await loopRepo();
+  const rev = await r.review([{ n: 1, text: 'reads an undeclared fixture' }]);
+  const sha = await dispute(r.cwd, disputeFields(rev, 1));
+  await answer(r.cwd, 'first', 'instead', 'Declare hello.txt as an input and re-run.', asDev);
+  assert.equal(escalationState(await r.log(), sha).status, 'answered');
+  assert.equal(disputes(await r.log(), rev, 1), null);
 });
 
 import { concerns, escalatedRequirement } from '../lib/escalate.mjs';

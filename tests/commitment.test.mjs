@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { readLog, decodeRecord } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { item, outside, fix, start, openCommitment, CommitmentError } from '../lib/commitment.mjs';
-import { project, roadmapWith } from './helpers/commitment-fixture.mjs';
+import { project, roadmapWith, OVERVIEW } from './helpers/commitment-fixture.mjs';
 
 const last = async (cwd, kind) => (await readLog(cwd)).filter((r) => r.kind === kind).at(-1);
 
@@ -114,8 +114,11 @@ test('at most one commitment is open', async () => {
 test('start refuses a section naming a non-Agreed requirement, a missing section and a bad slug before writing anything', async () => {
   const repo = await project();
   const before = await readLog(repo.cwd);
-  await assert.rejects(start(repo.cwd, 'drafty'), /DEMO-003 is Draft; a commitment names only Agreed requirements/);
-  await assert.rejects(start(repo.cwd, 'nowhere'), /roadmap has no section nowhere/);
+  // Fix round 1 finding 8: frozenSet now wraps lib/spec.mjs's requirementSet instead of a
+  // duplicate; its SpecError message text ("X is Y, not Agreed" / "no roadmap section X") differs
+  // from the plan's own original wording, an accepted consequence of removing the duplicate.
+  await assert.rejects(start(repo.cwd, 'drafty'), /DEMO-003 is Draft, not Agreed/);
+  await assert.rejects(start(repo.cwd, 'nowhere'), /no roadmap section nowhere/);
   await assert.rejects(start(repo.cwd, 'Bad Slug'), /invalid slug/);
   assert.equal((await readLog(repo.cwd)).length, before.length);
 });
@@ -421,6 +424,23 @@ test('Fix round 1 finding 3: an item still open from an earlier supersession is 
   const sup2 = await supersede(repo.cwd, 'third', { quote: 'Switch again.', confirm: confirmYes });
   const rec2 = (await readLog(repo.cwd)).find((r) => r.sha === sup2);
   assert.deepEqual(rec2.payload.carried, [d], 'the same defect, still unfixed, carries on the second supersession too');
+});
+
+test('Fix round 1 finding 8: a non-domain file that happens to contain a Prefix: line is never read as a domain file', async () => {
+  const repo = await project();
+  // The old specBlocks treated any docs/spec/*.md file with a line matching /^Prefix:/m as a
+  // domain file; lib/spec.mjs's readSpec instead excludes overview.md/glossary.md/roadmap.md by
+  // name (NON_DOMAIN) regardless of their prose. A stray "Prefix:" line in overview.md's prose
+  // must not make DEMO-001 resolve through a bogus second definition, and must not itself
+  // register as an Agreed requirement source.
+  await repo.write('docs/spec/overview.md', OVERVIEW + '\nPrefix: not a real domain header\n');
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.commit('add a stray Prefix line to overview.md');
+  await repo.authorize();
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'still-works', source: 'DEMO-001', body: 'x' });
+  assert.ok(b);
+  const set = await frozenSet(repo.cwd, 'first');
+  assert.deepEqual(set.map((r) => r.requirement), ['CORE-001', 'DEMO-001']);
 });
 
 test('Fix round 1 finding 9: a forged second init record surfaces as its own breach message, not a generic no-authorization one', async () => {

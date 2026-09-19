@@ -53,3 +53,39 @@ test('protectedDigests carries agreement null when AGENTS.md is absent', async (
   writeFileSync(join(cwd, 'AGENTS.md'), '# agreement\n');
   assert.equal(agreementDigest(cwd), sha256('# agreement\n'));
 });
+
+import { generateKeyPairSync, sign as cryptoSign } from 'node:crypto';
+import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence } from '../lib/auth.mjs';
+
+function keyPair() {
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  return { pem: publicKey.export({ type: 'spki', format: 'pem' }),
+    sign: async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey)) };
+}
+
+test('signed mode: a detached signature over the canonical payload verifies', async () => {
+  const { cwd } = await repoWith({});
+  const { pem, sign } = keyPair();
+  const settings = { signing_key: pem };
+  const ev = await authenticateDeveloper(cwd, settings, { purpose: 'authorize', subject: 's', sign, nonce: 'n1' });
+  assert.equal(ev.mode, 'signed');
+  assert.deepEqual(Object.keys(ev).sort(), ['mode', 'nonce', 'purpose', 'signature', 'subject']);
+  assert.equal(verifyEvidence(settings, ev), true);
+  assert.equal(verifyEvidence(settings, { ...ev, subject: 'other' }), false);
+  assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
+  assert.equal(describeEvidence(ev), 'signed by the developer key');
+});
+
+test('signed mode: a bad signature is refused, not recorded', async () => {
+  const { cwd } = await repoWith({});
+  const { pem } = keyPair();
+  const bad = async (bytes) => new Uint8Array(64);
+  await assert.rejects(
+    authenticateDeveloper(cwd, { signing_key: pem }, { purpose: 'authorize', subject: 's', sign: bad, nonce: 'n' }),
+    /^AuthError: cairn: the signature does not verify against signing_key/);
+});
+
+test('signingPayload is the canonical JSON of purpose, subject and nonce', () => {
+  const bytes = signingPayload({ purpose: 'read', subject: 'D1', nonce: 'x' });
+  assert.equal(Buffer.from(bytes).toString(), '{"nonce":"x","purpose":"read","subject":"D1"}');
+});

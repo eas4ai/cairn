@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateDraft, draftDigest, parseConcern, DraftError } from '../lib/escalate.mjs';
+import { loopRepo } from './helpers/loop.mjs';
+import { readLog, decodeRecord, KINDS } from '../lib/records.mjs';
+import { catCommit } from '../lib/gitx.mjs';
+import { escalate, escalationsFor } from '../lib/escalate.mjs';
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -40,4 +44,33 @@ test('unknown keys, missing keys, an empty concern list and malformed tokens are
   assert.deepEqual(parseConcern('finding:' + 'a'.repeat(40) + '#3'), { kind: 'finding', ref: 'a'.repeat(40), n: 3 });
   assert.deepEqual(parseConcern('DEMO-001'), { kind: 'requirement', ref: 'DEMO-001', n: null });
   assert.deepEqual(parseConcern('cycle'), { kind: 'cycle', ref: null, n: null });
+});
+
+test('escalate writes an escalation record targeted at the commitment with the five fields, joined concerns and evaluation', async () => {
+  for (const k of ['escalation', 'answer', 'reply']) assert.ok(KINDS.has(k), `${k} is a log kind`);
+  const r = await loopRepo();
+  const sha = await escalate(r.cwd, draft());
+  const commit = await catCommit(r.cwd, sha);
+  assert.equal(commit.subject, 'cairn: escalation first');
+  assert.deepEqual(commit.trailers.map(([k]) => k), ['Cairn-Schema', 'Cairn-Digest']);
+  const rec = decodeRecord(commit);
+  assert.deepEqual(rec.payload, {
+    slug: 'first', question: draft().question, recommendation: draft().recommendation, because: draft().because,
+    if_wrong: draft().if_wrong, instead: draft().instead, concerns: 'DEMO-001', evaluation: null,
+  });
+  const two = await escalate(r.cwd, draft({ concerns: ['DEMO-001', 'contract:AGENTS.md'], evaluation: 'e'.repeat(40) }));
+  const p = decodeRecord(await catCommit(r.cwd, two)).payload;
+  assert.deepEqual([p.concerns, p.evaluation], ['DEMO-001 contract:AGENTS.md', 'e'.repeat(40)]);
+  assert.deepEqual(escalationsFor(await r.log(), 'first').map((e) => e.sha), [sha, two]);
+});
+
+test('escalate refuses a closed or foreign commitment and a concern that names nothing in the range', async () => {
+  const r = await loopRepo();
+  await assert.rejects(escalate(r.cwd, draft({ commitment: 'other' })), /no open commitment other/);
+  await assert.rejects(escalate(r.cwd, draft({ concerns: ['ZZZ-999'] })), /ZZZ-999 is not in the frozen set/);
+  await assert.rejects(escalate(r.cwd, draft({ concerns: ['finding:' + 'f'.repeat(40) + '#1'] })), /no record f{40} in the open range/);
+  const rev = await r.review([{ n: 1, text: 'no empty-input test' }]);
+  await assert.rejects(escalate(r.cwd, draft({ concerns: [`finding:${rev}#2`] })), /has no finding 2/);
+  await assert.rejects(escalate(r.cwd, draft({ concerns: ['item:' + rev] })), /no item record/);
+  assert.match(await escalate(r.cwd, draft({ concerns: [`finding:${rev}#1`] })), /^[0-9a-f]{40}$/);
 });

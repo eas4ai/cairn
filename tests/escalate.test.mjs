@@ -310,6 +310,14 @@ import { wake, render } from '../lib/wake.mjs';
 const run = promisify(execFile);
 const BIN = fileURLToPath(new URL('../bin/cairn.mjs', import.meta.url));
 
+// Courtesy update, not one of the plan 09 review's 12 items: another (already-committed) fix
+// round on lib/wake.mjs, "Fix round 1 item 7: Waiting's render drops the answer line section 6
+// does not name, tested byte for byte", removed the trailing `answer: cairn answer ...` line from
+// render()'s Waiting output (section 6's own contract is verdict, action or party, one reason
+// line and the predicate; that line named a command the five fields never claimed to include).
+// The five-fields-verbatim assertion below this plan actually owns is unaffected and still holds
+// byte for byte; only the now-removed trailing line's own assertion is dropped, so this file's
+// suite is green again against the current, stable lib/wake.mjs contract.
 test('the five fields reach the terminal byte for byte: double spaces, trailing space, quotes and a tab survive', async () => {
   const r = await loopRepo();
   const fields = {
@@ -324,7 +332,6 @@ test('the five fields reach the terminal byte for byte: double spaces, trailing 
   assert.ok(Buffer.from(render(v), 'utf8').indexOf(expected) >= 0, 'render carries the exact bytes');
   const { stdout } = await run(process.execPath, [BIN, 'wake'], { cwd: r.cwd, encoding: 'buffer' });
   assert.ok(stdout.indexOf(expected) >= 0, 'stdout carries the exact bytes');
-  assert.ok(stdout.indexOf(Buffer.from('answer: cairn answer first ok | instead <text> | ask <text>\n')) >= 0);
 });
 
 import { parseEscalateArgs, cliEscalate, cliAnswer, cliReply, cliDispute } from '../lib/escalate.mjs';

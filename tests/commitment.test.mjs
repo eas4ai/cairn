@@ -142,3 +142,47 @@ test('setCurrent replaces exactly the Current: line', async () => {
   assert.equal(setCurrent(text, 'second'), '# Roadmap\n\nCurrent: second\n\n## first\n\nCurrent: not a header\n');
   assert.throws(() => setCurrent('# Roadmap\n', 'x'), /no Current: line/);
 });
+
+import { done } from '../lib/commitment.mjs';
+
+test('done closes the open commitment at its final workspace snapshot', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  await repo.write('src/main.mjs', 'console.log("hello");\n// final\n');
+  const sha = await done(repo.cwd, 'first');
+  const rec = await last(repo.cwd, 'done');
+  assert.equal(rec.sha, sha);
+  assert.deepEqual(Object.keys(rec.payload).sort(), ['slug', 'snapshot']);
+  assert.equal(rec.payload.slug, 'first');
+  assert.equal((await readSnapshot(repo.cwd, rec.payload.snapshot, 'workspace')).kind, 'workspace');
+  assert.equal(openCommitment(await readLog(repo.cwd)).open, null);
+  await assert.doesNotReject(start(repo.cwd, 'second'));
+});
+
+test('done refuses when no commitment is open or the slug is another commitment', async () => {
+  const repo = await project();
+  await assert.rejects(done(repo.cwd, 'first'), /no commitment is open/);
+  await start(repo.cwd, 'first');
+  await assert.rejects(done(repo.cwd, 'second'), /commitment first is open, not second/);
+});
+
+test('every record kind of this plan round-trips through decodeRecord', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
+  await outside(repo.cwd, d, 'not this commitment');
+  await fix(repo.cwd, d);
+  await done(repo.cwd, 'first');
+  const log = await readLog(repo.cwd);
+  for (const kind of ['start', 'item', 'outside', 'fix', 'done']) {
+    const rec = log.filter((r) => r.kind === kind).at(-1);
+    assert.deepEqual(decodeRecord(await catCommit(repo.cwd, rec.sha)).payload, rec.payload, kind);
+  }
+});
+
+test('the authorization record carries the three digests by the shared rule', async () => {
+  const repo = await project();
+  const auth = (await readLog(repo.cwd)).filter((r) => r.kind === 'authorization').at(-1);
+  const now = await protectedDigests(repo.cwd);
+  assert.deepEqual([auth.payload.spec_digest, auth.payload.agreement_digest, auth.payload.settings_digest], [now.spec, now.agreement, now.settings]);
+});

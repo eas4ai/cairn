@@ -456,3 +456,14 @@ test('catBlob goes through lib/gitx.mjs and never hard-codes a maxBuffer that a 
   assert.equal(bytes.length, big.length);
   assert.equal(bytes.toString('utf8'), big);
 });
+
+// tests/review.test.mjs (fix round 1, item 6)
+import { checkAttempts } from '../lib/review.mjs';
+
+test('checkAttempts refuses a repeated (question, target) pair, mirroring checkAnswers', async () => {
+  const r = await briefed();
+  const t = await targets(r.cwd, await r.log(), 'first');
+  const base = r.revPayload.answers.map((a) => ({ question: a.question, target: a.target, text: `tried ${a.question} ${a.target}: held` }));
+  assert.deepEqual(checkAttempts(base, t), base);
+  assert.throws(() => checkAttempts([...base, base[0]], t), /attempted twice/);
+});

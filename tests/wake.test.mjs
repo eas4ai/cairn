@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loopRepo, mechanismFor } from './helpers/loop.mjs';
@@ -410,4 +411,21 @@ test('a closed range with a backlog item names promote; without one the verdict 
   await r.item('next-feature', 'DEMO-001', 'colour');
   await r.add('promotion', 'nicer-greeting', { item, decision: ulid(), intent: null, results: [] });
   assert.equal((await wake(r.cwd)).verdict, 'Done');   // a next-feature item waits for the developer
+});
+
+test('cairn wake prints verdict, action or party, one reason line and the predicate; Waiting adds the five fields', async () => {
+  const r = await loopRepo();
+  let out = r.runWake();
+  assert.equal(out.status, 0);
+  assert.deepEqual(out.stdout.split('\n').slice(0, 4), ['verdict: Resolvable', 'action: run DEMO-001', 'reason: no current receipt carries a result for DEMO-001', `predicate: ${PREDICATES.run}`]);
+  await r.escalate('DEMO-001');
+  out = r.runWake();
+  const lines = out.stdout.split('\n');
+  assert.deepEqual(lines.slice(0, 2), ['verdict: Waiting', 'party: developer']);
+  assert.match(lines[2], /^reason: escalation [0-9a-f]{7} awaits an answer$/);
+  assert.deepEqual(lines.slice(3, 10), ['question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I', `predicate: ${PREDICATES.waiting}`, 'answer: cairn answer first ok | instead <text> | ask <text>']);
+  const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
+  const none = spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, 'wake'], { cwd: dir, encoding: 'utf8' });
+  assert.equal(none.status, 3);
+  assert.equal(none.stdout, 'cairn: outside a project; run /new-project or /existing-project\n');
 });

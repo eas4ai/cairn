@@ -305,3 +305,21 @@ test('every finding on the review, report or an acceptance needs a resolution or
   await r.escalate(`finding:${rep}#1`);
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
+
+test('post-report resolutions or a changed workspace need an acceptance at the current snapshot', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  const rep = await r.report([{ n: 1, text: 'finding' }]);
+  await r.write('src/demo.mjs', 'console.log("hello");\n// fixed\n'); await r.commit('fix');
+  await check(r.cwd, 'DEMO-001');                                   // the fix touched an input: refresh the pass first
+  const res = await r.resolveFinding(rep, 1);
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['accept', 'first']);
+  await r.accept({ accepted: [res] });
+  assert.notEqual((await wake(r.cwd)).action, 'accept');
+  await r.write('src/demo.mjs', 'console.log("hello");\n// again\n'); await r.commit('unreviewed change');
+  await check(r.cwd, 'DEMO-001');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['accept', 'first']);
+});

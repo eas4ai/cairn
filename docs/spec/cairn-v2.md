@@ -402,8 +402,10 @@ skill that continues and exits 3; none is a verdict.
 **Predicate.** The exact record state that completes an action. It is printed
 with the action.
 
-**Attempt.** A failing receipt at an input snapshot not seen among failures
-since that requirement's last pass.
+**Attempt.** A failing receipt at a product digest not seen among failures
+since that requirement's last pass. The product digest is the input tree with
+declared `documents` paths excluded, so a change only to a document is never a
+new attempt.
 
 **Semantic progress.** One of: a start-set requirement gains a current pass; an
 unresolved finding, defect or escalation is closed without an equal-or-higher
@@ -904,8 +906,11 @@ or an escalation. A defect against that commitment's requirement is worked
 under it and blocks Done; it is not deferred.
 
 After three distinct failing attempts without a pass, a fourth implementation
-attempt requires an escalation first. A rerun at a seen input snapshot and a
-change only to documents or outside paths are not new attempts.
+attempt requires an escalation first. Attempts are keyed on product digest, not
+input snapshot; a rerun at a seen product digest and a change only to
+documents or outside paths are not new attempts. Captured output may be
+truncated at a fixed byte cap; the truncation marker lives in the output
+bytes themselves, not in a separate receipt field.
 
 ### Decisions and realization
 

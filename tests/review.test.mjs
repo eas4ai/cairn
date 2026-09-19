@@ -367,3 +367,29 @@ test('end to end: cairn brief then cairn report refuses a report naming a differ
   assert.equal(reportRes.status, 1);
   assert.match(reportRes.stderr, /^cairn: report: /);
 });
+
+// tests/review.test.mjs (fix round 1, item 2)
+test('accept refuses a resolution sha that appears in both accepted and rejected, or twice in either list', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one fix');
+  await assert.rejects(
+    accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted'), verdict(r1, 'rejected', 'no')], findings: [] }),
+    /has more than one verdict/,
+  );
+  // the refused attempt above left the resolution still submitted (nothing was recorded)
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.kind, f.n, f.status]), [['report', 1, 'submitted']]);
+  await assert.rejects(
+    accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted'), verdict(r1, 'accepted')], findings: [] }),
+    /has more than one verdict/,
+  );
+  await assert.rejects(
+    accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'a'), verdict(r1, 'rejected', 'b')], findings: [] }),
+    /has more than one verdict/,
+  );
+  // a clean single verdict still works, and the rejections count used by the second-rejection
+  // escalation is unaffected by the refused attempts above
+  const sha = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still bad')], findings: [] });
+  const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+  assert.deepEqual([p.accepted, p.rejected], [[], [{ resolution: r1, reason: 'still bad' }]]);
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => f.rejections), [1]);
+});

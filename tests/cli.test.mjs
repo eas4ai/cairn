@@ -476,3 +476,22 @@ test('cairn answer: the full two-step signed flow succeeds; a signature over a d
   assert.equal(bad2.code, 1);
   assert.match(bad2.err, /does not verify against signing_key/);
 });
+
+// Fix round 1 item 5 (Minor, review-1.md finding 5): `cairn push` (lib/cli.mjs, plan 12 commit
+// 594168bc) had no CLI-dispatch test, only library-level coverage of push() itself in
+// tests/travel.test.mjs. Manually confirmed correct end to end in the implementer's own report;
+// this exercises the same success and refusal paths through main()'s real argv dispatch.
+import { makeProject } from './helpers/repo.mjs';
+
+test('cairn push exits 0 with one line; a refusal exits 1 with a cairn: line', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const r = await run(['push'], repo.cwd);
+  assert.equal(r.code, 0);
+  assert.equal(r.out, 'cairn: pushed refs/cairn/snapshots, refs/cairn/log, refs/heads/main to origin (atomic)\n');
+
+  const local = await makeProject({ settings: { authority_remote: null } });
+  const bad = await run(['push'], local.cwd);
+  assert.equal(bad.code, 1);
+  assert.equal(bad.err, 'cairn: no authority remote; the durable refs stay local\n');
+});

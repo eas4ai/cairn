@@ -1,10 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { loopRepo } from './helpers/loop.mjs';
 import { git, gitPath } from '../lib/gitx.mjs';
-import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle } from '../lib/cycle.mjs';
+import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle, guardKernelWrite, LivenessError, withLoop } from '../lib/cycle.mjs';
 import { readState, verdictOf, wake, progressMade, progressSummary } from '../lib/wake.mjs';
+import { begin } from '../lib/lease.mjs';
 
 test('the counter lives below the Git directory, counts by class and target, and never travels', async () => {
   const r = await loopRepo();
@@ -89,4 +91,29 @@ test('semantic progress resets the count; a snapshot or record alone does not', 
   const esc = await r.escalate('DEMO-001'); await r.answer(esc, 'ok');      // developer authorizes continuation
   await settle(r.cwd, V('record', 'c'), await readState(r.cwd));
   assert.equal((await (await import('../lib/cycle.mjs')).readCounter(r.cwd)).total, 1);   // reset, then the completion of record b starts the new window
+});
+
+// Deviation from the plan text: lib/mechanisms.mjs (plan 05, already committed) stores one JSON
+// entry per mechanism at '.cairn/mechanisms/<name>.json', not a single '.cairn/mechanisms' file;
+// readFile(join(cwd, '.cairn/mechanisms')) on that real directory throws EISDIR. Both the guarded
+// path and the good-bytes read below use the real per-mechanism file loopRepo's own declare()
+// wrote (demo-001.json, since loopRepo declares 'DEMO-001' under mechanism name 'demo-001').
+test('a kernel-managed write whose bytes would create a violation of equal or higher precedence is refused with the cycle escalation', async () => {
+  const r = await loopRepo();
+  const mechPath = '.cairn/mechanisms/demo-001.json';
+  const good = await readFile(join(r.cwd, mechPath));
+  await guardKernelWrite(r.cwd, mechPath, good, { action: 'declare' });
+  await assert.rejects(guardKernelWrite(r.cwd, mechPath, Buffer.concat([good, Buffer.from(' ')]), { action: 'declare' }), LivenessError);
+  const adr = await readFile(join(r.cwd, 'docs/decisions.jsonl')).catch(() => Buffer.alloc(0));
+  await assert.rejects(guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"kind": "read"}\n')]), { action: 'decide' }), /would create a scope violation/);   // the space makes the line noncanonical
+  await guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"id":"01HZZZZZZZZZZZZZZZZZZZZZZZ","kind":"read","of":"x","record":"y","ts":"2026-09-19T00:00:00Z"}\n')]), { action: 'decide' });
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 1);
+});
+
+test('withLoop settles after a state-changing command and leaves wake pure', async () => {
+  const r = await loopRepo();
+  const result = await withLoop(r.cwd, 'begin', () => begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] }));
+  assert.ok(result);
+  const c = await (await import('../lib/cycle.mjs')).readCounter(r.cwd);
+  assert.deepEqual(c.last, { action: 'run', target: 'DEMO-001' });
 });

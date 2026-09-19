@@ -154,6 +154,7 @@ import { dirname, join } from 'node:path';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
 import { canonicalize } from '../lib/canon.mjs';
+import { begin } from '../lib/lease.mjs';
 
 // A local write helper (mirrors tests/helpers/repo.mjs's own `write` and tests/helpers/loop.mjs's
 // own `write`) for a bare untracked file placed straight into a makeProject() worktree, with no
@@ -191,6 +192,15 @@ describe('C(c) and M(D)', () => {
     const { state } = await measureState(cwd, normalizeDraft(draft()), 0, C, f);
     assert.deepEqual(Object.keys(state).sort(), ['contract', 'facts', 'five', 'option']);
     assert.deepEqual(Object.keys(state.five).sort(), ['because', 'if_wrong', 'instead', 'question', 'recommendation']);
+    // Fix round 1 (review Important finding 2): the brief's own snippet, and this test until now,
+    // only spot-checked state.option's content (text, files) and asserted nothing at all about
+    // state.contract's or state.facts's key sets -- a reintroduced rule or context field on either
+    // (the exact regression this task exists to prevent) would have passed silently. contract is
+    // asserted by reference (measureState assigns it verbatim, never a copy); facts is asserted
+    // against a fresh authorityProjection(f) call, the same function measureState itself calls.
+    assert.deepEqual(Object.keys(state.option).sort(), ['diff', 'files', 'omitted', 'text']);
+    assert.equal(state.contract, C);
+    assert.deepEqual(state.facts, authorityProjection(f));
     assert.equal(state.option.text, 'hourly');
     assert.ok(state.option.files.some((x) => x.path === 'src/auth/rotate.mjs'));
   });
@@ -214,6 +224,114 @@ describe('C(c) and M(D)', () => {
       measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['secret/.env'] }), 0, C, f),
       (e) => e instanceof EgressError && e.klass === 'credential' && e.path === 'secret/.env',
     );
+  });
+  // Fix round 1 (review Critical finding 1): validateDraft only checks that named_paths entries
+  // are strings, not that they are well-formed repository paths, so an agent-authored draft could
+  // previously name a path outside the repository (a traversal or an absolute path) or a
+  // kernel-reserved path, and measureState read it and returned its real content in M(D). Each of
+  // these three now throws EgressError('reserved', p) before writeTreeFromPaths ever runs, and
+  // the message names the offending path (not only the klass), so a caller (or a human reading a
+  // log) can tell which of several touched paths was refused.
+  describe('the touched-path containment check', () => {
+    test('a relative traversal outside the repository throws EgressError naming the path', async () => {
+      const { cwd } = await makeProject();
+      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['../outside.txt'] }));
+      const C = await contractState(cwd, f);
+      await assert.rejects(
+        measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['../outside.txt'] }), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '../outside.txt' && e.message.includes('../outside.txt'),
+      );
+    });
+    test('an absolute path throws EgressError naming the path', async () => {
+      const { cwd } = await makeProject();
+      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['/etc/passwd'] }));
+      const C = await contractState(cwd, f);
+      await assert.rejects(
+        measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['/etc/passwd'] }), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '/etc/passwd' && e.message.includes('/etc/passwd'),
+      );
+    });
+    test('a kernel-reserved path throws EgressError naming the path', async () => {
+      const { cwd } = await makeProject();
+      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/log'] }));
+      const C = await contractState(cwd, f);
+      await assert.rejects(
+        measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/log'] }), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '.cairn/log' && e.message.includes('.cairn/log'),
+      );
+    });
+    test('a draft naming only ordinary source paths still builds the state', async () => {
+      const { cwd } = await makeProject();
+      await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
+      const f = await kernelFacts(cwd, normalizeDraft(draft()));
+      const C = await contractState(cwd, f);
+      const { state } = await measureState(cwd, normalizeDraft(draft()), 0, C, f);
+      assert.ok(state.option.files.some((x) => x.path === 'src/auth/rotate.mjs'));
+    });
+  });
+  // Fix round 1 (review Important finding 3): the brief's own test and the credential test above
+  // cover network_exclude and credential; host, output and both key-detection branches were
+  // written but untested. One focused test per branch.
+  test('a domain Host paths: match throws EgressError classed host', async () => {
+    const { cwd } = await makeProject({ files: { 'docs/spec/hosted.md': 'Host paths: web/index.html\n' } });
+    await mkdirAndWrite(cwd, 'web/index.html', '<html></html>\n');
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['web/index.html'] }));
+    const C = await contractState(cwd, f);
+    await assert.rejects(
+      measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['web/index.html'] }), 0, C, f),
+      (e) => e instanceof EgressError && e.klass === 'host' && e.path === 'web/index.html',
+    );
+  });
+  test('a kernel output path throws EgressError classed output', async () => {
+    const { cwd } = await makeProject();
+    await mkdirAndWrite(cwd, '.cairn/output/report.txt', 'report\n');
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/output/report.txt'] }));
+    const C = await contractState(cwd, f);
+    await assert.rejects(
+      measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/output/report.txt'] }), 0, C, f),
+      (e) => e instanceof EgressError && e.klass === 'output' && e.path === '.cairn/output/report.txt',
+    );
+  });
+  // TYPESAFEAI_API_KEY is set to an invented, non-real placeholder for the duration of this test
+  // only, then restored -- never a real key, per the global constraint, and never printed or
+  // written anywhere beyond this in-memory env var and the touched file's own throwaway fixture
+  // content.
+  test('a touched file containing the TypeSafe key throws EgressError classed key before it reaches state', async () => {
+    const { cwd } = await makeProject();
+    const prev = process.env.TYPESAFEAI_API_KEY;
+    process.env.TYPESAFEAI_API_KEY = 'test-placeholder-key-000';
+    try {
+      await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', '// test-placeholder-key-000\n');
+      const f = await kernelFacts(cwd, normalizeDraft(draft()));
+      const C = await contractState(cwd, f);
+      await assert.rejects(
+        measureState(cwd, normalizeDraft(draft()), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'key' && e.path === 'src/auth/rotate.mjs',
+      );
+    } finally {
+      if (prev === undefined) delete process.env.TYPESAFEAI_API_KEY; else process.env.TYPESAFEAI_API_KEY = prev;
+    }
+  });
+  test('the key appearing only in the diff (removed since the lease began) throws EgressError classed key on the diff', async () => {
+    const { cwd } = await makeProject();
+    await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n// test-placeholder-key-111\n');
+    await begin(cwd, { action: 'implement', target: 'AUTH-003', touch: ['src/auth/rotate.mjs'] });
+    const prev = process.env.TYPESAFEAI_API_KEY;
+    process.env.TYPESAFEAI_API_KEY = 'test-placeholder-key-111';
+    try {
+      // The key-bearing line is removed after the lease snapshot was taken: the current file text
+      // no longer contains the key (the per-file content check passes), but the diff against the
+      // lease's snapshot still shows the removed line, so only the diff check should fire.
+      await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
+      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: [] }));
+      const C = await contractState(cwd, f);
+      await assert.rejects(
+        measureState(cwd, normalizeDraft({ ...draft(), named_paths: [] }), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'key' && e.path === 'diff',
+      );
+    } finally {
+      if (prev === undefined) delete process.env.TYPESAFEAI_API_KEY; else process.env.TYPESAFEAI_API_KEY = prev;
+    }
   });
   // Not in the brief's own test list: measureState's Interfaces line and the task's own
   // instructions name `{state, requestBytesEstimate}` as its return shape (the brief's Step 3

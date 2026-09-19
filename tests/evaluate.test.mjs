@@ -147,3 +147,70 @@ describe('the narrow floor', () => {
     assert.equal(after.decisions[0].read, true);
   });
 });
+
+import { contractState, measureState, EgressError } from '../lib/evaluate.mjs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { appendRecord } from '../lib/records.mjs';
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+import { canonicalize } from '../lib/canon.mjs';
+
+// A local write helper (mirrors tests/helpers/repo.mjs's own `write` and tests/helpers/loop.mjs's
+// own `write`) for a bare untracked file placed straight into a makeProject() worktree, with no
+// project-level fixture wiring of its own -- these tests need one loose file on disk, not a
+// second full test-helper module.
+async function mkdirAndWrite(cwd, path, content) {
+  const full = join(cwd, path);
+  await mkdir(dirname(full), { recursive: true });
+  await writeFile(full, content);
+}
+
+describe('C(c) and M(D)', () => {
+  test('contractState carries the rule text nowhere: only keystone, glossary, commitment, requirements and developer-written decisions', async () => {
+    const { cwd } = await makeProject({ files: { 'docs/spec/roadmap.md': 'Current: auth-tokens\n\n## auth-tokens\n\nRequirements: AUTH-003\n' } });
+    // Starting the commitment for real would need a docs/spec domain file defining AUTH-003 as
+    // Agreed, plus authorize() and the full transactional start() -- a matching domain file is not
+    // this test's subject (contractState's key set, checked below, is). Appending the 'start'
+    // record directly, the same shortcut tests/helpers/loop.mjs's own fixture and
+    // tests/snapshots.test.mjs already use, opens the real commitment kernelFacts reads its slug
+    // and frozen set from, with no domain file or authorization detour.
+    const snapshot = await writeWorkspaceSnapshot(cwd);
+    await appendRecord(cwd, 'start', 'auth-tokens', {
+      slug: 'auth-tokens', snapshot, from_superseded: null, intent: null, results: [],
+      requirements: [{ requirement: 'AUTH-003', text_digest: 'sha256:' + 'a'.repeat(64) }],
+    });
+    const f = await kernelFacts(cwd, normalizeDraft(draft()));
+    const C = await contractState(cwd, f);
+    assert.deepEqual(Object.keys(C).sort(), ['commitment', 'decisions', 'glossary', 'keystone', 'requirements']);
+  });
+  test('M(D) is exactly the four closed parts, no rule and no free context', async () => {
+    const { cwd } = await makeProject();
+    await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
+    const f = await kernelFacts(cwd, normalizeDraft(draft()));
+    const C = await contractState(cwd, f);
+    const { state } = await measureState(cwd, normalizeDraft(draft()), 0, C, f);
+    assert.deepEqual(Object.keys(state).sort(), ['contract', 'facts', 'five', 'option']);
+    assert.deepEqual(Object.keys(state.five).sort(), ['because', 'if_wrong', 'instead', 'question', 'recommendation']);
+    assert.equal(state.option.text, 'hourly');
+    assert.ok(state.option.files.some((x) => x.path === 'src/auth/rotate.mjs'));
+  });
+  test('an excluded touched path throws EgressError and never reaches state', async () => {
+    const { cwd } = await makeProject({ settings: { network_exclude: ['fixtures/private/**'] } });
+    await mkdirAndWrite(cwd, 'fixtures/private/key.txt', 'shh');
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['fixtures/private/key.txt'] }));
+    const C = await contractState(cwd, f);
+    await assert.rejects(measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['fixtures/private/key.txt'] }), 0, C, f), EgressError);
+  });
+  // Not in the brief's own test list: measureState's Interfaces line and the task's own
+  // instructions name `{state, requestBytesEstimate}` as its return shape (the brief's Step 3
+  // snippet returns `{ state }` alone); this covers the field the snippet omitted.
+  test('measureState also returns a requestBytesEstimate, a positive byte count of the state', async () => {
+    const { cwd } = await makeProject();
+    await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
+    const f = await kernelFacts(cwd, normalizeDraft(draft()));
+    const C = await contractState(cwd, f);
+    const { state, requestBytesEstimate } = await measureState(cwd, normalizeDraft(draft()), 0, C, f);
+    assert.equal(requestBytesEstimate, Buffer.byteLength(canonicalize(state)));
+    assert.ok(requestBytesEstimate > 0);
+  });
+});

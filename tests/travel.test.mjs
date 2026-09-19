@@ -1,15 +1,21 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, chmodSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { makeRepo, makeProject } from './helpers/repo.mjs';
+import { git, readRef } from '../lib/gitx.mjs';
 import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
+import { appendRecord } from '../lib/records.mjs';
 import { wake } from '../lib/wake.mjs';
-import { installRefspecs, refspecsFor, DURABLE_REFS, TravelError, fetchCommand, missingRefsLine } from '../lib/travel.mjs';
+import {
+  installRefspecs, refspecsFor, DURABLE_REFS, TravelError,
+  fetchCommand, missingRefsLine,
+  push, remoteOids, PUSH_COMMAND,
+} from '../lib/travel.mjs';
 
 const sh = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -48,6 +54,18 @@ async function project({ remote = makeRemote(), authority = 'authority' } = {}) 
   await authorize(repo.dir, { confirm: yes });
   return { cwd: repo.dir, remote, authority };
 }
+async function started() {
+  const p = await project();
+  await start(p.cwd, 'first-slug');
+  return p;
+}
+// A pre-receive hook that refuses any push carrying more than one ref, or any ref matching `reject`.
+function hook(remote, { multi = true, reject = null } = {}) {
+  mkdirSync(join(remote, 'hooks'), { recursive: true });
+  const body = `#!/bin/sh\nn=0\nwhile read old new ref; do n=$((n+1)); case "$ref" in ${reject ?? '__none__'}) echo "refused $ref" >&2; exit 1;; esac; done\n${multi ? 'if [ $n -gt 1 ]; then echo "one ref at a time" >&2; exit 1; fi\n' : ''}exit 0\n`;
+  writeFileSync(join(remote, 'hooks/pre-receive'), body); chmodSync(join(remote, 'hooks/pre-receive'), 0o755);
+}
+const remoteRef = (remote, ref) => { try { return sh(remote, 'rev-parse', '--verify', '-q', ref); } catch { return null; } };
 
 describe('refspecs', () => {
   test('the exact fetch and push refspecs, one per durable ref', () => {
@@ -107,4 +125,62 @@ describe('clone without the durable refs', () => {
     sh(cwd, 'update-ref', '-d', 'refs/cairn/log');
     assert.match(await missingRefsLine(cwd), /^cairn init/);
   });
+});
+
+describe('push', () => {
+  test('atomic push advances the branch and both durable refs, never the lease', async () => {
+    const { cwd, remote } = await started();
+    const r = await push(cwd);
+    assert.equal(r.mode, 'atomic');
+    assert.deepEqual(r.pushed, ['refs/cairn/snapshots', 'refs/cairn/log', 'refs/heads/main']);
+    for (const ref of ['refs/cairn/log', 'refs/cairn/snapshots', 'refs/heads/main']) assert.equal(remoteRef(remote, ref), await readRef(cwd, ref));
+    assert.equal(remoteRef(remote, 'refs/cairn/in-progress'), null);
+  });
+  test('ordered fallback when the remote refuses a multi-ref push: snapshots, log, branch', async () => {
+    const { cwd, remote } = await started();
+    hook(remote, { multi: true });
+    const r = await push(cwd);
+    assert.equal(r.mode, 'ordered');
+    assert.deepEqual(r.pushed, ['refs/cairn/snapshots', 'refs/cairn/log', 'refs/heads/main']);
+    for (const ref of ['refs/cairn/log', 'refs/cairn/snapshots', 'refs/heads/main']) assert.equal(remoteRef(remote, ref), await readRef(cwd, ref));
+  });
+  test('a failure stops the ordered sequence and the branch is not advanced without its records', async () => {
+    const { cwd, remote } = await started();
+    hook(remote, { multi: true, reject: 'refs/cairn/log' });
+    await assert.rejects(push(cwd), (e) => /cairn: push of refs\/cairn\/log failed after refs\/cairn\/snapshots/.test(e.message));
+    assert.equal(remoteRef(remote, 'refs/cairn/snapshots'), await readRef(cwd, 'refs/cairn/snapshots'));
+    assert.equal(remoteRef(remote, 'refs/cairn/log'), null);
+    assert.equal(remoteRef(remote, 'refs/heads/main'), null);
+  });
+  test('the expected remote OID is the lease: a remote advanced by another clone refuses the push untouched', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const other = mkdtempSync(join(tmpdir(), 'cairn-other-'));
+    sh(other, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(other, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots');
+    await appendRecord(other, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'from the other clone' });
+    sh(other, 'push', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
+    const remoteLog = remoteRef(remote, 'refs/cairn/log');
+    await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'from this clone' });
+    await assert.rejects(push(cwd), /refs\/cairn\/log on authority is ahead of this clone; run: git fetch authority refs\/cairn\/log:refs\/cairn\/log/);
+    assert.equal(remoteRef(remote, 'refs/cairn/log'), remoteLog, 'the remote log did not move');
+  });
+  test('a race at the same base loses at the remote, not silently', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const other = mkdtempSync(join(tmpdir(), 'cairn-other-'));
+    sh(other, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(other, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots');
+    await appendRecord(other, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'a' });
+    await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'b' });
+    const oids = await remoteOids(cwd, 'authority', ['refs/cairn/log']);
+    sh(other, 'push', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');   // wins the race after our ls-remote
+    const r = await git(['push', '--atomic', `--force-with-lease=refs/cairn/log:${oids['refs/cairn/log']}`, 'authority', 'refs/cairn/log:refs/cairn/log'], { cwd, expect: [0, 1, 128] });
+    assert.match(String(r.stderr), /stale info|rejected/);
+  });
+  test('no authority remote: refused', async () => {
+    const { cwd } = await makeProject({ settings: { authority_remote: null } });
+    await assert.rejects(push(cwd), /cairn: no authority remote/);
+  });
+  test('PUSH_COMMAND is cairn push', () => assert.equal(PUSH_COMMAND, 'cairn push'));
 });

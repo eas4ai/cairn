@@ -1,7 +1,7 @@
 // tests/tx.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, readdirSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 
@@ -368,11 +368,29 @@ test('Fix round 1 finding 2: an aborted transaction\'s restored names the log\'s
     'the log ref can never truthfully equal its stale pre-capture again: the intent record itself already advanced it');
 });
 
-test('Fix round 1 finding 3: tampering a store after a completed transaction makes recoverPredicate name it again', async () => {
+// Fix round 2 finding 3 corrects this test's own original scenario: it used to assert that
+// editing the file after completion WAS drift, which is exactly the bug finding 3 names ("every
+// store matches its resulting identity" means the write landed, not that the store never changes
+// again). A file write's resulting identity is now verified against the content its own
+// transaction's branch commit holds, an immutable fact, not the mutable working tree.
+test('Fix round 1/2 finding 3: a legitimate later edit of a transaction-written file is never drift', async () => {
   const cwd = await initialized();
   const r = await withTransaction(cwd, { command: 'authorize', plan: terminalPlan() }, null);
   assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null, 'nothing has drifted yet');
-  writeFileSync(join(cwd, 'docs/spec/overview.md'), 'tampered after completion\n');
+  writeFileSync(join(cwd, 'docs/spec/overview.md'), 'edited later; not drift\n');
+  assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null,
+    'the file the transaction wrote was later edited, same as promote editing the roadmap start wrote, or a developer editing AGENTS.md between commitments -- not drift');
+  assert.equal((await pendingTransaction(cwd, await readLog(cwd))), null);
+});
+
+test('Fix round 2 finding 3: rewriting the branch so the recorded commit is no longer an ancestor of HEAD is drift', async () => {
+  const cwd = await initialized();
+  const headBefore = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
+  const r = await withTransaction(cwd, { command: 'authorize', plan: terminalPlan() }, null);
+  assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null, 'nothing has drifted yet');
+  // Rewrite history so the branch commit the transaction recorded is no longer reachable from HEAD.
+  await git(['reset', '--hard', headBefore], { cwd });
+  await git(['commit', '-q', '--allow-empty', '-m', 'rewritten history'], { cwd });
   const p = await recoverPredicate(cwd, await readLog(cwd));
   assert.deepEqual(p, { action: 'recover', target: r.tx,
     reason: `command-intent ${r.intentSha} for authorize closed, but a store no longer matches the identity it recorded; recover it before continuing` });
@@ -477,4 +495,66 @@ test('Fix round 1 finding 7: withTransaction crashed after each write recovers t
     assert.equal(headCommit.subject, 'Authorize the specification');
     assert.equal(headCommit.parents[0], headBefore, `write ${n}: by exactly one commit, not two`);
   }
+});
+
+// --- Fix round 2 ---
+
+test('Fix round 2 finding 1: recover on a completed-but-drifted transaction names the drift, not missing staging', async () => {
+  const cwd = await initialized();
+  const headBefore = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
+  const r = await withTransaction(cwd, { command: 'authorize', plan: terminalPlan() }, null);
+  await git(['reset', '--hard', headBefore], { cwd });
+  await git(['commit', '-q', '--allow-empty', '-m', 'rewritten history'], { cwd });
+  const result = await recover(cwd, r.tx);
+  assert.equal(result.completed, 'blocked');
+  assert.match(result.repair, new RegExp(`^cairn: transaction ${r.tx} completed, but drifted: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40}`));
+  assert.equal(/staging for transaction/.test(result.repair), false, 'never the missing-staging text for a transaction that actually completed');
+  assert.match(result.repair, /restore each store to its recorded identity, or accept the change and continue$/);
+});
+
+test('Fix round 2 finding 2: a branch write with empty paths is refused at stage time', async () => {
+  const cwd = await initialized();
+  const plan = { identity: {}, writes: [{ store: 'branch', paths: [], message: 'nothing' }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(cwd, plan);
+  await assert.rejects(stage(cwd, 'TXEMPTY', plan, pre), /^TxError: cairn: a branch write needs at least one path/);
+});
+
+test('Fix round 2 finding 4: a fabricated sha in a recorded result does not throw a raw GitError; it counts as drift', async () => {
+  const cwd = await initialized();
+  const intentSha = await appendRecord(cwd, 'command-intent', 'TXFAKE', { tx: 'TXFAKE', command: 'authorize', identity: {},
+    pre: { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: null, files: {} }, writes: [] });
+  const fake = 'f'.repeat(40); // a well-formed but nonexistent sha
+  await appendRecord(cwd, 'authorization', 'protected', {
+    spec_digest: sha256('x\n'), agreement_digest: sha256('y\n'), settings_digest: 'sha256:' + '0'.repeat(64),
+    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+    decision: null, intent: intentSha, results: [{ store: 'HEAD', identity: fake }],
+  });
+  const p = await pendingTransaction(cwd, await readLog(cwd));
+  assert.equal(p.sha, intentSha, 'a fabricated sha that cannot be resolved as an ancestor (git exits 128) is drift, not a thrown error');
+});
+
+test('Fix round 2 finding 5: a lock path that keeps disappearing and reappearing is bounded, not an infinite retry', async () => {
+  const { cwd } = await repoWith({});
+  const lock = await gitPath(cwd, 'cairn-tx.lock');
+  // A dangling symlink deterministically reproduces the EEXIST-then-ENOENT race: POSIX open()
+  // with O_CREAT|O_EXCL on a path that is a symlink fails EEXIST regardless of the target, and a
+  // read through it fails ENOENT since the target never exists. No real concurrency needed.
+  symlinkSync(join(cwd, 'nonexistent-lock-target'), lock);
+  await assert.rejects(acquireLock(cwd, 'TXBOUND'), /^TxError: cairn: cairn-tx.lock keeps disappearing and reappearing; remove it by hand and retry/);
+});
+
+import { writeInputSnapshot } from '../lib/snapshots.mjs';
+
+test('Fix round 2 finding 6: snapshot adoption verifies the candidate is a genuine workspace snapshot, not any commit sharing the parent', async () => {
+  const cwd = await initialized();
+  const plan = terminalPlan();
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TXBADSNAP', plan, pre);
+  // Simulate a concurrent, unrelated writer landing on refs/cairn/snapshots with the exact parent
+  // this transaction expects, but the wrong kind (an input snapshot, not the workspace snapshot
+  // this write plans) -- the old code adopted any commit sharing that parent.
+  await writeInputSnapshot(cwd, { mechanism: 'm', inputs: ['docs/spec/overview.md'] });
+  await assert.rejects(applyWrites(cwd, await readStaging(cwd, 'TXBADSNAP')),
+    new RegExp(`^TxConflict: cairn: transaction TXBADSNAP cannot complete: refs/cairn/snapshots is [0-9a-f]{40}, expected [0-9a-f]{40} or a new snapshot commit`));
 });

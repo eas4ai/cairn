@@ -152,7 +152,23 @@ after the developer confirms it. Its fields are:
 - `attribution`: `forbidden` or `allowed`, for the release script.
 - `harness`: one entry per supported harness, including the adversary model and
   whether the adversary is local or remote.
-- `typesafeai`: the optional evaluator policy in section 10.
+- `developer`: `present` or `absent`, default `present`. `absent` declares that
+  no human will ever answer an escalation; only the narrow evaluator floor in
+  section 10 can still name the developer, and section 5 says what wake does
+  there with no one to answer. This is the setting an autonomous benchmark
+  runs with.
+- `typesafeai`: the evaluator policy in section 10. `enabled` chooses the
+  measurement's source; it does not turn the measurement off (section 10).
+
+Revised 2026-09-19: added the `developer` field and reworded the `typesafeai`
+line. Previously this line read "the optional evaluator policy in section
+10," which implied the whole measurement could be switched off. It cannot:
+section 10 now measures every Consequential draft from Jev or, when
+`typesafeai.enabled` is false, from the harness's review model instead, so
+`enabled` only picks the source. The developer said the point of the redesign
+was "to give the coding model a gut check or additional evaluation capability
+to be able to measure the decision," which only works if the measurement
+runs either way.
 
 The settings shape is shown once here:
 
@@ -167,6 +183,7 @@ The settings shape is shown once here:
   "network_exclude": ["fixtures/private/**", "config/*.secret.*"],
   "signing_key": null,
   "attribution": "forbidden",
+  "developer": "present",
   "harness": {
     "claude_code": {
       "adversary_model": "claude-fable-5-1",
@@ -183,31 +200,58 @@ The settings shape is shown once here:
   },
   "typesafeai": {
     "enabled": false,
-    "mode": "shadow",
+    "mode": null,
     "model": "jev-1.13.0",
-    "route_confidence": 0.8,
-    "sufficient_threshold": 0.7,
-    "outside_threshold": 0.8,
-    "contradicts_ceiling": 0.3,
-    "reversible_floor": 0.7,
-    "observed_floor": 0.6,
-    "max_false_downgrade": 0.05,
+    "weights": {
+      "evidence": 0.2, "reach": 0.2, "contract": 0.2,
+      "surface": 0.2, "ambiguity": 0.2
+    },
+    "agent_ceiling": 0.35,
+    "confidence_floors": {
+      "evidence": 0.5, "reach": 0.5, "contract": 0.5,
+      "surface": 0.5, "ambiguity": 0.5
+    },
     "min_calibration_agent_predictions": 60,
     "request_cap_bytes": 48000
   }
 }
 ```
 
+Revised 2026-09-19: the `typesafeai` block previously carried seven fixed
+thresholds (`route_confidence`, `sufficient_threshold`, `outside_threshold`,
+`contradicts_ceiling`, `reversible_floor`, `observed_floor` and
+`max_false_downgrade`) that fed a gate cascade, and defaulted `mode` to
+`"shadow"`. `.superpowers/bench/results.md` ran that cascade live: 0 of 12
+agent-expected drafts reached the agent (the `sufficient` gate alone rejected
+every one), which the developer called ritual assent. This block now carries
+the composite's `weights`, `agent_ceiling` and `confidence_floors`
+(`.superpowers/bench/composite-design.md`, 0.895 route accuracy at
+`agent_ceiling: 0.35`), and `mode: null` is the live default; `"observe"` is
+now the only other value, and section 10 states plainly that it is for
+collecting calibration data, not for routing. `max_false_downgrade` moves to
+a kernel constant (section 10); `min_calibration_agent_predictions` and
+`request_cap_bytes` are unchanged.
+
 The kernel refuses an unknown settings schema or field; an invalid glob; an
 `outside` path overlapping `source`, `interfaces`, `data`, a reserved path or a
 mechanism input; a reserved path under `source`, `interfaces` or `data`; a
 `documents` path below `source`; a
 secret-shaped field or value other than the public `signing_key`; an invalid
-authority remote; an evaluator threshold outside `[0,1]`; `enabled: true`
-without a model; `request_cap_bytes` above 64,000; or `mode: route` without a
-current passing calibration. Route mode also requires a versioned model ID,
-not an alias. Unknown values fail closed. The evaluator's removed `weights` and
-`code_tiers` fields are refused rather than ignored.
+authority remote; an evaluator `weight`, `agent_ceiling` or confidence floor
+outside `[0,1]`; `enabled: true` without a model; `request_cap_bytes` above
+64,000; `mode` set to anything but `null` or `"observe"`; or `developer` set
+to anything but `"present"` or `"absent"`. `enabled: true` also requires a
+versioned model ID, not an alias, since a calibration record is bound to one
+resolved model. Unknown values fail closed. The evaluator's `code_tiers`
+field stays refused; `weights`, `agent_ceiling` and `confidence_floors` are
+now required fields, not refused ones.
+
+Revised 2026-09-19: previously refused "an evaluator threshold outside
+`[0,1]`" and "`mode: route` without a current passing calibration," and said
+the evaluator's "removed `weights` and `code_tiers` fields are refused rather
+than ignored." Those thresholds and the `route` mode are gone (section 10);
+`weights` came back with the composite (decision 56) while `code_tiers`
+stayed out, so only `code_tiers` is still refused.
 
 **Working agreement.** `AGENTS.md` at the repository root, copied from the
 template the plugin ships. It states the move for each verdict and action. The
@@ -331,15 +375,33 @@ verbatim. The developer writes `ok`, `instead <text>` or `ask <text>` with
 `cairn answer`; `ask` stays open until an agent reply. Developer-only commands
 use the authentication rule in Settings.
 
-**Evaluation intent, call and result.** The three record kinds that make the
-optional evaluator recoverable. The intent fixes the draft, pre-write identity,
-policy and every constructible request digest before network I/O. Each attempted model call
-has its own call record. The result applies deterministic gates and names the
-actual route. Section 10 defines them.
+**Evaluation intent, call and measurement.** The three record kinds that make
+the evaluator recoverable. The intent fixes the draft, pre-write identity,
+policy and every constructible request digest before network I/O. Each
+attempted model call has its own call record. The measurement holds the draft
+digest, the source (`jev` or `review`), the resolved model, each of the five
+Score dimensions with its level and confidence, the computed composite, which
+veto if any fired, the route and the reason. Section 10 defines them.
 
-**Calibration.** A record over developer-labelled shadow evaluations, bound to
-one evaluation-policy digest. It states the conditional sample, error count,
-confidence bound and pass or fail result.
+Revised 2026-09-19: this was "Evaluation intent, call and result"; the result
+record "applie[d] deterministic gates and name[d] the actual route" over raw
+Noul and Choice answers. Section 10 no longer runs that gate cascade; it
+scores five dimensions and computes one composite in code, so the third
+record now holds a measurement, not a gate result. "The optional evaluator"
+became "the evaluator" because section 10 measures every Consequential draft
+from one source or the other; only the source is optional.
+
+**Calibration.** A record over developer-labelled measurements, bound to one
+evaluation-policy digest. It states the conditional sample, error count,
+confidence bound and pass or fail result. It tunes the composite's `weights`,
+`agent_ceiling` and `confidence_floors` offline, from recorded dimension
+levels; it does not gate whether the agent may decide.
+
+Revised 2026-09-19: previously "developer-labelled shadow evaluations."
+Shadow is no longer the default source of labelled data (section 10), and a
+passing calibration is no longer a precondition for the agent to decide; the
+developer's benchmark showed that precondition was why no draft ever reached
+the agent under the superseded design.
 
 **Item.** A captured idea of kind `backlog`, `next-feature` or `defect`.
 Backlog work is already covered by Agreed requirements. A next-feature item
@@ -377,14 +439,28 @@ supersession has no open range.
 ### ADR and other terms
 
 **ADR.** `docs/decisions.jsonl`, append-only and kernel-managed. Each line is
-one canonical JSON object written by `cairn decide`, `cairn escalate` when an
-evaluation downgrades, `cairn answer`, `cairn decisions --read`, `cairn
+one canonical JSON object written by `cairn decide`, `cairn escalate` when the
+floor or a measurement sends a Consequential draft to the developer, `cairn
+answer`, `cairn decisions --read`, `cairn
 realize`, `cairn supersede`, or `cairn promote`. Kinds are `decision`,
 `realized`, `superseded`, `answered` and `read`.
-A decision carries `by`, `rests_on`, `wrong_if`, `body`, and the workspace
-snapshot from which realization will be measured. A realized line names that
-base and the realized workspace snapshot. A read line names the read record on
-the log, which carries the developer's authentication as an answer record does.
+A decision carries `by`, `rests_on`, `wrong_if`, `body`, the workspace
+snapshot from which realization will be measured, and the measurement it
+read, or `null` when the narrow floor routed it without one. A realized line
+names that base and the realized workspace snapshot. A read line names the
+read record on the log, which carries the developer's authentication as an
+answer record does.
+
+Revised 2026-09-19: "an evaluation downgrades" described the old gate
+cascade converting a Consequential draft to Blocking; that cascade is gone
+(section 10). "A decision carries ... and the measurement it read" is new
+text making explicit what section 4's ADR schema already stores as
+`"evaluation":<sha|null>`, so an autonomous run is scoreable from the
+decision record alone, as the developer asked. Section 4's schema table
+still names that field and the evaluation-intent/call/result rows in the old
+vocabulary; this revision did not touch section 4, so the field name and the
+result shape there are stale against this section until a later pass renames
+them.
 
 The kernel has two decision levels. A Consequential decision is appended to the
 ADR and queued while the agent continues. A Blocking decision is an escalation;

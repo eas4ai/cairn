@@ -93,7 +93,7 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
     async report(findings = []) {
       const log = await readLog(cwd);
       const rev = log.filter((x) => x.kind === 'review').at(-1);
-      const brief = await add('brief', slug, { slug, review: rev.sha, projection_digest: 'sha256:' + '1'.repeat(64), payload_digest: 'sha256:' + '2'.repeat(64), exclusions_digest: 'sha256:' + '3'.repeat(64) });
+      const brief = await add('brief', slug, { slug, review: rev.sha, harness: 'test-harness', model: 'test-model', transport: 'local', boundary: 'enforced', projection_digest: 'sha256:' + '1'.repeat(64), payload_digest: 'sha256:' + '2'.repeat(64), exclusions_digest: 'sha256:' + '3'.repeat(64) });
       const attempts = rev.payload.answers.map(({ question, target }) => ({ question, target, text: 'attempted' }));
       return add('report', slug, { slug, session: null, snapshot: rev.payload.snapshot, brief, model: 'test-model', transport: 'local', boundary: 'enforced', builder_model: null, projection_digest: 'sha256:' + '1'.repeat(64), attempts, findings, interface_attempts: [] });
     },

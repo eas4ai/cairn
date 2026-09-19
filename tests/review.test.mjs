@@ -330,3 +330,40 @@ test('the five commands print one line each and exit 1 with a cairn: line on ref
   const nofile = await cliAccept(r.cwd, ['first']);
   assert.deepEqual([nofile.code, nofile.out], [1, 'cairn: --file <path> is required\n']);
 });
+
+// tests/review.test.mjs (fix round 1, item 1)
+import { spawnSync } from 'node:child_process';
+const cairnBin = new URL('../bin/cairn.mjs', import.meta.url).pathname;
+function cairn(args, cwd) { return spawnSync(process.execPath, [cairnBin, ...args], { cwd, encoding: 'utf8' }); }
+
+test('the brief record carries the launch instruction; report derives it from the brief, never the report body', async () => {
+  const r = await briefed();
+  assert.deepEqual([r.bp.harness, r.bp.model, r.bp.transport, r.bp.boundary], ['claude_code', 'claude-fable-5-1', 'remote', 'unenforced']);
+  await assert.rejects(
+    report(r.cwd, 'first', adversary(r, { harness: 'codex', model: 'gpt-nano-0', transport: 'local' })),
+    /cairn: report: harness codex does not match the brief's claude_code/,
+  );
+  // A model/transport substitution with no harness field at all is refused too: the launch
+  // instruction is not re-derived from any part of the body, only checked against it.
+  await assert.rejects(
+    report(r.cwd, 'first', adversary(r, { harness: undefined, model: 'gpt-nano-0' })),
+    /cairn: report: model gpt-nano-0 does not match the launch instruction claude-fable-5-1/,
+  );
+  const sha = await report(r.cwd, 'first', adversary(r));
+  assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.boundary, 'unenforced');
+});
+
+test('end to end: cairn brief then cairn report refuses a report naming a different harness, model and transport', async () => {
+  const r = await reviewed();
+  const briefRes = cairn(['brief', 'first', '--harness', 'claude_code'], r.cwd);
+  assert.equal(briefRes.status, 0);
+  assert.match(briefRes.stdout, /harness: claude_code\nmodel: claude-fable-5-1\ntransport: remote/);
+  const briefSha = briefRes.stdout.split('\n')[0].split(' ')[3];
+  r.bp = decodeRecord(await catCommit(r.cwd, briefSha)).payload;
+  const rpPath = path.join(r.cwd, '.cairn/output', 'rp.json');
+  await fs.mkdir(path.dirname(rpPath), { recursive: true });
+  await fs.writeFile(rpPath, JSON.stringify(adversary(r, { harness: 'codex', model: 'gpt-nano-0', transport: 'local' })));
+  const reportRes = cairn(['report', 'first', '--file', rpPath], r.cwd);
+  assert.equal(reportRes.status, 1);
+  assert.match(reportRes.stderr, /^cairn: report: /);
+});

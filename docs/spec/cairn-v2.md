@@ -1490,7 +1490,7 @@ specification.
 17. `docs/commitments/` is gone; a roadmap section and start/close records define
     a commitment.
 18. The optional Jev evaluator applies only at Consequential and may make an
-    option-gate call and a separate owner call.
+    option-gate call and a separate owner call. (Superseded by 53.)
 19. `.cairn/settings.json` is the only settings file; the TypeSafe key is
     `TYPESAFEAI_API_KEY` in the environment.
 20. The adversary model and transport are selected per harness and recorded.
@@ -1502,9 +1502,9 @@ specification.
 25. The working agreement is protected and changes between commitments or after
     supersession.
 26. Deterministic code establishes the evaluator envelope before model judgment;
-    every gate fails closed.
+    every gate fails closed. (Superseded by 54.)
 27. Shadow is the evaluator default and route mode requires project-specific,
-    policy-matched calibration.
+    policy-matched calibration. (Superseded by 55.)
 28. Snapshot commits, not trailer text, keep code trees reachable.
 29. The local action lease and check lock are separate and use compare-and-swap.
 30. Reserved paths are kernel constants, not settings-derived exemptions.
@@ -1543,9 +1543,33 @@ specification.
     bounds counted locally, and valid Cairn bookkeeping may not generate its
     own violation.
 51. Composite option scores, weights and code tiers are absent; raw gate answers
-    are the only evaluator assistance shown.
+    are the only evaluator assistance shown. (Superseded by 56.)
 52. Only log and snapshots refs travel; the action lease remains local and
     cross-clone conflicts stop at leased push.
+53. The evaluator measures every Consequential draft, from Jev when
+    `typesafeai.enabled` or the harness's review model otherwise, in one
+    composite-scored call, not an option-gate call and a separate owner
+    call. Supersedes 18. The developer's reason: "the point was to give the
+    coding model a gut check or additional evaluation capability to be able
+    to measure the decision."
+54. Code still establishes a floor and a veto that fail closed before any
+    model judgment, but between them the agent applies one composite
+    measurement itself; no gate cascade decides by elimination anymore.
+    Supersedes 26. The developer's reason: "the goddamn evaluator was to
+    reduce ritual assent."
+55. Live composite measurement, not shadow, is the default; `observe` is an
+    explicit, stated setting for collecting calibration data only, and
+    calibration tunes the composite offline without gating whether the
+    agent may decide. Supersedes 27. The developer's reason: "the goddamn
+    evaluator was to reduce ritual assent," and the recorded benchmark
+    showed a shadow default plus a calibration-gated route mode produced
+    zero agent routing at the shipped gates.
+56. Composite option scores and weights are back, scored across five
+    dimensions with a computed ceiling and confidence floors, because the
+    raw-gate-answers-only design in 51 never let a draft reach the agent;
+    `code_tiers` stays absent. Supersedes 51. The developer's reason: "The
+    reason I wanted this design was to be able to use Cairn in an
+    autonomous benchmark."
 
 ## 14. Next steps
 

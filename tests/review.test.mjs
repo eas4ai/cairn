@@ -436,3 +436,23 @@ test('a refused accept leaves refs/cairn/snapshots unchanged; a successful one a
   const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
   assert.equal(p.snapshot, after);
 });
+
+// tests/review.test.mjs (fix round 1, item 5)
+import { catBlob } from '../lib/review.mjs';
+import { readFile as readSourceFile } from 'node:fs/promises';
+
+test('catBlob goes through lib/gitx.mjs and never hard-codes a maxBuffer that a large blob could exceed', async () => {
+  const src = await readSourceFile(new URL('../lib/review.mjs', import.meta.url), 'utf8');
+  assert.equal(src.includes('maxBuffer:'), false, 'no hard-coded maxBuffer option left');
+  assert.equal(src.includes("from 'node:child_process'"), false, 'no direct child_process import left');
+  const r = await loopRepo();
+  const big = 'x'.repeat(3 * 1024 * 1024); // 3MB: larger than node:child_process's unoverridden 1MB default maxBuffer
+  await r.write('src/big.mjs', big);
+  await r.commit('add a large tracked file');
+  const treeSha = (await git(['write-tree'], { cwd: r.cwd })).stdout.trim();
+  const entries = await import('../lib/gitx.mjs').then((m) => m.listTree(r.cwd, treeSha));
+  const entry = entries.find((e) => e.path === 'src/big.mjs');
+  const bytes = await catBlob(r.cwd, entry.sha);
+  assert.equal(bytes.length, big.length);
+  assert.equal(bytes.toString('utf8'), big);
+});

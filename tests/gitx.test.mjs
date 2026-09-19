@@ -76,3 +76,43 @@ test('a large stdin write to a git process that exits without draining it reject
   const big = Buffer.alloc(8 * 1024 * 1024, 65); // bigger than the OS pipe buffer, so the write outlives a git process that never reads stdin
   await assert.rejects(git(['cat-file', '-p', 'nothing'], { cwd: repo.dir, input: big }), (e) => e instanceof GitError && /nothing/.test(e.stderr));
 });
+
+// Fix round 1, item 1: treeIdentityReadOnly must produce the exact tree sha a write-tree of the
+// same entries would, without writing anything -- the multi-level path set (a nested directory
+// plus a sibling blob whose name is a prefix of the directory's own name) exercises
+// treeShaFromEntries' recursive grouping and its git-matching sort rule ('foo.txt' before 'foo/').
+import { treeIdentityReadOnly, treeShaFromEntries } from '../lib/gitx.mjs';
+import { readdir } from 'node:fs/promises';
+
+async function looseObjectCount(cwd) {
+  const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd })).stdout.trim();
+  let count = 0;
+  for (const d of await readdir(`${gitDir}/objects`, { withFileTypes: true })) {
+    if (!d.isDirectory() || d.name === 'pack' || d.name === 'info') continue;
+    count += (await readdir(`${gitDir}/objects/${d.name}`)).length;
+  }
+  return count;
+}
+
+test('treeIdentityReadOnly matches writeTreeFromPaths exactly and writes no object', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('foo/inner.txt', 'x\n');
+  await repo.write('foo.txt', 'y\n');
+  await repo.write('a/b/deep.txt', 'z\n');
+  await repo.commit('base');
+  const written = await writeTreeFromPaths(repo.dir, { paths: ['foo/inner.txt', 'foo.txt', 'a/b/deep.txt'], exclude: [] });
+  const before = await looseObjectCount(repo.dir);
+  const readOnly = await treeIdentityReadOnly(repo.dir, { paths: ['foo/inner.txt', 'foo.txt', 'a/b/deep.txt'], exclude: [] });
+  assert.equal(readOnly, written);
+  assert.equal(await looseObjectCount(repo.dir), before);
+});
+
+test('treeShaFromEntries recomputes a real write-tree sha from that tree\'s own flat entries', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('foo/inner.txt', 'x\n');
+  await repo.write('foo.txt', 'y\n');
+  await repo.commit('base');
+  const real = await writeTreeFromPaths(repo.dir, { paths: ['foo/inner.txt', 'foo.txt'], exclude: [] });
+  const entries = await listTree(repo.dir, real);   // listTree (-r) already lists blobs only, with paths like 'foo/inner.txt'
+  assert.equal(treeShaFromEntries(entries), real);
+});

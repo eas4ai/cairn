@@ -77,18 +77,50 @@ async function treeHash(dir) {
   return h.digest('hex');
 }
 
+async function looseObjectCount(gitDir) {
+  let count = 0;
+  for (const d of await readdir(`${gitDir}/objects`, { withFileTypes: true })) {
+    if (!d.isDirectory() || d.name === 'pack' || d.name === 'info') continue;
+    count += (await readdir(`${gitDir}/objects/${d.name}`)).length;
+  }
+  return count;
+}
+
 // Task 22 registers `cairn wake` in lib/cli.mjs; until then r.runWake() exits 1 with "unknown
 // command wake" and this test's second assertion fails as the plan's own text anticipates
 // ("Expected: PASS once task 22 registers cairn wake; until then the runWake line fails with exit
 // 1. Keep the test; it passes from task 22 on."). Committed here regardless, per that instruction.
+//
+// Fix round 1, item 2: the fixture above (a stray, undeclared file with no receipt at all) never
+// reached lib/check.mjs's isCurrent -- readState's currentReceipt only calls it while scanning an
+// existing receipt for the requirement, and this fixture had none, so the purity test never
+// exercised the actual write path item 1 found (identitiesNow -> writeTreeFromPaths -> `git
+// hash-object -w` / `write-tree`). passReq() first gives DEMO-001 a receipt to check currency
+// against; dirtying a declared input afterwards (not just leaving it clean) matches the exact
+// reproduction ("one wake call after a pass receipt and one edit added three loose objects").
 test('wake writes nothing: the Git directory and worktree hash the same before and after', async () => {
   const r = await loopRepo();
-  await r.write('src/stray.mjs', 'x\n');
+  await r.passReq('DEMO-001');
+  await r.write('src/demo.mjs', 'console.log("hello");\n// dirty\n');   // a declared input, uncommitted
   const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd: r.cwd })).stdout.trim();
   const before = [await treeHash(gitDir), await treeHash(r.cwd)];
   await wake(r.cwd);
   assert.equal(r.runWake().status, 0);
   assert.deepEqual([await treeHash(gitDir), await treeHash(r.cwd)], before);
+});
+
+// A direct, narrower check alongside the byte-hash one above: the loose object count under
+// .git/objects is unchanged by wake, run twice, with a pass receipt and a dirty declared input in
+// play (the exact state that, before item 1's fix, added three loose objects per call).
+test('wake adds no loose Git object when checking currency against a dirty declared input', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.write('src/demo.mjs', 'console.log("hello");\n// dirty\n');
+  const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd: r.cwd })).stdout.trim();
+  const before = await looseObjectCount(gitDir);
+  await wake(r.cwd);
+  await wake(r.cwd);
+  assert.equal(await looseObjectCount(gitDir), before);
 });
 
 // Deviation from the plan text: lib/spec.mjs's parseRoadmap has no check that Current: names an

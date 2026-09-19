@@ -1,4 +1,4 @@
-// New project: from an empty directory to drafted requirements; the spec-phase tail finishes it.
+// New project: from an empty directory through initialization to the spec tail.
 digraph new_project {
   rankdir=TB;
   graph [fontname="Helvetica", fontsize=11, labelloc=t, label="New project: start to the spec-phase tail"];
@@ -6,22 +6,23 @@ digraph new_project {
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /new-project"];
-  exists [shape=diamond, label="Directory holds source code, or\ndocs/spec/overview.md?\n(a README, a license and Git do not count)"];
-  switch [shape=oval, label="Switch to\n/existing-project"];
-  ask [label="The one open question:\nwhat is the software for?"];
+  exists [shape=diamond, label="Source code or docs/spec/overview.md exists?\n(README, license and Git do not count)"];
+  switch [shape=oval, label="Switch to /existing-project"];
+  init [label="Initialize Git if needed; cairn init;\ndeveloper confirms settings, authority remote or local-only,\nand signed or unsigned-local developer authentication"];
+  ask [label="One open question:\nwhat is the software for?"];
   restate [label="Gate 1: restate in own words;\ndeveloper corrects"];
-  keystone [label="Keystone: docs/spec/overview.md\nwhat it is, the problem, what it is not,\nthe spec map"];
+  keystone [label="Write docs/spec/overview.md:\nwhat it is, its problem, what it is not, spec map"];
   glossary [label="Gate 2: glossary, 5 to 15 terms as one set;\ndeveloper corrects by exception"];
-  partition [label="Gate 3: derive the domains from the keystone;\ndeveloper confirms the partition"];
-  draft [label="For each domain, draft the requirements:\none obligation per sentence, the actor named,\na Falsifier: line each, Status: Draft"];
+  partition [label="Gate 3: derive domains from the keystone;\ndeveloper confirms the partition"];
+  draft [label="Draft each domain's requirements:\none actor-named obligation, Falsifier, Status: Draft"];
   more [shape=diamond, label="More domains?"];
   roadmap [label="Roadmap with Current: naming the first commitment"];
-  tail [shape=box, peripheries=2, label="Gate 4: the spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, commitment,\ndeclare, AGENTS.md, commit, wake"];
+  tail [shape=box, peripheries=2, label="Gate 4: spec-phase.dot\nfalsifiers, self-review, lint, confirmation,\ncommitment, mechanisms, agreement, start, wake"];
 
   start -> exists;
   exists -> switch [label="yes"];
-  exists -> ask [label="no"];
-  ask -> restate -> keystone -> glossary -> partition -> draft -> more;
+  exists -> init [label="no"];
+  init -> ask -> restate -> keystone -> glossary -> partition -> draft -> more;
   more -> draft [label="yes"];
   more -> roadmap [label="no"];
   roadmap -> tail;

@@ -1,4 +1,4 @@
-// Next feature: from Done to drafted or revised requirements; the spec-phase tail finishes it.
+// Next feature: from Done to drafted or revised requirements, then the shared tail.
 digraph next_feature {
   rankdir=TB;
   graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Next feature: start to the spec-phase tail"];
@@ -8,21 +8,21 @@ digraph next_feature {
   start [shape=oval, label="Start: /next-feature"];
   isdone [shape=diamond, label="cairn wake says Done?"];
   notdone [shape=oval, label="Stop: hand the verdict\nto the working agreement"];
-  read [label="Read the spec set, the finished commitment's roadmap section,\nthe queue (cairn decisions), every next-feature item\nwithout a promotion (cairn items), and the backlog"];
-  ask [label="The one open question:\nthe waiting items, a new feature, or both?"];
+  read [label="Read the spec set, finished roadmap section,\nConsequential queue, unpromoted next-feature items\nand backlog"];
+  ask [label="One open question:\nwaiting items, a new feature, or both?"];
 
   subgraph cluster_change {
-    label="For each change the developer asks for"; style=dashed; fontname="Helvetica"; fontsize=11;
-    radius [label="Trace the blast radius:\nrequirements, mechanisms, code, documents; cite"];
-    restate [label="Restate: what changes for whom;\nwhich Agreed text, quoted, if any;\nthe alternative; the recommendation"];
+    label="For each requested change"; style=dashed; fontname="Helvetica"; fontsize=11;
+    radius [label="Trace and cite the blast radius:\nrequirements, mechanisms, code, documents"];
+    restate [label="Restate what changes for whom; quote affected Agreed text;\ngive the alternative and recommendation"];
     corrects [label="Developer corrects the reading"];
-    fits [shape=diamond, label="Covered by the Agreed\nrequirements as they stand?"];
-    covered [label="Into the commitment as it is:\nno new text"];
-    revise [label="Revise in place under its own identifier,\nor add a new requirement, Status: Draft;\nRationale: at most one line"];
+    fits [shape=diamond, label="Covered by current\nAgreed requirements?"];
+    covered [label="Put it into the commitment;\nwrite no new contract text"];
+    revise [label="Revise under the same identifier or add Draft;\nRationale: at most one line"];
     next [shape=diamond, label="More changes?"];
   }
 
-  tail [shape=box, peripheries=2, label="The spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, roadmap section,\ndeclare, commit, cairn start, wake"];
+  tail [shape=box, peripheries=2, label="spec-phase.dot:\nfalsifiers, self-review, lint, confirmation,\nroadmap, declarations, agreement, start, wake"];
 
   start -> isdone;
   isdone -> notdone [label="no"];

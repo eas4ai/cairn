@@ -6,7 +6,7 @@ are part of the Cairn 2 feature specification in docs/spec/cairn-v2.md.
 - install.dot: from a harness with no Cairn to the command, hooks and skills.
 - spec-phase.dot: the tail the three entry flows share, from drafted requirements to the first action.
 - new-project.dot: from an empty directory to an Agreed first commitment.
-- existing-project.dot: from an unspecified or drifted codebase to one prepared commitment.
+- existing-project.dot: from an unspecified or drifted codebase, or a pending supersession, to one prepared commitment.
 - next-feature.dot: from Done to the next Agreed commitment.
 - work-loop.dot: wake names one action with its completion predicate; the agent does it; wake again.
 

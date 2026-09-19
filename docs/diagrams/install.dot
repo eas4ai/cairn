@@ -1,4 +1,4 @@
-// Install: from a harness with no Cairn to a working command, hooks and skills.
+// Install: global harness setup. Project policy is initialized by an entry skill.
 digraph install {
   rankdir=TB;
   graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Install: start to done"];
@@ -9,19 +9,19 @@ digraph install {
   prereq [shape=diamond, label="node and git\navailable?"];
   missing [shape=oval, label="Stop: name the\nmissing prerequisite"];
   harness [shape=diamond, label="Which harness?"];
-  cc [label="Claude Code or Codex:\nplugin marketplace add eas4ai/cairn\nplugin install cairn@cairn\n(hooks registered by the plugin)"];
-  muse [label="Muse:\nmuse plugins install <checkout>\n(hooks registered by the plugin)"];
-  other [label="Any other agent:\nnpx skills add eas4ai/cairn\nthen /install-cairn: clone the checkout,\nregister the hooks where the harness has them"];
-  nohooks [label="No hook system: Cairn is instruction-only;\nthe working agreement is the whole enforcement"];
-  link [label="/install-cairn or the plugin's install step\nlinks ~/.local/bin/cairn to bin/cairn.mjs, once,\nand asks the developer to confirm the authority remote\n(origin proposed, never assumed); only it gets refs/cairn/*"];
+  cc [label="Claude Code or Codex:\ninstall the Cairn plugin\n(hooks registered by the plugin)"];
+  muse [label="Muse:\ninstall the Cairn plugin\n(hooks registered by the plugin)"];
+  other [label="Any other agent:\ninstall the skills, then /install-cairn;\nregister hooks where supported"];
+  nohooks [label="No hook system: instruction-only;\nthe working agreement is the enforcement"];
+  link [label="The plugin or /install-cairn links\n~/.local/bin/cairn to bin/cairn.mjs, once\n(no project remote is selected here)"];
   path [shape=diamond, label="~/.local/bin on PATH?"];
-  addpath [label="Say so; the developer adds it\n(no hook edits the shell)"];
+  addpath [label="Tell the developer to add it;\nno hook edits the shell"];
   help [shape=diamond, label="cairn --help prints\ncommands and exit codes?"];
-  broken [shape=oval, label="Stop: name the failure\n(link target, PATH, node)"];
-  project [shape=diamond, label="Inside a Git repo with\ndocs/spec/roadmap.md?"];
-  wake [label="The session-start hook prints\nthe verdict and its predicate"];
-  choose [label="Choose the entry skill:\n/new-project for software that does not exist\n/existing-project for a codebase"];
-  done [shape=box, peripheries=2, label="Done: the command resolves and helps;\nthe hooks are registered where the harness has them;\nthe four skills are listed"];
+  broken [shape=oval, label="Stop: name the failure\n(link target, PATH or node)"];
+  project [shape=diamond, label="Initialized Cairn project?"];
+  wake [label="Session-start hook prints\nthe verdict and predicate"];
+  choose [label="Choose /new-project or /existing-project;\nthe chosen flow runs cairn init"];
+  done [shape=box, peripheries=2, label="Done: command and skills are available;\nhooks are registered where supported"];
 
   start -> prereq;
   prereq -> missing [label="no"];
@@ -29,7 +29,7 @@ digraph install {
   harness -> cc [label="Claude Code, Codex"];
   harness -> muse [label="Muse"];
   harness -> other [label="other"];
-  other -> nohooks [label="no hook system"];
+  other -> nohooks [label="no hooks"];
   cc -> link; muse -> link; other -> link; nohooks -> link;
   link -> path;
   path -> addpath [label="no"];
@@ -39,6 +39,5 @@ digraph install {
   help -> project [label="yes"];
   project -> wake [label="yes"];
   project -> choose [label="no"];
-  wake -> done;
-  choose -> done;
+  wake -> done; choose -> done;
 }

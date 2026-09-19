@@ -1,4 +1,4 @@
-// Existing project: from a codebase Cairn has not specified, or one whose spec drifted, to the spec-phase tail.
+// Existing project: initialize or resume, reconcile the spec, then enter the shared tail.
 digraph existing_project {
   rankdir=TB;
   graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Existing project: start to the spec-phase tail"];
@@ -6,37 +6,47 @@ digraph existing_project {
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /existing-project"];
-  wake [shape=diamond, label="cairn wake?"];
-  tonext [shape=oval, label="Done: switch to /next-feature;\nthe work is a later commitment"];
-  midway [shape=diamond, label="Resolvable or Waiting:\na commitment is under way.\nDeveloper chooses"];
-  finish [shape=oval, label="Finish the current commitment;\ncapture the request as an item"];
-  supersede_c [label="Supersede the commitment: a Consequential decision\nquoting the developer, and a superseded record on the log\nnaming it and the successor's start; open findings and\nunfixed defects carry to the successor; move Current:"];
-  hasspec [shape=diamond, label="docs/spec/overview.md\nexists?"];
-  readspec [label="Path B: read the spec set first:\nglossary, keystone, domains, roadmap,\ncommitment, decisions, items"];
-  recon [label="Recon before questions:\nmanifests; entry points; data; tests;\nCI and scripts; docs outside the spec; recent history\n(B: every commit since the newest Agreed date)"];
-  report [label="docs/recon.md, every row cited:\nExists / Documented / Contradicted / Unverified;\ncarry unresolved earlier findings forward"];
+  state [shape=diamond, label="Cairn state?"];
+  tonext [shape=oval, label="Done: switch to /next-feature;\nthis work is a later commitment"];
+  fits [shape=diamond, label="Request belongs to the\nopen commitment?"];
+  continue [shape=oval, label="Return to the work loop"];
+  midway [shape=diamond, label="Commitment open:\ndeveloper chooses"];
+  finish [shape=oval, label="Finish current commitment;\ncapture request as an item"];
+  supersede [label="cairn supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
+  pending [label="Pending successor: resume the transition;\nthe later start points back to the superseded record"];
+  init [label="cairn init; developer confirms settings,\nauthority remote or local-only, and auth mode"];
+  hasspec [shape=diamond, label="docs/spec/overview.md exists?"];
+  readspec [label="Path B: read glossary, keystone, domains,\nroadmap, decisions and items first"];
+  recon [label="Recon before questions:\nmanifests, entry points, data, tests, CI, scripts,\nnon-spec docs and recent history"];
+  report [label="docs/recon.md, every row cited:\nExists / Documented / Contradicted / Unverified;\ncarry unresolved earlier findings"];
   corrects [label="Present; developer corrects the reading"];
-  ask [label="The one open question:\na feature to add, or a defect to fix?"];
-  radius [label="Trace the blast radius:\nmodules, tests, spec sections; cite each"];
-  pathA [label="Path A: glossary from the code's identifiers;\nObserved specs inside the radius,\none-line rows in the spec map outside"];
-  pathB [label="Path B: verify each spec section in the radius"];
+  ask [label="One open question:\nfeature to add or defect to fix?"];
+  radius [label="Trace and cite blast radius:\nmodules, tests and spec sections"];
+  pathA [label="Path A: glossary from code identifiers;\nObserved specs in radius; map rows outside"];
+  pathB [label="Path B: verify every spec section in radius"];
   verdict [shape=diamond, label="Holds / Drifted /\nStill Observed / Missing"];
-  drift [label="Raise both sides, cited;\nthe developer rules"];
+  drift [label="Raise both sides with citations;\ndeveloper rules"];
   rule [shape=diamond, label="Which side is wrong?"];
-  specwrong [label="Spec wrong: the developer's ruling revises\nthe Agreed text, cause named"];
-  codewrong [label="Code wrong: the section stands;\ncairn item --defect names it"];
-  missing [label="Write it as Observed,\nas Path A would"];
-  confirm [label="Observed sections the developer confirms\nbecome Draft with falsifiers;\nthe rest stay Observed and are not contract"];
-  roadmap [label="Roadmap with Current: if none exists;\na defect commitment names the requirement it violates\nand a mechanism that reproduces it"];
-  tail [shape=box, peripheries=2, label="The spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, commitment,\ndeclare, AGENTS.md, commit, wake"];
+  specwrong [label="Spec wrong: revise by developer ruling\nbefore successor start"];
+  codewrong [label="Code wrong: spec stands;\ncreate defect item"];
+  missing [label="Write missing behavior as Observed"];
+  confirm [label="Confirmed Observed sections become Draft with falsifiers;\nothers remain Observed and are not contract"];
+  roadmap [label="Prepare roadmap section; a defect commitment names\nthe violated requirement and reproducing mechanism"];
+  tail [shape=box, peripheries=2, label="spec-phase.dot:\nconfirm blocks, declare, agreement, commit,\nstart (with supersession link when present), wake"];
 
-  start -> wake;
-  wake -> tonext [label="Done"];
-  wake -> midway [label="Resolvable | Waiting"];
-  wake -> hasspec [label="not a project"];
+  start -> state;
+  state -> tonext [label="Done"];
+  state -> fits [label="open commitment"];
+  state -> pending [label="pending successor"];
+  state -> init [label="not initialized"];
+  state -> hasspec [label="initialized, no open range"];
+  fits -> continue [label="yes"];
+  fits -> midway [label="no"];
   midway -> finish [label="finish"];
-  midway -> supersede_c [label="supersede"];
-  supersede_c -> hasspec;
+  midway -> supersede [label="supersede"];
+  supersede -> pending;
+  pending -> readspec;
+  init -> hasspec;
   hasspec -> readspec [label="yes (B)"];
   hasspec -> recon [label="no (A)"];
   readspec -> recon;
@@ -44,7 +54,7 @@ digraph existing_project {
   radius -> pathA [label="A"];
   radius -> pathB [label="B"];
   pathB -> verdict;
-  verdict -> confirm [label="holds: cite,\nwrite nothing"];
+  verdict -> confirm [label="holds"];
   verdict -> drift [label="drifted"];
   verdict -> confirm [label="still Observed"];
   verdict -> missing [label="missing"];

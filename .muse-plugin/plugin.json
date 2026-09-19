@@ -1,0 +1,8 @@
+{ "schemaVersion": 1, "name": "cairn", "displayName": "Cairn", "version": "2.0.0-dev",
+  "description": "The referee for agent-led software development: reads the repository, names the next action.",
+  "compat": { "manifestDir": ".muse-plugin", "source": "native" },
+  "capabilities": { "commands": [], "mcpServers": [], "reminders": [],
+    "hooks": [ { "id": "session-start", "event": "SessionStart", "command": ["sh", "hooks/session-start.sh"] },
+               { "id": "stop", "event": "Stop", "command": ["sh", "hooks/stop.sh"] } ],
+    "skills": [ { "id": "install-cairn", "path": "skills/install-cairn/SKILL.md" }, { "id": "new-project", "path": "skills/new-project/SKILL.md" },
+                { "id": "existing-project", "path": "skills/existing-project/SKILL.md" }, { "id": "next-feature", "path": "skills/next-feature/SKILL.md" } ] } }

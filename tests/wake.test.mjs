@@ -10,7 +10,7 @@ import { appendDecision } from '../lib/adr.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
-import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES } from '../lib/wake.mjs';
+import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
 
@@ -342,4 +342,55 @@ test('an unrealized Consequential decision is build until a realized line names 
   await r.commit('realized');
   await r.accept();
   assert.notEqual((await wake(r.cwd)).action, 'build');
+});
+
+async function finished() {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  return r;
+}
+
+// Deviation from the plan text: doneRule is `export async function doneRule(st)`, so every call
+// below is awaited before reading `.holds`/`.failed`; the plan's own literal test code called
+// `doneRule(st).failed` and `doneRule(await readState(...)).holds` without awaiting doneRule
+// itself, which reads properties off a pending Promise (always undefined) rather than the
+// resolved object.
+test('Done rule bullet 1: every frozen requirement has a current bound pass', async () => {
+  const r = await finished();
+  await r.write('src/demo.mjs', 'console.log("changed");\n'); await r.commit('stale the receipt');
+  const st = await readState(r.cwd);
+  assert.deepEqual((await doneRule(st)).failed, ['evidence', 'acceptance']);
+  assert.equal((await wake(r.cwd)).action, 'run');
+});
+
+test('Done rule bullet 2: a review and report exist at the reviewed snapshot', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['review-report']);
+  await r.review();
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['review-report']);
+});
+
+test('Done rule bullet 3: the latest acceptance is at the final snapshot with every resolution accepted and every finding answered', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review();
+  const rep = await r.report([{ n: 1, text: 'f' }]);
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
+  const res = await r.resolveFinding(rep, 1);
+  await r.accept({ rejected: [res] });
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
+  const res2 = await r.resolveFinding(rep, 1);
+  await r.accept({ accepted: [res2] });
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
+});
+
+test('Done rule bullet 4: no escalation, breach, defect, transaction, lease, decision or cycle escalation is open', async () => {
+  const r = await finished();
+  const esc = await r.escalate('cycle');
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['obligations']);
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+  await r.answer(esc, 'ok');
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'done', 'first']);
 });

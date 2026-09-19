@@ -393,3 +393,40 @@ test('accept refuses a resolution sha that appears in both accepted and rejected
   assert.deepEqual([p.accepted, p.rejected], [[], [{ resolution: r1, reason: 'still bad' }]]);
   assert.deepEqual(ledger(await r.log(), 'first').map((f) => f.rejections), [1]);
 });
+
+// tests/review.test.mjs (fix round 1, item 3)
+import { readRef } from '../lib/gitx.mjs';
+import { SNAPSHOTS_REF } from '../lib/snapshots.mjs';
+
+test('a refused report leaves refs/cairn/snapshots unchanged', async () => {
+  const r = await briefed();
+  const before = await readRef(r.cwd, SNAPSHOTS_REF);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { model: 'nope' })), /model nope does not match/);
+  assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
+  // a genuinely successful report still records the review's own already-existing snapshot, never
+  // a fresh one written along the way
+  await report(r.cwd, 'first', adversary(r));
+  assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
+});
+
+test('reviewState is read-only: calling it twice leaves refs/cairn/snapshots unchanged', async () => {
+  const r = await reported();
+  const before = await readRef(r.cwd, SNAPSHOTS_REF);
+  await reviewState(r.cwd, 'first');
+  await reviewState(r.cwd, 'first');
+  assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
+});
+
+test('a refused accept leaves refs/cairn/snapshots unchanged; a successful one advances it exactly once and names the snapshot it wrote', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'a fix');
+  const before = await readRef(r.cwd, SNAPSHOTS_REF);
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [verdict('a'.repeat(40), 'accepted')], findings: [] }), /is not a submitted resolution/);
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted')], findings: [], session: 's-builder' }), /session s-builder wrote the review/);
+  assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
+  const sha = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted')], findings: [] });
+  const after = await readRef(r.cwd, SNAPSHOTS_REF);
+  assert.notEqual(after, before);
+  const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+  assert.equal(p.snapshot, after);
+});

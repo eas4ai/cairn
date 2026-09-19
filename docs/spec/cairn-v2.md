@@ -588,10 +588,10 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | Kind | Required logical fields | Read at |
 |---|---|---|
 | `init` | settings digest, authority remote or local-only, developer-auth mode | every project command |
-| `authorization` | spec digest, agreement digest, settings digest, developer-auth evidence, optional decision ID | start and protected writes |
+| `authorization` | spec digest, agreement digest, settings digest, developer-auth evidence, optional decision ID, intent SHA or null, results | start and protected writes |
 | `command-intent` | transaction ID, command, complete input identity, expected pre-identities, ordered planned writes and digests | wake and `recover` until finalized |
 | `command-abort` | intent SHA, failure class, verified restored identities | wake and `recover` |
-| `start` | slug, `<ws>` roadmap snapshot, repeated `{requirement,text_digest}`, optional `from_superseded:<sha>` | every wake; opens the range |
+| `start` | slug, `<ws>` roadmap snapshot, repeated `{requirement,text_digest}`, optional `from_superseded:<sha>`, intent SHA or null, results | every wake; opens the range |
 | `receipt` | mechanism, definition digest, `<input>`, `ran|error`, observed declared environment, repeated requirement text digest and `pass|fail|unverified`, output digest, exit code or signal | freshness and attempts |
 | `review` | slug, `<ws>`, examined entries, one answer for every fixed question and target, findings | brief, report and Done |
 | `brief` | slug, review SHA, launch instruction (harness, model, transport, boundary), projection digest, payload digest, exclusion manifest digest | report validation |
@@ -613,7 +613,12 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `scope-breach` | path as JSON string, first-observed `<ws>`, allowed-base `<ws>`, declaration-set digest | every wake until disposition |
 | `scope` | breach SHA, `keep|restore`, resulting `<ws>`, escalation and answer SHAs when kept | scope predicate |
 | `done` | slug, final `<ws>` | closes the range |
-| `superseded` | slug, old start SHA, developer decision ID, transition ID, successor slug, carried record SHAs | closes old range; successor start |
+| `superseded` | slug, old start SHA, developer decision ID, transition ID, successor slug, carried record SHAs, intent SHA or null, results | closes old range; successor start |
+
+`docs/spec/roadmap.md` is exempt from scope breaches only outside an open
+commitment range: the developer and agent write its next section, and
+`cairn start` and `cairn promote` edit it, between commitments. Inside an
+open range it is an undeclared change like any other.
 
 An evaluation's raw response is stored byte-for-byte inside its encoded payload;
 the parsed answer is separate. Missing, malformed or noncanonical responses

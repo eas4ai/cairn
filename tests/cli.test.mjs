@@ -315,6 +315,30 @@ test('cairn end --abandon releases the lease and claims no mechanism-definition 
   assert.deepEqual(greeter.definition.inputs, before, 'abandon claims no effect on the mechanism definition');
 });
 
+// Review-2 fix (Minor, new finding on the round-1 re-review): reproduced end to end through
+// main(), the same path bin/cairn.mjs uses. Actor A's lease is released, actor B begins a
+// different one, and A's stale `cairn end --lease <its own sha>` is refused and names B's lease --
+// B's lease is left exactly as it was (still ending normally afterward with a bare `cairn end`).
+test('cairn end --lease <sha> refuses a stale caller and leaves the newer actors lease untouched (review-2 new finding)', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const beginA = await run(['begin', 'implement', 'DEMO-001'], repo.cwd);
+  assert.equal(beginA.code, 0);
+  const shaA = beginA.out.trim().split(' ').at(-1);
+  assert.match(shaA, /^[0-9a-f]{40}$/);
+  assert.equal((await run(['end'], repo.cwd)).code, 0); // A's own lease is released
+
+  assert.equal((await run(['begin', 'run', 'DEMO-002'], repo.cwd)).code, 0); // B begins
+  const staleEnd = await run(['end', '--lease', shaA], repo.cwd);
+  assert.equal(staleEnd.code, 1);
+  assert.match(staleEnd.err, /^cairn: action lease [0-9a-f]{40} is now run DEMO-002 \(session none\), not the lease [0-9a-f]{40} this end expected; run cairn reconcile\n$/);
+
+  // B's lease is untouched: a bare `cairn end` (no --lease) still finds and ends it normally.
+  const normalEnd = await run(['end'], repo.cwd);
+  assert.equal(normalEnd.code, 0);
+  assert.equal(normalEnd.out, 'cairn: lease ended\n');
+});
+
 test('cairn end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);

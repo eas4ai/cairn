@@ -133,6 +133,59 @@ test('end records abandoned: false; end({abandon: true}) records abandoned: true
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });
 
+// Review-2 fix (Minor, new finding on the round-1 re-review): end() and end({abandon}) re-read
+// refs/cairn/in-progress and acted on whatever lease was live, with no check that it was the lease
+// the caller itself began -- reproduced here exactly as the reviewer found it: actor A's lease is
+// released, actor B begins a different one, and a stale end "by A" (no identity check) used to end
+// B's DEMO-002/CORE-002 lease instead. The ruling was explicit: no ownership check (a fresh
+// session must still be able to reconcile a dead actor's lease), only an identity check for a
+// caller that supplies the sha of the lease it itself began.
+test('a stale expected lease is refused and names the newer lease, by sha (review-2 new finding, case 1)', async () => {
+  const cwd = await initialized();
+  const shaA = await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  await end(cwd); // A's own lease is released
+  await begin(cwd, { action: 'run', target: 'CORE-002', env: { CAIRN_SESSION: 's2' } });
+  await assert.rejects(
+    end(cwd, { expect: shaA }),
+    /^LeaseError: cairn: action lease [0-9a-f]{40} is now run CORE-002 \(session s2\), not the lease [0-9a-f]{40} this end expected; run cairn reconcile$/,
+  );
+  // B's lease is untouched by A's stale, refused attempt.
+  const live = await readLease(cwd);
+  assert.equal(live.target, 'CORE-002');
+  assert.equal(live.session, 's2');
+});
+
+// Case 2: reconcile from a fresh session, with no begin (and so no expected sha) of its own, must
+// still be able to end or abandon a dead actor's stale lease -- this is the "no ownership check"
+// half of the ruling. This lease's session (s1) differs from the reconciling session (s2) -- the
+// same shape the "a lease from another session is stale" test below shows wake would name
+// reconcile for -- and end/end({abandon}) with no `expect` supplied is unaffected by the new check
+// and proceeds exactly as before.
+test('reconcile from a fresh session with no expected lease still ends a dead actors lease (review-2 new finding, case 2)', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  const lease = await readLease(cwd);
+  assert.equal(lease.session, 's1', 'the fresh session (s2, below) began nothing itself and differs from this');
+  const abandoned = await end(cwd, { abandon: true }); // no `expect`: a fresh session's reconcile
+  assert.equal(abandoned.abandoned, true);
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+
+// Case 3: normal begin/end is unchanged, whether or not the caller supplies the matching expected
+// lease sha.
+test('a matching expected lease succeeds; normal begin/end is unchanged either way (review-2 new finding, case 3)', async () => {
+  const cwd = await initialized();
+  const sha1 = await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
+  const finished = await end(cwd, { expect: sha1 });
+  assert.equal(finished.target, 'CORE-001');
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+
+  await begin(cwd, { action: 'implement', target: 'CORE-002', env: {} });
+  const finished2 = await end(cwd); // no `expect` at all: unchanged from before this fix
+  assert.equal(finished2.target, 'CORE-002');
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+
 test('a touched path whose bytes equal the start snapshot is unchanged; a modified existing file is changed', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/a.mjs'], env: {} });

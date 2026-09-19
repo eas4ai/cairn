@@ -93,3 +93,66 @@ describe('policy and draft digests', () => {
       ['sufficient', 'noul'], ['reversible_n', 'noul'], ['contradicts_n', 'noul'], ['outside_n', 'noul'], ['observed', 'noul'], ['owner', 'choice']]);
   });
 });
+
+import { kernelFacts, protectedReasons, authorityProjection } from '../lib/evaluate.mjs';
+import { makeProject } from './helpers/repo.mjs';
+
+describe('protected(D) and A(D)', () => {
+  // A hand-built kernelFacts() result, for protectedReasons/authorityProjection unit tests that do
+  // not need a real repository. kernelFacts() itself is exercised separately below, against a real
+  // makeProject() fixture.
+  const facts = (over = {}) => {
+    const D = normalizeDraft(draft());
+    return {
+      slug: 'first', concerns: D.concerns.map((id) => ({ id, valid: true })),
+      pathClasses: Object.fromEntries(D.named_paths.map((p) => [p, 'source'])),
+      attempts: { 'DEMO-001': 1 }, openObligations: { escalations: 0, findings: 0, defects: 0, breaches: 0 },
+      decisions: [], lease: { action: 'implement', target: 'DEMO-001' }, D, ...over,
+    };
+  };
+  test('a clean draft is not protected and projects completely', () => {
+    assert.deepEqual(protectedReasons(facts()), []);
+    const A = authorityProjection(facts());
+    assert.deepEqual(Object.keys(A).sort(), ['attempts', 'cited', 'concerns', 'open_obligations', 'option_count', 'option_index', 'path_counts', 'paths_known', 'protected']);
+    assert.equal(A.option_count, 2);
+    assert.equal(A.paths_known, true);
+  });
+  // Deviation from the plan text: escalate.mjs's real parseConcern (already committed) has no
+  // 'scope:' concern kind at all -- its grammar is a REQ token, 'cycle', or
+  // '(finding|item|breach|transaction|contract):<sha>[#n]'. A concern shaped 'scope:...' would
+  // never pass lib/escalate.mjs's own checkConcerns, so a draft carrying one could never legally
+  // reach evaluate() through cairn escalate. 'a scope ruling' (spec section 10's protected(D)) is
+  // read here as a concern about an actual scope-breach record, i.e. a 'breach:<sha>' token, which
+  // the real grammar does support.
+  test('each protected class routes to the developer with no call', () => {
+    assert.deepEqual(protectedReasons(facts({ pathClasses: { 'migrations/1.sql': 'data' } })), ['data']);
+    assert.deepEqual(protectedReasons(facts({ pathClasses: { 'docs/spec/demo.md': 'protected' } })), ['contract']);
+    assert.deepEqual(protectedReasons(facts({ pathClasses: { 'AGENTS.md': 'protected' } })), ['agreement']);
+    assert.deepEqual(protectedReasons(facts({ pathClasses: { '.cairn/settings.json': 'protected' } })), ['settings']);
+    assert.deepEqual(protectedReasons(facts({ pathClasses: { '.cairn/mechanisms': 'kernel-managed' } })), ['reserved']);
+    assert.deepEqual(protectedReasons(facts({ attempts: { 'DEMO-001': 3 } })), ['fourth-attempt']);
+    assert.deepEqual(protectedReasons(facts({ concerns: [{ id: 'breach:' + 'a'.repeat(40), valid: true }] })), ['scope-ruling']);
+    assert.deepEqual(protectedReasons(facts({ D: { ...normalizeDraft(draft()), recommendation: '  ' } })), ['missing-recommendation']);
+    assert.deepEqual(protectedReasons(facts({ concerns: [{ id: 'DEMO-999', valid: false }] })), ['incomplete-projection']);
+  });
+  test('an agent-written cited decision reaches A(D) only as id and read flag', () => {
+    const A = authorityProjection(facts({ decisions: [{ id: '01J', by: 'agent', read: false, body: 'long agent prose' }] }));
+    assert.deepEqual(A.cited, [{ id: '01J', read: false }]);
+    assert.ok(!JSON.stringify(A).includes('long agent prose'));
+  });
+  test('no named path means unknown', () => {
+    const A = authorityProjection(facts({ pathClasses: {}, D: { ...normalizeDraft(draft()), named_paths: [] } }));
+    assert.equal(A.paths_known, false);
+  });
+  // Deviation from the plan text: normalizeDraft (lib/escalate.mjs's validateDraft) refuses an
+  // empty concerns list ("draft needs at least one concern"), so the plan's own
+  // `{ ...draft(), commitment: 'none', concerns: [], named_paths: [] }` fixture cannot be built at
+  // all. 'cycle' is the one concern kind that names no record and needs no open commitment, so it
+  // stands in for "no meaningful concern" here.
+  test('kernelFacts reads the repository', async () => {
+    const { cwd } = await makeProject();
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), commitment: 'none', concerns: ['cycle'], named_paths: [] }));
+    assert.equal(f.lease, null);
+    assert.deepEqual(f.openObligations, { escalations: 0, findings: 0, defects: 0, breaches: 0 });
+  });
+});

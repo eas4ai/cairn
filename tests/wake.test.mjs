@@ -4,7 +4,8 @@ import { mkdtemp, readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loopRepo } from './helpers/loop.mjs';
+import { loopRepo, mechanismFor } from './helpers/loop.mjs';
+import { declare } from '../lib/mechanisms.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
@@ -214,4 +215,18 @@ test('no current receipt is run; a current fail is implement; three attempts mak
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
   await r.answer(esc, 'ok');
   assert.equal((await wake(r.cwd)).action, 'implement');
+});
+
+test('a current pass whose review metadata is unbound is review mechanism', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  assert.equal((await wake(r.cwd)).action, 'review');
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] });
+  await r.write('src/util.mjs', '');
+  await r.commit('widen inputs');
+  await r.failReq('DEMO-001');
+  await r.write('flags/DEMO-001', 'pass\n'); await r.commit('pass again');
+  await check(r.cwd, 'DEMO-001');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['review mechanism', 'DEMO-001']);
 });

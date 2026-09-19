@@ -653,8 +653,12 @@ state(D) := < process,                                  -- the level rule, the b
                                                         --   of those the decision is about
              context(r) for r in R*,                    -- the domain file's prose around each cited
                                                         --   block: its section heading and the
-                                                        --   paragraphs between it and the block
-             glossary(terms(D)),                        -- the glossary entries for terms the draft uses
+                                                        --   paragraphs between it and the block,
+                                                        --   stopping at the previous block's end so
+                                                        --   adjacent blocks never share prose
+             glossary(terms(D)),                        -- every glossary term that appears as a whole
+                                                        --   word, case-insensitive, in the five fields
+                                                        --   or the options
              decision(d) for d in d*,                   -- the ADR lines it cites
              declaration(m(r)) for r in R*,
              facts,                                     -- touched paths; which of them no mechanism
@@ -676,9 +680,8 @@ domain context and glossary entries are bounded by the cited blocks
 and the draft's own words.
 
 "Changes Agreed text" in the by-construction list is a fact, not a
-judgment: a touched path under `docs/spec/`, or an option whose text
-names a requirement identifier with a revision. The same fact feeds
-`outside_n`.
+judgment: a touched path under `docs/spec/`. The same fact feeds
+`outside_n`. Nothing is matched in the agent's prose.
 
 The code row fills in order until `state_cap_bytes` is spent: the diff
 of the touched paths since the tree in-progress pinned; the whole files
@@ -692,11 +695,13 @@ commitment is worse than none. The record says which tier was reached
 and how many bytes were cut, and the token count the API reports
 beside it, which is how the developer sees whether the byte cap maps
 to the token budget for this project's mix of prose and code. The cap
-is Cairn's rule, a default of 80,000 bytes (about 20k to 26k tokens
-depending on that mix, under a 32k state budget), chosen because a
-Consequential decision that cannot be judged from its diff, its files,
-its commitment and its cited decisions is a decision that should be
-smaller; it is not an API limit.
+is Cairn's rule, a default of 80,000 bytes, chosen so that the state
+stays under a 32k-token budget at either end of the byte-per-token
+range (about 4 for prose, about 3 for code and JSON), with the fixed
+tier, under 20 KB for thirty blocks and a section, leaving most of it
+for the diff; and because a Consequential decision that cannot be
+judged from its diff, its files, its commitment and its cited decisions
+is a decision that should be smaller. It is not an API limit.
 
 **The questions.** One call, all questions at once:
 
@@ -725,8 +730,10 @@ score(o_n) := w_rev * reversible_n + w_con * (1 - contradicts_n) + w_obs * obser
 route(D)   := sufficient < sufficient_threshold
                 -> the escalation stands; reason: insufficient context; nothing else consulted
               outside_rec >= outside_threshold                       -- rec: the recommended option
-                -> refuse: neither a decision nor an escalation; print the capture command,
-                   cairn item --backlog or --next-feature with the reason, and stop
+                -> refuse that option: neither a decision nor an escalation for it; print the
+                   capture command, cairn item --backlog or --next-feature with the reason, and
+                   list the options whose outside_n is under threshold, if any, to recommend
+                   instead; a re-escalation with a new recommendation is a new input
               owner = agent and conf(owner) >= route_confidence
                 -> cairn escalate writes the decision itself: a Consequential line in the ADR
                    with the recommendation as the decision; no escalation record; it queues
@@ -739,6 +746,15 @@ commitment is captured, never built, and never decided. Escalating a
 scope question is the ritual ascent this section exists to stop;
 downgrading one is the agent widening its own commitment. Capture is
 the only right answer, and the kernel names it.
+
+Outside is tested before owner, and the Done rule bounds the cost of
+that order. A false positive, inside work captured as outside, cannot
+lose work: if a requirement in the commitment's set needs it, that
+requirement's receipt stays failing, wake keeps naming `implement`, and
+the agent does the work; the item merely sits. If no requirement needs
+it to pass, it was outside by the kernel's own definition. The cost of
+outside-first is a stray item; the cost of owner-first is the developer
+answering scope questions the rule already answers.
 
 The evaluator is called once per input, by the command that has the
 input. `cairn escalate` writes whichever record the route selects, so
@@ -764,9 +780,11 @@ confidence. Reversals climbing means the evaluator is downgrading
 decisions that were the developer's; reversals near zero with
 escalations still high means the threshold is too timid. The developer
 turns `route_confidence`, `sufficient_threshold`, `outside_threshold`
-and the weights; the questions do not change. A captured item that
-the developer later promotes unchanged is the signal that
-`outside_threshold` is too low.
+and the weights; the questions do not change. The false-positive rate
+of `outside_threshold` is already in the record set: an item whose
+`Cairn-From` names a requirement in `scope(c)` of the commitment it was
+captured from is one the deferral rule then demands an outside record
+for; count those per commitment. No new field.
 
 **Validation.** The kernel refuses `enabled: true` with no `model`, a
 `schema` it does not read, a path in both `outside` and `source`, and
@@ -789,7 +807,10 @@ over `state_cap_bytes`; two states at the same tree with different
 digests; an evaluated decision in the by-construction class, a `data`
 hit included; a call made while the queue holds unread decisions from
 the last Done; a settings file carrying a key; a record whose model
-trailer is the alias rather than the resolved version.
+trailer is the alias rather than the resolved version; a capture
+refusal where the recommended option's `outside` is under
+`outside_threshold`; a decision or escalation written where it is at
+or above it.
 
 **Settings shape.**
 

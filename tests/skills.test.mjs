@@ -64,3 +64,10 @@ test("the AGENTS.md template states a move for every verdict and action", () => 
   for (const gone of ["explain", "present", "reword", "next-iteration", "refus"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });
+
+test("existing-project follows existing-project.dot and spec-phase.dot", () => checkSkill("existing-project", ["existing-project.dot", "spec-phase.dot"]));
+test("existing-project carries the same spec-phase tail as new-project", () => assert.equal(tail("existing-project"), tail("new-project")));
+test("existing-project names supersession as two phases", () => {
+  const t = skill("existing-project");
+  assert.ok(t.includes("`cairn supersede ")); assert.ok(/does not move `Current:`/.test(t)); assert.ok(/points back to the superseded record/.test(t));
+});

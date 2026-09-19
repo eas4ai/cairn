@@ -7,7 +7,7 @@ import { makeRepo } from './helpers/repo.mjs';
 import { validatePath, validateGlob, assertInside, PathError, RESERVED, PROTECTED, PROTECTED_EXCEPT, KERNEL_MANAGED, CREDENTIAL_PATTERNS } from '../lib/paths.mjs';
 
 test('validatePath accepts slash-separated relative UTF-8 paths', () => {
-  for (const p of ['a', 'src/a.js', '.github/w.yml', 'dir/é.md', '.cairn/settings.json']) assert.equal(validatePath(p), p);
+  for (const p of ['a', 'src/a.js', '.github/w.yml', 'dir/\u00e9.md', '.cairn/settings.json']) assert.equal(validatePath(p), p);
 });
 test('validatePath rejects absolute, .git root, empty components, dot components, NUL, backslash, bad Unicode', () => {
   const cases = { '/etc/x': /absolute/, '.git/config': /\.git/, 'a/.git/x': /\.git/, 'a//b': /empty component/, 'a/': /empty component/, '': /empty path/,

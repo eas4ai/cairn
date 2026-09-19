@@ -60,7 +60,7 @@ test('a snapshot refuses untracked credential paths and network_exclude matches,
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('.env', 'TRACKED=1\n'); await repo.commit('tracked env is the developer\'s choice');
   await writeWorkspaceSnapshot(repo.dir);
-  for (const p of ['.env.local', 'deploy/id_rsa', 'certs/x.pem', 'k.p12', 'k.pfx', 'k.key']) {
+  for (const p of ['.env.local', 'deploy/id_rsa', 'certs/x.pem', 'k.p12', 'k.pfx', 'k.key', 'deploy/id_ed25519_sk']) {
     await repo.write(p, 'secret');
     await assert.rejects(writeWorkspaceSnapshot(repo.dir), (e) => e instanceof SnapshotError && e.message.includes(p));
     await repo.git('clean', '-fdq');

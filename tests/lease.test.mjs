@@ -113,6 +113,26 @@ test('end removes the lease with compare-and-swap, calls the hook with the lease
   assert.deepEqual(returned.touch, ['src/new.mjs', 'src/untouched.mjs']);
 });
 
+// Review-1 fix, item 4: section 5's reconcile row reads "the action it named finished or was
+// explicitly abandoned", but nothing distinguished the two before this fix -- end() and
+// end({abandon: true}) were identical. abandoned is now written into a terminal commit (the
+// lease's own fields plus this one), parented on the lease commit, before the ref is removed;
+// end() returns its sha so a caller (here, or lib/cli.mjs's endCommand) can read back what was
+// actually recorded, not only trust an in-memory flag.
+test('end records abandoned: false; end({abandon: true}) records abandoned: true, in a terminal commit', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
+  const finished = await end(cwd);
+  assert.equal(finished.abandoned, false);
+  assert.equal(JSON.parse((await catCommit(cwd, finished.terminalSha)).body).abandoned, false);
+
+  await begin(cwd, { action: 'implement', target: 'CORE-002', env: {} });
+  const abandoned = await end(cwd, { abandon: true });
+  assert.equal(abandoned.abandoned, true);
+  assert.equal(JSON.parse((await catCommit(cwd, abandoned.terminalSha)).body).abandoned, true);
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+
 test('a touched path whose bytes equal the start snapshot is unchanged; a modified existing file is changed', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/a.mjs'], env: {} });
@@ -185,6 +205,22 @@ test('a lease from another session is stale and wake would name reconcile; the s
     { action: 'reconcile', target: 'implement CORE-001', reason: 'action lease from session s1 is stale in session s2' });
   assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's1' }), null);
   await end(cwd);
+  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }), null);
+});
+
+// Review-1 fix, item 4's own test: begin, then end --abandon, then wake's reconcile predicate is
+// satisfied. reconcile is unmet only while a stale lease exists (lib/wake.mjs's leaseStale reads
+// isStale, above); end({abandon: true}) removes the lease exactly as a plain end does, so an
+// explicitly abandoned action reconciles a stale lease the same way finishing it does -- the
+// difference reconcile itself cannot see is which of the two happened, which is why it is now
+// recorded in the terminal commit instead (the test above this one).
+test('a stale lease can be reconciled by abandoning it: reconcile is satisfied once it is gone', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  assert.deepEqual(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }),
+    { action: 'reconcile', target: 'implement CORE-001', reason: 'action lease from session s1 is stale in session s2' });
+  const abandoned = await end(cwd, { abandon: true });
+  assert.equal(abandoned.abandoned, true);
   assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }), null);
 });
 

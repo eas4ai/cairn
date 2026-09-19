@@ -297,6 +297,24 @@ test('cairn end writes a changed --touch path into the mechanism definition (fin
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
 });
 
+// Review-1 fix, item 4: `cairn end --abandon` must release the lease (so wake's reconcile
+// predicate is satisfied, lib/lease.test.mjs covers that) but must not also claim the touched path
+// as a real mechanism-definition change the way a plain `cairn end` does above -- that claim is
+// exactly the "effect" abandoning is supposed to withhold.
+test('cairn end --abandon releases the lease and claims no mechanism-definition effect (review-1 item 4)', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
+  assert.equal(beginResult.code, 0);
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const before = (await readMechanisms(repo.cwd)).greeter.definition.inputs;
+  const endResult = await run(['end', '--abandon'], repo.cwd);
+  assert.equal(endResult.code, 0);
+  assert.equal(endResult.out, 'cairn: lease abandoned\ncairn: touch helper.mjs not written: action abandoned\n');
+  const { greeter } = await readMechanisms(repo.cwd);
+  assert.deepEqual(greeter.definition.inputs, before, 'abandon claims no effect on the mechanism definition');
+});
+
 test('cairn end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);

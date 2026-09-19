@@ -72,3 +72,44 @@ test('readLease ignores a stray .cairn/in-progress file: the shared slot is gone
   writeFileSync(join(cwd, '.cairn/in-progress'), 'action: implement\ntarget: X\n');
   assert.equal(await readLease(cwd), null);
 });
+
+import { end, onEnd, touchOutcome, covers } from '../lib/lease.mjs';
+
+test('end removes the lease with compare-and-swap and reports the touch outcome to the hook', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/new.mjs', 'src/untouched.mjs'], env: {} });
+  writeFileSync(join(cwd, 'src/new.mjs'), 'export const n = 1;\n');
+  const seen = [];
+  const off = onEnd(async (c, lease, outcome) => { seen.push({ c, target: lease.target, outcome }); });
+  await end(cwd);
+  off();
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+  assert.deepEqual(seen, [{ c: cwd, target: 'CORE-001', outcome: { changed: ['src/new.mjs'], unchanged: ['src/untouched.mjs'] } }]);
+});
+
+test('a touched path whose bytes equal the start snapshot is unchanged; a modified existing file is changed', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/a.mjs'], env: {} });
+  assert.deepEqual(await touchOutcome(cwd, await readLease(cwd)), { changed: [], unchanged: ['src/a.mjs'] });
+  writeFileSync(join(cwd, 'src/a.mjs'), 'export const a = 2;\n');
+  assert.deepEqual(await touchOutcome(cwd, await readLease(cwd)), { changed: ['src/a.mjs'], unchanged: [] });
+  await end(cwd);
+});
+
+test('end without a lease is refused; a failing hook keeps the lease', async () => {
+  const cwd = await initialized();
+  await assert.rejects(end(cwd), /^LeaseError: cairn: no action lease to end/);
+  await begin(cwd, { action: 'run', target: 'CORE-001', env: {} });
+  const off = onEnd(async () => { throw new Error('declare failed'); });
+  await assert.rejects(end(cwd), /declare failed/);
+  off();
+  assert.ok(await readRef(cwd, LEASE_REF), 'lease survives a failed end');
+  await end(cwd);
+});
+
+test('covers: a lease covers its target inputs and its touch list', async () => {
+  const lease = { action: 'implement', target: 'CORE-001', touch: ['src/new.mjs'] };
+  assert.equal(covers(lease, 'src/new.mjs', ['src/a.mjs']), true);
+  assert.equal(covers(lease, 'src/a.mjs', ['src/a.mjs']), true);
+  assert.equal(covers(lease, 'src/other.mjs', ['src/a.mjs']), false);
+});

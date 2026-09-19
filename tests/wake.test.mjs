@@ -139,3 +139,19 @@ test('an undisposed breach is named before an unanswered escalation', async () =
   await dispose(r.cwd, b, 'restore');
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
+
+test('an escalation without a final answer is Waiting with the five fields verbatim; ask makes reply Resolvable', async () => {
+  const r = await loopRepo();
+  const esc = await r.escalate('DEMO-001');
+  let v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.party, 'developer');
+  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I' });
+  await r.answer(esc, 'ask', 'why?');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'reply', 'first']);
+  await r.reply(esc);
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+  await r.answer(esc, 'instead', 'do this');
+  assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
+});

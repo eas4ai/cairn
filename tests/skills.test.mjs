@@ -71,3 +71,7 @@ test("existing-project names supersession as two phases", () => {
   const t = skill("existing-project");
   assert.ok(t.includes("`cairn supersede ")); assert.ok(/does not move `Current:`/.test(t)); assert.ok(/points back to the superseded record/.test(t));
 });
+
+test("next-feature follows next-feature.dot and spec-phase.dot", () => checkSkill("next-feature", ["next-feature.dot", "spec-phase.dot"]));
+test("next-feature carries the same spec-phase tail", () => assert.equal(tail("next-feature"), tail("new-project")));
+test("next-feature runs from Done only", () => assert.ok(/says Done\?[\s\S]*Stop/.test(skill("next-feature"))));

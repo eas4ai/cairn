@@ -484,3 +484,80 @@ describe('evaluate', () => {
     assert.equal(r.reason, 'disabled'); assert.equal((await readLog(cwd)).length, before);
   });
 });
+
+import { upperBound, calibrate, assertRouteMode, currentCalibration, RouteModeError } from '../lib/evaluate.mjs';
+import { escalate, answer } from '../lib/escalate.mjs';
+
+describe('calibration', () => {
+  test('exact one-sided bound', () => {
+    assert.ok(Math.abs(upperBound(0, 60) - (1 - Math.pow(0.05, 1 / 60))) < 1e-9);
+    assert.ok(upperBound(0, 60) < 0.05); assert.ok(upperBound(0, 30) > 0.05);
+    assert.ok(upperBound(1, 60) > upperBound(0, 60)); assert.ok(upperBound(0, 1000) < upperBound(0, 100));
+    assert.equal(upperBound(5, 5), 1);
+  });
+
+  const asDev = { confirm: async () => true };
+  // Deviation from the plan text: the plan builds each labelled case by calling escalate() with an
+  // evaluation SHA and answer(cwd, sha, ...) (escalation SHA as the second positional argument).
+  // lib/escalate.mjs's real answer(cwd, slug, kind, text, opts) (already committed) takes the
+  // commitment SLUG there, narrowed to one escalation via opts.escalation, and needs developer
+  // evidence (opts.confirm) for its unsigned-local authentication.
+  let labelSeq = 0;
+  async function labelled(cwd, n, ownerLabel, agentProb = 0.95) {
+    for (let i = 0; i < n; i++) {
+      const q = `label ${labelSeq++}`;
+      const r = await evaluate(cwd, draft({ question: q }), { transport: transport([optionBody(), ownerBody(agentProb)]) });
+      const sha = await escalate(cwd, { ...draft({ question: q }), evaluation: r.evaluationSha });
+      await answer(cwd, 'first', 'ok', '', { ...asDev, escalation: sha, owner: ownerLabel });
+    }
+  }
+  test('60 zero-error predicted-agent cases pass at 0.05; 30 cannot', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 30, 'agent');
+    let c = await calibrate(cwd);
+    assert.deepEqual([c.pass, c.sample, c.errors], [false, 30, 0]); assert.ok(c.bound > 0.05);
+    await labelled(cwd, 30, 'agent');
+    c = await calibrate(cwd);
+    assert.deepEqual([c.pass, c.sample, c.errors], [true, 60, 0]);
+    const rec = (await readLog(cwd)).at(-1);
+    assert.equal(rec.kind, 'calibration'); assert.equal(rec.payload.result, 'pass'); assert.equal(rec.payload.predicted_agent, 60);
+    assert.match(rec.payload.criterion, /0\.05/); assert.match(rec.payload.criterion, /60/);
+    const commit = await catCommit(cwd, rec.sha);
+    assert.doesNotThrow(() => decodeRecord(commit));
+  });
+  test('denominator is predicted-agent labelled cases only; unknown and predicted-developer are excluded', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 3, 'agent'); await labelled(cwd, 2, 'unknown'); await labelled(cwd, 4, 'agent', 0.2);
+    await labelled(cwd, 1, 'developer');
+    const c = await calibrate(cwd);
+    assert.deepEqual([c.sample, c.errors], [4, 1]);
+  });
+  test('a policy change resets calibration', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 60, 'agent');
+    assert.equal((await calibrate(cwd)).pass, true);
+    const { settings } = await loadSettings(cwd);
+    settings.typesafeai = { ...settings.typesafeai, route_confidence: 0.85 };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    assert.equal(await currentCalibration(cwd, settings, await readLog(cwd)), null);
+    assert.equal((await calibrate(cwd)).sample, 0);
+  });
+  // Deviation from the plan text: mode: 'route' can never be the setting a project starts with --
+  // lib/settings.mjs's validateSettings (already committed) refuses route mode without a passing
+  // calibration, and cairn init writes settings through that same validator, so a project cannot
+  // even be created in route mode. The fixture instead starts in shadow, then pokes route mode
+  // directly onto the settings file (bypassing cairn authorize's own validation, the same way other
+  // tests in this file edit settings.json directly) purely to exercise assertRouteMode's own read,
+  // which -- for exactly this reason -- reads the raw file itself rather than going through
+  // loadSettings/validateSettings.
+  test('route mode is refused without a matching passing calibration and with an alias', async () => {
+    const cwd = await repoWithCommitment('shadow');
+    const { settings } = await loadSettings(cwd);
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    await assert.rejects(assertRouteMode(cwd), (e) => e instanceof RouteModeError && /cairn: route mode requires a passing calibration/.test(e.message));
+    settings.typesafeai.model = 'jev-latest';
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    await assert.rejects(assertRouteMode(cwd), /alias/);
+  });
+});

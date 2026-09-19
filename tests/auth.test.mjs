@@ -214,3 +214,39 @@ test('a settings change needs a new authorization naming the new digest', async 
   await authorize(cwd, { confirm: yes });
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
 });
+
+import { readDecision, runDecisionsRead } from '../lib/auth.mjs';
+
+test('decisions --read writes a read record with developer evidence', async () => {
+  const cwd = await initialized();
+  const sha = await readDecision(cwd, '01J0000000000000000000ABCD', { confirm: yes });
+  const rec = (await readLog(cwd)).at(-1);
+  assert.equal(rec.sha, sha);
+  assert.equal(rec.kind, 'read');
+  assert.equal(rec.target, '01J0000000000000000000ABCD');
+  assert.equal(rec.payload.decision, '01J0000000000000000000ABCD');
+  assert.equal(rec.payload.evidence.purpose, 'read');
+  assert.equal(rec.payload.evidence.subject, '01J0000000000000000000ABCD');
+  assert.equal(verifyEvidence({ signing_key: null }, rec.payload.evidence), true);
+});
+
+test('decisions --read refuses a malformed decision id and an unconfirmed read', async () => {
+  const cwd = await initialized();
+  await assert.rejects(readDecision(cwd, 'not-a-ulid', { confirm: yes }), /^AuthError: cairn: decision id must be a 26-character ULID/);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { confirm: async () => false }), /did not confirm read/);
+});
+
+test('runDecisionsRead exits 1 with one cairn: line when the signature is missing in signed mode', async () => {
+  const { cwd } = await repoWith(BASE);
+  const { generateKeyPairSync } = await import('node:crypto');
+  const pem = generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' });
+  const s = JSON.parse(SETTINGS); s.signing_key = pem;
+  writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(s));
+  const err = []; const out = [];
+  const io = { cwd, env: {}, stdout: (l) => out.push(l), stderr: (l) => err.push(l) };
+  const code = await runDecisionsRead(['--read', '01J0000000000000000000ABCD'], io);
+  assert.equal(code, 1);
+  assert.equal(err.length, 1);
+  assert.match(err[0], /^cairn: signing_key is set; pass --signature or CAIRN_SIGNATURE/);
+  assert.match(out[0], /^cairn: sign this payload: \{"nonce":/);
+});

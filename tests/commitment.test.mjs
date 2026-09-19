@@ -375,3 +375,29 @@ test('the ADR line the decision itself appended is not a stop; a second realizat
   await assert.rejects(realize(repo.cwd, id, { subject: 'again' }), /already realized/);
   await assert.rejects(realize(repo.cwd, '01ARZ3NDEKTSV4RRFFQ69G5FAV', { subject: 'x' }), /no decision/);
 });
+
+// Fix round 1
+
+import { recover } from '../lib/tx.mjs';
+
+test('Fix round 1 finding 1: promote crashed after each write recovers to exactly one promotion and one start record', async () => {
+  for (let n = 0; n < 3; n++) {
+    const repo = await project();
+    const b = await finished(repo);
+    await assert.rejects(promote(repo.cwd, b, { failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
+    const beforeRecover = await readLog(repo.cwd);
+    const intent = beforeRecover.findLast((r) => r.kind === 'command-intent');
+    assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
+    const r = await recover(repo.cwd, intent.target);
+    assert.equal(r.completed, 'forward', `write ${n}: recovery completes forward`);
+    const log = await readLog(repo.cwd);
+    assert.equal(log.filter((x) => x.kind === 'promotion').length, 1, `write ${n}: exactly one promotion record`);
+    assert.equal(log.filter((x) => x.kind === 'start' && x.payload.slug === 'second').length, 1, `write ${n}: exactly one successor start record`);
+  }
+});
+
+test('Fix round 1 finding 6: supersede refuses the open commitment naming itself as successor', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  await assert.rejects(supersede(repo.cwd, 'first', { quote: 'x', confirm: confirmYes }), /successor first is the same as the open commitment first/);
+});

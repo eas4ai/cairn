@@ -1351,7 +1351,7 @@ explanation of what a route means.
 The draft is unchanged: `D := <commitment, concerns, question,
 recommendation, because, if_wrong, instead, options, named_paths,
 cited_decisions>`. The measurement state is `M(D) := <D's five narrative
-fields, the recommended option, C(c), A(D)>`, where `C(c)` is the rule text,
+fields, the recommended option, C(c), A(D)>`, where `C(c)` is the
 start keystone, commitment and glossary, frozen requirements, and developer-
 written cited decisions (`by: developer`), and `A(D)` is the closed JSON
 authority projection of validated IDs, enums, booleans and counts the old

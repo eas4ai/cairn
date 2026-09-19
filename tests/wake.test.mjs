@@ -155,3 +155,16 @@ test('an escalation without a final answer is Waiting with the five fields verba
   await r.answer(esc, 'instead', 'do this');
   assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
 });
+
+test('an unfixed defect against a set requirement is named before dirty inputs', async () => {
+  const r = await loopRepo();
+  const item = await r.item('defect', 'DEMO-001', 'wrong-greeting');
+  await r.write('src/demo.mjs', 'console.log("hey");\n');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['fix', 'wrong-greeting']);
+  await r.commit('fix greeting');
+  await r.add('fix', 'wrong-greeting', { item, snapshot: await r.snap() });
+  assert.equal((await wake(r.cwd)).action, 'fix');           // no current pass at or after the fix yet
+  await r.passReq('DEMO-001');
+  assert.notEqual((await wake(r.cwd)).action, 'fix');
+});

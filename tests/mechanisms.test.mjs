@@ -53,6 +53,11 @@ for (const [name, overrides, message] of [
   ['no requirements', { requirements: [] }, /at least one requirement/],
   ['a malformed requirement id', { requirements: ['demo1'] }, /requirement identifier/],
   ['an empty command', { command: '' }, /command/],
+  // Fix round 1 finding 3: a glob metacharacter in inputs or documents must be refused (the
+  // carried plan 02 obligation the original Task 1 pass missed).
+  ['a * glob metacharacter in inputs', { inputs: [...DEFINITION.inputs, 'src/*.mjs'] }, /glob metacharacter/],
+  ['a ? glob metacharacter in inputs', { inputs: [...DEFINITION.inputs, 'note?.md'] }, /glob metacharacter/],
+  ['a [ glob metacharacter in documents', { inputs: [...DEFINITION.inputs, 'bad[1].md'], documents: ['bad[1].md'] }, /glob metacharacter/],
 ]) {
   test(`declare refuses ${name}`, async () => {
     const repo = await project();
@@ -66,6 +71,14 @@ test('declare refuses a bad mechanism name and readMechanisms refuses a noncanon
   await assert.rejects(declare(repo.cwd, 'Greeter One', DEFINITION), /mechanism name/);
   await repo.write('.cairn/mechanisms/bad.json', '{ "schema": 1 }\n');
   await assert.rejects(readMechanisms(repo.cwd), /bad\.json/);
+});
+
+// Fix round 1 finding 9: readMechanisms shape-checks the definition, not just the top-level keys.
+test('readMechanisms refuses a malformed definition shape, naming the file', async () => {
+  const repo = await project();
+  const entry = { schema: 1, definition: {}, review: {} };
+  await repo.write('.cairn/mechanisms/broken.json', canonicalize(entry));
+  await assert.rejects(readMechanisms(repo.cwd), (e) => e instanceof MechanismError && /^cairn: /.test(e.message) && /broken\.json/.test(e.message));
 });
 
 import { reviewMechanism, reviewBinds } from '../lib/mechanisms.mjs';
@@ -126,37 +139,78 @@ test('review mechanism refuses a pass receipt, an error receipt, another mechani
   await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', '0'.repeat(40)), /not a record on refs\/cairn\/log/);
 });
 
-import { begin, end, readLease } from '../lib/lease.mjs';
+import { begin, end, readLease, touchOutcome } from '../lib/lease.mjs';
 import { applyTouch } from '../lib/mechanisms.mjs';
 
-test('end writes a changed touched path into the definition and unbinds review metadata', async () => {
+// Fix round 1 findings 2 and 7: applyTouch is no longer wired in as a module-level onEnd side
+// effect (lib/cli.mjs's endCommand calls it explicitly instead -- see tests/cli.test.mjs), and it
+// no longer recomputes "changed" itself; it takes the same outcome lib/lease.mjs's own
+// touchOutcome computes. These tests call applyTouch directly with a real lease and a real
+// outcome, the same shape lib/cli.mjs's wiring produces, then call end() separately to confirm it
+// still finishes normally (it does not, itself, write anything into a definition any more).
+test('applyTouch writes a changed touched path into the definition and unbinds review metadata', async () => {
   const repo = await declared();
   await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
   await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
   await repo.write('helper.mjs', 'export const x = 1;\n');
-  await end(repo.cwd);
-  assert.equal(await readLease(repo.cwd), null);
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  const result = await applyTouch(repo.cwd, lease, outcome);
+  assert.deepEqual(result, { added: ['helper.mjs'], dropped: [], unclaimed: [] });
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
   assert.deepEqual(greeter.review, {});
+  await end(repo.cwd);
+  assert.equal(await readLease(repo.cwd), null);
 });
 
-test('end drops an unchanged touched path and leaves the definition and review alone', async () => {
+test('applyTouch drops an unchanged touched path and leaves the definition and review alone', async () => {
   const repo = await declared();
   await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
   const before = await readMechanisms(repo.cwd);
   await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
-  const r = await applyTouch(repo.cwd, await readLease(repo.cwd));
-  assert.deepEqual(r, { added: [], dropped: ['helper.mjs'] });
-  await end(repo.cwd);
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  const result = await applyTouch(repo.cwd, lease, outcome);
+  assert.deepEqual(result, { added: [], dropped: ['helper.mjs'], unclaimed: [] });
   assert.deepEqual(await readMechanisms(repo.cwd), before);
+  await end(repo.cwd);
 });
 
-test('a touched path that changed and was removed again is dropped', async () => {
+test('a touched path that changed and was removed again is dropped, following touchOutcome', async () => {
   const repo = await declared();
   await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['scratch.txt'] });
   await repo.write('scratch.txt', 'x\n');
   await rm(join(repo.cwd, 'scratch.txt'));
-  assert.deepEqual(await applyTouch(repo.cwd, await readLease(repo.cwd)), { added: [], dropped: ['scratch.txt'] });
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  assert.deepEqual(outcome, { changed: [], unchanged: ['scratch.txt'] });
+  assert.deepEqual(await applyTouch(repo.cwd, lease, outcome), { added: [], dropped: ['scratch.txt'], unclaimed: [] });
+  await end(repo.cwd);
+});
+
+// Fix round 1 finding 4: a lease target that no mechanism declares, or more than one, used to make
+// applyTouch throw. Now that end() removes the lease ref before running hooks, that throw would
+// lose the change with nothing left to retry against; applyTouch instead reports it as unclaimed
+// and still completes.
+test('finding 4: applyTouch reports an unclaimable touch instead of throwing, for a review-slug target', async () => {
+  const repo = await declared();
+  await begin(repo.cwd, { action: 'review', target: 'my-slug', touch: ['helper.mjs'] });
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  const result = await applyTouch(repo.cwd, lease, outcome);
+  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares my-slug' }] });
+  await end(repo.cwd);
+});
+
+test('finding 4: applyTouch reports an unclaimable touch for a REQ no mechanism declares', async () => {
+  const repo = await declared();
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-999', touch: ['helper.mjs'] });
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  const result = await applyTouch(repo.cwd, lease, outcome);
+  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares DEMO-999' }] });
   await end(repo.cwd);
 });

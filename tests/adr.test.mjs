@@ -93,3 +93,27 @@ test('breach: a final line without its newline', async () => {
   await writeFile(join(repo.cwd, ADR_PATH), text.trimEnd());
   await assert.rejects(readAdr(repo.cwd), /newline/);
 });
+
+// Fix round 1
+
+import { decisionFileBytes } from '../lib/adr.mjs';
+
+test('Fix round 1 finding 2: decisionFileBytes validates and computes the new file bytes without writing anything', async () => {
+  const repo = await project();
+  const id1 = await decide(repo.cwd, draft); // one real line already on disk, to prove appending works past an existing one
+  const before = await readFile(join(repo.cwd, ADR_PATH), 'utf8');
+  const snap = await writeWorkspaceSnapshot(repo.cwd);
+  const line = { kind: 'decision', level: 'Consequential', by: 'agent', ...draft, base_snap: snap, evaluation: null, interfaces: [] };
+  const { id, bytes } = await decisionFileBytes(repo.cwd, line, { command: 'decide' });
+  assert.equal(await readFile(join(repo.cwd, ADR_PATH), 'utf8'), before, 'nothing was written to disk');
+  assert.ok(bytes.startsWith(before), 'the new bytes extend the existing file');
+  const added = bytes.slice(before.length);
+  assert.equal(added.at(-1), '\n');
+  const obj = JSON.parse(added.trimEnd());
+  assert.equal(canonicalize(obj), added.trimEnd(), 'the appended line is canonical JSON');
+  assert.deepEqual([obj.id, obj.kind, obj.base_snap], [id, 'decision', snap]);
+  await writeFile(join(repo.cwd, ADR_PATH), bytes);
+  assert.deepEqual((await readAdr(repo.cwd)).map((l) => l.id), [id1, id]);
+  // decisionFileBytes still refuses a wrongly-assigned command, before touching the file.
+  await assert.rejects(decisionFileBytes(repo.cwd, line, { command: 'realize' }), AdrError);
+});

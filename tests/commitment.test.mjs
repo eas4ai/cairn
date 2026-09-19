@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { readLog, decodeRecord } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { item, outside, fix, start, openCommitment, CommitmentError } from '../lib/commitment.mjs';
-import { project, roadmapWith, OVERVIEW } from './helpers/commitment-fixture.mjs';
+import { project, roadmapWith, OVERVIEW, ROADMAP } from './helpers/commitment-fixture.mjs';
 
 const last = async (cwd, kind) => (await readLog(cwd)).filter((r) => r.kind === kind).at(-1);
 
@@ -392,7 +392,10 @@ test('the ADR line the decision itself appended is not a stop; a second realizat
 import { recover } from '../lib/tx.mjs';
 
 test('Fix round 1 finding 1: promote crashed after each write recovers to exactly one promotion and one start record', async () => {
-  for (let n = 0; n < 3; n++) {
+  // Fix round 1 finding 2 folded the ADR line and the roadmap's Current: edit into the same
+  // transaction's plan.writes (promotion log, ADR file, roadmap file, branch, snapshot: 5 writes),
+  // so this now covers 5 crash points, not the 3 from before that fix.
+  for (let n = 0; n < 5; n++) {
     const repo = await project();
     const b = await finished(repo);
     await assert.rejects(promote(repo.cwd, b, { failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
@@ -404,7 +407,17 @@ test('Fix round 1 finding 1: promote crashed after each write recovers to exactl
     const log = await readLog(repo.cwd);
     assert.equal(log.filter((x) => x.kind === 'promotion').length, 1, `write ${n}: exactly one promotion record`);
     assert.equal(log.filter((x) => x.kind === 'start' && x.payload.slug === 'second').length, 1, `write ${n}: exactly one successor start record`);
+    assert.equal((await readAdr(repo.cwd)).length, 1, `write ${n}: exactly one ADR line, not one per crash-and-recover attempt`);
+    assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m, `write ${n}: Current: moved exactly once`);
   }
+});
+
+test('Fix round 1 finding 2: promote on a roadmap with no Current: line leaves no ADR line', async () => {
+  const repo = await project();
+  const b = await finished(repo);
+  await repo.write('docs/spec/roadmap.md', ROADMAP.replace('Current: first\n\n', ''));
+  await assert.rejects(promote(repo.cwd, b), /has no Current: line/);
+  assert.deepEqual(await readAdr(repo.cwd), []);
 });
 
 test('Fix round 1 finding 6: supersede refuses the open commitment naming itself as successor', async () => {
@@ -450,6 +463,53 @@ test('Fix round 1 finding 9: a forged second init record surfaces as its own bre
   const log = await readLog(repo.cwd);
   await assert.rejects(currentAuthorization(repo.cwd, log), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
   await assert.rejects(start(repo.cwd, 'first'), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
+});
+
+test('Fix round 1 finding 10: a plain start crashed after each write recovers to exactly one start record', async () => {
+  for (let n = 0; n < 2; n++) {
+    const repo = await project();
+    await assert.rejects(start(repo.cwd, 'first', { failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
+    const log0 = await readLog(repo.cwd);
+    const intent = log0.findLast((r) => r.kind === 'command-intent');
+    assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
+    const r = await recover(repo.cwd, intent.target);
+    assert.equal(r.completed, 'forward', `write ${n}: recovery completes forward`);
+    const log = await readLog(repo.cwd);
+    assert.equal(log.filter((x) => x.kind === 'start' && x.payload.slug === 'first').length, 1, `write ${n}: exactly one start record`);
+  }
+});
+
+test('Fix round 1 findings 2, 10: a supersession successor start crashed after each write recovers to exactly one start record and Current: moved exactly once', async () => {
+  for (let n = 0; n < 3; n++) {
+    const repo = await project();
+    await start(repo.cwd, 'first');
+    await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+    await assert.rejects(start(repo.cwd, 'second', { failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
+    const log0 = await readLog(repo.cwd);
+    const intent = log0.findLast((r) => r.kind === 'command-intent');
+    assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
+    const r = await recover(repo.cwd, intent.target);
+    assert.equal(r.completed, 'forward', `write ${n}: recovery completes forward`);
+    const log = await readLog(repo.cwd);
+    assert.equal(log.filter((x) => x.kind === 'start' && x.payload.slug === 'second').length, 1, `write ${n}: exactly one successor start record`);
+    assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m, `write ${n}: Current: moved exactly once`);
+  }
+});
+
+test('Fix round 1 findings 2, 10: supersede crashed after each write recovers to exactly one superseded record and one ADR line', async () => {
+  for (let n = 0; n < 2; n++) {
+    const repo = await project();
+    await start(repo.cwd, 'first');
+    await assert.rejects(supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes, failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
+    const log0 = await readLog(repo.cwd);
+    const intent = log0.findLast((r) => r.kind === 'command-intent');
+    assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
+    const r = await recover(repo.cwd, intent.target);
+    assert.equal(r.completed, 'forward', `write ${n}: recovery completes forward`);
+    const log = await readLog(repo.cwd);
+    assert.equal(log.filter((x) => x.kind === 'superseded').length, 1, `write ${n}: exactly one superseded record`);
+    assert.equal((await readAdr(repo.cwd)).length, 1, `write ${n}: exactly one ADR line, not one per crash-and-recover attempt`);
+  }
 });
 
 test('Fix round 1 finding 4: start refuses to move Current: outside a supersession, and still moves it for a pending successor', async () => {

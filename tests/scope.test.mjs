@@ -228,3 +228,19 @@ test('an unnamed path under .cairn is a breach', async () => {
   await preflight(r.cwd, await r.log(), { command: 'check' });
   assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['.cairn/notes.txt']);
 });
+
+import { allowedBase } from '../lib/snapshots.mjs';
+import { dispose } from '../lib/scope.mjs';
+
+test('the first-observed snapshot and snapshots written under an open breach are not allowed bases', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'review' });
+  assert.equal(await allowedBase(r.cwd, await r.log()), r.startSnapshot);
+  await r.add('review', r.slug, { slug: r.slug, snapshot: await r.snap(), examined: ['src'], answers: [], findings: [] });
+  assert.equal(await allowedBase(r.cwd, await r.log()), r.startSnapshot);
+  await r.remove('src/stray.mjs');
+  const scopeSha = await dispose(r.cwd, b, 'restore');
+  const log = await r.log();
+  assert.equal(await allowedBase(r.cwd, log), log.find((x) => x.sha === scopeSha).payload.snapshot);
+});

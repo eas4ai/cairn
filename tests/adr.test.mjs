@@ -64,6 +64,12 @@ test('breach: a line written outside its assigned command is refused before it i
   assert.deepEqual(await readAdr(repo.cwd), []);
 });
 
+// Fix round 1 finding 11: these 8 breach categories are all structural (canonical JSON, closed
+// schema, id/ts format and uniqueness, or a cross-reference to another ADR line via the `ids` map
+// already built while reading this file) -- readAdr's default, non-verify pass still catches every
+// one of them, no git call needed, so readAdr/queue/decide (which itself only fully verifies the
+// one new line it is about to write, not the whole existing file) all still reject exactly as
+// before finding 11's change.
 for (const [name, mutate, message] of [
   ['a duplicate ID', (l) => l, /duplicate id/],
   ['a noncanonical line', (l) => ' ' + l, /not canonical JSON/],
@@ -71,7 +77,6 @@ for (const [name, mutate, message] of [
   ['a missing key', (l) => { const o = JSON.parse(l); delete o.wrong_if; o.id = ulid(); return canonicalize(o); }, /lacks wrong_if/],
   ['an unknown kind', (l) => canonicalize({ ...JSON.parse(l), kind: 'note', id: ulid() }), /unknown kind/],
   ['a reference to a missing decision', (l) => canonicalize({ kind: 'superseded', id: ulid(), ts: JSON.parse(l).ts, of: JSON.parse(l).id, by: '01ARZ3NDEKTSV4RRFFQ69G5FAV', cause: 'the premise was false' }), /by names missing/],
-  ['a reference to a missing workspace snapshot', (l) => canonicalize({ ...JSON.parse(l), id: ulid(), base_snap: '0'.repeat(40) }), /not a workspace snapshot/],
   ['an unknown supersession cause', (l) => canonicalize({ kind: 'superseded', id: ulid(), ts: JSON.parse(l).ts, of: JSON.parse(l).id, by: JSON.parse(l).id, cause: 'we changed our minds' }), /cause/],
   ['a bad level', (l) => canonicalize({ ...JSON.parse(l), id: ulid(), level: 'Blocking' }), /level/],
 ]) {
@@ -85,6 +90,27 @@ for (const [name, mutate, message] of [
     await assert.rejects(decide(repo.cwd, draft), AdrError);
   });
 }
+
+// Fix round 1 finding 11: a reference to a missing workspace snapshot is the one breach category
+// among the original nine that needs an actual git read (readSnapshot) to catch -- exactly the
+// cost this finding removes from the default path. readAdr(cwd) (no verify) accepts the malformed
+// base_snap's FORMAT (a well-formed-looking 40-hex string) without confirming it names a real
+// snapshot commit, so queue() and a plain decide() -- both non-verify -- no longer reject it
+// either; only readAdr(cwd, { verify: true }), the on-demand full check for a lint-style caller,
+// still catches it. This is a deliberate, disclosed behavior change from finding 11's redesign,
+// not an oversight: deep corruption of an EXISTING line is now caught by periodic verify: true
+// checks, not by every ordinary append re-verifying the whole file's history.
+test('breach: a reference to a missing workspace snapshot is caught by readAdr(cwd, {verify: true}), not by a plain read, queue or decide', async () => {
+  const repo = await project();
+  await decide(repo.cwd, draft);
+  const good = (await readFile(join(repo.cwd, ADR_PATH), 'utf8')).trimEnd();
+  const bad = canonicalize({ ...JSON.parse(good), id: ulid(), base_snap: '0'.repeat(40) });
+  await appendFile(join(repo.cwd, ADR_PATH), bad + '\n');
+  await assert.rejects(readAdr(repo.cwd, { verify: true }), (e) => e instanceof AdrError && /not a workspace snapshot/.test(e.message));
+  await assert.doesNotReject(readAdr(repo.cwd));
+  await assert.doesNotReject(queue(repo.cwd));
+  await assert.doesNotReject(decide(repo.cwd, draft));
+});
 
 test('breach: a final line without its newline', async () => {
   const repo = await project();
@@ -121,4 +147,13 @@ test('Fix round 1 finding 2: decisionFileBytes validates and computes the new fi
 test('Fix round 1 finding 12: decide wraps a malformed named_paths entry as an AdrError, not a raw PathError', async () => {
   const repo = await project();
   await assert.rejects(decide(repo.cwd, { ...draft, named_paths: ['/etc/passwd'] }), (e) => e instanceof AdrError && /absolute path/.test(e.message));
+});
+
+test('Fix round 1 finding 11: appendDecision and decisionFileBytes still fully verify the one new line being written, even though readAdr no longer verifies existing ones by default', async () => {
+  const repo = await project();
+  const notASnapshot = '1'.repeat(40);
+  const line = { kind: 'decision', level: 'Consequential', by: 'agent', ...draft, base_snap: notASnapshot, evaluation: null, interfaces: [] };
+  await assert.rejects(appendDecision(repo.cwd, line, { command: 'decide' }), (e) => e instanceof AdrError && /base_snap is not a workspace snapshot/.test(e.message));
+  await assert.rejects(decisionFileBytes(repo.cwd, line, { command: 'decide' }), (e) => e instanceof AdrError && /base_snap is not a workspace snapshot/.test(e.message));
+  assert.deepEqual(await readAdr(repo.cwd), [], 'the invalid line was never written');
 });

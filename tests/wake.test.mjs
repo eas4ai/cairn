@@ -85,3 +85,21 @@ test('wake writes nothing: the Git directory and worktree hash the same before a
   assert.equal(r.runWake().status, 0);
   assert.deepEqual([await treeHash(gitDir), await treeHash(r.cwd)], before);
 });
+
+// Deviation from the plan text: lib/spec.mjs's parseRoadmap has no check that Current: names an
+// existing section, so the plan's own edit ('Current: first\n' alone, with the '## first' section
+// removed) produces no lint finding at all under the real lint() -- 'repair' would never fire and
+// 'scope' would win instead, failing this test's intent. parseRoadmap does refuse a second
+// Requirements: line in one section (its own documented grammar problem), which is used here
+// instead to make docs/spec/roadmap.md a genuinely unreadable hand-written input while keeping
+// the same "repair precedes scope even with a stray file present" behavior under test.
+test('an unreadable hand-written input names repair first', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');                       // would be scope, lower precedence
+  await r.write('docs/spec/roadmap.md', 'Current: first\n\n## first\n\nRequirements: DEMO-001\n\nRequirements: DEMO-001\n\nDelivers the demo.\n');
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Resolvable');
+  assert.equal(v.action, 'repair');
+  assert.match(v.target, /^docs\/spec/);
+  assert.equal(v.predicate, 'the named hand-written file reads under its grammar and no unrelated byte changed');
+});

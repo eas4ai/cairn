@@ -1271,25 +1271,33 @@ Code, not the model, computes what happens next from the five levels and
 confidences:
 
 - Veto: `reach >= 4`, `contract >= 3` or `surface >= 3` on the recommended
-  option routes to the developer regardless of weights; the three are
-  checked in that order and the measurement records which one decided it.
-  The floor above is code-certain and needs no call; the veto is what the
-  model itself flags after scoring, so the two catch different risks and
-  neither substitutes for the other.
+  option forces the developer regardless of weights; the three are checked
+  in that order and the measurement records which one decided it. The floor
+  above is code-certain and needs no call; the veto is what the model
+  itself flags after scoring, so the two catch different risks and neither
+  substitutes for the other.
 - Otherwise, composite is the weighted mean of the five levels over 4, with
   evidence counted as `(4 - level)` so more evidence lowers the composite:
   `composite = sum(weight_d * level_d / 4)` over evidence, reach, contract,
   surface and ambiguity.
-- The agent may decide when `composite <= agent_ceiling` and every
-  dimension's confidence meets its `confidence_floors` entry; the draft
-  routes to the developer in every other case.
+- The composite feeds one suggestion, `suggested: agent | developer`:
+  `agent` when `composite <= agent_ceiling` and every dimension's
+  confidence meets its `confidence_floors` entry, `developer` otherwise.
+  The suggestion is advisory, not a route: only the floor above and a veto
+  force the developer. In every other case the agent decides, informed by
+  the suggestion and the five raw levels beside it, and the agent may still
+  escalate toward the developer at its own judgment after reading the
+  measurement, whatever the suggestion says.
 - `weights`, `agent_ceiling` and `confidence_floors` live in
   `typesafeai` settings and in the policy digest (section 2); a change to
   any of them resets calibration.
-- The five raw levels and their confidences are the evaluator assistance the
-  agent sees; the composite is printed beside them, never in place of them,
-  which is decision 51's original transparency intent carried into the
-  composite it once excluded.
+- The decision record names the measurement and the agent's own decision
+  beside the suggestion it read, so an autonomous run is scored on where
+  the two agree or disagree.
+- The five raw levels, their confidences and the suggestion are the
+  evaluator assistance the agent sees; none of them is a verdict, which is
+  decision 51's original transparency intent carried into the composite it
+  once excluded.
 
 ### Two sources
 
@@ -1363,30 +1371,28 @@ network I/O and fixes request digests, so a crash can be recovered (section
 parsed answer and usage before routing. An unknown crash outcome becomes
 `indeterminate`, is not retried, and routes to the developer.
 
-### Record, observe mode and calibration
+### Record and calibration
 
 The final measurement names its intent and call, the five dimension levels
-and confidences, the computed composite, which veto if any fired, the route
-and the reason. The resulting record points back to both.
+and confidences, the computed composite, which veto if any fired, the
+suggestion and the reason. The resulting record points back to both.
 
-Live measurement is the default: when no floor and no veto apply, the agent
-decides per the composite and confidence floors above, and the measurement
-record is what makes an autonomous run scoreable afterward.
-`typesafeai.mode: "observe"` is the only other value: an explicit, stated
-setting that runs the same measurement and records the same fields but never
-lets the composite route to the agent, so it is fit only for collecting
-calibration data, never for live operation. The developer labels a recorded
-measurement's outcome `agent`, `developer` or `unknown`; only the first two
-calibrate. `developer: absent` does not change any of this; it only removes
-the developer as a destination once the floor or a veto names one (section
-5).
+There is one operating mode, not a live/shadow choice: the agent always
+decides, informed by the measurement, except when the floor or a veto forces
+the developer; the measurement record is what makes an autonomous run
+scoreable afterward. The developer labels a recorded measurement's outcome
+`agent`, `developer` or `unknown`; only the first two calibrate. Calibration
+data comes from live records alone: the measurement's suggestion, the
+agent's own decision, and the developer's later label when one exists.
+`developer: absent` does not change any of this; it only removes the
+developer as a destination once the floor or a veto names one (section 5).
 
 The policy digest covers model, schemas, questions, request construction,
 the narrow floor, the veto rule, `weights`, `agent_ceiling`,
 `confidence_floors`, caps and egress; a change to any of them resets
-calibration. `cairn calibrate` uses matching valid `observe`-mode and live
-measurements labelled by the developer. Its denominator is labelled cases
-predicted `agent`; a false downgrade is one labelled `developer`. The
+calibration. `cairn calibrate` uses matching valid measurements labelled by
+the developer. Its denominator is labelled cases whose suggestion was
+`agent`; a false downgrade is one the developer labelled `developer`. The
 one-sided 95% exact binomial upper bound on the false-downgrade rate is a
 kernel constant, not a setting, fixed at 5%; the sample floor is
 `min_calibration_agent_predictions` (default 60) predicted-agent cases.
@@ -1402,12 +1408,14 @@ settings. Supersessions are not labels.
 The contract is falsified by: a missing measurement, prior intent or call
 record for a measured draft; untrusted state reaching either source; policy
 prose, rather than a named state field, reaching a question; nondeterministic
-requests at equal identity and policy digest; an agent route on a draft the
-narrow floor should have caught; an agent route on a draft carrying a veto; a
-composite computed anywhere but code, from anything but the recorded
-dimension levels; a retried or invented ambiguous result; Cairn egress of
-excluded bytes to either source; an accepted protected realization; or a
-calibration record whose denominator is not labelled predicted-agent cases.
+requests at equal identity and policy digest; an `agent` suggestion or a
+`developer` suggestion treated as anything but advisory; an agent decision
+on a draft the narrow floor should have caught; an agent decision on a draft
+carrying a veto; a composite computed anywhere but code, from anything but
+the recorded dimension levels; a retried or invented ambiguous result; Cairn
+egress of excluded bytes to either source; an accepted protected
+realization; or a calibration record whose denominator is not cases whose
+suggestion was `agent`.
 
 ## 11. Distribution
 

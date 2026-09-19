@@ -274,8 +274,12 @@ by log SHA and code only by a kind-checked snapshot SHA.
 
 **Action lease.** `refs/cairn/in-progress`, local to the repository and never
 pushed. `cairn begin <action> <target>` creates it with compare-and-swap before
-the agent changes a declared input; `cairn end` removes it with
-compare-and-swap after the action is committed. `cairn begin --touch <path>`
+the agent changes a declared input, and prints the sha it wrote; `cairn end`
+removes it with compare-and-swap after the action is committed, and refuses
+when a passed `--lease <sha>` does not name that printed sha, so a stale end
+from another session can never close this one's lease. `cairn end --abandon`
+removes it and records the action as explicitly abandoned rather than
+finished. `cairn begin --touch <path>`
 provisionally adds a path to the target's mechanism inputs for the life of the
 lease, so the declaration precedes the change; `cairn end` writes the addition
 into the definition, which unbinds its review metadata as any definition change

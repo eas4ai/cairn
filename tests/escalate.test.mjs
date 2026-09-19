@@ -18,6 +18,9 @@ const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.
   reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
   min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
 const EV = 'e'.repeat(40);
+import { answer, escalationState, unanswered, describeEvidence } from '../lib/escalate.mjs';
+
+const asDev = { confirm: async () => true };
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -125,4 +128,63 @@ test('cairn decide --consequential accepts the same canonical draft and writes t
   const id = await decideConsequential(r.cwd, draft());
   const line = (await readAdr(r.cwd)).find((l) => l.id === id);
   assert.deepEqual([line.kind, line.evaluation, line.body, line.wrong_if], ['decision', null, `${draft().recommendation} Instead: ${draft().instead}`, draft().if_wrong]);
+});
+
+test('answer refuses without developer evidence: no terminal, or a declined confirmation', async () => {
+  const r = await loopRepo();
+  const sha = await escalate(r.cwd, draft());
+  await assert.rejects(answer(r.cwd, 'first', 'ok', ''), /cairn: /);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', '', { confirm: async () => false }), /cairn: /);
+  assert.equal(escalationState(await r.log(), sha).status, 'open');
+});
+
+// Deviation from the plan text: the plan's own note ("The stored evidence is plan 01's shape
+// {mode, author, signature}") does not match the actual `evidence` variant lib/records.mjs
+// (already committed) uses for the answer/authorization/read record kinds -- the 'unsigned-local'
+// branch needs {mode, purpose, subject, nonce, author: {name, email}, confirmed}, with no
+// top-level `signature` field at all; tests/helpers/loop.mjs's own fixture documents this same
+// gap. Checked against that real shape instead: mode, confirmed, and a non-empty author.name.
+test('ok writes the answer record with the evidence and the answered ADR line', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const rec = decodeRecord(await catCommit(r.cwd, sha));
+  assert.equal(rec.target, 'first');
+  assert.deepEqual([rec.payload.escalation, rec.payload.kind, rec.payload.text, rec.payload.owner], [esc, 'ok', '', null]);
+  assert.equal(rec.payload.evidence.mode, 'unsigned-local');
+  assert.equal(rec.payload.evidence.confirmed, true);
+  assert.ok(rec.payload.evidence.author.name.length > 0);
+  const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
+  assert.deepEqual([line.escalation, line.answer], [esc, sha]);
+  assert.equal(escalationState(await r.log(), esc).status, 'answered');
+  assert.deepEqual(unanswered(await r.log()), []);
+  await assert.rejects(answer(r.cwd, 'first', 'instead', 'no', asDev), /no unanswered escalation for first/);
+});
+
+test('ask stays open until a reply and writes no answered line; instead needs text; kinds are closed', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  await assert.rejects(answer(r.cwd, 'first', 'instead', '', asDev), /needs text/);
+  await assert.rejects(answer(r.cwd, 'first', 'maybe', 'x', asDev), /must be ok, instead or ask/);
+  await answer(r.cwd, 'first', 'ask', 'Why 30 and not 14?', asDev);
+  const log = await r.log();
+  assert.equal(escalationState(log, esc).status, 'asked');
+  assert.deepEqual(unanswered(log).map((u) => [u.target, u.awaiting]), [['first', 'reply']]);
+  assert.equal((await readAdr(r.cwd)).some((l) => l.kind === 'answered'), false);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), /awaits the agent's reply/);
+});
+
+test('two open escalations: the oldest is answered first unless --escalation names the other', async () => {
+  const r = await loopRepo();
+  const a = await escalate(r.cwd, draft());
+  const b = await escalate(r.cwd, draft({ question: 'Second?' }));
+  const s2 = await answer(r.cwd, 'first', 'ok', '', { ...asDev, escalation: b });
+  assert.equal(decodeRecord(await catCommit(r.cwd, s2)).payload.escalation, b);
+  const s1 = await answer(r.cwd, 'first', 'ok', '', asDev);
+  assert.equal(decodeRecord(await catCommit(r.cwd, s1)).payload.escalation, a);
+});
+
+test('describeEvidence says unsigned-local is evidence, not authentication', () => {
+  assert.equal(describeEvidence({ mode: 'unsigned-local', author: 'Dev <dev@example.test>', signature: null }), 'unsigned-local, author Dev <dev@example.test>: evidence, not authentication');
+  assert.equal(describeEvidence({ mode: 'signed', author: 'Dev', signature: 'AQID' }), 'signed by Dev, verified against signing_key');
 });

@@ -368,8 +368,8 @@ const optionBody = (n = 2) => JSON.stringify({ model: 'jev-1.13.0', answers: Obj
 const ownerBody = (agent = 0.95) => JSON.stringify({ model: 'jev-1.13.0', answers: { owner: { type: 'choice', choice: agent >= 0.5 ? 'agent' : 'developer',
   probabilities: { agent, developer: +(1 - agent).toFixed(6) }, confidence: 0.9 } }, usage: { input_tokens: 10, output_tokens: 2 } });
 const transport = (bodies, seen = []) => async (req) => { seen.push(req); const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
-async function repoWithCommitment(mode = 'shadow') {
-  const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode, model: 'jev-1.13.0' } } });
+async function repoWithCommitment(mode = 'shadow', overrides = {}) {
+  const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode, model: 'jev-1.13.0', ...overrides } } });
   return r.cwd;
 }
 const kinds = async (cwd) => (await readLog(cwd)).map((r) => r.kind);
@@ -630,25 +630,104 @@ describe('route mode conversion (lib/escalate.mjs consumes this module\'s evalua
     const rCap = await evaluate(cwd, draft({ question: 'route-capture' }), { transport: transport([outsideBody]) });
     assert.equal(rCap.route, 'capture'); assert.equal(rCap.option, 1);
   });
-  // Codifies the reproduced finding above as a regression marker: once lib/escalate.mjs's own
-  // loadSettings(cwd) call (line ~120) is fixed to thread a {calibration} option through (the same
-  // way this file's loadSettingsFull does), this test starts failing -- exactly the signal that the
-  // finding is resolved and this test (and the report note) should be removed.
-  test('reproduced, out-of-scope finding: escalateWithRoute cannot run in route mode today', async () => {
-    const cwd = await repoWithCommitment('shadow');
+  // Fix round 1 finding 1: escalateWithRoute (lib/escalate.mjs) now reads settings through this
+  // module's exported loadSettingsFull, the same calibration-aware load evaluate() itself uses, so
+  // a route-mode project with a genuinely passing calibration at the current policy digest no
+  // longer refuses at the point escalateWithRoute itself used to throw. Proven directly against the
+  // real, unmocked escalateWithRoute (not a stub `evaluate`) for the developer and capture routes,
+  // which -- unlike agent -- touch no other module with the same unguarded-loadSettings defect (see
+  // the two reproduced-and-out-of-scope tests below for why agent and the CLI entry point still
+  // cannot complete). A lowered, test-only min_calibration_agent_predictions/max_false_downgrade
+  // pair keeps this fast; the exact spec-default numbers (60 passes, 30 fails, at 5%) are proven
+  // separately and cheaply by the pure-math upperBound unit test above.
+  test('route mode: escalateWithRoute itself now succeeds for the developer and capture routes', async () => {
+    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
+    await labelled(cwd, 5, 'agent');
+    assert.equal((await calibrate(cwd)).pass, true);
     const { settings } = await loadSettings(cwd);
-    const policy = policyDigest(settings);
-    const log = await readLog(cwd);
-    await appendRecord(cwd, 'calibration', log.findLast((x) => x.kind === 'start').payload.slug, {
-      policy_digest: policy, log_head: log.at(-1).sha, predicted_agent: 60, false_downgrades: 0, bound: 0.01,
-      criterion: 'test fixture: a directly-written passing calibration for this exact policy digest', result: 'pass',
-    });
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+
+    const outsideBody = optionBody().replace('"outside_1":{"type":"noul","noul":0.1}', '"outside_1":{"type":"noul","noul":0.9}');
+    const outCap = await escalateWithRoute(cwd, draft({ question: 'capture-via-fixed-wiring' }), { transport: transport([outsideBody]) });
+    assert.equal(outCap.route, 'capture');
+    const log1 = await readLog(cwd);
+    assert.ok(log1.some((x) => x.kind === 'item' && x.payload.kind === 'backlog'));
+    assert.ok(log1.some((x) => x.kind === 'outside' && x.sha === outCap.sha));
+
+    const badObserved = optionBody().replace('"observed":{"type":"noul","noul":0.9}', '"observed":{"type":"noul","noul":0.1}');
+    const outDev = await escalateWithRoute(cwd, draft({ question: 'developer-via-fixed-wiring' }), { transport: transport([badObserved, ownerBody(0.95)]) });
+    assert.equal(outDev.route, 'developer');
+    assert.ok((await readLog(cwd)).some((x) => x.kind === 'escalation' && x.sha === outDev.sha));
+  });
+  // Reproduced, out-of-scope finding (not this fix round's authorized file): lib/adr.mjs's decide()
+  // (already committed) calls loadSettings(cwd) directly with no {calibration} option, the same
+  // circularity finding 1 fixed in lib/escalate.mjs -- so escalateWithRoute's agent route, which
+  // calls decide(), still cannot complete in route mode even though the settings load that used to
+  // block every route is now fixed. Left for the developer; this fix round's authorization named
+  // lib/escalate.mjs only.
+  test('reproduced, out-of-scope finding: the agent route still cannot complete in route mode (lib/adr.mjs\'s decide() has the same unguarded loadSettings call)', async () => {
+    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
+    await labelled(cwd, 5, 'agent');
+    assert.equal((await calibrate(cwd)).pass, true);
+    const { settings } = await loadSettings(cwd);
     settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
     writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
     await assert.rejects(
-      escalateWithRoute(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) }),
-      /route mode needs a current passing calibration/,
-      'lib/escalate.mjs\'s own loadSettings(cwd) call refuses a route-mode project even with a genuinely passing calibration at the exact policy digest',
+      escalateWithRoute(cwd, draft({ question: 'agent-route-still-broken' }), { transport: transport([optionBody(), ownerBody(0.95)]) }),
+      /settings refused: route mode needs a current passing calibration/,
     );
+  });
+  // Reproduced, out-of-scope finding, discovered while building the "through the real CLI"
+  // positive test the fix round asked for: lib/scope.mjs's preflight() (already committed, called
+  // by every STATE_CHANGING command through lib/cli.mjs's main() -> lib/cycle.mjs's withLoop, before
+  // any command handler runs) has the identical unguarded loadSettings(cwd) call. This blocks EVERY
+  // state-changing command in route mode through the real CLI -- not just escalate, and regardless
+  // of which route the draft would take -- one layer earlier than lib/escalate.mjs's own settings
+  // load (which this fix round's finding 1 already fixed and the test above proves directly).
+  // lib/scope.mjs was not named in this fix round's authorization ("You may edit lib/escalate.mjs
+  // for this item only"), so it is reproduced and left for the developer rather than fixed here.
+  test('reproduced, out-of-scope finding: cairn escalate still cannot run in route mode through the real CLI (lib/scope.mjs\'s preflight() has the same unguarded loadSettings call, one layer before lib/escalate.mjs is ever reached)', async () => {
+    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
+    await labelled(cwd, 5, 'agent');
+    assert.equal((await calibrate(cwd)).pass, true);
+    const { settings } = await loadSettings(cwd);
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+
+    const outsideBody = optionBody().replace('"outside_1":{"type":"noul","noul":0.1}', '"outside_1":{"type":"noul","noul":0.9}');
+    const stubPath = join(cwd, '.stub-transport.mjs');
+    writeFileSync(stubPath,
+      `let n = 0;\nconst bodies = ${JSON.stringify([outsideBody])};\n` +
+      `export default async function stub() { return { status: 200, body: bodies[n++], model: 'jev-1.13.0' }; }\n`);
+
+    const { main } = await import('../lib/cli.mjs');
+    const run = async (argv) => {
+      let out = '', err = '';
+      const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } });
+      return { code, out, err };
+    };
+    const res = await run(['escalate', '--commitment', 'first', '--concern', 'DEMO-001', '--question', 'Route via CLI?',
+      '--recommendation', 'hourly', '--because', 'observed: the mechanism already runs and passes', '--if-wrong', 'the demo drifts',
+      '--instead', 'daily', '--option', 'hourly', '--option', 'daily', '--path', 'src/demo.mjs', '--transport-module', stubPath]);
+    assert.equal(res.code, 1);
+    assert.match(res.err, /settings refused: route mode needs a current passing calibration/);
+  });
+  test('route mode: cairn escalate still refuses through the real CLI without a passing calibration', async () => {
+    const cwd = await repoWithCommitment('shadow');
+    const { settings } = await loadSettings(cwd);
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    const { main } = await import('../lib/cli.mjs');
+    const run = async (argv) => {
+      let out = '', err = '';
+      const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } });
+      return { code, out, err };
+    };
+    const res = await run(['escalate', '--commitment', 'first', '--concern', 'DEMO-001', '--question', 'Refused?',
+      '--recommendation', 'hourly', '--because', 'observed: the mechanism already runs and passes', '--if-wrong', 'the demo drifts',
+      '--instead', 'daily', '--option', 'hourly', '--option', 'daily']);
+    assert.equal(res.code, 1);
+    assert.match(res.err, /calibration/);
   });
 });

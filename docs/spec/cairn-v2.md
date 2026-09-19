@@ -643,31 +643,42 @@ D        := decide(c, R*, o1..on, rec, wrong_if, d*)   -- five fields + options 
 state(D) := < process,                                  -- the level rule, the by-construction list,
                                                         --   the safety net, the predicate, ~300 tokens
              D,
+             keystone.is + keystone.is_not,             -- what the software is and is not
              section(c) @ c.start,                      -- the commitment's roadmap section, whole:
                                                         --   what it delivers, its done-when, its
                                                         --   Requirements: line
-             block(r) for r in reqs(c) + R*,            -- every requirement of the commitment and
-                                                        --   every one the draft cites: text,
-                                                        --   falsifier, status, mechanism name
+             block(r) for r in scope(c) + R*,           -- scope(c): every requirement the section
+                                                        --   names plus every Scope: every commitment
+                                                        --   block; R*: the draft's pointer to which
+                                                        --   of those the decision is about
              context(r) for r in R*,                    -- the domain file's prose around each cited
                                                         --   block: its section heading and the
                                                         --   paragraphs between it and the block
              glossary(terms(D)),                        -- the glossary entries for terms the draft uses
              decision(d) for d in d*,                   -- the ADR lines it cites
              declaration(m(r)) for r in R*,
-             facts,                                     -- touched paths; interface and data hits by
-                                                        --   settings globs; diff stat; attempts;
+             facts,                                     -- touched paths; which of them no mechanism
+                                                        --   of the commitment declares; which lie
+                                                        --   under docs/spec/; interface and data hits
+                                                        --   by settings globs; diff stat; attempts;
                                                         --   escalations this commitment; queue unread
              open(range(c)),                            -- findings, escalations, in-progress
              code >                                     -- tiered, capped, last
 ```
 
-The commitment's section and its requirement set are always present:
-whose decision this is depends on what the work is for and what done
-means for it, not only on the blocks the draft happens to cite. The
+The commitment is resolved by the kernel, never cited: its section,
+its whole requirement set and the keystone's what-it-is and
+what-it-is-not are always present, ahead of `facts` and `code` so they
+are never what gets cut. "Inside the commitment" is meaningless
+without the commitment, and a scope question judged against blocks the
+builder selected would be the hand-on-the-brief problem again. The
 domain context and glossary entries are bounded by the cited blocks
-and the draft's own words; the keystone is not sent, because the
-commitment section is the part of it that applies.
+and the draft's own words.
+
+"Changes Agreed text" in the by-construction list is a fact, not a
+judgment: a touched path under `docs/spec/`, or an option whose text
+names a requirement identifier with a revision. The same fact feeds
+`outside_n`.
 
 The code row fills in order until `state_cap_bytes` is spent: the diff
 of the touched paths since the tree in-progress pinned; the whole files
@@ -693,7 +704,8 @@ smaller; it is not an API limit.
 |---|---|---|
 | `sufficient` | noul | does `state` hold what is needed to judge `D`? |
 | `reversible_n` | noul | would reverting the commits that realize option n restore the prior behavior with no migration, data change or caller change? |
-| `contradicts_n` | noul | does option n contradict any cited decision, given its body and wrong-if? |
+| `contradicts_n` | noul | does option n contradict any cited decision, given its body and wrong-if, or any Agreed block in the commitment's set? |
+| `outside_n` | noul | would option n require work that no requirement in the commitment's set covers, given `facts` (paths no mechanism of the commitment declares) and the keystone's what-it-is-not? |
 | `observed` | noul | does `D.because` name something observed (a command, path or output) rather than a belief? |
 | `owner` | choice | under `process`, whose decision is `D`: `agent` or `developer`? |
 
@@ -710,15 +722,23 @@ confidence is what routes:
 
 ```
 score(o_n) := w_rev * reversible_n + w_con * (1 - contradicts_n) + w_obs * observed
-route(D)   := sufficient >= sufficient_threshold
-              and owner = agent and conf(owner) >= route_confidence
+route(D)   := sufficient < sufficient_threshold
+                -> the escalation stands; reason: insufficient context; nothing else consulted
+              outside_rec >= outside_threshold                       -- rec: the recommended option
+                -> refuse: neither a decision nor an escalation; print the capture command,
+                   cairn item --backlog or --next-feature with the reason, and stop
+              owner = agent and conf(owner) >= route_confidence
                 -> cairn escalate writes the decision itself: a Consequential line in the ADR
                    with the recommendation as the decision; no escalation record; it queues
               otherwise
                 -> the escalation record is written and stands
-              sufficient < sufficient_threshold
-                -> the escalation stands; reason: insufficient context; owner not consulted
 ```
+
+The third leg is idea 6 applied to the evaluator: work outside the
+commitment is captured, never built, and never decided. Escalating a
+scope question is the ritual ascent this section exists to stop;
+downgrading one is the agent widening its own commitment. Capture is
+the only right answer, and the kernel names it.
 
 The evaluator is called once per input, by the command that has the
 input. `cairn escalate` writes whichever record the route selects, so
@@ -743,8 +763,10 @@ which evaluated decisions are superseded at the queue, by route
 confidence. Reversals climbing means the evaluator is downgrading
 decisions that were the developer's; reversals near zero with
 escalations still high means the threshold is too timid. The developer
-turns `route_confidence`, `sufficient_threshold` and the weights; the
-questions do not change.
+turns `route_confidence`, `sufficient_threshold`, `outside_threshold`
+and the weights; the questions do not change. A captured item that
+the developer later promotes unchanged is the signal that
+`outside_threshold` is too low.
 
 **Validation.** The kernel refuses `enabled: true` with no `model`, a
 `schema` it does not read, a path in both `outside` and `source`, and
@@ -791,6 +813,7 @@ trailer is the alias rather than the resolved version.
     "weights": { "reversible": 0.4, "contradicts": 0.3, "observed": 0.3 },
     "route_confidence": 0.8,
     "sufficient_threshold": 0.7,
+    "outside_threshold": 0.8,
     "state_cap_bytes": 80000
   }
 }

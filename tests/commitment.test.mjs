@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { readLog, decodeRecord } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { item, outside, fix, start, openCommitment, CommitmentError } from '../lib/commitment.mjs';
-import { project } from './helpers/commitment-fixture.mjs';
+import { project, roadmapWith } from './helpers/commitment-fixture.mjs';
 
 const last = async (cwd, kind) => (await readLog(cwd)).filter((r) => r.kind === kind).at(-1);
 
@@ -156,6 +156,11 @@ test('done closes the open commitment at its final workspace snapshot', async ()
   assert.equal(rec.payload.slug, 'first');
   assert.equal((await readSnapshot(repo.cwd, rec.payload.snapshot, 'workspace')).kind, 'workspace');
   assert.equal(openCommitment(await readLog(repo.cwd)).open, null);
+  // Fix round 1 finding 4: start() no longer moves Current: outside a supersession (the
+  // spec-phase-tail workflow, out of this plan's scope, is what is supposed to have already
+  // written Current: second before cairn start runs for a plain next commitment); write it here
+  // to simulate that precondition rather than relying on start()'s own removed permissiveness.
+  await repo.write('docs/spec/roadmap.md', roadmapWith('second'));
   await assert.doesNotReject(start(repo.cwd, 'second'));
 });
 
@@ -400,4 +405,14 @@ test('Fix round 1 finding 6: supersede refuses the open commitment naming itself
   const repo = await project();
   await start(repo.cwd, 'first');
   await assert.rejects(supersede(repo.cwd, 'first', { quote: 'x', confirm: confirmYes }), /successor first is the same as the open commitment first/);
+});
+
+test('Fix round 1 finding 4: start refuses to move Current: outside a supersession, and still moves it for a pending successor', async () => {
+  const repo = await project();
+  await assert.rejects(start(repo.cwd, 'second'), /roadmap names first as Current:, not second/);
+  await start(repo.cwd, 'first');
+  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+  const s2 = await start(repo.cwd, 'second');
+  assert.equal((await readLog(repo.cwd)).find((r) => r.sha === s2).payload.from_superseded, sup);
+  assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m);
 });

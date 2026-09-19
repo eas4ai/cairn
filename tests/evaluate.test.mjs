@@ -488,7 +488,7 @@ describe('evaluate', () => {
   });
 });
 
-import { upperBound, calibrate, assertRouteMode, RouteModeError } from '../lib/evaluate.mjs';
+import { upperBound, calibrate } from '../lib/evaluate.mjs';
 import { escalate, answer } from '../lib/escalate.mjs';
 
 // Shared by the calibration and route-mode-conversion describe blocks below (route-mode
@@ -549,24 +549,13 @@ describe('calibration', () => {
     assert.equal(await hasPassingCalibration(cwd, settings), false);
     assert.equal((await calibrate(cwd)).sample, 0);
   });
-  // Deviation from the plan text: mode: 'route' can never be the setting a project starts with --
-  // lib/settings.mjs's validateSettings (already committed) refuses route mode without a passing
-  // calibration, and cairn init writes settings through that same validator, so a project cannot
-  // even be created in route mode. The fixture instead starts in shadow, then pokes route mode
-  // directly onto the settings file (bypassing cairn authorize's own validation, the same way other
-  // tests in this file edit settings.json directly) purely to exercise assertRouteMode's own read,
-  // which -- for exactly this reason -- reads the raw file itself rather than going through
-  // loadSettings/validateSettings.
-  test('route mode is refused without a matching passing calibration and with an alias', async () => {
-    const cwd = await repoWithCommitment('shadow');
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    await assert.rejects(assertRouteMode(cwd), (e) => e instanceof RouteModeError && /cairn: route mode requires a passing calibration/.test(e.message));
-    settings.typesafeai.model = 'jev-latest';
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    await assert.rejects(assertRouteMode(cwd), /alias/);
-  });
+  // Kernel fix round (item 3): the test that used to live here ("route mode is refused without a
+  // matching passing calibration and with an alias") existed purely to exercise
+  // lib/evaluate.mjs's assertRouteMode, which was dead code after plan 11's round 3 --
+  // lib/settings.mjs's loadSettings/validateSettings already refuse a route-mode project without
+  // a passing calibration or a versioned model before any caller in this file gets that far, so
+  // nothing ever called assertRouteMode (confirmed: no caller in lib/, bin/, hooks/ or skills/).
+  // Removed along with the function itself and RouteModeError.
 });
 
 // Task 10 (route mode conversion): lib/escalate.mjs's escalateWithRoute (plan 09, already
@@ -620,7 +609,9 @@ describe('route mode conversion (lib/escalate.mjs consumes this module\'s evalua
     });
     settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
     writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    await assertRouteMode(cwd); // must not throw: the calibration above matches this exact policy digest
+    // Kernel fix round (item 3): this used to also call the now-removed assertRouteMode(cwd) here
+    // as a sanity check ("must not throw: the calibration above matches this exact policy
+    // digest"); evaluate() itself, exercised immediately below, is this test's real subject.
 
     const rAgent = await evaluate(cwd, draft({ question: 'route-agent' }), { transport: transport([optionBody(), ownerBody(0.95)]) });
     assert.equal(rAgent.route, 'agent'); assert.equal(rAgent.would_route, null, 'route mode: no hypothetical route, an actual one');

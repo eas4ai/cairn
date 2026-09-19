@@ -65,3 +65,80 @@ test('fix refuses a backlog item, no open commitment, and a snapshot that change
   await repo.write('AGENTS.md', '# Working agreement\n\nChanged.\n');
   await assert.rejects(fix(repo.cwd, d), (e) => e instanceof CommitmentError && /fix changes protected contract AGENTS.md/.test(e.message));
 });
+
+import { frozenSet, protectedDigests, currentAuthorization, setCurrent } from '../lib/commitment.mjs';
+import { readSnapshot } from '../lib/snapshots.mjs';
+import { git } from '../lib/gitx.mjs';
+import { sha256 } from '../lib/canon.mjs';
+
+test('start freezes the roadmap section plus every Scope: every commitment Agreed block, at one workspace snapshot', async () => {
+  const repo = await project();
+  const calls = [];
+  const sha = await start(repo.cwd, 'first', { installRefspecs: async (cwd, remote) => calls.push(remote) });
+  const rec = await last(repo.cwd, 'start');
+  assert.equal(rec.sha, sha);
+  assert.equal(rec.target, 'first');
+  // Deviation from the plan text: 'start' is written through withTransaction (a MULTI_STORE
+  // command), which unconditionally injects intent and results into the terminal payload
+  // (lib/tx.mjs's finish()); the plan's own carried obligation for this task closes the 'start'
+  // schema with those two fields. The plan's literal 4-key list is extended to 6 here.
+  assert.deepEqual(Object.keys(rec.payload).sort(), ['from_superseded', 'intent', 'requirements', 'results', 'slug', 'snapshot']);
+  assert.deepEqual(rec.payload.requirements.map((r) => r.requirement), ['CORE-001', 'DEMO-001']);
+  assert.deepEqual(rec.payload.requirements, await frozenSet(repo.cwd, 'first'));
+  assert.equal(rec.payload.from_superseded, null);
+  assert.equal((await readSnapshot(repo.cwd, rec.payload.snapshot, 'workspace')).kind, 'workspace');
+  assert.equal(decodeRecord(await catCommit(repo.cwd, sha)).kind, 'start');
+  assert.deepEqual(calls, ['origin']);
+  const status = (await git(['status', '--porcelain', '--', 'docs/spec', 'AGENTS.md', '.cairn/settings.json'], { cwd: repo.cwd })).stdout;
+  assert.equal(status, '', 'start committed the contract bytes');
+  assert.deepEqual(openCommitment(await readLog(repo.cwd)).open.sha, sha);
+});
+
+test('start with a local-only authority remote installs nothing', async () => {
+  const repo = await project({ authority_remote: null });
+  const calls = [];
+  await start(repo.cwd, 'first', { installRefspecs: async () => calls.push(1) });
+  assert.deepEqual(calls, []);
+});
+
+test('at most one commitment is open', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  await assert.rejects(start(repo.cwd, 'second'), (e) => e instanceof CommitmentError && /commitment first is open; at most one commitment is open/.test(e.message));
+  assert.equal((await readLog(repo.cwd)).filter((r) => r.kind === 'start').length, 1);
+});
+
+test('start refuses a section naming a non-Agreed requirement, a missing section and a bad slug before writing anything', async () => {
+  const repo = await project();
+  const before = await readLog(repo.cwd);
+  await assert.rejects(start(repo.cwd, 'drafty'), /DEMO-003 is Draft; a commitment names only Agreed requirements/);
+  await assert.rejects(start(repo.cwd, 'nowhere'), /roadmap has no section nowhere/);
+  await assert.rejects(start(repo.cwd, 'Bad Slug'), /invalid slug/);
+  assert.equal((await readLog(repo.cwd)).length, before.length);
+});
+
+test('start refuses without a current authorization, and after a protected file changed since it', async () => {
+  const repo = await project();
+  await repo.write('AGENTS.md', '# Working agreement\n\nEdited after authorize.\n');
+  await assert.rejects(start(repo.cwd, 'first'), /no current authorization/);
+  assert.equal(await currentAuthorization(repo.cwd, await readLog(repo.cwd)), null);
+  await repo.authorize();
+  await assert.doesNotReject(start(repo.cwd, 'first'));
+});
+
+test('protectedDigests excludes the roadmap and covers every other spec file, the agreement and settings', async () => {
+  const repo = await project();
+  const a = await protectedDigests(repo.cwd);
+  await repo.write('docs/spec/roadmap.md', (await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8')) + '\nMore prose.\n');
+  const b = await protectedDigests(repo.cwd);
+  assert.equal(a.spec, b.spec);
+  await repo.write('docs/spec/glossary.md', '# Glossary\n\nchanged\n');
+  assert.notEqual((await protectedDigests(repo.cwd)).spec, a.spec);
+  assert.equal(a.agreement, sha256(await readFile(join(repo.cwd, 'AGENTS.md'))));
+});
+
+test('setCurrent replaces exactly the Current: line', async () => {
+  const text = '# Roadmap\n\nCurrent: first\n\n## first\n\nCurrent: not a header\n';
+  assert.equal(setCurrent(text, 'second'), '# Roadmap\n\nCurrent: second\n\n## first\n\nCurrent: not a header\n');
+  assert.throws(() => setCurrent('# Roadmap\n', 'x'), /no Current: line/);
+});

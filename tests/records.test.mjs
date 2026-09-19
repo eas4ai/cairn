@@ -6,7 +6,9 @@ import { git, emptyTree, catCommit } from '../lib/gitx.mjs';
 import { KINDS, SCHEMAS, encodeRecord, decodeRecord, RecordError } from '../lib/records.mjs';
 
 const WS = 'a'.repeat(40), D = 'sha256:' + 'b'.repeat(64);
-const START = { slug: 'hooks', snapshot: WS, requirements: [{ requirement: 'LOOP-001', text_digest: D }], from_superseded: null };
+// Deviation from the plan text (plan 06 carried obligation): 'start' now closes with
+// intent/results, the same as 'promotion' and 'superseded' (lib/records.mjs).
+const START = { slug: 'hooks', snapshot: WS, requirements: [{ requirement: 'LOOP-001', text_digest: D }], from_superseded: null, intent: null, results: [] };
 async function rawCommit(repo, message) {
   const tree = await emptyTree(repo.dir);
   const head = Buffer.from(`tree ${tree}\nauthor A <a@b.c> 0 +0000\ncommitter A <a@b.c> 0 +0000\n\n`);
@@ -25,7 +27,7 @@ test('the table has the 27 kinds of section 4 and no admin-transition', () => {
 test('encodeRecord emits the subject, canonical body and exactly two trailers', () => {
   const r = encodeRecord('start', 'hooks', START);
   assert.equal(r.subject, 'cairn: start hooks');
-  assert.equal(r.body, '{"from_superseded":null,"requirements":[{"requirement":"LOOP-001","text_digest":"' + D + '"}],"slug":"hooks","snapshot":"' + WS + '"}');
+  assert.equal(r.body, '{"from_superseded":null,"intent":null,"requirements":[{"requirement":"LOOP-001","text_digest":"' + D + '"}],"results":[],"slug":"hooks","snapshot":"' + WS + '"}');
   assert.deepEqual(r.trailers, [['Cairn-Schema', '1'], ['Cairn-Digest', sha256(r.body)]]);
 });
 test('encodeRecord refuses unknown kinds, path targets, unknown keys, missing keys and wrong types', () => {

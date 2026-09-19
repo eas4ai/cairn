@@ -105,7 +105,9 @@ test('allowedBase is the newest start or scope snapshot, never merely the newest
   await repo.write('a.txt', 'a'); await repo.commit('base');
   assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), null);
   const A = await writeWorkspaceSnapshot(repo.dir);
-  await appendRecord(repo.dir, 'start', 's', { slug: 's', snapshot: A, requirements: [], from_superseded: null });
+  // Deviation from the plan text (plan 06 carried obligation): 'start' now closes with
+  // intent/results, the same as 'promotion' and 'superseded'; this fixture payload needs both.
+  await appendRecord(repo.dir, 'start', 's', { slug: 's', snapshot: A, requirements: [], from_superseded: null, intent: null, results: [] });
   await repo.write('a.txt', 'b'); const B = await writeWorkspaceSnapshot(repo.dir);
   assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), A);
   await appendRecord(repo.dir, 'scope-breach', 'a.txt', { path: 'a.txt', snapshot: B, base: A, declarations_digest: D });
@@ -114,7 +116,7 @@ test('allowedBase is the newest start or scope snapshot, never merely the newest
   await appendRecord(repo.dir, 'scope', 'a.txt', { breach: log.at(-1).sha, disposition: 'keep', snapshot: B, escalation: null, answer: null });
   assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), B);
   const I = await writeInputSnapshot(repo.dir, { mechanism: 'm', inputs: ['a.txt'] });
-  await appendRecord(repo.dir, 'start', 'bad', { slug: 'bad', snapshot: I, requirements: [], from_superseded: null });
+  await appendRecord(repo.dir, 'start', 'bad', { slug: 'bad', snapshot: I, requirements: [], from_superseded: null, intent: null, results: [] });
   await assert.rejects(allowedBase(repo.dir, await readLog(repo.dir)), KindError);
 });
 

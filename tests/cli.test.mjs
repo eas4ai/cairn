@@ -50,7 +50,9 @@ test('show renders a record with its references resolved and kind-checked', asyn
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('a.txt', 'a'); await repo.commit('base');
   const ws = await writeWorkspaceSnapshot(repo.dir);
-  const start = await appendRecord(repo.dir, 'start', 'hooks', { slug: 'hooks', snapshot: ws, requirements: [], from_superseded: null });
+  // Deviation from the plan text (plan 06 carried obligation): 'start' now closes with
+  // intent/results, the same as 'promotion' and 'superseded' (lib/records.mjs).
+  const start = await appendRecord(repo.dir, 'start', 'hooks', { slug: 'hooks', snapshot: ws, requirements: [], from_superseded: null, intent: null, results: [] });
   const done = await appendRecord(repo.dir, 'done', 'hooks', { slug: 'hooks', snapshot: ws });
   const r = await run(['show', done], repo.dir);
   assert.equal(r.code, 0);

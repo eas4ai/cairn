@@ -354,7 +354,7 @@ git commit -m "Require a current, composite-outcome measurement before a Consequ
 
 ---
 
-### Task 4: `escalateConsequential`; the `--consequential` CLI flags
+### Task 4: `escalateConsequential`; wiring `cairn decide --consequential` and `cairn escalate --consequential`
 
 **Files:**
 - Modify: `lib/escalate.mjs`, `lib/cli.mjs`
@@ -362,9 +362,11 @@ git commit -m "Require a current, composite-outcome measurement before a Consequ
 
 **Interfaces:**
 - Consumes: `currentMeasurement` (Task 2), `writeEscalation` (already private to `lib/escalate.mjs`; exported here for `escalateConsequential`'s own use, matching how `escalate()` already calls it).
-- Produces: `escalateConsequential(cwd, draft) -> sha` (new), `COMMANDS.decide.run`/`COMMANDS.escalate.run` (modified: `--consequential` on `escalate` routes to `escalateConsequential`; `decide --consequential` already routed to `decideConsequential`, unchanged wiring, now backed by Task 3's rewrite).
+- Produces: `escalateConsequential(cwd, draft) -> sha` (new), `COMMANDS.decide.run` and `COMMANDS.escalate.run` (both modified).
 
-`cairn escalate` without `--consequential` is unaffected: it still calls the plain `escalate()` (no measurement, any level -- scope rulings, disputes, cycle escalations, the fourth-attempt rule). `cairn escalate --consequential` is the only path that consumes a measurement and is the only path a floor-caught or vetoed draft, or an agent's own choice to escalate past a `suggested: agent` composite, can take -- exactly what makes Waiting "arise only two ways" true in code, not merely in prose.
+Correction to plan on record: `cairn decide --consequential` is not, today, wired to `lib/escalate.mjs`'s `decideConsequential`. The existing `decideCommand` (`lib/cli.mjs`) already uses `--consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` for a *different* flow -- the spec-phase deference decision the skills already call (`skills/new-project/SKILL.md` and its siblings: "A ruling instead of a confirmation is a deference decision"), written with `lib/adr.mjs`'s bare `decide()` before any commitment is even open, so it has no requirement concerns, no options and nothing to measure. `decideConsequential` (`lib/escalate.mjs`) is the *other* flow: the work-loop draft, with `--commitment`/`--concern`/`--question`/`--recommendation`/etc., the one section 10 measures. Both are legitimately "a Consequential decision" and both keep the same `cairn decide --consequential` verb (mandatory `--consequential` stays a confirmation flag, not a mode switch, exactly as it is today); `decideCommand` now dispatches on which flag set is present -- `--title` for the old spec-phase shape, `--commitment` for the new draft shape -- rather than trying to merge two structurally different inputs into one parser. This task adds that dispatch; it does not touch the spec-phase shape's own behavior.
+
+`cairn escalate` without `--consequential` is unaffected: it still calls the plain `escalate()` (no measurement, any level -- scope rulings, disputes, cycle escalations, the fourth-attempt rule). `cairn escalate --consequential` is new (no existing flag to collide with) and is the only path that consumes a measurement and is the only path a floor-caught or vetoed draft, or an agent's own choice to escalate past a `suggested: agent` composite, can take -- exactly what makes Waiting "arise only two ways" true in code, not merely in prose.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -400,18 +402,48 @@ describe('escalateConsequential', () => {
 ```
 
 ```js
-// tests/cli.test.mjs
-describe('escalate --consequential and decide --consequential', () => {
+// tests/cli.test.mjs -- uses the file's own run(argv, cwd, extra) helper (already defined at the
+// top of this file, plan 03/09: `let out='', err=''; const code = await main(argv, {cwd, stdout:
+// {write:(s)=>{out+=s;}}, stderr:{write:(s)=>{err+=s;}}, ...extra}); return {code, out, err};`) and
+// its own draftArgs(D) helper, added here since no existing helper turns a draft object into argv
+// (parseEscalateArgs goes the other way).
+function draftArgs(d) {
+  const argv = ['--commitment', d.commitment];
+  for (const c of d.concerns) argv.push('--concern', c);
+  argv.push('--question', d.question, '--recommendation', d.recommendation, '--because', d.because, '--if-wrong', d.if_wrong, '--instead', d.instead);
+  for (const o of d.options) argv.push('--option', o);
+  for (const p of d.named_paths) argv.push('--path', p);
+  for (const c of d.cited_decisions) argv.push('--decision', c);
+  return argv;
+}
+
+describe('escalate --consequential and decide --consequential (CLI dispatch)', () => {
   test('escalate --consequential routes through escalateConsequential', async () => {
     const cwd = await repoWithCommitment();
-    await measureViaCli(cwd, draft());   // helper: spawns `cairn measure <draft flags>` (Task 5)
-    const r = await runCli(cwd, ['escalate', '--consequential', ...draftFlags(draft())]);
-    assert.equal(r.code, 0); assert.match(r.stdout, /cairn: escalate/);
+    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const r = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: escalate/);
   });
   test('plain escalate (no --consequential) needs no measurement', async () => {
     const cwd = await repoWithCommitment();
-    const r = await runCli(cwd, ['escalate', ...draftFlags(draft())]);
-    assert.equal(r.code, 0);
+    const r = await run(['escalate', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err);
+  });
+  test('decide --consequential --commitment ... routes through decideConsequential', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const r = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: decide/);
+  });
+  test('decide --consequential --title ... (the spec-phase deference shape) is unaffected', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['decide', '--consequential', '--title', 't', '--rests-on', 'AUTH-003', '--wrong-if', 'w', '--body', 'b'], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /^decide /);
+  });
+  test('decide --consequential with neither --title nor --commitment refuses', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['decide', '--consequential'], cwd);
+    assert.equal(r.code, 1);
   });
 });
 ```
@@ -419,7 +451,7 @@ describe('escalate --consequential and decide --consequential', () => {
 - [ ] **Step 2: Run to verify it fails**
 
 Run: `node --test tests/escalate.test.mjs tests/cli.test.mjs`
-Expected: FAIL, `escalateConsequential` is not exported and `cairn escalate --consequential` is not recognized (it is parsed as an ordinary, unrecognized escalate flag today, since `parseEscalateArgs` refuses any flag not in its known set).
+Expected: FAIL, `escalateConsequential` is not exported, `cairn escalate --consequential` is not recognized (it is parsed as an ordinary, unrecognized escalate flag today, since `parseEscalateArgs` refuses any flag not in its known set), and `cairn decide --consequential --commitment ...` is refused ("decide needs --title, --rests-on, --wrong-if and --body").
 
 - [ ] **Step 3: Implement**
 
@@ -455,7 +487,32 @@ async function escalateCommand(argv, { cwd, stdout }) {
 }
 ```
 
-Update `COMMANDS.escalate.usage` to `'escalate [--consequential] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]'` (the old `--transport-module (test only)` flag is gone from this command's own surface; plan 18's fixtures inject a transport into `cairn measure` instead, per Task 5).
+```js
+// lib/cli.mjs -- decideCommand dispatches on which flag set is present: --title is the existing
+// spec-phase deference shape (bare decide(), unchanged); --commitment is the new work-loop draft
+// shape (decideConsequential, Task 3). Neither present is a refusal, same as today's message style.
+async function decideCommand(argv, { cwd, stdout }) {
+  if (!argv.includes('--consequential')) throw new Refusal('decide needs --consequential (a Blocking decision is an escalation, not this command)');
+  if (argv.includes('--commitment')) {
+    const { decideConsequential } = await import('./escalate.mjs');
+    const { parseEscalateArgs } = await import('./escalate.mjs');
+    const draft = parseEscalateArgs(argv.filter((a) => a !== '--consequential'));
+    const id = await decideConsequential(cwd, draft);
+    stdout.write(`cairn: decide ${draft.commitment} ${id}\n`);
+    return 0;
+  }
+  const title = flagValue(argv, '--title');
+  const restsOnRaw = flagValue(argv, '--rests-on');
+  const wrongIf = flagValue(argv, '--wrong-if');
+  const body = flagValue(argv, '--body');
+  if (!title || !restsOnRaw || !wrongIf || !body) throw new Refusal('decide needs --title, --rests-on, --wrong-if and --body (or the work-loop draft shape: --commitment, --concern, --question, --recommendation, --because, --if-wrong, --instead)');
+  const rests_on = restsOnRaw.split(',').map((s) => s.trim()).filter(Boolean);
+  const id = await decide(cwd, { title, rests_on, wrong_if: wrongIf, body });
+  stdout.write(`decide ${id}\n`);
+}
+```
+
+Update `COMMANDS.decide.usage` to `'decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t> (a spec-phase deference decision) | decide --consequential --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...] (a measured work-loop decision)'` and `COMMANDS.escalate.usage` to `'escalate [--consequential] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]'` (the old `--transport-module (test only)` flag is gone from `escalate`'s own surface; plan 18's fixtures inject a transport into `cairn measure` instead, per Task 5).
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -466,7 +523,7 @@ Expected: PASS.
 
 ```bash
 git add lib/escalate.mjs lib/cli.mjs tests/escalate.test.mjs tests/cli.test.mjs
-git commit -m "Add escalate --consequential, requiring and naming the current measurement; leave plain escalate unmeasured"
+git commit -m "Wire escalate --consequential and decide --consequential --commitment to the measured work-loop draft, leaving the spec-phase deference shape and plain escalate unmeasured"
 ```
 
 ---

@@ -83,8 +83,10 @@ The kernel's terms. A term in this list means this and nothing else.
   `data` (paths whose change is a persisted-data change; a decision
   touching one is the developer's), `signing_key` (the key `cairn
   answer` verifies against, when the developer signs), `attribution`
-  (`forbidden` or `allowed`, for the release script), and `typesafeai`
-  (section 10). All path lists use one glob syntax; a path in both
+  (`forbidden` or `allowed`, for the release script), `harness` (one
+  entry per harness the project runs under, naming the model the
+  adversary is started on, section 9), and `typesafeai` (section 10).
+  All path lists use one glob syntax; a path in both
   `outside` and `source` is refused. A settings file that carries a
   field whose name or value looks like an API key is refused; secrets
   come from the environment and never from a tracked file.
@@ -266,7 +268,7 @@ record SHA; a reference into the code is a tree OID.
 | receipt | `Cairn-Receipt: <mechanism> <entry-digest> <input-tree-oid> ran\|error`, `Cairn-Result: <REQ> <text-digest> pass\|fail\|unverified` (repeated), `Cairn-Output: <digest>`, `Cairn-Exit: <code or signal>` | the input set's tree | every wake: freshness, attempts |
 | review | `Cairn-Review: <slug> <tree-oid>`, `Cairn-Examined: <text>` (repeated), `Cairn-Q: <n> <target> observed\|not-checked <text>` (repeated), `Cairn-Finding: <n> <text>` (repeated) | the tree reviewed | before the report; at Done |
 | brief | `Cairn-Brief: <slug> <review-sha> <digest>` | the review | when the report is checked |
-| report | `Cairn-Report: <slug> <tree-oid> <brief-sha>`, `Cairn-Attempt: <q> <target> <tried> <result>` (repeated), `Cairn-Finding: <n> <text>` (repeated) | the review's tree, verified equal; the brief | at Done: every finding resolved or disputed |
+| report | `Cairn-Report: <slug> <tree-oid> <brief-sha> model=<name>`, `Cairn-Attempt: <q> <target> <tried> <result>` (repeated), `Cairn-Finding: <n> <text>` (repeated) | the review's tree, verified equal; the brief | at Done: every finding resolved or disputed |
 | resolution | `Cairn-Resolves: <report-sha> <n> <tree-oid> <how>` | the report; the tree after the fix | at Done |
 | acceptance | `Cairn-Accepts: <resolution-sha> <tree-oid>` or `Cairn-Rejects: <resolution-sha> <text>` | the resolution; the final tree | at Done |
 | escalation | `Cairn-Escalation: <slug>`, `Cairn-Question:`, `Cairn-Recommend:`, `Cairn-Because:`, `Cairn-If-Wrong:`, `Cairn-Instead:`, `Cairn-Concerns: <REQ or record-sha>` | what it concerns | every wake until answered |
@@ -527,11 +529,24 @@ the developer answers). The adversary is asked once more, at the final
 tree, to accept or reject each resolution; a rejection names why and
 the builder resolves again. No second report.
 
-What the kernel cannot check: that the adversary was a different agent.
-The brief's digest keeps the builder's hand off the adversary's input;
-where the harness gives session identities, `cairn report` refuses a
-session that wrote the review. Beyond that, the record's shape is the
-evidence.
+**The adversary's model.** A different model has different blind spots,
+which is what idea 5 wants; a second session of the same model only
+has less context. Settings name, per harness, the model the adversary
+is started on (`harness.<name>.adversary_model`). The session-start
+hook records which harness is running, in the Git directory beside the
+check lock, never tracked; `cairn brief` reads it and prints the
+instruction: start the adversary on that model, with none of your
+context, never as a fork. A `null` entry or an unknown harness means
+"any model but your own", and the report records what was used. The
+report's `model=` trailer is required; where the harness reports the
+session's own model, `cairn report` refuses a report whose model equals
+it.
+
+What the kernel cannot check: that the adversary was a different agent
+or model, beyond what the harness reports. The brief's digest keeps the
+builder's hand off the adversary's input; where the harness gives
+session identities, `cairn report` refuses a session that wrote the
+review. Beyond that, the record's shape is the evidence.
 
 **Cost.** One adversary per commitment, plus its acceptance pass. The
 trade, stated: a mechanism that passes without the behavior is caught
@@ -677,6 +692,11 @@ trailer is the alias rather than the resolved version.
   "data": ["src/store/**", "migrations/**"],
   "signing_key": null,
   "attribution": "forbidden",
+  "harness": {
+    "claude_code": { "adversary_model": "fable" },
+    "codex":       { "adversary_model": "gpt-5" },
+    "muse":        { "adversary_model": null }
+  },
   "typesafeai": {
     "enabled": true,
     "model": "jev-1.13.0",
@@ -690,6 +710,10 @@ trailer is the alias rather than the resolved version.
 
 `interfaces` and `data` sit at the top level because the scope gate and
 the adversary's brief use them whether or not the evaluator is on.
+`harness` is keyed by the name the session-start hook records; an
+entry may later carry the facts the kernel needs per harness (whether
+a per-turn hook exists, whether subagents exist), filled by the
+install skill rather than written by the developer.
 
 What this does not do, said once: it does not make the agent's
 judgment better; it makes the routing of that judgment cheaper for the
@@ -781,6 +805,10 @@ repository's own roadmap, not in this specification.
 19. `.cairn/policy` becomes `.cairn/settings.json`, the only
     configuration file; the API key comes from `TYPESAFEAI_API_KEY`
     and a settings file carrying a key is refused.
+20. The adversary's model is set per harness in settings, the
+    session-start hook records the harness, the brief prints the
+    instruction and the report records the model (section 9).
+    Confirmed by the developer on 2026-09-18 ("confirmed").
 
 ## 14. Next steps
 

@@ -65,6 +65,16 @@ test('overlaps follows the literal-stem rule', () => {
   assert.ok(!overlaps('src/**', 'srcx/**') && !overlaps('README.md', 'bin/**') && !overlaps('**/*.md', '**/*.js'));
 });
 
+import { matchGlob } from '../lib/paths.mjs';
+
+test('S1: a wildcard-leading glob overlapping a reserved path is caught, not just stem containment', () => {
+  assert.ok(matchGlob('**/*.json', '.cairn/settings.json'));
+  assert.ok(overlaps('**/*.json', '.cairn/**'));
+  assert.ok(overlaps('**/spec/**', 'docs/spec/**'));
+  refuses((s) => { s.outside.push('**/*.json'); }, /outside \*\*\/\*\.json overlaps reserved \.cairn\/\*\*/);
+  refuses((s) => { s.outside.push('**/spec/**'); }, /outside \*\*\/spec\/\*\* overlaps reserved docs\/spec\/\*\*/);
+});
+
 import { makeRepo } from './helpers/repo.mjs';
 import { loadSettings, SettingsError } from '../lib/settings.mjs';
 import { sha256, canonicalize } from '../lib/canon.mjs';

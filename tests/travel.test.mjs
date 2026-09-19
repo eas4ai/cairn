@@ -15,7 +15,9 @@ import {
   installRefspecs, refspecsFor, DURABLE_REFS, TravelError,
   fetchCommand, missingRefsLine,
   push, remoteOids, PUSH_COMMAND,
+  validateAfterFetch,
 } from '../lib/travel.mjs';
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
 
 const sh = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -183,4 +185,53 @@ describe('push', () => {
     await assert.rejects(push(cwd), /cairn: no authority remote/);
   });
   test('PUSH_COMMAND is cairn push', () => assert.equal(PUSH_COMMAND, 'cairn push'));
+});
+
+describe('validateAfterFetch', () => {
+  test('a consistent clone has no repairs', async () => {
+    const { cwd } = await started();
+    assert.deepEqual(await validateAfterFetch(cwd), []);
+  });
+  test('log fetched without snapshots: names the snapshot fetch', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
+    sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));  // an older snapshot root, fetched by hand
+    const repairs = await validateAfterFetch(clone);
+    assert.equal(repairs.length, 1);
+    assert.deepEqual([repairs[0].kind, repairs[0].ref, repairs[0].command], ['fetch', 'refs/cairn/snapshots', 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots']);
+  });
+  test('branch ahead of the log: Current names a slug with no start on the remote log; the repair is a push from the writer', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    writeFileSync(join(cwd, 'docs/spec/roadmap.md'), 'Current: second-slug\n\n## second-slug\nRequirements: \n');
+    sh(cwd, 'add', '-A'); sh(cwd, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'move current by hand');
+    sh(cwd, 'push', '-q', 'authority', 'main');   // a bypassing ordinary Git push
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots');
+    const repairs = await validateAfterFetch(clone);
+    assert.equal(repairs.length, 1);
+    assert.equal(repairs[0].kind, 'push'); assert.equal(repairs[0].ref, 'refs/cairn/log');
+    assert.match(repairs[0].command, /^cairn push  \(in the clone that wrote the start record for second-slug\)$/);
+  });
+  test('branch behind the log is safe', async () => {
+    const { cwd } = await started();
+    await push(cwd);
+    await writeWorkspaceSnapshot(cwd);
+    await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'later' });
+    assert.deepEqual(await validateAfterFetch(cwd), []);
+  });
+  test('wake prints the first repair and exits 3', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
+    sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
+    const v = await wake(clone);
+    assert.equal(v.exit, 3); assert.equal(v.line, 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots');
+  });
 });

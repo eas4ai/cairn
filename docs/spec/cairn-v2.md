@@ -535,7 +535,8 @@ has less context. Settings name, per harness, the model the adversary
 is started on (`harness.<name>.adversary_model`): the exact identifier
 that harness's subagent launch accepts, verbatim, which for an
 API-driven harness is the API model id. The kernel passes the string
-through and never maps names. The session-start
+through and never maps names; the skill for each harness says how the
+identifier is handed to that harness's subagent launch. The session-start
 hook records which harness is running, in the Git directory beside the
 check lock, never tracked; `cairn brief` reads it and prints the
 instruction: start the adversary on that model, with none of your

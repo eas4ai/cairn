@@ -829,6 +829,24 @@ predicate. The table is normative.
 | `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally |
 | `reply SLUG` | a reply record names the open `ask` escalation |
 
+A Consequential decision carries one more requirement this table does not
+list as a row, because wake never queues it as a next action the way it
+queues `declare` or `run`: before the agent writes the decision, `cairn
+measure` runs on the exact draft and writes a current measurement record
+(section 2). `cairn decide --consequential` refuses a draft whose
+measurement is missing, stale, or built from a different draft digest.
+Waiting for a Consequential decision arises only two ways: the narrow floor
+in section 10 sends it to the developer before any call is made, or the
+agent, having read the measurement, chooses to escalate anyway. A
+measurement that clears the composite is information, not consent; the agent
+may still escalate past it toward the developer, but nothing routes a floor-
+caught or vetoed draft to the agent.
+
+Revised 2026-09-19: new. Section 10 replaces a deterministic gate cascade
+with one composite measurement the agent itself reads and acts on; this
+paragraph is where the decision predicate picks that up, since the
+Consequential decision row was never in the action table to begin with.
+
 ### Scope is monotonic
 
 Before any state-changing command, the kernel compares the current workspace
@@ -893,6 +911,23 @@ same finding escalates.
 Waiting begins when an escalation exists without a final answer. Wake prints
 the five fields verbatim; the agent adds nothing. Hooks print the same state and
 do not nag.
+
+Settings' `developer` field states whether a human can ever answer that
+Waiting. `developer: absent` is what an autonomous benchmark runs with: the
+narrow floor in section 10 is the only path left to the developer, since the
+agent's own choice to escalate past a clearing measurement would have no one
+to answer it either. When the floor names the developer and `developer:
+absent`, the run records the floor decision as an escalation on the log
+exactly as it would with a developer present, then exits 4 instead of
+waiting for an answer that cannot come. Exit 4 is distinct from wake's exit 3
+for a non-verdict state (section 2): a floor hit in absent mode is a real
+Waiting verdict, just one this run cannot resolve.
+
+Revised 2026-09-19: new. This states what section 5's own Waiting rule does
+in the one mode where nobody can end it, which the developer's stated reason
+for the evaluator redesign, "The reason I wanted this design was to be able
+to use Cairn in an autonomous benchmark," requires: a benchmark run cannot
+sit at Waiting forever.
 
 The kernel also prevents administrative cycling. It counts each completed
 administrative action (`repair`, `recover`, `reconcile`, `scope`, `record`,

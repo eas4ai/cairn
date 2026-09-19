@@ -4,11 +4,12 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { makeRepo } from './helpers/repo.mjs';
+import { makeRepo, makeProject } from './helpers/repo.mjs';
 import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
-import { installRefspecs, refspecsFor, DURABLE_REFS, TravelError } from '../lib/travel.mjs';
+import { wake } from '../lib/wake.mjs';
+import { installRefspecs, refspecsFor, DURABLE_REFS, TravelError, fetchCommand, missingRefsLine } from '../lib/travel.mjs';
 
 const sh = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -81,5 +82,29 @@ describe('refspecs', () => {
     const { cwd } = await project();
     await installRefspecs(cwd, 'authority');
     assert.ok(!sh(cwd, 'config', '--get-all', 'remote.authority.push').includes('in-progress'));
+  });
+});
+
+describe('clone without the durable refs', () => {
+  test('fetchCommand is the exact two-line text from section 4', () => {
+    assert.equal(fetchCommand('origin'), "git fetch origin 'refs/cairn/log:refs/cairn/log' \\\n  'refs/cairn/snapshots:refs/cairn/snapshots'");
+  });
+  test('a fresh clone gets the line and exit 3; after the fetch it does not', async () => {
+    const { cwd, remote } = await project();
+    await start(cwd, 'first-slug');
+    sh(cwd, 'push', '-q', 'authority', 'main', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots');
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    assert.equal(await missingRefsLine(clone), fetchCommand('authority'));
+    const v = await wake(clone);
+    assert.equal(v.exit, 3); assert.equal(v.line, fetchCommand('authority'));
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots');
+    assert.equal(await missingRefsLine(clone), null);
+    assert.equal((await wake(clone)).exit, undefined);
+  });
+  test('local-only project without refs names cairn init', async () => {
+    const { cwd } = await makeProject({ settings: { authority_remote: null } });
+    sh(cwd, 'update-ref', '-d', 'refs/cairn/log');
+    assert.match(await missingRefsLine(cwd), /^cairn init/);
   });
 });

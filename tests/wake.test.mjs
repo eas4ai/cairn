@@ -32,7 +32,11 @@ test('outside a project wake exits 3 naming the skills', async () => {
 test('missing durable refs print the exact fetch command from section 4, or name init without a remote', async () => {
   const r1 = await loopRepo({ settings: { authority_remote: null } });
   await git(['update-ref', '-d', 'refs/cairn/log'], { cwd: r1.cwd });
-  assert.deepEqual(await wake(r1.cwd), { exit: 3, line: 'cairn: missing refs/cairn/log; run cairn init' });
+  // Deviation from the plan text: plan 12's lib/travel.mjs (missingRefsLine) now supplies this
+  // line, naming every missing durable ref rather than only the first one this loop's own scan
+  // happened to reach; its local-only wording is "cairn init  (durable refs ... are missing and no
+  // authority remote is configured)", not this file's earlier placeholder text.
+  assert.deepEqual(await wake(r1.cwd), { exit: 3, line: 'cairn init  (durable refs refs/cairn/log are missing and no authority remote is configured)' });
 
   const r2 = await loopRepo();
   await git(['update-ref', '-d', 'refs/cairn/log'], { cwd: r2.cwd });

@@ -215,3 +215,28 @@ test('retryDelayMs caps exponential backoff at 5000ms', () => {
   // 500 * 2**1 = 1000, under the cap
   assert.equal(retryDelayMs(res, 1, noJitter), 1000);
 });
+
+test('a response body that echoes the key is redacted and truncated', async () => {
+  const key = 'sk-live-abcDEF123456789';
+  const filler = 'y'.repeat(3000); // forces the body well past the 2000 byte cap
+  const text = `{"error":"denied","echo":"the key was ${key}, again ${key}","filler":"${filler}"}`;
+
+  let thrown;
+  try {
+    await post(req, { key, fetchImpl: fake(401, text) });
+    assert.fail('post() must reject on a 401');
+  } catch (e) {
+    thrown = e;
+  }
+
+  assert.ok(thrown instanceof TransportError);
+  assert.equal(thrown.klass, 'auth');
+  assert.equal(thrown.status, 401);
+  assert.ok(!thrown.message.includes(key), 'message must not carry the key');
+  assert.ok(!String(thrown.stack).includes(key), 'stack must not carry the key');
+  assert.ok(!thrown.body.includes(key), 'body must not carry the key');
+  assert.ok(!JSON.stringify(thrown).includes(key), 'JSON.stringify(error) must not carry the key');
+  assert.ok(thrown.body.includes('[redacted]'), 'body must show the redaction marker');
+  assert.ok(thrown.body.length < text.length, 'body must actually be truncated, not just redacted');
+  assert.ok(Buffer.byteLength(thrown.body, 'utf8') <= 2000, 'body must be capped at 2000 bytes');
+});

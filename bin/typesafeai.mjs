@@ -14,11 +14,30 @@ const BACKOFF_MAX_MS = 5000;
 const JITTER = 0.25;
 const RETRY_AFTER_CAP_MS = 60000;
 const DEFAULT_TIMEOUT_MS = 60000;
+const MAX_BODY_BYTES = 2000;
+
+// A server response can echo the request back, including the bearer key, and can run
+// to any length. This is the one place response text is ever attached to an error
+// (TransportError.body, and by extension anything derived from it, such as
+// JSON.stringify(error) or a logged error message), so it is the one place that needs
+// to strip the key and cap the length -- every occurrence of `key` is replaced before
+// truncating to MAX_BODY_BYTES, so a key that straddles the truncation point is still
+// fully redacted rather than half-visible.
+function sanitize(text, key) {
+  if (typeof text !== 'string') return text;
+  const redacted = key ? text.split(key).join('[redacted]') : text;
+  const buf = Buffer.from(redacted, 'utf8');
+  return buf.length > MAX_BODY_BYTES ? buf.subarray(0, MAX_BODY_BYTES).toString('utf8') : redacted;
+}
 
 export class TransportError extends Error {
-  constructor(klass, status, body) {
+  // `key` is never stored: it is used once, here, to redact `body`, and only the
+  // redacted, truncated result becomes part of the error (message never carries
+  // response text at all, so it needs no separate redaction).
+  constructor(klass, status, body, key) {
     super(`typesafeai: ${klass}${status ? ' ' + status : ''}`);
-    this.klass = klass; this.status = status ?? null; this.body = body ?? null;
+    this.klass = klass; this.status = status ?? null;
+    this.body = body == null ? null : sanitize(body, key);
   }
 }
 
@@ -103,12 +122,12 @@ export async function post(request, opts = {}) {
         await sleepImpl(delay);
         continue;
       }
-      throw new TransportError(classify(res.status, text), res.status, text);
+      throw new TransportError(classify(res.status, text), res.status, text, k);
     }
 
     let parsed;
-    try { parsed = JSON.parse(text); } catch { throw new TransportError('malformed', 200, text); }
-    if (!parsed || typeof parsed !== 'object' || typeof parsed.model !== 'string') throw new TransportError('malformed', 200, text);
+    try { parsed = JSON.parse(text); } catch { throw new TransportError('malformed', 200, text, k); }
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.model !== 'string') throw new TransportError('malformed', 200, text, k);
     return { status: 200, body: text, model: parsed.model };
   }
 }

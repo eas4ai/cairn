@@ -74,11 +74,15 @@ The kernel's terms. A term in this list means this and nothing else.
 - **Commitment**: one agreed unit of work: a roadmap section, opened by
   a start record and closed by a done record on the ref. Not a Git
   commit; one commitment spans many.
-- **Policy**: `.cairn/policy`, hand-written flat fields: `outside:` the
-  paths that are nobody's input and never a scope breach; `source:` the
-  directories under which no `documents:` or `outside:` entry may lie;
-  `signing-key:` the key `cairn answer` verifies against, when the
-  developer signs; `attribution: forbidden` for the release script.
+- **Settings**: `.cairn/settings.json`, hand-written, tracked, the only
+  configuration file: `outside` (paths that are nobody's input and
+  never a scope breach), `source` (directories under which no
+  `documents` or `outside` entry may lie), `signing_key` (the key
+  `cairn answer` verifies against, when the developer signs),
+  `attribution` (`forbidden` for the release script), and `typesafeai`
+  (section 10). A settings file that carries a field whose name or
+  value looks like an API key is refused; secrets come from the
+  environment and never from a tracked file.
 - **Working agreement**: `AGENTS.md` at the repository root, copied from
   the template the plugin ships: the move for each verdict and action.
   The kernel digests it to know when it changed; it does not parse it.
@@ -131,7 +135,7 @@ squashed and amended freely, and the loop does not care.
 - **Escalation**: a record with five one-line fields (question,
   recommendation, because, if wrong, instead). **Answer**: the
   developer's record, `ok`, `instead <text>` or `ask <text>`, written by
-  `cairn answer`, signed when policy names a key. An `ask` keeps it open
+  `cairn answer`, signed when the settings name a key. An `ask` keeps it open
   for the agent's **reply**.
 - **Item**: a record capturing an idea: kind `backlog` (work the
   Agreed requirements already cover), `next-feature` (would change
@@ -239,10 +243,10 @@ presents the queue, and stops.
 A record exists only if something reads it at a known moment: the
 kernel on the next wake, or the developer at a moment this document
 names. The kernel parses exactly two hand-written things, the
-specification files and the policy, and in the specification exactly
-the lines the grammar below names. Everything else it reads, it wrote:
-the mechanisms entry, the ref, the ADR. There is no prose for it to
-see through.
+specification files and the settings file, and in the specification
+exactly the lines the grammar below names. Everything else it reads,
+it wrote: the mechanisms entry, the ref, the ADR. There is no prose for
+it to see through.
 
 **The ref schema.** Every record on `refs/cairn/log` is an empty commit.
 Its subject is `cairn: <kind> <target>`; its trailers are below. Every
@@ -261,7 +265,8 @@ record SHA; a reference into the code is a tree OID.
 | resolution | `Cairn-Resolves: <report-sha> <n> <tree-oid> <how>` | the report; the tree after the fix | at Done |
 | acceptance | `Cairn-Accepts: <resolution-sha> <tree-oid>` or `Cairn-Rejects: <resolution-sha> <text>` | the resolution; the final tree | at Done |
 | escalation | `Cairn-Escalation: <slug>`, `Cairn-Question:`, `Cairn-Recommend:`, `Cairn-Because:`, `Cairn-If-Wrong:`, `Cairn-Instead:`, `Cairn-Concerns: <REQ or record-sha>` | what it concerns | every wake until answered |
-| answer | `Cairn-Answer: <escalation-sha> ok\|instead\|ask <text>` | the escalation | every wake; verified against `signing-key` when set |
+| answer | `Cairn-Answer: <escalation-sha> ok\|instead\|ask <text>` | the escalation | every wake; verified against `signing_key` when set |
+| evaluation | `Cairn-Eval: typesafeai <model> <schema> <state-digest> tokens=<n> tier=<1\|2\|3> cut=<n>` or `Cairn-Eval: unavailable <reason>`, `Cairn-Eval-Option: <n> reversible=<p> contradicts=<p> observed=<p> score=<s>` (repeated), `Cairn-Eval-Route: agent\|developer conf=<c> sufficient=<p>` | on an escalation or a Consequential decision's promotion record only | the queue; `cairn reversals` |
 | reply | `Cairn-Reply: <escalation-sha> <text>` | the escalation | after an `ask` |
 | item | `Cairn-Item: backlog\|next-feature\|defect <slug>`, `Cairn-From: <REQ>` or `Cairn-Changes: <REQ or agreement>`, `Cairn-Body: <text>` | a requirement | Done, next-feature |
 | outside | `Cairn-Outside: <item-sha> <reason>` | the item | the capture gate |
@@ -422,13 +427,13 @@ state that hook lacked.
 kernel release does not invalidate evidence; the schema version does,
 when the format changes. A revised requirement needs `review mechanism`
 before its evidence counts. A `documents` entry must be among the
-mechanism's inputs and must not lie under a `source:` directory; `cairn
+mechanism's inputs and must not lie under a `source` directory; `cairn
 declare` refuses otherwise. A receipt whose output file is absent, as
 on a fresh clone, is current; the output digest lets its absence be
 reported when asked.
 
 **Scope.** A change on the loop's own history to a path no mechanism
-declares and `outside:` does not list is a breach, named with the path.
+declares and `outside` does not list is a breach, named with the path.
 Recovery: declare the input, or a scope record with an escalation the
 developer answers `ok`.
 
@@ -439,7 +444,7 @@ requirement is worked under it.
 
 **Attempts.** After three attempts without a pass, a fourth requires an
 escalation first. Reruns at a seen tree and changes only to `documents`
-or `outside:` paths are not attempts.
+or `outside` paths are not attempts.
 
 **Decisions.** Two kernel levels, in the ADR. Consequential: `cairn
 decide` appends the line; the agent continues; the developer reads at
@@ -449,9 +454,12 @@ one of four causes.
 
 **Escalation.** Five one-line fields; `ok`, `instead`, `ask`; a reply
 after `ask`. The developer runs `cairn answer`; the agent never does.
-When `.cairn/policy` names a `signing-key`, the answer record must
-verify against it, and that is a check. Without one, the author line is
-evidence and not a check, and the specification says so.
+When the settings name a `signing_key`, the answer record must verify
+against it, and that is a check. Without one, the author line is
+evidence and not a check, and the specification says so. `cairn
+escalate` and `cairn decide --consequential` take the same input; with
+the evaluator enabled, the route decides which record is written
+(section 10).
 
 **Capture and promotion.** A backlog item is work the Agreed
 requirements already cover; the agent promotes one at Done by a
@@ -525,19 +533,158 @@ trade, stated: a mechanism that passes without the behavior is caught
 at Done rather than at its first pass; the fail-receipt rule and Q1's
 printed output cover the gap.
 
-## 10. Distribution
+## 10. The evaluator: one optional model call at Consequential
+
+Ritual ascent is the agent pricing its own uncertainty at zero and the
+developer's attention at zero, so every borderline call goes up. The
+evaluator answers "could the agent have decided this?" before an
+escalation is written, at the one level where the agent is both
+allowed to decide and inclined not to. It is optional, off by default,
+and touches nothing but escalations and Consequential decisions.
+
+**Where it lives.** `bin/typesafeai.mjs`, the one file in the plugin
+that makes a network call; the kernel's no-network rule holds for
+`bin/cairn.mjs` on its own. `cairn escalate` and `cairn decide
+--consequential` call it only when `settings.typesafeai.enabled` is
+true and `TYPESAFEAI_API_KEY` is in the environment. The key comes
+from the environment and nowhere else.
+
+**What is never evaluated.** An escalation that changes Agreed text or
+the working agreement, a fourth attempt after three without a pass, a
+scope retention or restoration, or one whose recommendation is empty
+is the developer's by construction and is written without a call. The
+evaluator never raises a decision's level, and never touches lint,
+receipts, mechanisms, reviews or items.
+
+**The state.** A deterministic function of the decision draft and the
+tree, assembled by the kernel; the agent supplies references, the
+kernel resolves them. Two invocations at the same tree produce
+byte-identical state.
+
+```
+D        := decide(c, R*, o1..on, rec, wrong_if, d*)   -- five fields + options + ids
+state(D) := < process,                                  -- the level rule, the by-construction list,
+                                                        --   the safety net, the predicate, ~300 tokens
+             D,
+             block(r) for r in R*,                      -- text, falsifier, status, mechanism name
+             decision(d) for d in d*,                   -- the ADR lines it cites
+             declaration(m(r)) for r in R*,
+             facts,                                     -- touched paths; interface and data hits by
+                                                        --   settings globs; diff stat; attempts;
+                                                        --   escalations this commitment; queue unread
+             open(range(c)),                            -- findings, escalations, in-progress
+             code >                                     -- tiered, capped, last
+```
+
+The code row fills in order until `state_cap_tokens` is spent: the
+diff of the touched paths since the tree in-progress pinned; the whole
+files that diff touches; the remaining declared inputs in declaration
+order, whole files. The record says which tier was reached and how
+many files were cut. The cap is Cairn's rule, 32k tokens for the state
+and a default of 28k in settings, chosen because a Consequential
+decision that cannot be judged from its diff, its files, its blocks and
+its cited decisions is a decision that should be smaller; it is not an
+API limit.
+
+**The questions.** One call, all questions at once:
+
+| id | type | asks |
+|---|---|---|
+| `sufficient` | noul | does `state` hold what is needed to judge `D`? |
+| `reversible_n` | noul | would reverting the commits that realize option n restore the prior behavior with no migration, data change or caller change? |
+| `contradicts_n` | noul | does option n contradict any cited decision, given its body and wrong-if? |
+| `observed` | noul | does `D.because` name something observed (a command, path or output) rather than a belief? |
+| `owner` | choice | under `process`, whose decision is `D`: `agent` or `developer`? |
+
+Interface and data exposure are facts from the `interfaces` and `data`
+globs, not questions; when an option names no paths they are unknown
+and the record says so.
+
+**The route.** In code, from settings:
+
+```
+score(o_n) := w_rev * reversible_n + w_con * (1 - contradicts_n) + w_obs * observed
+route(D)   := sufficient >= sigma and owner = agent and conf(owner) >= theta
+                -> refuse the escalation; print the cairn decide line, recommendation as the decision;
+                   the decision queues with the evaluation on its record
+              otherwise
+                -> the escalation stands, with the evaluation on its record
+              sufficient < sigma
+                -> the escalation stands; reason: insufficient context; owner not consulted
+```
+
+**The record.** Every evaluated record carries the trailers in section
+4: the model the response named, the schema version, the state digest,
+the token count the API reported, the tier and the cut, one line per
+option, and the route with its confidence. A failed call writes
+`Cairn-Eval: unavailable <reason>` (`no-key`, `schema`, `overloaded`,
+or the network error) and the escalation stands; 429 and 529 are
+retried three times with backoff, in seconds, before that. "Not asked"
+and "asked and unavailable" are never the same line.
+
+**Tuning.** `cairn reversals`, in this narrow form only: the rate at
+which evaluated decisions are superseded at the queue, by route
+confidence. Reversals climbing means the evaluator is downgrading
+decisions that were the developer's; reversals near zero with
+escalations still high means the threshold is too timid. The developer
+turns `route_threshold`, `sufficient_threshold` and the weights; the
+questions do not change.
+
+**The kill switch.** A downgrade is safe only because the queue is read.
+When a Done finds unread Consequential decisions, the evaluator is not
+called on the next commitment, and `cairn escalate` says why, until the
+queue is read. The kernel does not edit the settings file; it refuses
+to evaluate.
+
+**Falsifiers.** An evaluation trailer on a record that is not an
+escalation or a Consequential decision; an escalation in an enabled
+project with neither an evaluation nor an `unavailable` line; a state
+over the cap; two states at the same tree with different digests; an
+evaluated decision in the by-construction class; a call made while the
+queue holds unread decisions from the last Done; a settings file
+carrying a key.
+
+**Settings shape.**
+
+```json
+{
+  "outside": ["README.md", "CHANGELOG.md", ".github/"],
+  "source": ["bin/", "src/"],
+  "signing_key": null,
+  "attribution": "forbidden",
+  "typesafeai": {
+    "enabled": true,
+    "model": "jev-latest",
+    "weights": { "reversible": 0.4, "contradicts": 0.3, "observed": 0.3 },
+    "route_threshold": 0.8,
+    "sufficient_threshold": 0.7,
+    "state_cap_tokens": 28000,
+    "interfaces": ["src/api/**"],
+    "data": ["src/store/**", "migrations/**"]
+  }
+}
+```
+
+What this does not do, said once: it does not make the agent's
+judgment better; it makes the routing of that judgment cheaper for the
+developer. The option scores beside the agent's wrong-if in the queue
+are the part that may improve a decision, and only because the
+developer reads both.
+
+## 11. Distribution
 
 One plugin: the command, the hooks, four skills (`install-cairn`,
-`new-project`, `existing-project`, `next-feature`). Manifests for
-Claude Code, Codex and Muse share one version. The skills also install
-by the skills CLI. Node and Git; no build, no packages, no service.
+`new-project`, `existing-project`, `next-feature`), and the optional
+evaluator module. Manifests for Claude Code, Codex and Muse share one
+version. The skills also install by the skills CLI. Node and Git; no
+build, no packages, no service; one network call, opt-in, in one file.
 Linux and macOS.
 
 How this repository develops Cairn (its release script, its attribution
 refusal at release, its kernel line ceiling as a norm) is in the
 repository's own roadmap, not in this specification.
 
-## 11. Removed from 1.x
+## 12. Removed from 1.x
 
 - The record directories: `.cairn/evidence`, `.cairn/reviews`,
   `.cairn/escalations`, `.cairn/backlog`, `.cairn/next-iteration`,
@@ -555,7 +702,8 @@ repository's own roadmap, not in this specification.
 - A second report after resolutions; the acceptance pass replaces it.
 - `Revised <date>` rationale paragraphs inside requirement blocks.
 - Agreed by promotion. Promotion never Agrees text.
-- Decision files at Judged; the reversals report.
+- Decision files at Judged; the reversals report as analytics (it
+  returns only as the evaluator's tuning instrument, section 10).
 - The `reword` action; attribution is refused at release only.
 - The kernel digest as a freshness input; the schema version replaces it.
 - Command output files in Git.
@@ -566,7 +714,7 @@ repository's own roadmap, not in this specification.
   produced when the 2 requirements are written, identifier by
   identifier.
 
-## 12. Decisions in this draft the developer may reverse
+## 13. Decisions in this draft the developer may reverse
 
 1. A defect against the commitment's own requirement is worked, not
    captured (section 8).
@@ -599,8 +747,15 @@ repository's own roadmap, not in this specification.
     deltas; there is no carry (section 5, the cost of Done).
 17. `docs/commitments/` is gone; a commitment is a roadmap section
     between a start record and a done record.
+18. An optional evaluator, TypeSafe's Jev, at Consequential only, routing
+    escalations the agent could have decided into the queue; composite
+    scoring with weights in settings, one fan-out call, state capped at
+    32k tokens (section 10). The developer's direction on 2026-09-18.
+19. `.cairn/policy` becomes `.cairn/settings.json`, the only
+    configuration file; the API key comes from `TYPESAFEAI_API_KEY`
+    and a settings file carrying a key is refused.
 
-## 13. Next steps
+## 14. Next steps
 
 1. The developer corrects this document and the six digraphs.
 2. The requirements are written from it, each with a falsifier and the

@@ -210,13 +210,15 @@ test('the assigned command\'s exact mutation of a kernel-managed path is exempt'
 // Deviation from the plan text: targets .cairn/mechanisms/demo-001.json, the actual file
 // loopRepo's default DEMO-001 mechanism writes (see Task 4's directory-layout note), not the bare
 // directory path '.cairn/mechanisms'.
-test('any other write to a kernel-managed path is a breach that outside cannot exempt', async () => {
+// Fix round 2 item 2 note: this test used to also corrupt .cairn/mechanisms/demo-001.json and
+// expect a second breach for it; a corrupted mechanism file now refuses the whole preflight
+// instead (see the dedicated refusal test below), so only the decisions.jsonl half remains here.
+test('an invalid hand-written line in a kernel-managed path is a breach that outside cannot exempt', async () => {
   const r = await loopRepo({ settings: { outside: ['README.md'] } });
-  await r.write('.cairn/mechanisms/demo-001.json', (await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8')) + '\n');
   await r.write('docs/decisions.jsonl', '{"kind":"decision","id":"01HZZZZZZZZZZZZZZZZZZZZZZZ","ts":"2026-09-19T00:00:00Z"}\n');
   const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
-  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path).sort(), ['.cairn/mechanisms/demo-001.json', 'docs/decisions.jsonl']);
-  assert.equal(shas.length, 2);
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['docs/decisions.jsonl']);
+  assert.equal(shas.length, 1);
 });
 
 test('an unnamed path under .cairn is a breach', async () => {
@@ -316,7 +318,13 @@ test('a breach is a log fact: squashing the branch does not clear it', async () 
 // it would still pass if runWithPreflight stopped calling preflight altogether. This drives
 // runWithPreflight itself: for every state-changing command it asserts a genuine breach was
 // actually recorded, and for a reader command it asserts one was not.
+// Fix round 2 item 3 (Minor): the positive membership assertions the plan's original test made
+// are restored alongside the behavioral one -- naming every state-changing command explicitly
+// still catches a command silently dropped from the set even if the loop below happens not to
+// exercise it for some other reason.
 test('runWithPreflight invokes the preflight for every state-changing command and skips it for a reader', async () => {
+  for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
+  for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
   const r = await loopRepo();
   for (const command of STATE_CHANGING) {
     const p = `src/stray-${command}.mjs`;
@@ -324,7 +332,6 @@ test('runWithPreflight invokes the preflight for every state-changing command an
     await runWithPreflight(r.cwd, command, () => {});
     assert.ok(openBreaches(await r.log()).some((b) => b.path === p), command);
   }
-  for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
   await r.write('src/stray-reader.mjs', 'x\n');
   await runWithPreflight(r.cwd, 'show', () => {});
   assert.ok(!openBreaches(await r.log()).some((b) => b.path === 'src/stray-reader.mjs'));
@@ -409,19 +416,42 @@ test('a missing settings.json refuses cleanly instead of crashing the preflight'
   await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }), (e) => e instanceof ScopeError && e.message.startsWith('cairn: '));
 });
 
-// Item 4 (Important): an unreadable mechanism file used to turn every other declared, changed
-// path into a spurious breach too (readMechanisms failing for the whole directory made
-// declaredPaths() see nothing as declared). Only the corrupted path itself is recorded; the
-// already-declared src/demo.mjs and the plain undeclared src/stray.mjs wait until it is repaired.
-test('an unreadable mechanism file is the only breach recorded; other changes wait', async () => {
+// Item 4 (fix round 1) superseded by fix round 2 item 2: an unreadable mechanism file no longer
+// gets recorded as a single breach while everything else silently waits -- it now refuses the
+// whole preflight outright, every time, whether or not the corrupted path is itself a currently
+// changed one.
+test('an unreadable mechanism file refuses the preflight while it is itself the changed path', async () => {
   const r = await loopRepo();
   const path = '.cairn/mechanisms/demo-001.json';
   await r.write(path, (await readFile(join(r.cwd, path), 'utf8')) + ' ');   // extra byte: breaks parseStrict
   await r.write('src/demo.mjs', 'console.log("hi");\n');                   // declared by the corrupted mechanism
   await r.write('src/stray.mjs', 'x\n');                                   // plainly undeclared
-  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
-  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), [path]);
-  assert.equal(shas.length, 1);
+  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
+    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && e.message.includes(path) && /repair/.test(e.message));
+  assert.equal(openBreaches(await r.log()).length, 0);
+});
+
+// Fix round 2 item 2 (Important): reproduces the coordinator's exact report -- once the corrupted
+// mechanism file is itself no longer a delta (it was already accepted into the allowed base by an
+// earlier disposition, so it is byte-identical to the base and never appears in workspaceDelta),
+// the fix round 1 approach recorded nothing and refused nothing for anything else either: a stray
+// file and an unauthorized AGENTS.md edit both produced zero breaches, a silent failure. The
+// preflight now refuses unconditionally as soon as readMechanisms cannot read the directory,
+// before it ever looks at workspaceDelta.
+test('an unreadable mechanism file refuses the preflight even once it is part of the allowed base', async () => {
+  const r = await loopRepo();
+  const path = '.cairn/mechanisms/demo-001.json';
+  await r.write(path, (await readFile(join(r.cwd, path), 'utf8')) + ' ');
+  // Accept the corrupted bytes into the allowed base directly (appendRecord), since preflight()
+  // and dispose() would themselves now refuse on this corrupted directory.
+  const snap = await r.snap();
+  await r.add('review', r.slug, { slug: r.slug, snapshot: snap, examined: ['src'], answers: [], findings: [] });
+  assert.equal(await allowedBase(r.cwd, await r.log()), snap);
+  await r.write('src/stray.mjs', 'x\n');
+  await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
+  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
+    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && e.message.includes(path) && /repair/.test(e.message));
+  assert.equal(openBreaches(await r.log()).length, 0);
 });
 
 // Item 5 (Important, ruling): the roadmap is exempt from scope only while no commitment range is
@@ -479,4 +509,68 @@ test('a renamed file is reported as the old path deleted and the new path added'
     { path: 'src/demo.mjs', change: 'deleted' },
     { path: 'src/renamed.mjs', change: 'added' },
   ]);
+});
+
+// ==== Fix round 2 ====
+
+import { symlink } from 'node:fs/promises';
+import { recordManagedWrite, managedWriteDigest } from '../lib/scope.mjs';
+import { gitPath } from '../lib/gitx.mjs';
+import { sha256 } from '../lib/canon.mjs';
+
+// Item 1 (Critical): `git hash-object --stdin-paths` dereferences a symlink (hashing whatever it
+// points at, not the link text the snapshot tree stores), so an unchanged tracked symlink came
+// back "modified" forever.
+test('an unchanged tracked symlink is not in the delta', async () => {
+  const r = await loopRepo();
+  await symlink('demo.mjs', join(r.cwd, 'src/link.mjs'));
+  await r.commit('track a symlink');
+  const { tree } = await readSnapshot(r.cwd, await r.snap(), 'workspace');
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), []);
+});
+
+// Item 1: a dangling symlink made `git hash-object --stdin-paths` try to open its target and
+// exit 128, a raw GitError out of every state-changing command.
+test('a dangling symlink is not in the delta and does not crash', async () => {
+  const r = await loopRepo();
+  await symlink('nonexistent-target', join(r.cwd, 'src/dangling.mjs'));
+  await r.commit('track a dangling symlink');
+  const { tree } = await readSnapshot(r.cwd, await r.snap(), 'workspace');
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), []);
+});
+
+// Item 1: a symlink whose target text actually changes is still reported modified.
+test('a changed symlink target text is modified', async () => {
+  const r = await loopRepo();
+  await symlink('demo.mjs', join(r.cwd, 'src/link.mjs'));
+  await r.commit('track a symlink');
+  const { tree } = await readSnapshot(r.cwd, await r.snap(), 'workspace');
+  await r.remove('src/link.mjs');
+  await symlink('other.mjs', join(r.cwd, 'src/link.mjs'));
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), [{ path: 'src/link.mjs', change: 'modified' }]);
+});
+
+// Item 1: `--stdin-paths` also runs a clean filter and EOL conversion named by .gitattributes,
+// unlike the raw byte hashing it replaced; `--no-filters` must keep the raw bytes so the computed
+// hash still matches what the snapshot tree (built from raw bytes) actually stored.
+test('a file a clean/EOL filter would alter still hashes as its raw bytes', async () => {
+  const r = await loopRepo();
+  await r.write('.gitattributes', '* text=auto\n');
+  await r.write('src/crlf.mjs', 'line1\r\nline2\r\n');
+  await r.commit('track a CRLF file under text=auto');
+  const { tree } = await readSnapshot(r.cwd, await r.snap(), 'workspace');
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), []);
+});
+
+// Item 3 (Minor): the ledger used to key its lines with a space, which misreads a path that
+// itself contains a space (the first space inside the path would be read as the separator).
+test('the managed-write ledger keys entries with a tab so a path containing a space round-trips correctly', async () => {
+  const r = await loopRepo();
+  const path = 'a path with spaces.json';
+  const bytes = Buffer.from('content');
+  await recordManagedWrite(r.cwd, path, bytes);
+  assert.equal(await managedWriteDigest(r.cwd, path), sha256(bytes));
+  assert.equal(await managedWriteDigest(r.cwd, 'a'), null);   // a space-keyed reader would have matched this
+  const raw = await readFile(await gitPath(r.cwd, 'cairn-managed'), 'utf8');
+  assert.match(raw, /(^|\n)a path with spaces\.json\tsha256:[0-9a-f]{64}\n/);
 });

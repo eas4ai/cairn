@@ -263,3 +263,69 @@ test('carriedRecords carries unanswered escalations and unfixed defects, not ans
   assert.equal(s, open.sha);
   assert.equal(log.some((r) => r.sha === b), true);
 });
+
+import { promote } from '../lib/commitment.mjs';
+import { queue } from '../lib/adr.mjs';
+
+async function finished(repo) {
+  await start(repo.cwd, 'first');
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'Greet by name.' });
+  await done(repo.cwd, 'first');
+  return b;
+}
+
+test('promote writes decision, promotion, Current: move and successor start as one transaction', async () => {
+  const repo = await project();
+  const b = await finished(repo);
+  const calls = [];
+  const sha = await promote(repo.cwd, b, { installRefspecs: async (cwd, remote) => calls.push(remote) });
+  const log = await readLog(repo.cwd);
+  const promotion = log.filter((r) => r.kind === 'promotion').at(-1);
+  const startRec = log.at(-1);
+  assert.equal(startRec.sha, sha);
+  assert.deepEqual([startRec.kind, startRec.payload.slug, startRec.payload.from_superseded], ['start', 'second', null]);
+  assert.deepEqual(startRec.payload.requirements.map((r) => r.requirement), ['CORE-001', 'DEMO-002']);
+  // Deviation from the plan text: the already-committed 'promotion' schema (lib/records.mjs, Fix
+  // round 1 finding 8) carries intent/results, the same as 'superseded' and this task's own
+  // 'start'; the plan's literal 2-key list is extended to 4.
+  assert.deepEqual(Object.keys(promotion.payload).sort(), ['decision', 'intent', 'item', 'results']);
+  assert.equal(promotion.payload.item, b);
+  const decision = (await readAdr(repo.cwd)).find((l) => l.id === promotion.payload.decision);
+  assert.deepEqual([decision.by, decision.title], ['agent', 'Promote second']);
+  assert.deepEqual(await queue(repo.cwd), [decision.id]);
+  assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m);
+  assert.equal((await git(['status', '--porcelain', '--', 'docs/spec/roadmap.md', 'docs/decisions.jsonl'], { cwd: repo.cwd })).stdout, '');
+  assert.deepEqual(calls, ['origin']);
+  assert.equal(decodeRecord(await catCommit(repo.cwd, promotion.sha)).kind, 'promotion');
+});
+
+test('promote refuses a next-feature item', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const n = await item(repo.cwd, { kind: 'next-feature', slug: 'second', source: 'DEMO-002 falsifier', body: 'x' });
+  await done(repo.cwd, 'first');
+  await assert.rejects(promote(repo.cwd, n), (e) => e instanceof CommitmentError && /next-feature item waits for the developer/.test(e.message));
+});
+
+test('promote refuses while a defect item is unfixed', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'x' });
+  await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
+  await done(repo.cwd, 'first');
+  await assert.rejects(promote(repo.cwd, b), /defect item typo is unfixed; defects are fixed before promotion/);
+});
+
+test('promote refuses while a commitment is open, a section naming Draft text, an already promoted item, and a non-item', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'drafty', source: 'DEMO-001', body: 'x' });
+  await assert.rejects(promote(repo.cwd, b), /commitment first is open/);
+  await done(repo.cwd, 'first');
+  await assert.rejects(promote(repo.cwd, b), /DEMO-003 is Draft/);
+  const b2 = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'x' });
+  const s = await promote(repo.cwd, b2);
+  await done(repo.cwd, 'second');
+  await assert.rejects(promote(repo.cwd, b2), /already promoted/);
+  await assert.rejects(promote(repo.cwd, s), /not an item record/);
+});

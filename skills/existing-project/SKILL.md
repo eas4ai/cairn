@@ -117,7 +117,7 @@ Apply the corrections, then `review` again.
 Set `Status: Agreed <date>` on each confirmed block. A ruling instead of a confirmation is a deference decision: `cairn decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body "<the developer's words>"`.
 
 ### `commitment`
-Write the roadmap section with the Agreed requirements, delivery and done-when. `Current:` moves inside the start transaction, not by hand.
+Write the roadmap section with the Agreed requirements, delivery and done-when. Write `Current:` by hand too, unless this start resumes a pending supersession, when `cairn start` moves it itself.
 
 ### `declare`
 For this commitment only: `cairn declare <name> --file <path>`, reading the mechanism definition as JSON. Show the violating example fails: `cairn check <REQ>` must record a fail receipt, then `cairn review mechanism <REQ> <receipt>` binds it.

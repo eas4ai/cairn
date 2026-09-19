@@ -70,6 +70,22 @@ test('begin refuses an unknown action and a touch path that is reserved, protect
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });
 
+// Fix round 2 finding 1a (Important): checkTouch used to apply a narrower rule set than
+// normalizeDefinition's, so `cairn begin --touch` accepted an outside or glob-shaped path that
+// applyTouch's own declare() call would refuse later, at `cairn end`, with the lease already
+// created and nothing left to retry against. Reproduced: begin implement REQ --touch README.md
+// with README.md in settings.outside used to succeed. checkTouch now applies the same rules.
+test('begin refuses a --touch path that is outside or names a glob metacharacter (finding 1a)', async (t) => {
+  const settings = { ...JSON.parse(SETTINGS), outside: ['README.md'] };
+  const { cwd } = await repoWith({ '.cairn/settings.json': JSON.stringify(settings), 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n', 'README.md': 'r\n' });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['README.md'], env: {} }),
+    /^LeaseError: cairn: --touch README\.md is an outside path and cannot be a mechanism input/);
+  await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['src/*.mjs'], env: {} }),
+    /^LeaseError: cairn: --touch src\/\*\.mjs has a glob metacharacter and cannot be a mechanism input/);
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+
 test('readLease ignores a stray .cairn/in-progress file: the shared slot is gone', async () => {
   const cwd = await initialized();
   writeFileSync(join(cwd, '.cairn/in-progress'), 'action: implement\ntarget: X\n');
@@ -78,16 +94,23 @@ test('readLease ignores a stray .cairn/in-progress file: the shared slot is gone
 
 import { end, onEnd, touchOutcome, covers } from '../lib/lease.mjs';
 
-test('end removes the lease with compare-and-swap and reports the touch outcome to the hook', async () => {
+// Fix round 2 finding 3 (Minor): end() no longer computes a touchOutcome for hooks -- the only
+// production hook (the mechanism definition write-back) moved out to lib/cli.mjs's endCommand in
+// Fix round 1 finding 2, which calls touchOutcome itself; computing it here too ran the same git
+// calls twice for no consumer. Hooks are now called with (cwd, lease) only, and end() returns the
+// lease so a caller (or this test) does not need a second readLease for what end() already read.
+test('end removes the lease with compare-and-swap, calls the hook with the lease, and returns it', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/new.mjs', 'src/untouched.mjs'], env: {} });
   writeFileSync(join(cwd, 'src/new.mjs'), 'export const n = 1;\n');
   const seen = [];
-  const off = onEnd(async (c, lease, outcome) => { seen.push({ c, target: lease.target, outcome }); });
-  await end(cwd);
+  const off = onEnd(async (c, lease) => { seen.push({ c, target: lease.target }); });
+  const returned = await end(cwd);
   off();
   assert.equal(await readRef(cwd, LEASE_REF), null);
-  assert.deepEqual(seen, [{ c: cwd, target: 'CORE-001', outcome: { changed: ['src/new.mjs'], unchanged: ['src/untouched.mjs'] } }]);
+  assert.deepEqual(seen, [{ c: cwd, target: 'CORE-001' }]);
+  assert.equal(returned.target, 'CORE-001');
+  assert.deepEqual(returned.touch, ['src/new.mjs', 'src/untouched.mjs']);
 });
 
 test('a touched path whose bytes equal the start snapshot is unchanged; a modified existing file is changed', async () => {

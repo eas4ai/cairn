@@ -116,3 +116,26 @@ test('treeShaFromEntries recomputes a real write-tree sha from that tree\'s own 
   const entries = await listTree(repo.dir, real);   // listTree (-r) already lists blobs only, with paths like 'foo/inner.txt'
   assert.equal(treeShaFromEntries(entries), real);
 });
+
+// Fix round 2, finding 1 (Important): treeShaFromEntries used to index directories and files by
+// path component into plain `{}` objects, so a component literally named '__proto__' or
+// 'constructor' -- an ordinary, unremarkable repository path to Git -- either vanished from the
+// computed tree ('__proto__' as a file name assigns the object's own prototype instead of
+// creating an own property) or was written onto the inherited Object.prototype/Function value
+// instead of a fresh object ('constructor', or '__proto__' as a directory). Both produced a wrong
+// tree sha; '__proto__' additionally polluted Object.prototype for the rest of the process.
+test('a path component named __proto__ or constructor is an ordinary tree entry, not prototype pollution', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('src/a.txt', 'a\n');
+  await repo.write('src/__proto__/x.mjs', 'p\n');
+  await repo.write('src/constructor/x.mjs', 'c\n');
+  await repo.commit('base');
+  const protoBefore = { dirs: Object.prototype.dirs, files: Object.prototype.files, keys: Object.keys(Object.prototype).length };
+  const paths = ['src/a.txt', 'src/__proto__/x.mjs', 'src/constructor/x.mjs'];
+  const written = await writeTreeFromPaths(repo.dir, { paths, exclude: [] });
+  const readOnly = await treeIdentityReadOnly(repo.dir, { paths, exclude: [] });
+  assert.equal(readOnly, written);
+  assert.deepEqual({ dirs: Object.prototype.dirs, files: Object.prototype.files, keys: Object.keys(Object.prototype).length }, protoBefore);
+  const entries = await listTree(repo.dir, written);
+  assert.deepEqual(entries.map((e) => e.path).sort(), ['src/__proto__/x.mjs', 'src/a.txt', 'src/constructor/x.mjs']);
+});

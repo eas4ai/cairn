@@ -581,3 +581,19 @@ test('a corrupted action lease is a repair refusal, not a crash', async () => {
   assert.equal(v.verdict, 'Resolvable');
   assert.equal(v.action, 'repair');
 });
+
+// Fix round 2, finding 1: a declared input directory that expands to a '__proto__' path used to
+// make lib/gitx.mjs's treeShaFromEntries compute a wrong, permanently-mismatched tree sha (or
+// silently drop the entry), so isCurrent never found the receipt current again and wake named
+// `run DEMO-001` forever, with no way for `cairn check` to clear it. '__proto__' and 'constructor'
+// are ordinary path components to Git; declaring the whole 'src' directory (rather than the exact
+// file) as the input is what makes resolveInputPaths actually walk into the awkward subdirectory.
+test('a declared input directory containing a __proto__ path component is current after passing, not stuck on run', async () => {
+  const r = await loopRepo();
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src'] });
+  await r.write('src/__proto__/x.mjs', 'export const x = 1;\n');
+  await r.commit('add an awkward path under the declared input directory');
+  await r.passReq('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.notEqual(v.action, 'run');
+});

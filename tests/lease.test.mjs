@@ -200,3 +200,21 @@ test('Fix round 1 finding 10: an unparseable cairn-check.lock is treated as held
   writeFileSync(lock, '0');
   await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: cairn: cairn-check.lock is unreadable/);
 });
+
+test('Fix round 1 finding 5: a lease ref that changed under cairn end is a CAS mismatch reported as LeaseError, not a raw GitError', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
+  // Two concurrent `cairn end` calls on the same lease: git's own ref locking lets exactly one
+  // delete succeed; the other's deleteRefCAS(cwd, LEASE_REF, sha) sees a real CAS mismatch (the ref
+  // it read is no longer current), and lib/lease.mjs's end() must convert that into the friendly
+  // LeaseError rather than let deleteRefCAS's raw CasError (or, before the fix, the git() wrapper's
+  // own GitError on the '-d' update-ref's nonzero exit) propagate.
+  const results = await Promise.allSettled([end(cwd), end(cwd)]);
+  const fulfilled = results.filter((r) => r.status === 'fulfilled');
+  const rejected = results.filter((r) => r.status === 'rejected');
+  assert.equal(fulfilled.length, 1, 'exactly one of the two concurrent end() calls removes the ref');
+  assert.equal(rejected.length, 1, 'the other observes the CAS mismatch');
+  assert.equal(rejected[0].reason.name, 'LeaseError');
+  assert.match(rejected[0].reason.message, /^cairn: action lease changed under cairn end; run cairn reconcile/);
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});

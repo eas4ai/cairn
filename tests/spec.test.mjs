@@ -66,3 +66,63 @@ test('parseRoadmap reads only Current: and Requirements: under the matching head
   assert.deepEqual(r.sections.notes.requirements, []);
   assert.equal(parseRoadmap('no current line').current, null);
 });
+
+import { makeRepo } from './helpers/repo.mjs';
+import { lint, parseSpecMap } from '../lib/spec.mjs';
+
+const OVERVIEW = '# Overview\n\nWhat it is.\n\n| File | Prefix |\n|---|---|\n| loop.md | LOOP |\n| ui.md | UI |\n';
+const LOOP = 'Prefix: LOOP\n\n[LOOP-001] The kernel refuses stale writes.\nFalsifier: a stale write lands.\nMechanism: refs-cas\nStatus: Agreed 2026-09-19\n\n[LOOP-002] Wake writes nothing.\nFalsifier: wake changes a file.\nMechanism:\nStatus: Draft\n';
+const UI = 'Prefix: UI\n\n[UI-001] The CLI prints usage.\nFalsifier: --help prints nothing.\nMechanism: cli\nStatus: Observed\n';
+async function specRepo(t, files = {}) {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const all = { 'overview.md': OVERVIEW, 'glossary.md': '# Glossary\n', 'roadmap.md': '# Roadmap\n\nCurrent: first\n\n## first\n\nRequirements: LOOP-001\n', 'loop.md': LOOP, 'ui.md': UI, ...files };
+  for (const [name, text] of Object.entries(all)) await repo.write(`docs/spec/${name}`, text);
+  return repo;
+}
+const reasons = async (repo) => (await lint(repo.dir)).map((f) => `${f.file}:${f.line}: ${f.reason}`);
+
+test('parseSpecMap reads the File/Prefix table', () => {
+  assert.deepEqual(parseSpecMap(OVERVIEW), [{ file: 'loop.md', prefix: 'LOOP' }, { file: 'ui.md', prefix: 'UI' }]);
+  assert.deepEqual(parseSpecMap('# no table'), []);
+});
+test('a consistent spec lints clean', async (t) => { assert.deepEqual(await reasons(await specRepo(t)), []); });
+test('lint refuses broken order', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nStatus: Draft\nFalsifier: f\n' });
+  assert.match((await reasons(repo)).join(), /docs\/spec\/ui.md:5: UI-001: Falsifier: after Status:/);
+});
+test('lint refuses duplicate identifiers across files and a reused Retired identifier', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': UI + '\n[LOOP-001] Again.\nFalsifier: f\nStatus: Draft\n' });
+  assert.match((await reasons(repo)).join(), /duplicate identifier LOOP-001 \(also docs\/spec\/loop.md:3\)/);
+  const reused = await specRepo(t, { 'ui.md': UI + '\n[UI-002] Old.\nFalsifier: f\nStatus: Retired 2026-01-01\n\n[UI-002] New.\nFalsifier: f\nStatus: Draft\n' });
+  assert.match((await reasons(reused)).join(), /duplicate identifier UI-002/);
+});
+test('lint refuses references to absent identifiers', async (t) => {
+  const repo = await specRepo(t, { 'roadmap.md': '# Roadmap\n\nCurrent: first\n\n## first\n\nRequirements: LOOP-001, LOOP-007\n', 'glossary.md': 'See UI-009.\n' });
+  const r = (await reasons(repo)).join();
+  assert.match(r, /docs\/spec\/roadmap.md:7: reference to absent identifier LOOP-007/);
+  assert.match(r, /docs\/spec\/glossary.md:1: reference to absent identifier UI-009/);
+});
+test('lint refuses a missing falsifier', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nMechanism: m\nStatus: Draft\n' });
+  assert.match((await reasons(repo)).join(), /UI-001: missing Falsifier:/);
+});
+test('lint refuses an Agreed block without a mechanism', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nFalsifier: f\nStatus: Agreed 2026-09-19\n' });
+  assert.match((await reasons(repo)).join(), /UI-001: Agreed block without a mechanism/);
+});
+test('lint refuses noncanonical status dates', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nFalsifier: f\nMechanism: m\nStatus: Agreed 19/09/2026\n' });
+  assert.match((await reasons(repo)).join(), /noncanonical status date/);
+});
+test('lint refuses a spec map that does not match domain prefixes', async (t) => {
+  const missingRow = await specRepo(t, { 'overview.md': '| File | Prefix |\n|---|---|\n| loop.md | LOOP |\n' });
+  assert.match((await reasons(missingRow)).join(), /docs\/spec\/overview.md:1: spec map has no row for ui.md/);
+  const wrongPrefix = await specRepo(t, { 'overview.md': OVERVIEW.replace('| UI |', '| UX |') });
+  assert.match((await reasons(wrongPrefix)).join(), /spec map says ui.md has prefix UX, file says UI/);
+  const extraRow = await specRepo(t, { 'overview.md': OVERVIEW + '| gone.md | GONE |\n' });
+  assert.match((await reasons(extraRow)).join(), /spec map names missing file gone.md/);
+  const wrongBlock = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UX-001] x\nFalsifier: f\nStatus: Draft\n' });
+  assert.match((await reasons(wrongBlock)).join(), /UX-001 does not carry prefix UI/);
+  const noHeader = await specRepo(t, { 'ui.md': '[UI-001] x\nFalsifier: f\nStatus: Draft\n' });
+  assert.match((await reasons(noHeader)).join(), /docs\/spec\/ui.md:1: no Prefix: header/);
+});

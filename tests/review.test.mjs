@@ -142,3 +142,58 @@ test('brief writes the record, the projection and the rendered file, and prints 
   await assert.rejects(fs.stat(path.join(b.projectionDir, '.git')));
   assert.deepEqual(await interfaceObligations(r.cwd, SETTINGS, r.startSnapshot, r.revPayload.snapshot), ['src/api/x.mjs']);
 });
+
+// tests/review.test.mjs (append)
+import { report } from '../lib/review.mjs';
+
+export async function briefed(over = {}) {
+  const r = await reviewed(over);
+  r.b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  r.bp = decodeRecord(await catCommit(r.cwd, r.b.sha)).payload;
+  return r;
+}
+export function adversary(r, over = {}) {
+  return {
+    harness: 'claude_code', model: 'claude-fable-5-1', transport: 'remote', session: 's-adversary', builder_model: null, projection_digest: r.bp.projection_digest,
+    attempts: r.revPayload.answers.map((a) => ({ question: a.question, target: a.target, text: `tried to break ${a.target} for ${a.question}: held` })),
+    findings: [{ n: 1, text: 'the flag accepts whitespace-only input' }],
+    interface_attempts: [{ path: 'src/api/x.mjs', text: 'called x() from a fresh module: held' }], ...over,
+  };
+}
+
+test('report records attempts, model, transport, boundary and session at the reviewed snapshot; a second report is refused', async () => {
+  const r = await briefed();
+  const sha = await report(r.cwd, 'first', adversary(r));
+  const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+  assert.deepEqual([p.brief, p.snapshot, p.model, p.transport, p.boundary, p.session, p.builder_model], [r.b.sha, r.revPayload.snapshot, 'claude-fable-5-1', 'remote', 'unenforced', 's-adversary', null]);
+  await assert.rejects(report(r.cwd, 'first', adversary(r)), /one report per commitment; first has/);
+});
+
+test('report refuses a snapshot differing from the review, a stale projection and a stale brief', async () => {
+  const r = await briefed();
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { projection_digest: 'sha256:' + '0'.repeat(64) })), /projection digest does not match the brief/);
+  await r.write('src/demo.mjs', 'export const changed = 1;\n');
+  await assert.rejects(report(r.cwd, 'first', adversary(r)), /workspace differs from the reviewed snapshot/);
+  await review(r.cwd, 'first', await claims(r));
+  await assert.rejects(report(r.cwd, 'first', adversary(r)), /brief [0-9a-f]{40} is stale: the review is/);
+});
+
+test('report refuses a model or transport that does not match the launch instruction; a matching builder model is recorded', async () => {
+  const r = await briefed();
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { model: 'other-model' })), /model other-model does not match the launch instruction claude-fable-5-1/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { transport: 'local' })), /transport local does not match the launch instruction remote/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { model: null })), /model must be a string/);
+  const sha = await report(r.cwd, 'first', adversary(r, { builder_model: 'claude-fable-5-1' }));
+  assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.builder_model, 'claude-fable-5-1');
+});
+
+test('report refuses a missing question or interface attempt, and the session that wrote the review', async () => {
+  const r = await briefed();
+  const a = adversary(r);
+  await assert.rejects(report(r.cwd, 'first', { ...a, attempts: a.attempts.filter((x) => x.question !== 'Q4') }), /Q4 has no attempt/);
+  await assert.rejects(report(r.cwd, 'first', { ...a, attempts: [...a.attempts, { question: 'Q3', target: 'ZZZ-999', text: 'x' }] }), /ZZZ-999 is not a target/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { interface_attempts: [] })), /interface src\/api\/x.mjs has no attempt/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { session: 's-builder' })), /session s-builder wrote the review/);
+  const anon = await report(r.cwd, 'first', adversary(r, { session: null }));
+  assert.equal(decodeRecord(await catCommit(r.cwd, anon)).payload.session, null);
+});

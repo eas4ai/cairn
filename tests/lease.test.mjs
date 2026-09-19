@@ -139,3 +139,48 @@ test('a live check holder refuses a second run; a dead holder is cleared', async
   await assert.rejects(withCheckLock(cwd, async () => { throw new Error('check crashed'); }), /check crashed/);
   assert.equal(existsSync(lock), false, 'released after a throw');
 });
+
+import { isStale, reconcilePredicate, runBegin, runEnd } from '../lib/lease.mjs';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+
+test('a lease from another session is stale and wake would name reconcile; the same session is not', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  const lease = await readLease(cwd);
+  assert.equal(isStale(lease, { CAIRN_SESSION: 's1' }), false);
+  assert.equal(isStale(lease, { CAIRN_SESSION: 's2' }), true);
+  assert.equal(isStale(lease, {}), false, 'a session-less wake cannot tell and does not nag');
+  assert.deepEqual(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }),
+    { action: 'reconcile', target: 'implement CORE-001', reason: 'action lease from session s1 is stale in session s2' });
+  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's1' }), null);
+  await end(cwd);
+  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }), null);
+});
+
+test('the lease does not coordinate separate clones and never travels with the durable refs', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
+  const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+  await git(['clone', '-q', cwd, clone], { cwd });
+  await git(['fetch', '-q', 'origin', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots'], { cwd: clone });
+  assert.equal(await readRef(clone, LEASE_REF), null);
+  await begin(clone, { action: 'run', target: 'CORE-002', env: {} }); // independent of the first clone's lease
+  assert.equal((await readLease(clone)).target, 'CORE-002');
+  assert.equal((await readLease(cwd)).target, 'CORE-001');
+});
+
+test('cairn begin and cairn end parse their arguments and refuse with one cairn: line', async () => {
+  const cwd = await initialized();
+  const err = []; const out = [];
+  const io = { cwd, env: {}, stdout: (l) => out.push(l), stderr: (l) => err.push(l) };
+  assert.equal(await runBegin(['implement', 'CORE-001', '--touch', 'src/new.mjs', '--touch', 'src/b.mjs'], io), 0);
+  assert.deepEqual((await readLease(cwd)).touch, ['src/new.mjs', 'src/b.mjs']);
+  assert.equal(await runBegin(['implement', 'CORE-001'], io), 1);
+  assert.match(err.at(-1), /^cairn: action lease held/);
+  assert.equal(await runEnd([], io), 0);
+  assert.equal(await runEnd([], io), 1);
+  assert.equal(err.at(-1), 'cairn: no action lease to end');
+  assert.equal(await runBegin(['implement'], io), 1);
+  assert.equal(err.at(-1), 'cairn: usage: cairn begin <action> <target> [--touch <path>]...');
+});

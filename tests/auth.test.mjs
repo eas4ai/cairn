@@ -122,3 +122,54 @@ test('verifyEvidence refuses unsigned-local evidence when a signing key is set',
     author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
   assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
 });
+
+import { appendRecord, readLog, decodeRecord } from '../lib/records.mjs';
+import { catCommit } from '../lib/gitx.mjs';
+import { authorize, authorizations, latestProtected } from '../lib/auth.mjs';
+import { init } from '../lib/init.mjs';
+
+const yes = async () => true;
+const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+async function initialized(files = BASE) {
+  const { cwd } = await repoWith(files);
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  return cwd;
+}
+
+test('authorize writes one record binding the three digests with verified evidence', async () => {
+  const cwd = await initialized();
+  const sha = await authorize(cwd, { confirm: yes });
+  const log = await readLog(cwd);
+  const rec = log.at(-1);
+  assert.equal(rec.sha, sha);
+  assert.equal(rec.kind, 'authorization');
+  const d = await protectedDigests(cwd);
+  assert.equal(rec.payload.spec_digest, d.spec);
+  assert.equal(rec.payload.agreement_digest, d.agreement);
+  assert.equal(rec.payload.settings_digest, d.settings);
+  assert.equal(rec.payload.decision, null);
+  assert.equal(rec.payload.intent, null);
+  assert.equal(rec.payload.evidence.mode, 'unsigned-local');
+  assert.equal(rec.payload.evidence.subject, canonicalize({ spec: d.spec, agreement: d.agreement, settings: d.settings }));
+  assert.equal((await catCommit(cwd, sha)).subject, 'cairn: authorization protected');
+  assert.deepEqual(decodeRecord(await catCommit(cwd, sha)).payload, rec.payload);
+  assert.deepEqual(latestProtected(log), d);
+  assert.equal(authorizations(log).length, 2);
+});
+
+test('authorize refuses before init', async () => {
+  const { cwd } = await repoWith(BASE);
+  await assert.rejects(authorize(cwd, { confirm: yes }), /^AuthError: cairn: run cairn init first/);
+});
+
+test('authorize refuses without AGENTS.md', async () => {
+  const cwd = await initialized({ '.cairn/settings.json': SETTINGS, 'docs/spec/overview.md': '# k\n' });
+  await assert.rejects(authorize(cwd, { confirm: yes }), /cairn: AGENTS.md is missing; authorize binds the working agreement/);
+});
+
+test('authorize refuses a declined confirmation and writes nothing', async () => {
+  const cwd = await initialized();
+  const before = (await readLog(cwd)).length;
+  await assert.rejects(authorize(cwd, { confirm: async () => false }), /did not confirm/);
+  assert.equal((await readLog(cwd)).length, before);
+});

@@ -362,3 +362,35 @@ describe('C(c) and M(D)', () => {
     assert.ok(requestBytesEstimate > 0);
   });
 });
+
+import { buildScoreRequest, requestBytes, requestDigest, sizeCheck } from '../lib/evaluate.mjs';
+
+describe('the Score request', () => {
+  test('five questions, each naming its backticked state path with a zero-based option index', () => {
+    const req = buildScoreRequest(settings(), { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} }, 0);
+    assert.deepEqual(Object.keys(req.questions).sort(), ['ambiguity', 'contract', 'evidence', 'reach', 'surface']);
+    assert.match(req.questions.evidence.instructions, /`state\.five\.because`/);
+    assert.match(req.questions.ambiguity.instructions, /`state\.five\.question`/);
+    for (const d of ['reach', 'contract', 'surface']) assert.match(req.questions[d].instructions, /`state\.option`.*\[0\]|`state\.option`/);
+    for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.deepEqual(req.questions[d].criteria.length, 5);
+    assert.equal(req.model, settings().typesafeai.model);
+  });
+  test('the recommended-option index in the request text tracks n, zero-based', () => {
+    const state = { five: { question: 'q', recommendation: 'daily', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'daily', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
+    const req = buildScoreRequest(settings(), state, 1);
+    assert.match(req.questions.reach.instructions, /\[1\]/);
+  });
+  test('requests round-trip through canonical JSON: equal state yields byte-identical requests', () => {
+    const state = { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
+    const a = buildScoreRequest(settings(), state, 0), b = buildScoreRequest(settings(), state, 0);
+    assert.equal(requestBytes(a), requestBytes(b));
+    assert.match(requestDigest(a), /^sha256:[0-9a-f]{64}$/);
+  });
+  test('sizeCheck refuses above 75 percent of either the request or the state-plus-longest-question limit', () => {
+    const small = buildScoreRequest(settings(), { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} }, 0);
+    assert.equal(sizeCheck(settings(), small), null);
+    const big = buildScoreRequest(settings(), { five: { question: 'q', recommendation: 'r', because: 'x'.repeat(200000), if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} }, 0);
+    assert.equal(sizeCheck(settings(), big), 'oversize');
+    assert.equal(sizeCheck({ typesafeai: { ...settings().typesafeai, request_cap_bytes: 10 } }, small), 'oversize');
+  });
+});

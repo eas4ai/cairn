@@ -25,7 +25,7 @@ Return to the work loop under AGENTS.md.
 A commitment is open. The developer chooses: finish it (`finish`) or supersede it (`supersede`). State both and what each changes.
 
 ### `finish`
-Capture the request: `cairn item --backlog --slug <slug> --from <REQ> --body "<what>"`, or `--next-feature --changes <REQ>` when it would change Agreed text. Return to the work loop.
+Capture the request: `cairn item --backlog --slug <slug> --from <REQ> --body "<what>"`, or `--next-feature` when it would change Agreed text. Return to the work loop.
 
 ### `supersede`
 Run `cairn supersede <successor-slug> --quote "<the developer's words>"`. It writes the developer-quoted Consequential decision and the superseded record: old range closed with a transition id and intended slug; open escalations, unresolved findings and unfixed defects carried. It does not move `Current:` and cannot name a start that does not exist. Then `pending`.
@@ -114,13 +114,13 @@ Explain another way, then `present` again.
 Apply the corrections, then `review` again.
 
 ### `agreed`
-Set `Status: Agreed <date>` on each confirmed block. A ruling instead of a confirmation is a deference decision: `cairn decide --consequential --quote "<the developer's words>"`.
+Set `Status: Agreed <date>` on each confirmed block. A ruling instead of a confirmation is a deference decision: `cairn decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body "<the developer's words>"`.
 
 ### `commitment`
 Write the roadmap section with the Agreed requirements, delivery and done-when. `Current:` moves inside the start transaction, not by hand.
 
 ### `declare`
-For this commitment only: `cairn declare <name> --command <cmd> --input <path> --requirement <REQ> --results per-requirement`. Show the violating example fails: `cairn check <REQ>` must record a fail receipt, then `cairn review mechanism <REQ> <receipt>` binds it.
+For this commitment only: `cairn declare <name> --file <path>`, reading the mechanism definition as JSON. Show the violating example fails: `cairn check <REQ>` must record a fail receipt, then `cairn review mechanism <REQ> <receipt>` binds it.
 
 ### `agreement`
 Copy `templates/AGENTS.md` from this skill to `AGENTS.md` for developer authorization. Do not edit it after authorization.

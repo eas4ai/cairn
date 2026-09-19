@@ -25,8 +25,8 @@ The move for each action wake can name:
 - `implement REQ`: read the latest receipt and its output, change the code under a lease, commit, `cairn end`, `cairn check REQ`.
 - `escalate REQ`: three attempts failed; `cairn escalate` with the five fields before any fourth attempt.
 - `review mechanism REQ`: `cairn review mechanism REQ <fail-receipt>` after checking the failure was the stated violation.
-- `capture ITEM`: `cairn outside <item> "<why it is not this commitment's work>"`, or escalate.
-- `review SLUG`: `cairn review SLUG` answering Q1 to Q6 for every target with observed commands, paths or outputs.
+- `capture ITEM`: `cairn outside <item> --reason "<why it is not this commitment's work>"`, or escalate.
+- `review SLUG`: `cairn review SLUG --file <path>` naming a file that answers Q1 to Q6 for every target with observed commands, paths or outputs.
 - `report SLUG`: `cairn brief SLUG`; start one adversary with none of your context on the brief and projection only; wait; `cairn report SLUG --file <its report>`.
 - `resolve SLUG N`: fix finding N as its own work, commit, then `cairn resolve SLUG N "<how>"`; or dispute it with `cairn escalate`.
 - `accept SLUG`: give the adversary the report, the resolutions and the cumulative delta; `cairn accept SLUG --file <its acceptance>`.
@@ -35,7 +35,7 @@ The move for each action wake can name:
 - `promote`: choose one backlog item by judgment; `cairn promote <item>`. Promotion never Agrees text.
 - `reply SLUG`: `cairn reply SLUG "<explanation>"`; an `ask` answer authorizes an explanation only.
 
-Out of scope is captured, never built: `cairn item --backlog`, `--next-feature --changes <REQ>`, or `--defect --from <REQ>`. A defect against this commitment's requirement is worked here, not captured. Decide by level: Routine and Judged leave no record; Consequential is `cairn decide --consequential` and continues; Blocking is `cairn escalate` and stops.
+Out of scope is captured, never built: `cairn item --backlog`, `--next-feature`, or `--defect --from <REQ>`. A defect against this commitment's requirement is worked here, not captured. Decide by level: Routine and Judged leave no record; Consequential is `cairn decide --consequential` and continues; Blocking is `cairn escalate` and stops.
 
 ## The developer
 

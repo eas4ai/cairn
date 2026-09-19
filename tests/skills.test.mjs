@@ -14,29 +14,81 @@ import { ROOT } from "./helpers/hookenv.mjs";
 // step, so they are excluded here; every other extracted id is unaffected.
 const DOT_KEYWORDS = new Set(["graph", "node", "edge"]);
 export const nodeIds = (dot) => [...readFileSync(join(ROOT, "docs/diagrams", dot), "utf8").matchAll(/^\s*([a-z][a-z_]*)\s*\[/gm)].map((m) => m[1]).filter((id) => !DOT_KEYWORDS.has(id));
-export const cairnCommands = (text) => [...new Set([...text.matchAll(/`cairn ([a-z][a-z-]*)(?: (mechanism))?/g)].map((m) => (m[2] ? `${m[1]} ${m[2]}` : m[1])))];
 export const skill = (name) => readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");
+const AGENTS_TEMPLATE = () => readFileSync(join(ROOT, "skills/new-project/templates/AGENTS.md"), "utf8");
 const help = spawnSync(process.execPath, [join(ROOT, "bin/cairn.mjs"), "--help"], { encoding: "utf8" }).stdout;
 
-// Deviation from the plan text: lib/mechanisms.mjs's declare() and lib/check.mjs's check() exist
-// as library functions (plans 05 and 08's own goals name "cairn declare" and "cairn check" as
-// commands), but no plan wired either one into lib/cli.mjs's COMMANDS table -- verified by reading
-// the whole table in lib/cli.mjs and by running `node bin/cairn.mjs --help`, which lists neither
-// word. lib/cli.mjs is outside this plan's file ownership (hooks/, skills/, manifests, the release
-// script), so this gap cannot be fixed here. The skill text still names `cairn declare` and
-// `cairn check` (the spec's and this plan's own working-agreement text call for both), so this
-// allowlist keeps the cross-check meaningful for every other command -- a typo'd or invented verb
-// still fails -- while not blocking Tasks 6 to 8 on a pre-existing gap in another plan's file.
-// Recorded in the plan 13 report as a concern for whichever plan owns lib/cli.mjs.
-const NOT_YET_WIRED = new Set(["declare", "check"]);
+// Round 1 fix, items 1-3: the plan's own cairnCommands() only ever checked that the bare command
+// word appeared somewhere in --help, never the flags after it -- so `cairn decide --consequential
+// --quote "..."` (--quote belongs only to supersede, not decide), `cairn outside <item> "<why...>"`
+// (a bare positional where the real command needs --reason <text>) and `cairn review SLUG` (missing
+// the --file <path> the real command requires) all read as plausible without ever being run. Fixed
+// review-1 finding 1-3 lines in skills/*/SKILL.md and templates/AGENTS.md, and, while sweeping
+// every other `cairn ` invocation in those same files, found and fixed one more: `cairn item
+// --next-feature --changes <REQ>` -- itemCommand (lib/cli.mjs) never reads a --changes flag at all.
+//
+// parseCommandFlags(helpText) reads --help's own usage lines (the same text `cairn --help` prints,
+// not a hand-copied list) into { command name -> Set of every --flag token that command's usage
+// line names }, so a skill or template invocation can be checked against the flags the CLI itself
+// actually documents, not a snapshot that drifts from lib/cli.mjs. "review <slug> --file <path> |
+// review mechanism <REQ> <fail-receipt>" is the one usage line with two forms; each side is parsed
+// under its own name ("review" and "review mechanism") so a "review mechanism ..." invocation is
+// never checked against --file, which only the plain form takes.
+function parseCommandFlags(helpText) {
+  const map = new Map();
+  for (const raw of helpText.split("\n")) {
+    const m = raw.match(/^\s*cairn (.+)$/);
+    if (!m) continue;
+    for (const part of m[1].split(" | ")) {
+      const words = part.trim().split(/\s+/);
+      if (!/^[a-z][a-z-]*$/.test(words[0])) continue; // skips the bare "--help" line
+      const mech = words[0] === "review" && words[1] === "mechanism";
+      const name = mech ? "review mechanism" : words[0];
+      const rest = (mech ? words.slice(2) : words.slice(1)).join(" ");
+      map.set(name, new Set([...rest.matchAll(/--[a-z][a-z-]*/g)].map((x) => x[0])));
+    }
+  }
+  return map;
+}
+const COMMAND_FLAGS = parseCommandFlags(help);
+
+// declare (lib/mechanisms.mjs) and check (lib/check.mjs) are real library functions that plan 05's
+// own goal names as CLI commands, but lib/cli.mjs's COMMANDS table has never wired either one in
+// (confirmed by reading the whole table and by COMMAND_FLAGS not having a "declare" or "check" key
+// below). lib/cli.mjs is outside this plan's file ownership. This exception is computed from
+// COMMAND_FLAGS itself, not hand-maintained: the moment either word is wired into --help,
+// COMMAND_FLAGS gains that key and the exception for it drops on its own, with no edit needed here.
+const NOT_YET_WIRED = new Set(["declare", "check"].filter((w) => !COMMAND_FLAGS.has(w)));
+
+// Checks every `cairn ...` backtick invocation in text: the subcommand (or "review mechanism")
+// must be a real command --help lists (skip declare/check while NOT_YET_WIRED), and every --flag
+// token used in the invocation must be one that command's own --help usage line names. This is a
+// flag-validity check (a flag either belongs to the command or it doesn't), not a
+// required-flag-presence check: a short reference like `cairn decide --consequential` or `cairn
+// item --backlog` (a real flag, just not the whole invocation) is legitimate prose naming which
+// command/mode handles something, and is not flagged merely for being short. An invented flag
+// (--quote on decide) or a command absent from --help (typo'd or never wired) always fails.
+export function checkInvocations(text, label) {
+  for (const inv of [...text.matchAll(/`cairn ([^`]*)`/g)].map((m) => m[1])) {
+    const words = inv.trim().split(/\s+/);
+    if (!/^[a-z][a-z-]*$/.test(words[0])) continue; // e.g. "cairn --help"
+    const mech = words[0] === "review" && words[1] === "mechanism";
+    const name = mech ? "review mechanism" : words[0];
+    if (NOT_YET_WIRED.has(name)) continue;
+    assert.ok(COMMAND_FLAGS.has(name), `${label} names cairn ${name}, absent from --help`);
+    const validFlags = COMMAND_FLAGS.get(name);
+    for (const w of mech ? words.slice(2) : words.slice(1)) {
+      if (!w.startsWith("--")) continue;
+      const flag = w.replace(/[^a-z-]+$/, "");
+      assert.ok(validFlags.has(flag), `${label} uses cairn ${name} ${flag}, not a real flag of it (real flags: ${[...validFlags].join(", ") || "none"})`);
+    }
+  }
+}
 
 export function checkSkill(name, dots) {
   const text = skill(name);
   for (const dot of dots) for (const id of nodeIds(dot)) assert.ok(new RegExp("^#+ .*`" + id + "`", "m").test(text), `${name} lacks node ${id} of ${dot}`);
-  for (const cmd of cairnCommands(text)) {
-    if (NOT_YET_WIRED.has(cmd.split(" ")[0])) continue;
-    assert.ok(new RegExp("(^|\\s)" + cmd.split(" ")[0] + "(\\s|$)").test(help), `${name} names cairn ${cmd}, absent from --help`);
-  }
+  checkInvocations(text, name);
   assert.ok(/^---\nname: [a-z-]+\ndescription: .+\n(disable-model-invocation: true\n)?---\n/.test(text), `${name} front matter`);
   assert.ok(!/[^\x00-\x7f]/.test(text), `${name} is not ASCII`);
   assert.ok(!text.includes("next-iteration"), name);
@@ -57,13 +109,14 @@ test("new-project names the four gates in order", () => {
   assert.ok(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), at);
 });
 test("the AGENTS.md template states a move for every verdict and action", () => {
-  const t = readFileSync(join(ROOT, "skills/new-project/templates/AGENTS.md"), "utf8");
+  const t = AGENTS_TEMPLATE();
   for (const v of ["Resolvable", "Waiting", "Done"]) assert.ok(new RegExp("^- " + v + ":", "m").test(t), v);
   for (const a of ["repair PATH", "recover TRANSACTION", "reconcile ACTION", "scope PATH", "fix ITEM", "record PATH", "commit PATH", "declare REQ", "run REQ", "implement REQ", "escalate REQ", "review mechanism REQ", "capture ITEM", "review SLUG", "report SLUG", "resolve SLUG N", "accept SLUG", "build DECISION", "done SLUG", "promote", "reply SLUG"]) assert.ok(t.includes("`" + a + "`"), a);
   assert.ok(t.includes("`cairn push`"));
   for (const gone of ["explain", "present", "reword", "next-iteration", "refus"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });
+test("every cairn invocation in the AGENTS.md template is a real command with real flags", () => checkInvocations(AGENTS_TEMPLATE(), "templates/AGENTS.md"));
 
 test("existing-project follows existing-project.dot and spec-phase.dot", () => checkSkill("existing-project", ["existing-project.dot", "spec-phase.dot"]));
 test("existing-project carries the same spec-phase tail as new-project", () => assert.equal(tail("existing-project"), tail("new-project")));

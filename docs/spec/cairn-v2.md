@@ -673,13 +673,19 @@ The code row fills in order until `state_cap_bytes` is spent: the diff
 of the touched paths since the tree in-progress pinned; the whole files
 that diff touches; the remaining declared inputs in declaration order,
 whole files. The cap is in bytes because the kernel can count bytes
-without a tokenizer, so truncation is deterministic. The record says
-which tier was reached and how many bytes were cut, and the token count
-the API reports beside it. The cap is Cairn's rule, a default of
-100,000 bytes (about 25k tokens, under a 32k state budget), chosen
-because a Consequential decision that cannot be judged from its diff,
-its files, its blocks and its cited decisions is a decision that should
-be smaller; it is not an API limit.
+without a tokenizer, so truncation is deterministic. Only the code row
+is ever cut: the parts above it are sent whole or not at all. When
+they alone exceed the cap, the kernel does not call; the record says
+`unavailable oversize` and the escalation stands, because a half-sent
+commitment is worse than none. The record says which tier was reached
+and how many bytes were cut, and the token count the API reports
+beside it, which is how the developer sees whether the byte cap maps
+to the token budget for this project's mix of prose and code. The cap
+is Cairn's rule, a default of 80,000 bytes (about 20k to 26k tokens
+depending on that mix, under a 32k state budget), chosen because a
+Consequential decision that cannot be judged from its diff, its files,
+its commitment and its cited decisions is a decision that should be
+smaller; it is not an API limit.
 
 **The questions.** One call, all questions at once:
 
@@ -785,7 +791,7 @@ trailer is the alias rather than the resolved version.
     "weights": { "reversible": 0.4, "contradicts": 0.3, "observed": 0.3 },
     "route_confidence": 0.8,
     "sufficient_threshold": 0.7,
-    "state_cap_bytes": 100000
+    "state_cap_bytes": 80000
   }
 }
 ```

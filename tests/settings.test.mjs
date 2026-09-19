@@ -64,3 +64,22 @@ test('overlaps follows the literal-stem rule', () => {
   assert.ok(overlaps('src/**', 'src/api/**') && overlaps('docs/spec/**', 'docs/spec/a.md') && overlaps('a/b', 'a/b') && overlaps('config/*.json', 'config/x.json'));
   assert.ok(!overlaps('src/**', 'srcx/**') && !overlaps('README.md', 'bin/**') && !overlaps('**/*.md', '**/*.js'));
 });
+
+import { makeRepo } from './helpers/repo.mjs';
+import { loadSettings, SettingsError } from '../lib/settings.mjs';
+import { sha256, canonicalize } from '../lib/canon.mjs';
+
+test('loadSettings reads .cairn/settings.json, checks remotes, and digests the canonical form', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await assert.rejects(loadSettings(repo.dir), /no .cairn\/settings.json/);
+  await repo.write('.cairn/settings.json', JSON.stringify(GOOD, null, 2) + '\n');
+  await assert.rejects(loadSettings(repo.dir), (e) => e instanceof SettingsError && e.reasons.some((r) => /not a configured remote/.test(r)));
+  await repo.git('remote', 'add', 'origin', '/nonexistent/origin.git');
+  const a = await loadSettings(repo.dir);
+  assert.deepEqual(a.settings, GOOD);
+  assert.equal(a.digest, sha256(canonicalize(GOOD)));
+  await repo.write('.cairn/settings.json', JSON.stringify(GOOD));
+  assert.equal((await loadSettings(repo.dir)).digest, a.digest);
+  await repo.write('.cairn/settings.json', '{ not json');
+  await assert.rejects(loadSettings(repo.dir), /not valid JSON/);
+});

@@ -261,3 +261,26 @@ test('review is named until a review at the current workspace answers every fixe
   assert.equal(v.action, 'review');
   assert.match(v.reason, /Q1 for demo-001/);
 });
+
+// Deviation from the plan text: the real 'report' schema's interface_attempts entries are
+// {path, text} objects, not bare path strings (the same {path,text}/{question,target,text} shape
+// its `attempts` list already uses), so the wake predicate below checks `.some(a => a.path === p)`
+// rather than the plan's `.includes(p)`, which can never match an object against a string.
+test('report is named until a brief and report name the reviewed snapshot with every attempt', async () => {
+  const r = await loopRepo({ settings: { interfaces: ['src/api/**'] } });
+  await r.write('src/api/index.mjs', 'export const api = 1;\n');
+  await r.commit('api');
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/api'] });
+  await r.commit('declare api');
+  await r.passReq('DEMO-001');
+  await r.review();
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['report', 'first']);
+  const rep = await r.report();
+  v = await wake(r.cwd);
+  assert.equal(v.action, 'report');
+  assert.match(v.reason, /interface src\/api\/index\.mjs/);
+  const log = await r.log();
+  await r.add('report', 'first', { ...log.find((x) => x.sha === rep).payload, interface_attempts: [{ path: 'src/api/index.mjs', text: 'attempted' }] });
+  assert.notEqual((await wake(r.cwd)).action, 'report');
+});

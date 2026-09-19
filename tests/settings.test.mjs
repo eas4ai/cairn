@@ -60,6 +60,14 @@ test('unknown values fail closed', () => {
   refuses((s) => { s.harness.muse.adversary_transport = 'cloud'; }, /adversary_transport/); refuses((s) => { s.typesafeai.min_calibration_agent_predictions = 0; }, /min_calibration/);
   refuses((s) => { s.outside = 'README.md'; }, /outside must be an array/);
 });
+test('S5: AKIA is the real AWS key-id shape with no separator, and long hyphenated model ids are not secret-shaped', () => {
+  refuses((s) => { s.authority_remote = 'AKIAIOSFODNN7EXAMPLE'; }, /secret-shaped value/);
+  assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model: 'claude-fable-5-1' } }), []);
+  assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model: 'jev-1.13.0' } }), []);
+  // 32 characters, mixes letters and digits, and would have matched the old unrestricted
+  // [A-Za-z0-9_-]{32,} alternative: a false positive the old regex would have flagged.
+  assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model: 'claude-opus-5-1-20260301-preview' } }), []);
+});
 test('the removed weights and code_tiers fields are refused by name', () => {
   refuses((s) => { s.typesafeai.weights = {}; }, /removed field weights/); refuses((s) => { s.typesafeai.code_tiers = []; }, /removed field code_tiers/);
 });

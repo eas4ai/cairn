@@ -1,53 +1,36 @@
-// Next feature: from Done to the next Agreed commitment, starting from the specification.
+// Next feature: from Done to drafted or revised requirements; the spec-phase tail finishes it.
 digraph next_feature {
   rankdir=TB;
-  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Next feature: start to done"];
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Next feature: start to the spec-phase tail"];
   node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /next-feature"];
   isdone [shape=diamond, label="cairn wake says Done?"];
   notdone [shape=oval, label="Stop: hand the verdict\nto the working agreement"];
-  read [label="Read the spec set, the finished commitment,\nevery .cairn/next-feature/ item without Promoted to:,\nthe decisions they cite, and the backlog"];
-  ask [label="Ask the one question:\nthe waiting items, a new feature, or both?"];
+  read [label="Read the spec set, the finished commitment,\nthe queue, every .cairn/next-feature/ item without\nPromoted to:, the decisions they cite, and the backlog"];
+  ask [label="The one open question:\nthe waiting items, a new feature, or both?"];
 
   subgraph cluster_change {
-    label="For each change"; style=dashed; fontname="Helvetica"; fontsize=11;
+    label="For each change the developer asks for"; style=dashed; fontname="Helvetica"; fontsize=11;
     radius [label="Trace the blast radius:\nrequirements, mechanisms, code, documents; cite"];
-    restate [label="Restate: what changes for whom;\nwhich Agreed text, quoted;\nthe alternative; the recommendation"];
+    restate [label="Restate: what changes for whom;\nwhich Agreed text, quoted, if any;\nthe alternative; the recommendation"];
     corrects [label="Developer corrects the reading"];
-    fits [shape=diamond, label="Fits inside the\nspecification as it stands?"];
-    backlog [label="cairn item --backlog;\nnot this phase's work"];
-    revise [label="Revise in place under its own identifier,\nor add a new requirement;\nrationale at most one line"];
+    fits [shape=diamond, label="Covered by the Agreed\nrequirements as they stand?"];
+    covered [label="Into the commitment as it is:\nno new text"];
+    revise [label="Revise in place under its own identifier,\nor add a new requirement, Status: Draft;\nRationale: at most one line"];
+    next [shape=diamond, label="More changes?"];
   }
 
-  falsifiers [label="Propose the falsifiers as one set,\na mechanism named for each"];
-  review [label="Self-review: contradictions with standing requirements,\nfalsifiers that would not catch their violation,\nuncheckable requirements; record it"];
-  lint [shape=diamond, label="cairn lint docs/spec\nclean?"];
-  present [label="Present for agreement by exception"];
-  confirmed [shape=diamond, label="Developer confirms,\nor rules that the\nrecommendation stands?"];
-  correct [label="Apply the corrections"];
-  agreed [label="Confirms: Status: Agreed <date>\nRules: deference decision at Consequential,\nquoting their words; Status: Agreed by deference"];
-  commitment [label="Commitment file with Specified from:;\nroadmap Current: moved;\neach carried item stamped Promoted to:"];
-  mechs [label="Extend or write each mechanism;\na failing test is the safe violating example"];
-  commit [label="Commit spec, commitment, roadmap,\nstamps, declarations; cairn lint; cairn wake"];
-  done [shape=box, peripheries=2, label="Done:\nwake names the first action;\nConsequential decisions wait in the queue"];
+  tail [shape=box, peripheries=2, label="The spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, commitment with\nSpecified from:, items stamped, declare, commit, wake"];
 
   start -> isdone;
   isdone -> notdone [label="no"];
   isdone -> read [label="yes"];
   read -> ask -> radius -> restate -> corrects -> fits;
-  fits -> backlog [label="yes"];
+  fits -> covered [label="yes"];
   fits -> revise [label="no"];
-  backlog -> radius [label="next change"];
-  revise -> radius [label="next change"];
-  revise -> falsifiers [label="all changes restated"];
-  falsifiers -> review -> lint;
-  lint -> revise [label="findings"];
-  lint -> present [label="clean"];
-  present -> confirmed;
-  confirmed -> correct [label="corrects"];
-  correct -> review;
-  confirmed -> agreed [label="confirms or rules"];
-  agreed -> commitment -> mechs -> commit -> done;
+  covered -> next; revise -> next;
+  next -> radius [label="yes"];
+  next -> tail [label="no"];
 }

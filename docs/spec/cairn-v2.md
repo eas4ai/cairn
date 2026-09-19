@@ -1,23 +1,26 @@
 # Cairn 2: feature specification
 
-Status: Draft, 2026-09-18. Nothing here is Agreed until the developer confirms it.
+Status: Draft, 2026-09-18, revised the same day after an adversarial
+review of the first draft. Nothing here is Agreed until the developer
+confirms it.
 
 This document says what Cairn 2 is, which processes it keeps, what each
 record is for, and what 1.x had that 2 does not. It is a feature
 specification: it names behaviors and the reader of each record, not
 requirement identifiers. The requirements, with falsifiers, are written
-from it in the next step, under the policy in section 7.
+from it in the next step, under the policy in section 7. This document
+is self-contained: every term the kernel relies on is defined in it.
 
-The five process digraphs beside it, in docs/diagrams/, are part of this
-specification: install, new-project, existing-project, next-feature, and
-the work loop.
+The six process digraphs in docs/diagrams/ are part of this
+specification: install, new-project, existing-project, next-feature,
+the spec-phase tail the three entry flows share, and the work loop.
 
 ## 1. Purpose
 
 Cairn keeps agent-led development tied to what the developer agreed to
 build. A coding agent from any vendor does the work; Cairn is the
-referee that reads the repository, records what was proven, decides what
-is still current, and names the next action. Belief that the code
+referee that reads the repository, records what was checked, decides
+what is still current, and names the next action. Belief that the code
 matches the agreement lives in the repository, not in a session, so a
 new session with no memory can continue.
 
@@ -25,324 +28,497 @@ Cairn 2 keeps seven ideas from 1.x, and little else:
 
 1. A requirement is Agreed only with an observable failure, its falsifier.
 2. Work happens one commitment at a time, named in the roadmap.
-3. Each requirement is proven by a declared command whose result is
-   recorded with digests of everything it ran against.
+3. Each requirement is checked by a declared command that tries to
+   falsify it; the result is recorded with digests of everything it ran
+   against. A passing check has not falsified the requirement; it has
+   not proven it.
 4. Evidence is current only while those digests match; nothing is re-run
    for its own sake and nothing stale counts.
 5. Nothing is Done until a reviewer with none of the builder's context
-   has looked and every finding is answered.
+   has looked and every finding is answered. Done means: not falsified
+   by the declared checks, and looked at by someone who does not share
+   the builder's blind spots.
 6. Work outside the commitment is captured, never built.
-7. The agent stops for the developer only when the decision is theirs.
+7. Agreed text changes only by the developer's ruling. The agent stops
+   for the developer only when the decision is theirs.
 
 Everything in Cairn 2 serves one of those seven. A behavior that serves
 none of them is not in Cairn 2.
 
-## 2. Vocabulary
+## 2. Definitions
 
-- **Requirement**: one obligation, the actor named, with a **falsifier**:
-  the observable state in which it is violated.
-- **Commitment**: one agreed unit of work; the roadmap names the current
-  one. Not a Git commit.
-- **Mechanism**: a declared command, the paths it reads, and the
-  requirements it speaks for.
-- **Receipt**: the record of one mechanism run: commit, digests, result.
-- **Review**: the builder's record of what it examined and found.
-- **Report**: the independent reviewer's record, same shape.
-- **Decision**: a recorded choice above routine, with what would make it
-  wrong.
-- **Escalation**: a question only the developer can answer, with a
-  recommendation.
-- **Item**: a captured idea. A **backlog** item fits the specification; a
-  **next-feature** item would change it; a **defect** item names an
-  Agreed requirement the code already violates.
-- **Verdict**: what wake prints: Resolvable with an action, Escalate, or
-  Done.
-- **Predicate**: the condition under which the named action is complete,
-  printed with the action.
+The kernel's terms. A term in this list means this and nothing else.
+
+- **Specification**: the files under `docs/spec/`. The **keystone**
+  (`docs/spec/overview.md`) says what the software is and holds the
+  **spec map**, one row per **domain** file with its identifier prefix.
+  The **glossary** (`docs/spec/glossary.md`) holds the project's terms.
+  The **roadmap** (`docs/spec/roadmap.md`) holds a `Current:` line
+  naming the current commitment's slug, and is parsed for nothing else.
+- **Requirement**: one block in a domain file: an identifier
+  `[PREFIX-nnn]`, one obligation with the actor named, a `Falsifier:`
+  line naming the observable state in which it is violated, and a
+  `Status:` line. The block grammar is in section 4.
+- **Status**: one of `Draft` (written, not confirmed), `Observed`
+  (derived from existing code; describes what is, never contract),
+  `Agreed <date>` (confirmed by the developer, or by a deference
+  decision the rationale line names), `Retired <date>` (no longer
+  contract; kept so identifiers are never reused). Only Agreed blocks
+  are digested and checked. A commitment may name only Agreed
+  requirements.
+- **Commitment**: `docs/commitments/<slug>.md`, one agreed unit of work.
+  Parsed lines: `Requirements:`, `Specified from:` (next-feature items
+  it carries), `Promoted from:` (the backlog item it carries). Not a
+  Git commit; one commitment spans many.
+- **Mechanism**: `.cairn/mechanisms/<name>`, written by `cairn declare`:
+  the command, its working directory, the paths it reads (`inputs:`),
+  the inputs whose change costs a check and not a review
+  (`documents:`), the requirements it speaks for, whether it prints
+  per-requirement result lines (`results: per-requirement`, in which
+  case stdout carries `cairn: REQ: pass|fail` and a requirement with no
+  line is unverified), and its **reviewed list**: one entry per
+  requirement it has been accepted for, naming the requirement's text
+  digest and the fail receipt of its violating example.
+- **Receipt**: `.cairn/evidence/<stamp>`, written by `cairn check`: the
+  mechanism, the digest of its input set, the digests of the
+  declaration and of each requirement's text, the receipt schema
+  version, the exit and signal, per-requirement results, and the
+  digest and path of the captured output. Keyed by digests, never by a
+  commit.
+- **Current**: a receipt is current for a requirement when the input
+  set digest, the declaration digest and the requirement text digest
+  it names equal the ones computed now. The input set digest is the
+  Git tree identity of the declared paths as they are in the working
+  tree; tracked clean files use Git's own blob identity.
+- **Review**: `.cairn/reviews/<slug>.md`, written by `cairn review`: the
+  commit and input set digest it examined, what was examined, the
+  builder's answers to the fixed questions (section 9), and findings,
+  each open or resolved.
+- **Report**: `.cairn/reviews/<slug>.report.md`, written by `cairn
+  report`: the adversary's record at Done, section 9.
+- **Decision**: `docs/decisions/<slug>.md`, written by `cairn decide`
+  at Consequential: what it rests on, who decided (`developer`,
+  `agent`, `joint`), what would make it wrong, the commits that
+  realized it, and, when it supersedes another, the cause. The kernel
+  knows two levels: Consequential (record, queue, continue) and
+  Blocking (escalate). The working agreement's guidance keeps four
+  (Routine and Judged leave no record).
+- **Queue**: `.cairn/queue/<slug>`, one entry per unread Consequential
+  decision; presented at Done and at the start of next-feature; the
+  developer removes an entry to mark it read.
+- **Escalation**: `.cairn/escalations/<slug>.md`, written by `cairn
+  escalate` with five one-line fields (question, recommendation,
+  because, if wrong, instead), answered by the developer with `cairn
+  answer <slug> ok | instead <text> | ask <text>`. An `ask` keeps it
+  open for the agent's `reply`. A Blocking decision is its escalation;
+  no separate decision record is written.
+- **Item**: `.cairn/backlog/<slug>.md` or `.cairn/next-feature/<slug>.md`,
+  written by `cairn item`. A **backlog** item is work the current
+  Agreed requirements already cover. A **next-feature** item would
+  change Agreed text or the working agreement, and names what. A
+  **defect** item is a backlog item with `Defect: yes` naming an Agreed
+  requirement the code violates. Header fields are the kernel's:
+  `Surfaced from:`, `Changes:`, `Outside because:`, `Defect:`,
+  `Fixed by:`, `Promoted to:`. The body is never parsed.
+- **In-progress record**: `.cairn/in-progress`, ignored by Git, written
+  by the agent before it changes a declared input and removed when the
+  change is committed: `action`, `target`, `base` (the commit), `started`,
+  `session` (the harness session identifier when the hook provides
+  one). A second session that finds one names `reconcile`. `cairn
+  check` writes its own while a mechanism runs and removes it after.
+- **Policy**: `.cairn/policy`, hand-written flat fields: `outside:` the
+  paths that are nobody's input and never a scope breach (README,
+  CHANGELOG, CI configuration); `source:` the directories under which
+  no `documents:` or `outside:` entry may lie; `attribution:
+  forbidden` for the release script.
+- **Working agreement**: `AGENTS.md` at the repository root, copied from
+  the template the plugin ships: the move for each verdict and action.
+  The kernel digests it to know when it changed; it does not parse it.
+- **The loop's own history**: the first-parent commits since the commit
+  that wrote the roadmap's current `Current:` line. Merged branches
+  stay off it.
+- **Carried**: a report finding n is carried when exactly one review
+  finding cites it as `(report n)` and begins with the finding's words.
+- **Verdict**: what wake prints. Four: `Resolvable` with an action
+  (the agent's turn), `Waiting` (the developer's turn: an escalation
+  has been presented and not answered), `Escalate` with a slug (a
+  question awaits presentation), `Done`. A pending adversary's report
+  is the agent's wait, not the developer's, and stays Resolvable.
+  Outside a project, wake prints one line saying so and exits 3; that
+  is not a verdict.
+- **Predicate**: the condition the kernel tests on the next wake to
+  decide the named action is complete, printed with the action.
+- **Attempt**: a failing receipt for a requirement at an input set
+  digest not seen among the failures since its last pass.
 
 The term next-feature replaces 1.x's next-iteration everywhere: the
-skill, the directory `.cairn/next-feature/`, and the flag
-`--next-feature`.
+skill, the directory, and the flag.
 
 ## 3. The processes
 
-Four entry flows and one loop. Each flow ends where the loop begins.
+Four entry flows, one shared tail, and one loop.
 
-**Install** (docs/diagrams/install.dot). From a harness with no Cairn to
-a working command, registered hooks and the four skills. Done when
-`cairn --help` prints and, inside a project, wake prints a verdict.
+**Install** (install.dot). Prerequisites first: Node and Git, or stop
+naming the missing one. Then the plugin (Claude Code, Codex, Muse) or
+the skills CLI plus `/install-cairn`, which does by hand what the
+plugin's hooks do. The install skill links `~/.local/bin/cairn`; the
+session-start hook only says when the link or PATH is missing. Done
+when `cairn --help` prints, and inside a project the verdict prints. In
+a harness with no hook system, Cairn degrades to instruction-only: the
+working agreement is the whole enforcement.
 
-**New project** (new-project.dot). From an empty directory to an Agreed
-first commitment: keystone, glossary, domain specifications with
-falsifiers, roadmap, commitment, mechanisms, working agreement. One
-question to the developer at the start; everything else is drafted and
-corrected by exception. Done when wake names the first action.
+**New project** (new-project.dot). From an empty directory, or one
+holding only a README, a license and Git, to an Agreed first
+commitment. One open question (what the software is for) and four
+confirmation gates: the restatement, the glossary, the domain
+partition, each requirement block. Ends in the spec-phase tail.
 
 **Existing project** (existing-project.dot). From a codebase Cairn has
-not specified, or one whose specification has drifted, to one prepared
-commitment. Recon before questions, every claim cited; Observed text is
-never contract; drift is raised, never quietly fixed. Done when wake
-names the first action.
+not specified, or one whose specification drifted, to one prepared
+commitment. Recon before questions, every claim cited in
+`docs/recon.md`; Observed text is never contract; drift is raised with
+both sides cited and the developer rules. When the developer's request
+falls outside the current commitment, the developer chooses: finish the
+current commitment and capture the request, or supersede the commitment
+and take the request. Ends in the spec-phase tail.
 
 **Next feature** (next-feature.dot). From Done to the next Agreed
-commitment, starting from the specification rather than the code. The
-developer's phase: it is the only route by which Agreed text changes.
-Done when wake names the first action of the new commitment.
+commitment, starting from the specification. Every change the developer
+asks for goes into the commitment: one that fits the Agreed
+requirements needs no new text; one that does not is revised or added
+under the developer's confirmation. Ends in the spec-phase tail.
 
-**The work loop** (work-loop.dot). Wake names one action; the agent does
-it; wake again. Escalate presents the question and stops. Done reports
-and stops, unless a backlog item waits, which the agent promotes by a
-recorded decision. Every step leaves a trace in the repository: a
-commit, a receipt, a record.
+**The spec-phase tail** (spec-phase.dot). Shared by the three flows
+above, defined once: falsifiers proposed as one set with a mechanism
+named for each; a self-review for contradictions, falsifiers that would
+not catch their violation, and requirements no mechanism can check
+(done, not recorded: nothing reads the record); `cairn lint`; present
+by exception, with the invitation to ask for another explanation; the
+developer confirms or corrects, or rules that the recommendation stands
+(a deference decision, quoting their words); `Status: Agreed <date>`
+per confirmed block; the commitment file; `cairn declare` for the
+commitment's requirements only, each with a failing test as its
+violating example; the working agreement; commit; wake.
+
+**The work loop** (work-loop.dot). Wake names one action with its
+predicate; the agent does it until the predicate holds, leaves the
+trace, and wakes again. Escalate presents the question; Waiting is the
+developer's turn and the agent stops. Done reports and stops.
 
 ## 4. The record set
 
 A record exists only if something reads it at a known moment: the
-kernel on the next wake, or the developer at a moment they can name.
-The kernel writes every record it reads, and never parses prose. A
-human-readable view is generated from a record, never read back from
-one.
+kernel on the next wake, or the developer at a moment this document
+names. The kernel parses exactly two hand-written files, the
+requirement files and the commitment files, and in them exactly the
+lines the grammar below names. Every other record it reads, it wrote.
+A human-readable view is generated from a record and never read back.
 
-| Record | Written by | Read by | When |
+| Record | Written by | Read by | Moment |
 |---|---|---|---|
-| Requirement (`docs/spec/*.md`) | agent, in the spec phases | kernel (identity, status, digest); developer (agreement) | every wake; each spec phase |
-| Commitment (`docs/commitments/<slug>.md`) | agent, in the spec phases | kernel (its requirements); developer (done-when) | every wake |
-| Mechanism (`.cairn/mechanisms/<name>`) | agent | kernel | every check and wake |
-| Receipt (`.cairn/evidence/`) | kernel | kernel; developer when asking what was proven | every wake |
-| Review and report (`.cairn/reviews/`) | kernel, from `cairn review` and `cairn report` | kernel (open findings, carry); developer at Done | before Done |
-| Adversary's record (`.cairn/reviews/<slug>.<stage>.md`) | kernel, from `cairn report --stage` | kernel (exists at HEAD; every attempt answered); developer at Done | at each of the three points in section 9 |
-| Decision (`docs/decisions/`) | kernel, from `cairn decide` | developer (the queue); kernel (realized, superseded) | Consequential and Blocking only |
-| Escalation (`.cairn/escalations/`) | kernel, from `cairn escalate` and `cairn answer` | developer, once; kernel (open or answered) | when raised |
-| Item (`.cairn/backlog/`, `.cairn/next-feature/`) | kernel, from `cairn item` | kernel (promotion, deferral, defects); developer in next-feature | at Done and in next-feature |
+| Requirement files | agent, in the spec phases | kernel: the grammar lines; developer: agreement | every wake; each spec phase |
+| Commitment file | agent, in the spec phases | kernel: three field lines; developer: done-when | every wake |
+| Roadmap | agent, in the spec phases | kernel: `Current:` | every wake |
+| Glossary, keystone, recon | agent | developer and the next agent | each spec phase |
+| Mechanism | kernel, from `cairn declare` and `cairn review mechanism` | kernel | every check and wake |
+| Receipt | kernel, from `cairn check` | kernel; developer asking what was checked | every wake |
+| Review | kernel, from `cairn review` | kernel: findings, claims; the adversary at Done | before Done |
+| Report | kernel, from `cairn report` | kernel: carry; developer at Done | at Done |
+| Decision | kernel, from `cairn decide` | developer: the queue; kernel: realized, superseded | Done, next-feature |
+| Escalation | kernel, from `cairn escalate`, `cairn answer` | developer, once; kernel: open or answered | when raised |
+| Item | kernel, from `cairn item` | kernel: promotion, deferral, defects; developer in next-feature | Done, next-feature |
+| In-progress record | agent; kernel during check | kernel | every wake |
+| Policy | developer or agent, by hand | kernel | every wake |
+| Working agreement | the template, copied | the agent | every session |
 
-Requirement and commitment files are the only records the agent writes
-by hand, because the developer reads and edits them. Their parsed part
-is small: the identifier, the text, the falsifier line, the status line,
-the requirements list. Everything else in them is prose the kernel skips.
+**The requirement block grammar.** A block begins at a line matching
+`[PREFIX-nnn]` at the margin and ends at the next blank line. Inside
+it, in order: the identifier line, whose remainder begins the text; the
+text, continuing on following lines until a `Falsifier:` line; the
+`Falsifier:` line, one line; an optional `Rationale:` line, one line,
+outside the digest; the `Status:` line. Nothing else is inside a block.
+The digest of a requirement is the identifier, the text and the
+falsifier, whitespace-normalized. A file header holds `Prefix:`, an
+optional `Scope: every commitment`, and an optional `Host paths:` line,
+each before the first block. Everything outside a block and the header
+is prose the kernel skips, fenced or not. `cairn lint docs/spec` refuses
+a file that breaks this grammar, a duplicate identifier, a reference to
+an identifier that does not exist, a block with no falsifier, and an
+Agreed block whose falsifier names no mechanism; its refusal is the
+falsifier for every rule in this paragraph.
 
-A review or report is entered through the command, one field per flag:
-`cairn review --commit <sha> --examined "<what>" --finding "open|resolved: <text>"`.
-The kernel writes the file in its own form. The reviewer's words are
-kept verbatim in the field; there is no markup the kernel has to see
-through, because there is no markup.
+**The commitment file.** Parsed lines: `Requirements:` (a comma-separated
+list of identifiers, all Agreed), `Specified from:`, `Promoted from:`.
+The rest is prose: what it delivers, its done-when, what the
+review-before-agreement attacked. The kernel writes `Promoted to:` onto
+an item and `Specified from:` is written by the agent in next-feature;
+both are parsed as field lines and nothing else in either file is.
 
-Records from 1.x are not read. This is a major version; a project moves
-to it at Done, by re-running its checks and writing its review through
-the new commands.
+**Reviews and reports** are entered through commands, one field per
+flag: `cairn review --examined "<what>" --open "<text>" --resolved <n>
+"<how>" --observed <q> "<observation>" --not-checked <q>`. The kernel
+writes the file in its own form. A finding is a field; there is no
+prefix inside it and no markup to see through.
 
-## 5. Verdicts, actions, and predicates
+Records from 1.x are not read. A project moves to 2 at Done by
+re-running its checks and writing its review through the new commands.
 
-Three verdicts, as in 1.x. Wake prints the verdict, the action, one line
-of reason, and the predicate: the condition the kernel will test on the
-next wake to decide the action is complete. The predicate is the
-notation from the 1.x README, made per-action:
+## 5. Verdicts, actions, predicates, precedence
+
+Wake prints the verdict, the action or party, one line of reason, and
+the predicate. The predicate is the specification of the action: each
+row below becomes one requirement with a falsifier, which with the
+precedence list and the Done rule is most of the loop specification.
 
 | Action | Complete when |
 |---|---|
-| `run REQ` | a receipt for REQ exists at HEAD and is current; the receipt is committed |
-| `implement REQ` | as run, the result is pass, and the receipt carries a tried line |
-| `attack mechanism REQ` | an adversary's record for the mechanism exists at HEAD and the review answers each attempt |
-| `attack implement REQ` | an adversary's record for the change exists at HEAD and the review answers each attempt |
-| `declare REQ` | a committed mechanism names REQ |
-| `record PATH` | `.cairn/in-progress` names the action, or PATH is clean at HEAD |
-| `commit PATH` | PATH is clean at HEAD |
-| `reconcile ACTION` | `.cairn/in-progress` is absent and the tree is clean or committed |
-| `review SLUG` | the review and the report both name HEAD, are committed, and every report finding is carried |
+| `reconcile ACTION` | the in-progress record is gone; the action it named finished or was abandoned |
+| `record PATH` | the in-progress record names the action, or PATH is clean at the base commit |
+| `commit PATH` | PATH is clean |
+| `repair PATH` | the named record reads under its grammar, and nothing else changed |
+| `scope PATH` | the path is declared by a mechanism, listed under `outside:`, or an approved retention or restoration names it |
+| `capture PATH` | the item carries `Outside because:`, or an escalation names it |
+| `fix ITEM` | `Fixed by:` names a commit that changes no Agreed text, and the requirement has a current passing receipt after it |
+| `declare REQ` | a mechanism names REQ |
+| `run REQ` | a current receipt for REQ exists |
+| `implement REQ` | a current passing receipt for REQ exists, and the mechanism's reviewed list carries REQ with a fail receipt |
+| `review mechanism REQ` | the reviewed list carries REQ with the current text digest and a fail receipt; no declared input changed |
+| `escalate REQ` | an escalation names REQ (three attempts without a pass) |
+| `review SLUG` | the review names the current input set digest, answers every fixed question, and no finding is open |
+| `report SLUG` | the brief is issued; a report names the review's digest and the brief's digest, answers every claim of the review by its question and target, and every answer and finding is carried into the review |
 | `resolve SLUG` | no finding is open; each resolution is its own commit |
-| `review mechanism REQ` | the declaration's reviewed list carries REQ with the current text digest, committed |
-| `fix ITEM` | the item names a fixing commit that changes no Agreed text, and REQ passes at or after it |
-| `capture PATH` | the item carries a reason it is outside, or an escalation names it |
-| `build DECISION` | the record's Realized by names a commit that resolves |
-| `promote` | a promotion decision, the requirement Agreed by it, the commitment, the roadmap, the stamped item |
-| `present SLUG` | none: the developer's turn |
+| `build DECISION` | `Realized by` names a commit that resolves |
+| `promote` | a Consequential decision names the item; the commitment file names only Agreed requirements; the roadmap's `Current:` moved; the item stamped |
 | `reply SLUG` | the escalation carries the agent's explanation |
 
-The predicate is the specification of the action. The working agreement
-lists the actions and points at the predicates; it does not describe
-record formats, because the commands own them.
+**Precedence.** Wake tests in this order and names the first that
+fails: an in-progress record from another session or an abandoned one
+(`reconcile`); an undeclared changed path on the loop's own history
+(`scope`); an open escalation (`Escalate`, or `Waiting` on the
+developer after `ask` is answered by the agent); a defect item without
+`Fixed by:` (`fix`); a dirty declared input (`record`, `commit`); a
+requirement with no mechanism (`declare`); a requirement with no current
+receipt (`run`), or a failing one (`implement`, or `escalate` at three
+attempts); a revised requirement without a mechanism review (`review
+mechanism`); a capture from the commitment's own requirement without
+its reason (`capture`); a review that is stale or incomplete
+(`review`); an open finding (`resolve`); a report missing, not
+answering every claim, or not carried (`report`); an unrealized
+Consequential decision (`build`); a backlog item (`promote`); Done.
+
+**Done.** Every requirement of the current commitment has a current
+passing receipt whose mechanism's reviewed list carries it; the review
+names the current input set digest with no open finding and every
+fixed question answered; the report names the review's digest and the
+brief's digest and every report finding is carried; no escalation is
+open; no changed path on the loop's own history is undeclared; no
+backlog item lacks `Promoted to:`; no defect item lacks `Fixed by:`. The
+queue is presented with Done.
+
+**Waiting.** The agent's turn ends when an escalation has been
+presented and not answered. The hooks print `Waiting` and do not nag.
+A pending report is not Waiting: the agent started the adversary, and
+`report SLUG` stays its action until the record exists.
 
 ## 6. Hooks
 
-Two hooks, both prompting, neither blocking.
+Where the harness has a per-turn hook (UserPromptSubmit), it is the
+enforcement: it prints the verdict, action and predicate before every
+turn, so a skipped step is in front of the model. Wake costs under a
+second. The stop hook prints the same line and exists only as the
+fallback for a harness without a per-turn hook. The session-start hook
+prints the verdict and says, in one line, when the command link or PATH
+is missing; it changes nothing. The install skill makes the link, once.
 
-- **Session start**: link the command if missing; say which kernel
-  judges; inside a project, print the verdict and its predicate.
-- **Each turn** (UserPromptSubmit where the harness has it): print the
-  verdict and its predicate. Wake costs under a second. The referee's
-  line sits in front of the model before every response, which is where
-  a skipped step is caught.
-- **Stop**: print the verdict and predicate as a message. No refusal, no
-  refusal count, no stop record.
-
-1.x's stop hook refused a stop while Resolvable and, after three
-refusals with no change to the tree, wrote a record the next session had
-to explain. Twenty-seven such records were written in two days, every
-one explaining that the agent was waiting for a reviewer. The
-prompting hook keeps the enforcement that worked (the model sees the
-named action) and drops the part that did not (refusing a wait).
+No hook refuses a stop, counts refusals, or writes a record. 1.x's stop
+hook wrote twenty-seven stop records in two days, every one explaining
+that the agent was waiting for a reviewer; the Waiting verdict is the
+state that hook lacked.
 
 ## 7. Requirements policy
 
 - A requirement describes something a user of Cairn can observe: a
   verdict, a refusal, a record, a command's output. The kernel's
   internals are tests, not contract. 1.x had 255 requirements, 141 of
-  them about the loop; most of those were internals.
-- A requirement block holds its identifier, its text, its falsifier and
-  its status. Rationale is at most one line, naming a decision record if
-  there is one. History is Git's.
+  them about the loop; the predicate table, the precedence list and
+  the Done rule replace most of those with about 25.
+- A requirement block holds its identifier, text, falsifier, one
+  optional rationale line naming a decision, and its status. History is
+  Git's.
 - A falsifier names a mechanism that could observe it before the
-  requirement is Agreed. Every mechanism demonstrates a safe violating
-  example when it is built, and the review that accepts a new or revised
-  mechanism carries a line saying what example was tried.
-- Agreement is per block, by the developer's confirmation, or by a
-  recorded deference or promotion decision, as in 1.x.
+  requirement is Agreed. A mechanism counts for a requirement only once
+  its reviewed list names a fail receipt for that requirement's
+  violating example: the check was seen to fail before it was seen to
+  pass.
+- Agreement is per block, by the developer's confirmation or by a
+  deference decision quoting their words. Promotion never Agrees text.
 
 ## 8. What each kept process does, and what changed
 
-**Freshness.** Evidence is current when the digests of the mechanism's
-inputs, its declaration, the requirement text and the kernel match now.
-A revised requirement needs a mechanism review before its evidence
-counts. A review is stale when a code input changed since it was
-written; a declaration may list `documents:` for inputs whose change
-costs a check and not a review, and the kernel refuses a `documents:`
-entry that is not among the inputs or that lies under a source
-directory.
+**Freshness.** A receipt is current by the digests in section 2. A
+kernel release does not invalidate evidence; the receipt schema version
+does, when the format changes. A revised requirement needs `review
+mechanism` before its evidence counts. A review is stale when an input
+outside `documents:` changed since the digest it names. A `documents:`
+entry must be among the mechanism's inputs and must not lie under a
+`source:` directory; `cairn declare` refuses otherwise. A receipt whose
+output file is absent, as on a fresh clone, is current; the output
+digest lets its absence or alteration be reported when asked.
 
 **Scope.** A change on the loop's own history to a path no mechanism
-declares is a breach, named with the path. The two recovery routes from
-1.x remain: declare the input, or escalate to keep or to restore.
+declares and `outside:` does not list is a breach, named with the path.
+Recovery: declare the input, or escalate to keep or to restore.
 
 **Deferral.** An item captured from one of the commitment's own
-requirements carries the agent's reason it is outside, or an escalation
-names it. A defect item is never deferral: a defect from the
-commitment's own requirement is worked under it. (1.x's LOOP-092 and
-LOOP-140 disagreed on this case; 2 takes LOOP-140's side.)
+requirements carries `Outside because:`, or an escalation names it. A
+defect item is never deferral: a defect against the commitment's own
+requirement is worked under it.
 
-**Attempts.** Three distinct input digests that fail without a pass make
-the next decision Blocking. Reruns and documentation changes do not
-count.
+**Attempts.** After three attempts without a pass, a fourth requires an
+escalation first; wake names `escalate REQ`. Reruns at a seen digest
+and changes only to `documents:` or `outside:` paths are not attempts.
 
-**Decisions.** The four-level scale stays. Routine and Judged leave no
-file; a Judged decision is a line in the commit message. Consequential
-writes a record and queues it; Blocking escalates. Supersession names
-one of the four causes; `cairn reversals` reports the rate by decider.
+**Decisions.** Two kernel levels. Consequential: `cairn decide` writes
+the record and the queue entry; the agent continues; the developer
+reads the queue at Done and in next-feature. Blocking: `cairn escalate`;
+the answered escalation is the record. Supersession names one of four
+causes (the stated condition occurred; an unforeseen condition
+occurred; it was wrong when it was made; the premise was false).
 
 **Escalation.** Five one-line fields; `ok`, `instead`, `ask`; a reply
-turn after `ask`. Unchanged from 1.x, because it is the record that
-works.
+turn after `ask`. The developer runs `cairn answer`; the agent never
+does. Where the harness gives session identity, `cairn answer` refuses
+the session that raised the escalation.
 
-**Capture and promotion.** Backlog items are promoted at Done by a
-Consequential decision. Next-feature items wait for the developer.
-Defect items are fixed before any promotion.
+**Capture and promotion.** A backlog item is work the Agreed
+requirements already cover; the agent promotes one at Done by a
+Consequential decision that writes a commitment naming only Agreed
+requirements. An item that would need new or changed text is a
+next-feature item and waits for the developer. Defect items are fixed
+before any promotion.
 
-**Review.** The builder records what it examined and found; a reviewer
-with none of the builder's context writes a report at the same commit;
-each report finding is carried into the review by number. Both records
-are written through commands, so a finding is a field, not a line the
-kernel has to recognize.
+**Review.** The builder's review answers the fixed questions and lists
+findings; the adversary's report at Done answers each claim and each
+finding by name; each report finding is carried into the review.
 
-**Release.** One tagged commit sets the version in every manifest and
-carries the changelog entry; the script refuses a dirty tree, a
-non-increase, a taken tag, an attributed commit, or a loop not at Done.
-The attribution policy in `.cairn/policy` stays, opt-in.
+**Evidence.** The receipt is committed. The output is written beside it,
+ignored by Git, and named by digest in the receipt.
 
-**Evidence.** The receipt is committed. The command's output is written
-beside it but ignored by Git, and the receipt names its digest, so a
-missing or altered output is detectable and a repository does not grow
-by the size of its test logs.
+## 9. Self-evaluation and one adversarial review
 
-## 9. Self-evaluation and adversarial review
+The loop takes the agent's word at three points: that a falsifier is
+observable, that a mechanism fails for the right reason, and that a
+change makes its falsifier unreachable. At each, the builder records
+claims; at Done, one adversary attacks them all.
 
-The loop takes the agent's word at three points before Done: that a
-falsifier is observable, that a mechanism fails for the right reason,
-and that a change makes its falsifier unreachable. At each, Cairn 2
-asks for two records: the builder's claims, and an adversary's attempts
-to break them. The agent starts the adversary itself, a subagent with
-none of its context, the way it starts the independent reviewer; Cairn
-checks that the records exist at HEAD and answer each other.
+**Claims.** Fixed questions with identifiers, answered through the
+review command as `--observed <q> "<command, path or output>"` or
+`--not-checked <q>`. The kernel checks that every question is answered;
+it cannot check truth, and the adversary can.
 
-The claims are answers to fixed questions. Every answer names an
-observation (a command, a path, an output) or says "not checked".
-"Confident" is not an answer. The adversary's record is a list of
-attempts, each with what was tried and what happened, never an opinion.
-The builder answers each attempt by name, as it carries a report's
-findings.
+- Q1, per mechanism: which violating example failed the check, which
+  fail receipt records it, and what the check printed. (Enforced: the
+  reviewed list entry names the receipt, and the receipt holds the
+  output.)
+- Q2, per mechanism: why the failure was the stated reason and not a
+  setup error.
+- Q3, per requirement implemented: why the falsifier is now unreachable.
+- Q4, per requirement implemented: what else the change touched that no
+  check covers.
+- Q5, per commitment: what could be wrong that every check would still
+  pass.
+- Q6, per commitment: what was not tested.
 
-| Point | The builder's claims | The adversary's brief | Record |
-|---|---|---|---|
-| Falsifiers proposed (spec phases) | each falsifier names the mechanism that observes it | write a command that satisfies this falsifier without the behavior; name two falsifiers that contradict | the commitment file's review-before-agreement section, and the adversary's record beside it |
-| A mechanism is new or changed | what violating example was tried, what the check printed, why the failure was the stated reason and not a setup error | make it pass without the behavior; make it fail for a setup reason; find an input it reads that it does not declare | `cairn check --tried "<example>: <result>"` on the receipt; `cairn report --stage mechanism REQ` |
-| `implement` completes | why the falsifier is now unreachable; what else the change touched that no check covers | reach the falsifier with an input; find a touched path the claim omits | `cairn review --claim ...` on the review; `cairn report --stage implement REQ` |
-| Done | the builder's review: what could be wrong that every check would pass; what was not tested | the independent report, as in 1.x, now answering each claim by name | `cairn review`, `cairn report` |
+**The adversary at Done.** When the review is complete, wake names
+`report SLUG` and prints the brief: `cairn brief <slug>` emits the
+commitment, its requirements and falsifiers, the declarations, the
+review's claims and findings, the commit range, and the brief's digest.
+The agent starts an adversary with none of its context, gives it the
+brief and the repository, and waits for its record; `report SLUG`
+stays the named action meanwhile. The adversary's tasks, each answered
+by name against the claim it attacks: for each mechanism (Q1, Q2), make
+it pass without the behavior, make it fail for a setup reason, and find
+an input it reads that it does not declare; for each Q3, reach the
+falsifier with an input; for each Q4, find a touched path the claim
+omits; for Q5 and Q6, look where the builder said not to. Its record,
+through `cairn report`, is a list of attempts, each naming the claim,
+what was tried and what happened, and carries the brief's digest; a
+report whose brief digest is not the current one, or that leaves a
+claim unanswered, is refused. The builder carries each answer and each
+finding by number.
 
-The wake names the missing half: `attack mechanism REQ` when a
-mechanism's receipt carries a tried line and no adversary's record
-answers it at HEAD; `attack implement REQ` likewise for a change. A pass
-with no tried line does not count for `implement`. An attempt the
-builder has not answered is an open finding.
+What the kernel cannot check: that the adversary was a different agent.
+The brief's digest keeps the builder's hand off the adversary's input;
+where the harness gives session identities, `cairn report` refuses a
+session that wrote the review. Beyond that, the record's shape is the
+evidence.
 
-One adversary per point per commitment, not per round. The 1.x cost
-came from a full review on every commit; this asks three narrow
-questions once each, and the adversary's input is the claim, not the
-diff.
-
-What the kernel cannot check remains what it could not check in 1.x:
-that the adversary was a different agent. The record's shape is the
-evidence: attempts a builder would not have made against itself.
+**Cost.** One adversary per commitment, with the repository and the
+brief, not the builder's session. Nothing runs per spec phase, per
+mechanism or per commit. The trade, stated: a mechanism that passes
+without the behavior is caught at Done rather than at its first pass;
+the fail-receipt rule and Q1's printed output cover the gap.
 
 ## 10. Distribution
 
-One plugin: the command, two hooks, four skills (`install-cairn`,
-`new-project`, `existing-project`, `next-feature`). Manifests for Claude
-Code, Codex and Muse share one version. The skills also install by the
-skills CLI. Node and Git; no build, no packages, no service. Linux and
-macOS.
+One plugin: the command, the hooks, four skills (`install-cairn`,
+`new-project`, `existing-project`, `next-feature`). Manifests for
+Claude Code, Codex and Muse share one version. The skills also install
+by the skills CLI. Node and Git; no build, no packages, no service.
+Linux and macOS.
 
-The kernel keeps a line ceiling. Its value is set when the kernel
-exists, from what the seven ideas need, and it is not raised inside a
-commitment.
+How this repository develops Cairn (its release script, its attribution
+refusal at release, its kernel line ceiling as a norm) is in the
+repository's own commitment, not in this specification.
 
 ## 11. Removed from 1.x
 
 - The autonomy and Jev modes (AUTO-001 to AUTO-018): Agreed, never
-  built, never checked. Not carried.
-- The stop hook's refusal, its refusal count, stop records, and the
-  `explain` action.
+  built, never checked.
+- The stop hook's refusal, its count, stop records, and `explain`.
 - Reading review and item records as Markdown: the findings sweep, the
-  heading rules, the fence rules, the markup tolerance, and the 778-word
-  paragraph in the working agreement that described them (the class
-  LOOP-108 to LOOP-138 and LOOP-086 covered).
+  heading, fence and markup rules, and the working agreement's
+  paragraph describing them (LOOP-086, LOOP-108 to LOOP-138).
 - `Revised <date>` rationale paragraphs inside requirement blocks.
-- Decision files at Judged.
+- Agreed by promotion. Promotion never Agrees text.
+- Decision files at Judged; the reversals report.
+- The `reword` action; attribution is refused at release only.
+- The kernel digest as a freshness input.
 - Command output files in Git.
-- docs/audit and the diagrams of 1.x; this specification's digraphs
-  replace them.
-- Every requirement that described a kernel internal rather than an
-  observable behavior. The cut list is produced when the 2 requirements
-  are written, identifier by identifier, so the developer rules on
-  specifics.
+- The release process, attribution policy and kernel ceiling as product
+  requirements.
+- docs/audit and the 1.x diagrams.
+- Every requirement that described a kernel internal. The cut list is
+  produced when the 2 requirements are written, identifier by
+  identifier.
 
 ## 12. Decisions in this draft the developer may reverse
 
-1. A defect from the commitment's own requirement is worked, not
-   captured (section 8, Deferral).
-2. The stop hook prompts and never blocks (section 6).
-3. Judged decisions have no file (section 8, Decisions).
-4. next-iteration is renamed next-feature, including the directory and
-   the flag (section 2).
-5. 1.x records are not read; the move to 2 is at Done and re-checks
-   (section 4).
-6. Command output lives outside Git (section 8, Evidence).
-7. The version is 2.0.0 and the branch is `v2` in this repository; the
-   1.x line is archived at cutover.
-8. Adversarial review happens at three points per commitment, once
-   each, and the agent starts the adversary (section 9).
-9. A mechanism's pass counts for `implement` only with a tried line on
-   its receipt (section 9).
+1. A defect against the commitment's own requirement is worked, not
+   captured (section 8).
+2. The hooks prompt and never block (section 6).
+3. The kernel knows two decision levels; the guidance keeps four
+   (section 2).
+4. next-iteration is renamed next-feature, directory and flag included.
+5. 1.x records are not read; the move to 2 is at Done.
+6. Command output lives outside Git; a receipt is current without it.
+7. The branch is `v2` in this repository; the 1.x line is archived at
+   cutover.
+8. One adversary, at Done; nothing per spec phase, per mechanism or
+   per commit (section 9). The developer ruled this on 2026-09-18: "I
+   only see the need for one adversarial review instead of 3."
+9. Promotion never Agrees text; the agent starts a backlog commitment
+   at Done without the developer (section 8).
+10. A fourth verdict, Waiting, for the developer's turn only; a pending
+    report is the agent's wait (section 5).
+11. The developer runs `cairn answer`; the agent never does (section 8).
+12. The install skill makes the command link; the hooks change nothing
+    (section 6).
+13. The spec-phase self-review is done and not recorded (section 3).
 
 ## 13. Next steps
 
-1. The developer corrects this document and the five digraphs.
+1. The developer corrects this document and the six digraphs.
 2. The requirements are written from it, each with a falsifier and the
    mechanism that observes it, under section 7's policy, with the 1.x
    cut list beside them.

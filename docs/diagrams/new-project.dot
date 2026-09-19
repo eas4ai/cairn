@@ -1,50 +1,28 @@
-// New project: from an empty directory to an Agreed first commitment.
+// New project: from an empty directory to drafted requirements; the spec-phase tail finishes it.
 digraph new_project {
   rankdir=TB;
-  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="New project: start to done"];
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="New project: start to the spec-phase tail"];
   node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /new-project"];
-  exists [shape=diamond, label="Directory holds code or\ndocs/spec/overview.md?"];
+  exists [shape=diamond, label="Directory holds source code, or\ndocs/spec/overview.md?\n(a README, a license and Git do not count)"];
   switch [shape=oval, label="Switch to\n/existing-project"];
-  ask [label="Ask the one question:\nwhat is the software for?"];
-  restate [label="Restate in own words;\ndeveloper corrects"];
+  ask [label="The one open question:\nwhat is the software for?"];
+  restate [label="Gate 1: restate in own words;\ndeveloper corrects"];
   keystone [label="Keystone: docs/spec/overview.md\nwhat it is, the problem, what it is not,\nthe spec map"];
-  glossary [label="Glossary: 5 to 15 terms as one set;\ndeveloper corrects by exception"];
-  partition [label="Derive the domains from the keystone;\nconfirm the partition"];
-
-  subgraph cluster_domain {
-    label="For each domain"; style=dashed; fontname="Helvetica"; fontsize=11;
-    draft [label="Draft requirements: one obligation per sentence,\nthe actor named, a falsifier each,\na mechanism named per falsifier"];
-    review [label="Self-review: contradictions,\nfalsifiers that would not catch their violation,\nrequirements no mechanism can check;\nrecord what was attacked"];
-    lint [shape=diamond, label="cairn lint docs/spec\nclean?"];
-    present [label="Present for agreement by exception,\nwith the invitation to ask for\nanother explanation"];
-    confirmed [shape=diamond, label="Developer confirms\neach block?"];
-    correct [label="Apply the corrections"];
-    agreed [label="Status: Agreed <date>\ninside each confirmed block;\nunconfirmed blocks stay Draft"];
-  }
-
+  glossary [label="Gate 2: glossary, 5 to 15 terms as one set;\ndeveloper corrects by exception"];
+  partition [label="Gate 3: derive the domains from the keystone;\ndeveloper confirms the partition"];
+  draft [label="For each domain, draft the requirements:\none obligation per sentence, the actor named,\na Falsifier: line each, Status: Draft"];
   more [shape=diamond, label="More domains?"];
-  roadmap [label="Roadmap with Current:\nand the first commitment file:\nrequirements, deliverables, done-when"];
-  mechs [label="One mechanism per requirement:\ncommand, inputs, requirements;\nresults: per-requirement where used"];
-  agreement [label="AGENTS.md copied verbatim\nfrom the template"];
-  commit [label="Commit; cairn wake"];
-  done [shape=box, peripheries=2, label="Done:\nwake names the first action;\nthe work loop takes over"];
+  roadmap [label="Roadmap with Current: naming the first commitment"];
+  tail [shape=box, peripheries=2, label="Gate 4: the spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, commitment,\ndeclare, AGENTS.md, commit, wake"];
 
   start -> exists;
   exists -> switch [label="yes"];
   exists -> ask [label="no"];
-  ask -> restate -> keystone -> glossary -> partition -> draft;
-  draft -> review -> lint;
-  lint -> draft [label="findings"];
-  lint -> present [label="clean"];
-  present -> confirmed;
-  confirmed -> correct [label="corrects"];
-  correct -> review;
-  confirmed -> agreed [label="confirms"];
-  agreed -> more;
+  ask -> restate -> keystone -> glossary -> partition -> draft -> more;
   more -> draft [label="yes"];
   more -> roadmap [label="no"];
-  roadmap -> mechs -> agreement -> commit -> done;
+  roadmap -> tail;
 }

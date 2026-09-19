@@ -1,0 +1,33 @@
+// The spec-phase tail: shared by new-project, existing-project and next-feature. Defined once.
+digraph spec_phase {
+  rankdir=TB;
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="The spec-phase tail: from drafted requirements to the first action"];
+  node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+  edge  [fontname="Helvetica", fontsize=10];
+
+  start [shape=oval, label="Enter: requirements drafted or revised,\neach with a falsifier"];
+  falsifiers [label="Propose the falsifiers as one set;\nname the mechanism that observes each"];
+  review [label="Self-review: contradictions, falsifiers that would not\ncatch their violation, requirements no mechanism can check\n(done, not recorded)"];
+  lint [shape=diamond, label="cairn lint docs/spec\nclean?"];
+  present [label="Present by exception: the requirements and the falsifiers;\ninvite another explanation"];
+  outcome [shape=diamond, label="Developer's answer?"];
+  explain [label="Explain it another way"];
+  correct [label="Apply the corrections"];
+  agreed [label="Confirms: Status: Agreed <date> per block\nRules that the recommendation stands: deference decision\nat Consequential quoting their words; Status: Agreed <date>\nwith a Rationale: line naming it"];
+  commitment [label="Commitment file: Requirements: (Agreed only),\nSpecified from: or Promoted from:, done-when;\nroadmap Current:; items stamped Promoted to:"];
+  declare [label="cairn declare for the commitment's requirements only;\na failing test is each mechanism's violating example"];
+  agreement [label="AGENTS.md from the template\n(write it, or replace the copy it holds)"];
+  commit [label="Commit; cairn wake"];
+  done [shape=box, peripheries=2, label="Done: wake names the first action;\nthe work loop takes over;\nConsequential decisions wait in the queue"];
+
+  start -> falsifiers -> review -> lint;
+  lint -> falsifiers [label="findings"];
+  lint -> present [label="clean"];
+  present -> outcome;
+  outcome -> explain [label="asks"];
+  explain -> present;
+  outcome -> correct [label="corrects"];
+  correct -> review;
+  outcome -> agreed [label="confirms, or rules"];
+  agreed -> commitment -> declare -> agreement -> commit -> done;
+}

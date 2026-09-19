@@ -1,9 +1,10 @@
 # Process digraphs
 
-Five Graphviz digraphs, one per process, each from start to done. They
+Six Graphviz digraphs, one per process, each from start to done. They
 are part of the Cairn 2 feature specification in docs/spec/cairn-v2.md.
 
 - install.dot: from a harness with no Cairn to the command, hooks and skills.
+- spec-phase.dot: the tail the three entry flows share, from drafted requirements to the first action.
 - new-project.dot: from an empty directory to an Agreed first commitment.
 - existing-project.dot: from an unspecified or drifted codebase to one prepared commitment.
 - next-feature.dot: from Done to the next Agreed commitment.
@@ -11,7 +12,7 @@ are part of the Cairn 2 feature specification in docs/spec/cairn-v2.md.
 
 Render with Graphviz:
 
-    for f in install new-project existing-project next-feature work-loop; do
+    for f in install new-project existing-project next-feature spec-phase work-loop; do
       dot -Tsvg docs/diagrams/$f.dot -o docs/diagrams/$f.svg
     done
 

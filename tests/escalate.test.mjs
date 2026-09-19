@@ -5,6 +5,19 @@ import { loopRepo } from './helpers/loop.mjs';
 import { readLog, decodeRecord, KINDS } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { escalate, escalationsFor } from '../lib/escalate.mjs';
+import { readAdr } from '../lib/adr.mjs';
+import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
+
+// Deviation from the plan text: validateSettings (lib/settings.mjs, already committed) requires
+// every typesafeai.* threshold key to be present (a closed-object schema); the plan's partial
+// stub `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
+// when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
+// already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
+const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0',
+  route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
+  reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
+  min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
+const EV = 'e'.repeat(40);
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -73,4 +86,43 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
   await assert.rejects(escalate(r.cwd, draft({ concerns: [`finding:${rev}#2`] })), /has no finding 2/);
   await assert.rejects(escalate(r.cwd, draft({ concerns: ['item:' + rev] })), /no item record/);
   assert.match(await escalate(r.cwd, draft({ concerns: [`finding:${rev}#1`] })), /^[0-9a-f]{40}$/);
+});
+
+test('with the evaluator disabled the route is developer and the evaluator is never loaded', async () => {
+  const r = await loopRepo();
+  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => { throw new Error('must not be called'); } });
+  assert.equal(out.route, 'developer');
+  assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).kind, 'escalation');
+});
+
+// Deviation from the plan text: lib/adr.mjs's real appendDecision/prepareLine always validates a
+// non-null decision `evaluation` field against the actual log (validateLine's `sha()` checker
+// calls readLog and requires logShas.has(s)); the plan's fabricated EV = 'e'.repeat(40) is not a
+// record any of these fixtures ever write, so decide(..., 'escalate') would throw "evaluation
+// names a missing record". Using r.startSha (a real record already in the log) instead keeps the
+// test's stated behavior -- the evaluation SHA reaches the decision line -- true against the real
+// validator. The 'developer' route test below stores the evaluation on an escalation record, whose
+// schema (lib/records.mjs) checks only SHA format, not log membership, so EV is left as written there.
+test('an evaluation that downgrades writes an ADR decision line naming the evaluation and no escalation record', async () => {
+  const r = await loopRepo({ settings: enabled });
+  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'agent', evaluationSha: r.startSha }) });
+  assert.deepEqual(out, { route: 'agent', sha: r.startSha });
+  const line = (await readAdr(r.cwd)).find((l) => l.kind === 'decision');
+  assert.deepEqual([line.level, line.by, line.title, line.evaluation], ['Consequential', 'agent', draft().question, r.startSha]);
+  assert.equal(escalationsFor(await r.log(), 'first').length, 0);
+});
+
+test('an evaluation that routes to the developer writes the escalation with its evaluation SHA', async () => {
+  const r = await loopRepo({ settings: enabled });
+  const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'developer', evaluationSha: EV }) });
+  assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).payload.evaluation, EV);
+});
+
+test('cairn decide --consequential accepts the same canonical draft and writes the same line without an evaluation', async () => {
+  const r = await loopRepo();
+  await assert.rejects(decideConsequential(r.cwd, draft({ because: '' })), DraftError);
+  await assert.rejects(decideConsequential(r.cwd, draft({ concerns: ['ZZZ-999'] })), /not in the frozen set/);
+  const id = await decideConsequential(r.cwd, draft());
+  const line = (await readAdr(r.cwd)).find((l) => l.id === id);
+  assert.deepEqual([line.kind, line.evaluation, line.body, line.wrong_if], ['decision', null, `${draft().recommendation} Instead: ${draft().instead}`, draft().if_wrong]);
 });

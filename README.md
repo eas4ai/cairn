@@ -92,8 +92,8 @@ correct. It means the open commitment meets Cairn's recorded conditions.
 The backlog is not part of this rule. When it holds nothing to promote,
 Cairn reports Done and stops. Ideas the agent captures during the work go
 to one of two places. An idea already covered by the agreed specification
-goes to the backlog; the agent may promote one into the next commitment on
-its own, recording the decision for your review. An idea that would change
+goes to the backlog. The agent may promote one into the next commitment on
+its own, and it records that decision for your review. An idea that would change
 an agreed requirement or the working agreement waits for the next feature
 specification, which you open. Neither is a place to park unfinished
 work: an in-scope problem the agent cannot solve becomes a question to you,

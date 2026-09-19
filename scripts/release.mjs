@@ -56,7 +56,7 @@ export async function release(cwd, next, { wake } = {}) {
   return { sha: git(cwd, "rev-parse", "HEAD").trim(), tag: `v${next}` };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   release(process.cwd(), process.argv[2]).then(
     ({ sha, tag }) => process.stdout.write(`release: ${tag} at ${sha.slice(0, 7)}; next: cairn check <REQ>, the review, cairn push, then git push origin ${tag}\n`),
     (e) => { process.stderr.write(`${e.message}\n`); process.exit(3); },

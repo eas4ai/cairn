@@ -186,3 +186,80 @@ test('the authorization record carries the three digests by the shared rule', as
   const now = await protectedDigests(repo.cwd);
   assert.deepEqual([auth.payload.spec_digest, auth.payload.agreement_digest, auth.payload.settings_digest], [now.spec, now.agreement, now.settings]);
 });
+
+import { supersede, carriedRecords } from '../lib/commitment.mjs';
+import { readAdr } from '../lib/adr.mjs';
+import { appendRecord } from '../lib/records.mjs';
+
+// Deviation from the plan text: lib/auth.mjs's authenticateDeveloper (already committed) defaults
+// its unsigned-local confirm to ttyConfirm, which opens /dev/tty and throws without a controlling
+// terminal -- there is none in this test run. The plan's own supersede() Interfaces line documents
+// only {quote}, with no confirm/sign passthrough and no stub in its test code, so every test that
+// actually reaches authenticateDeveloper would throw AuthError as written. supersede() (below) is
+// implemented to accept the same {confirm, sign, nonce} passthrough authorize()/readDecision()
+// already take, and the two tests that exercise a real supersede pass this same non-interactive
+// stub tests/auth.test.mjs itself uses.
+const confirmYes = async () => true;
+
+test('supersede writes the developer-quoted decision and a superseded record, and does not move Current:', async () => {
+  const repo = await project();
+  const s = await start(repo.cwd, 'first');
+  const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
+  const sha = await supersede(repo.cwd, 'second', { quote: 'Drop the greeting work; the name argument matters more.', confirm: confirmYes });
+  const rec = await last(repo.cwd, 'superseded');
+  assert.equal(rec.sha, sha);
+  // Deviation from the plan text: the already-committed 'superseded' schema (lib/records.mjs) has
+  // no `evidence` field -- spec section 2's own Superseded definition names "the old start, the
+  // developer decision, a transition ID, the intended successor slug and every carried open
+  // record" and nothing else, and section 4's table agrees; the developer's authentication is
+  // gated here but not persisted on this record (unlike 'read' and 'answer', which the spec
+  // explicitly says do carry it). It does carry intent/results, the same as 'promotion' (Fix round
+  // 1 finding 8). The plan's Global Constraints text calling `evidence` "the ninth logical field"
+  // conflicts with both the already-committed schema and the spec; followed the schema and spec.
+  assert.deepEqual(Object.keys(rec.payload).sort(), ['carried', 'decision', 'intent', 'results', 'slug', 'start', 'successor', 'transition']);
+  assert.deepEqual([rec.payload.slug, rec.payload.start, rec.payload.successor, rec.payload.carried], ['first', s, 'second', [d]]);
+  assert.match(rec.payload.transition, /^[0-9A-HJKMNP-TV-Z]{26}$/);
+  const decision = (await readAdr(repo.cwd)).find((l) => l.id === rec.payload.decision);
+  assert.deepEqual([decision.kind, decision.by, decision.body], ['decision', 'developer', 'Drop the greeting work; the name argument matters more.']);
+  assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: first$/m);
+  const state = openCommitment(await readLog(repo.cwd));
+  assert.equal(state.open, null);
+  assert.equal(state.pending.sha, sha);
+  assert.equal(decodeRecord(await catCommit(repo.cwd, sha)).kind, 'superseded');
+});
+
+test('the successor start names the superseded record and Current: moves in its own transaction', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+  await assert.rejects(start(repo.cwd, 'drafty'), /pending supersession names successor second, not drafty/);
+  const s2 = await start(repo.cwd, 'second');
+  const rec = await last(repo.cwd, 'start');
+  assert.deepEqual([rec.sha, rec.payload.from_superseded, rec.payload.slug], [s2, sup, 'second']);
+  assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m);
+  assert.equal(openCommitment(await readLog(repo.cwd)).pending, null);
+});
+
+test('supersede refuses without an open commitment, without the developer quote, or with a bad successor', async () => {
+  const repo = await project();
+  await assert.rejects(supersede(repo.cwd, 'second', { quote: 'x' }), /no commitment is open/);
+  await start(repo.cwd, 'first');
+  await assert.rejects(supersede(repo.cwd, 'second', { quote: '' }), /developer's words/);
+  await assert.rejects(supersede(repo.cwd, 'Bad', { quote: 'x' }), /invalid slug/);
+});
+
+test('carriedRecords carries unanswered escalations and unfixed defects, not answered or fixed ones', async () => {
+  const repo = await project();
+  const s = await start(repo.cwd, 'first');
+  const log0 = await readLog(repo.cwd);
+  const open = openCommitment(log0).open;
+  const d1 = await item(repo.cwd, { kind: 'defect', slug: 'one', source: 'DEMO-001', body: 'x' });
+  const d2 = await item(repo.cwd, { kind: 'defect', slug: 'two', source: 'DEMO-001', body: 'x' });
+  await fix(repo.cwd, d2);
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'later', source: 'DEMO-001', body: 'x' });
+  const log = await readLog(repo.cwd);
+  assert.deepEqual(carriedRecords(log, open), [d1]);
+  assert.equal(carriedRecords(log0, open).length, 0);
+  assert.equal(s, open.sha);
+  assert.equal(log.some((r) => r.sha === b), true);
+});

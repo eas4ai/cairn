@@ -184,7 +184,11 @@ test('authorize writes one record binding the three digests with verified eviden
   assert.equal(rec.payload.agreement_digest, d.agreement);
   assert.equal(rec.payload.settings_digest, d.settings);
   assert.equal(rec.payload.decision, null);
-  assert.equal(rec.payload.intent, null);
+  // Deviation from the plan text: this is plan 03's own test, asserting intent was null before
+  // plan 04 (this plan, Task 6) made authorize() a transaction. No protected path is dirty here (the
+  // fixture files match what init() already saw), so authorize's transaction has no branch write and
+  // its only earlier record is the command-intent that withTransaction appends; intent now names it.
+  assert.equal(rec.payload.intent, log.at(-2).sha);
   assert.equal(rec.payload.evidence.mode, 'unsigned-local');
   assert.equal(rec.payload.evidence.subject, canonicalize({ spec: d.spec, agreement: d.agreement, settings: d.settings }));
   assert.equal((await catCommit(cwd, sha)).subject, 'cairn: authorization protected');
@@ -351,4 +355,19 @@ test('init, authorization and read records round-trip and refuse unknown or miss
   }
   assert.throws(() => encodeRecord('init', 'project', { settings_digest: 'sha256:' + '0'.repeat(64) }), /authority_remote/);
   assert.throws(() => encodeRecord('read', 'X', { decision: 'X', evidence: {}, more: 1 }), /more/);
+});
+
+import { git } from '../lib/gitx.mjs';
+
+test('authorize commits the dirty protected paths and its record names the intent', async () => {
+  const cwd = await initialized();
+  writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
+  const sha = await authorize(cwd, { confirm: yes });
+  const log = await readLog(cwd);
+  assert.deepEqual(log.slice(-2).map((r) => r.kind), ['command-intent', 'authorization']);
+  assert.equal(log.at(-1).payload.intent, log.at(-2).sha);
+  assert.equal(log.at(-1).sha, sha);
+  assert.equal((await git(['status', '--porcelain', '--', 'AGENTS.md'], { cwd })).stdout, '', 'AGENTS.md is committed');
+  assert.equal((await git(['log', '-1', '--format=%s'], { cwd })).stdout.trim(), 'Authorize the specification, working agreement and settings');
+  assert.equal(log.at(-1).payload.agreement_digest, sha256('# changed\n'));
 });

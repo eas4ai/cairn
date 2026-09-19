@@ -1,6 +1,9 @@
 // tests/evaluate.test.mjs
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdir, readFile as readFileP } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { validateEvaluatorSettings, isVersionedModel, EVALUATOR_DEFAULTS } from '../lib/evaluate.mjs';
 import { validateSettings } from '../lib/settings.mjs';
 
@@ -161,7 +164,7 @@ import { contractState, ownerState, optionState, EgressError } from '../lib/eval
 import { writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { loopRepo } from './helpers/loop.mjs';
-import { loadSettings } from '../lib/settings.mjs';
+import { loadSettings, hasPassingCalibration } from '../lib/settings.mjs';
 
 // A hand-built facts object for a repository-backed draft, used by the states/egress tests below
 // that do not need kernelFacts' own log/ADR/lease reads. `set: []` matches kernelFacts' own shape
@@ -485,7 +488,7 @@ describe('evaluate', () => {
   });
 });
 
-import { upperBound, calibrate, assertRouteMode, currentCalibration, RouteModeError } from '../lib/evaluate.mjs';
+import { upperBound, calibrate, assertRouteMode, RouteModeError } from '../lib/evaluate.mjs';
 import { escalate, answer } from '../lib/escalate.mjs';
 
 // Shared by the calibration and route-mode-conversion describe blocks below (route-mode
@@ -543,7 +546,7 @@ describe('calibration', () => {
     const { settings } = await loadSettings(cwd);
     settings.typesafeai = { ...settings.typesafeai, route_confidence: 0.85 };
     writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    assert.equal(await currentCalibration(cwd, settings, await readLog(cwd)), null);
+    assert.equal(await hasPassingCalibration(cwd, settings), false);
     assert.equal((await calibrate(cwd)).sample, 0);
   });
   // Deviation from the plan text: mode: 'route' can never be the setting a project starts with --
@@ -630,14 +633,12 @@ describe('route mode conversion (lib/escalate.mjs consumes this module\'s evalua
     const rCap = await evaluate(cwd, draft({ question: 'route-capture' }), { transport: transport([outsideBody]) });
     assert.equal(rCap.route, 'capture'); assert.equal(rCap.option, 1);
   });
-  // Fix round 1 finding 1: escalateWithRoute (lib/escalate.mjs) now reads settings through this
-  // module's exported loadSettingsFull, the same calibration-aware load evaluate() itself uses, so
-  // a route-mode project with a genuinely passing calibration at the current policy digest no
-  // longer refuses at the point escalateWithRoute itself used to throw. Proven directly against the
-  // real, unmocked escalateWithRoute (not a stub `evaluate`) for the developer and capture routes,
-  // which -- unlike agent -- touch no other module with the same unguarded-loadSettings defect (see
-  // the two reproduced-and-out-of-scope tests below for why agent and the CLI entry point still
-  // cannot complete). A lowered, test-only min_calibration_agent_predictions/max_false_downgrade
+  // Fix round 1 finding 1: escalateWithRoute (lib/escalate.mjs) now reads settings through plain
+  // loadSettings, calibration-aware in lib/settings.mjs itself since fix round 3, so a route-mode
+  // project with a genuinely passing calibration at the current policy digest no longer refuses at
+  // the point escalateWithRoute itself used to throw. Proven directly against the real, unmocked
+  // escalateWithRoute (not a stub `evaluate`) for the developer and capture routes. A lowered,
+  // test-only min_calibration_agent_predictions/max_false_downgrade
   // pair keeps this fast; the exact spec-default numbers (60 passes, 30 fails, at 5%) are proven
   // separately and cheaply by the pure-math upperBound unit test above.
   test('route mode: escalateWithRoute itself now succeeds for the developer and capture routes', async () => {
@@ -661,8 +662,8 @@ describe('route mode conversion (lib/escalate.mjs consumes this module\'s evalua
     assert.ok((await readLog(cwd)).some((x) => x.kind === 'escalation' && x.sha === outDev.sha));
   });
   // Fix round 2: lib/adr.mjs's decide() (called by escalateWithRoute only for the agent route) now
-  // reads settings through the same shared, calibration-aware helper (lib/settings.mjs's
-  // loadSettingsFull) evaluate() and the now-fixed escalateWithRoute already use, so the agent
+  // reads settings through plain loadSettings, the same helper evaluate() and escalateWithRoute
+  // already use, calibration-aware in lib/settings.mjs itself since fix round 3, so the agent
   // route -- previously blocked here even after fix round 1's escalateWithRoute fix -- completes.
   test('route mode: escalateWithRoute\'s agent route now completes (lib/adr.mjs\'s decide() reads settings the same calibration-aware way)', async () => {
     const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
@@ -817,5 +818,33 @@ describe('fix round 1 finding 3: the resolved model is checked against the reque
     assert.equal(call.payload.outcome, 'failure');
     assert.equal(call.payload.failure_class, 'model_mismatch');
     assert.equal(call.payload.raw, null);
+  });
+});
+
+// Fix round 3 (plan 11 review): lib/settings.mjs's own loadSettings is now the single place that
+// checks whether a passing calibration record exists for a project's current policy digest
+// (hasPassingCalibration). Before this round, three separate files (lib/adr.mjs's decide(),
+// lib/scope.mjs's preflight(), and this module's own now-removed currentCalibration) each grew
+// their own copy of the identical `r.kind === 'calibration'` read, one discovered per fix round.
+// This test guards the consolidation itself: it fails if a *new* copy of that check is ever added
+// to any lib/*.mjs file other than lib/settings.mjs, catching a future caller reintroducing the
+// exact class of defect fix rounds 1-3 closed, rather than relying on a human noticing a fourth
+// copy. The pattern `kind === 'calibration'` is the check idiom specifically (a record-kind
+// comparison), not every mention of the word: it does not match lib/records.mjs's schema entry for
+// the 'calibration' record kind (a plain string key, not a comparison) or this module's own
+// calibrate() writing a fresh calibration record via appendRecord(cwd, 'calibration', ...) (a
+// write, not a check of whether one already exists).
+describe('fix round 3: exactly one file checks for a passing calibration record', () => {
+  test('no lib file other than settings.mjs contains the kind === \'calibration\' check idiom', async () => {
+    const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
+    const entries = (await readdir(libDir)).filter((f) => f.endsWith('.mjs'));
+    assert.ok(entries.includes('settings.mjs'), 'sanity check: lib/settings.mjs exists');
+    const offenders = [];
+    for (const f of entries) {
+      if (f === 'settings.mjs') continue;
+      const text = await readFileP(join(libDir, f), 'utf8');
+      if (text.includes("kind === 'calibration'")) offenders.push(f);
+    }
+    assert.deepEqual(offenders, [], 'only lib/settings.mjs may check for a passing calibration record');
   });
 });

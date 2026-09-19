@@ -22,6 +22,13 @@ import { answer, escalationState, unanswered, describeEvidence } from '../lib/es
 
 const asDev = { confirm: async () => true };
 import { reply } from '../lib/escalate.mjs';
+import { dispute, disputes } from '../lib/escalate.mjs';
+
+const disputeFields = (record, n) => ({
+  commitment: 'first', record, n,
+  question: `Is finding ${n} a defect?`, recommendation: 'No: the check reads the declared fixture.',
+  because: 'hello.txt is in the mechanism inputs.', if_wrong: 'A hidden input goes undeclared.', instead: 'Declare it and re-run.',
+});
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -204,4 +211,20 @@ test('reply names the open ask; after it the escalation awaits the developer aga
   await assert.rejects(reply(r.cwd, 'first', 'Again.'), /no open ask/);
   await answer(r.cwd, 'first', 'instead', 'Fourteen days.', asDev);
   assert.equal(escalationState(await r.log(), esc).final.payload.text, 'Fourteen days.');
+});
+
+test('a dispute names finding N on its exact source record and is settled by the developer\'s final answer', async () => {
+  const r = await loopRepo();
+  const rev = await r.review([{ n: 1, text: 'reads an undeclared fixture' }, { n: 2, text: 'no test for empty input' }]);
+  await assert.rejects(dispute(r.cwd, disputeFields(rev, 3)), /has no finding 3/);
+  const sha = await dispute(r.cwd, disputeFields(rev, 1));
+  assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.concerns, `finding:${rev}#1`);
+  assert.equal(disputes(await r.log(), rev, 1), null);
+  await answer(r.cwd, 'first', 'ask', 'Which fixture?', asDev);
+  assert.equal(disputes(await r.log(), rev, 1), null);
+  await reply(r.cwd, 'first', 'hello.txt');
+  await answer(r.cwd, 'first', 'ok', '', asDev);
+  const log = await r.log();
+  assert.equal(disputes(log, rev, 1), sha);
+  assert.equal(disputes(log, rev, 2), null);
 });

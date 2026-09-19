@@ -10,13 +10,13 @@ Run `cairn wake` first, every session, and act on the verdict only. With hooks t
 - Waiting: an escalation is unanswered and wake printed its five fields verbatim. Add nothing and stop; the developer answers.
 - Done: a done record exists and nothing waits. Report it and stop. Backlog waiting: wake names `promote` instead.
 
-Before changing a declared input: `cairn begin <action> <target>` (`--touch <path>` declares a new file). After the commit: `cairn end`. Commit before `cairn check`; a dirty declared input stops a check. Push with `cairn push`: it pushes the branch and both durable refs atomically where the remote allows and in the safe order otherwise. Never push `refs/cairn/*` with plain `git push`.
+Before changing a declared input: `cairn begin <action> <target>` (`--touch <path>` declares a new file); it prints the lease sha. After the commit: `cairn end --lease <sha>` with that sha, so a stale end never closes another session's lease. Commit before `cairn check`; an uncommitted declared input makes wake name `commit` or `record` before anything else. Push with `cairn push`: it pushes the branch and both durable refs atomically where the remote allows and in the safe order otherwise. Never push `refs/cairn/*` with plain `git push`.
 
 The move for each action wake can name:
 
 - `repair PATH`: make the hand-written file read under its grammar; change no unrelated byte.
 - `recover TRANSACTION`: run `cairn recover <transaction>`.
-- `reconcile ACTION`: finish the leased action and `cairn end`, or abandon it with `cairn end --abandon`.
+- `reconcile ACTION`: finish the leased action and `cairn end`, or abandon it with `cairn end --abandon`; a lease left by a dead session needs no `--lease`.
 - `scope PATH`: restore the path to its allowed base and run `cairn scope <breach> restore`, or ask the developer to keep it with `cairn escalate` and, after `ok`, `cairn scope <breach> keep`.
 - `fix ITEM`: write a test that fails, make it pass, commit, check, then `cairn fix <item>`.
 - `record PATH` and `commit PATH`: put the change under a lease with `cairn begin`, commit it, or revert it.

@@ -261,3 +261,28 @@ test('lost staging with no effect is blocked and names the repair; staging witho
   assert.equal(existsSync(await stagingDir(cwd, 'TXORPHAN')), false);
   assert.equal((await readLog(cwd)).at(-1).kind, 'command-intent', 'no abort record for a transaction that never reached the log');
 });
+
+import { recoverPredicate, runRecover } from '../lib/tx.mjs';
+
+test('recoverPredicate names the pending transaction and is null once it has a terminal or abort record', async () => {
+  const cwd = await initialized();
+  assert.equal(recoverPredicate(cwd, await readLog(cwd)), null);
+  const intentSha = await crashAfterIntent(cwd, terminalPlan(), 'TXP');
+  assert.deepEqual(recoverPredicate(cwd, await readLog(cwd)),
+    { action: 'recover', target: 'TXP', reason: `command-intent ${intentSha} for authorize has no terminal record` });
+  await recover(cwd, 'TXP');
+  assert.equal(recoverPredicate(cwd, await readLog(cwd)), null);
+});
+
+test('cairn recover prints the result and exits 3 with the repair line when blocked', async () => {
+  const cwd = await initialized();
+  await crashAfterIntent(cwd, terminalPlan(), 'TXB');
+  writeFileSync(join(cwd, 'docs/spec/overview.md'), 'v2\n');
+  await git(['commit', '-q', '-am', 'Unrelated'], { cwd });
+  const out = []; const err = [];
+  const code = await runRecover(['TXB'], { cwd, stdout: (l) => out.push(l), stderr: (l) => err.push(l) });
+  assert.equal(code, 3);
+  assert.equal(out.length, 1);
+  assert.match(out[0], /^cairn: transaction TXB cannot complete/);
+  assert.equal(err.length, 0);
+});

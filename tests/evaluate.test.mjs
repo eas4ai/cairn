@@ -260,6 +260,22 @@ describe('C(c) and M(D)', () => {
         (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '.cairn/log' && e.message.includes('.cairn/log'),
       );
     });
+    test('a kernel-managed path (the ADR file) throws EgressError naming the path', async () => {
+      const { cwd } = await makeProject();
+      const d = normalizeDraft({ ...draft(), named_paths: ['docs/decisions.jsonl'] });
+      const f = await kernelFacts(cwd, d);
+      const C = await contractState(cwd, f);
+      await assert.rejects(measureState(cwd, d, 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'kernel-managed' && e.path === 'docs/decisions.jsonl');
+    });
+    test('a protected path (the working agreement) throws EgressError naming the path', async () => {
+      const { cwd } = await makeProject();
+      const d = normalizeDraft({ ...draft(), named_paths: ['AGENTS.md'] });
+      const f = await kernelFacts(cwd, d);
+      const C = await contractState(cwd, f);
+      await assert.rejects(measureState(cwd, d, 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'protected' && e.path === 'AGENTS.md');
+    });
     test('a draft naming only ordinary source paths still builds the state', async () => {
       const { cwd } = await makeProject();
       await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');

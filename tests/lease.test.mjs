@@ -96,15 +96,19 @@ test('a touched path whose bytes equal the start snapshot is unchanged; a modifi
   await end(cwd);
 });
 
-test('end without a lease is refused; a failing hook keeps the lease', async () => {
+// Fix round 1 finding 11: the ref is removed before hooks run, so a failing hook is reported but
+// does not resurrect the lease (previously asserted the opposite: "a failing hook keeps the
+// lease", which is exactly the bug finding 11 names -- a retry after a hook failure would have
+// re-run every hook, repeating side effects like the mechanism definition write).
+test('end without a lease is refused; a failing hook is reported but the lease stays removed', async () => {
   const cwd = await initialized();
   await assert.rejects(end(cwd), /^LeaseError: cairn: no action lease to end/);
   await begin(cwd, { action: 'run', target: 'CORE-001', env: {} });
   const off = onEnd(async () => { throw new Error('declare failed'); });
   await assert.rejects(end(cwd), /declare failed/);
   off();
-  assert.ok(await readRef(cwd, LEASE_REF), 'lease survives a failed end');
-  await end(cwd);
+  assert.equal(await readRef(cwd, LEASE_REF), null, 'the ref was already removed before the hook ran, so it is not resurrected by the hook throwing');
+  await assert.rejects(end(cwd), /^LeaseError: cairn: no action lease to end/, 'a retry finds no lease left to end, not a second run of the hooks');
 });
 
 test('covers: a lease covers its target inputs and its touch list', async () => {

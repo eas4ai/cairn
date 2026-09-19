@@ -6,8 +6,33 @@ import { makeRepo } from './helpers/repo.mjs';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot, writeInputSnapshot } from '../lib/snapshots.mjs';
 import { main, FETCH_LINE } from '../lib/cli.mjs';
+import { init } from '../lib/init.mjs';
+import { b64url } from '../lib/canon.mjs';
 
-const run = async (argv, cwd) => { let out = '', err = ''; const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } }); return { code, out, err }; };
+// Fix round 1, item 5: extra takes the test-only confirm/confirmRemote/chooseKey/confirmDigest
+// overrides main() now passes through to init/authorize/decisions --read, so their success and
+// refusal paths can be driven through main() itself without a controlling terminal.
+const run = async (argv, cwd, extra = {}) => { let out = '', err = ''; const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } }, ...extra }); return { code, out, err }; };
+const yes = async () => true;
+
+function extractPayload(out) {
+  const m = /^cairn: sign this payload: (.+)$/m.exec(out);
+  if (!m) throw new Error(`no payload line in: ${JSON.stringify(out)}`);
+  return m[1];
+}
+
+async function signedProject(t) {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('AGENTS.md', '# agreement\n');
+  await repo.write('docs/spec/overview.md', '# keystone\n');
+  await repo.commit('fixture');
+  const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirm: yes, confirmDigest: yes, sign });
+  return { cwd: repo.dir, repo, privateKey, pem };
+}
 
 test('--help exits 0 and lists commands; an unknown command exits 1 with one cairn: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
@@ -55,4 +80,133 @@ test('cairn lint docs/spec prints findings and exits 1, exits 0 when clean, refu
   assert.match(dirty.err, /^cairn: lint found \d+ problems\n$/);
   const other = await run(['lint', 'docs'], repo.dir);
   assert.equal(other.code, 1); assert.match(other.err, /^cairn: lint takes docs\/spec/);
+});
+
+// Fix round 1, item 5: the typed CLI surface (runInit, runAuthorize, runDecisionsRead, cliSigner's
+// supplied-signature branch, and main()'s dispatch) was untested. These drive cairn init, cairn
+// authorize and cairn decisions --read through main() with injected io and injected confirm,
+// covering the success and refusal path for each in unsigned-local mode.
+test('cairn init: success prints the evidence description; refusal is one cairn: line', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const ok = await run(['init'], repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes });
+  assert.equal(ok.code, 0);
+  assert.match(ok.out, /^cairn: initialized; init record [0-9a-f]{40} \(unsigned-local: terminal confirmation by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+
+  const repo2 = await makeRepo(); t.after(repo2.remove);
+  const refused = await run(['init'], repo2.dir, { confirmRemote: async () => 'upstream', chooseKey: async () => null, confirm: yes });
+  assert.equal(refused.code, 1);
+  assert.equal(refused.err, 'cairn: authority_remote upstream is not a configured remote\n');
+});
+
+test('cairn authorize: success prints the evidence description; refusal is one cairn: line', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('AGENTS.md', '# agreement\n');
+  await repo.write('docs/spec/overview.md', '# keystone\n');
+  await repo.commit('fixture');
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  const ok = await run(['authorize'], repo.dir, { confirm: yes });
+  assert.equal(ok.code, 0);
+  assert.match(ok.out, /^cairn: authorization [0-9a-f]{40} \(unsigned-local: terminal confirmation by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+
+  const repo2 = await makeRepo(); t.after(repo2.remove);
+  await repo2.write('docs/spec/overview.md', '# keystone\n');
+  await repo2.commit('fixture');
+  await init(repo2.dir, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  const refused = await run(['authorize'], repo2.dir, { confirm: yes });
+  assert.equal(refused.code, 1);
+  assert.equal(refused.err, 'cairn: AGENTS.md is missing; authorize binds the working agreement\n');
+});
+
+test('cairn decisions --read: success prints the evidence description; refusal is one cairn: line', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  const ok = await run(['decisions', '--read', '01J0000000000000000000ABCD'], repo.dir, { confirm: yes });
+  assert.equal(ok.code, 0);
+  assert.match(ok.out, /^cairn: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(unsigned-local: terminal confirmation by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+
+  const refused = await run(['decisions', '--read', 'not-a-ulid'], repo.dir, { confirm: yes });
+  assert.equal(refused.code, 1);
+  assert.equal(refused.err, 'cairn: decision id must be a 26-character ULID\n');
+});
+
+// Fix round 1, item 10: decisionsCommand's own Refusal used to start with the word "cairn" itself,
+// and main()'s catch block always prepends its own "cairn: ", printing a doubled-up line.
+test('cairn decisions without --read is one cairn: line, no doubled prefix', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const r = await run(['decisions'], repo.dir);
+  assert.equal(r.code, 1);
+  assert.equal(r.err, 'cairn: decisions needs --read <id>\n');
+});
+
+// Fix round 1, item 1 (Critical): reproduced as described: a fresh nonce was minted on every
+// invocation (runDecisionsRead) or not threaded at all (runAuthorize, runInit), so a run 2 with
+// --signature always verified against a payload carrying a different nonce than the one actually
+// signed, and could never succeed. These drive the full two-invocation signed flow for each of the
+// three commands with a real Ed25519 key pair and assert it now succeeds, and that a signature
+// produced over one nonce's payload is refused when presented against a different --nonce.
+test('cairn init: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+  const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const io = { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes };
+
+  const repo = await makeRepo(); t.after(repo.remove);
+  const run1 = await run(['init'], repo.dir, io);
+  assert.equal(run1.code, 1);
+  const payload = extractPayload(run1.out);
+  const nonce = JSON.parse(payload).nonce;
+  const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
+  const run2 = await run(['init', '--nonce', nonce, '--signature', signature], repo.dir, io);
+  assert.equal(run2.code, 0);
+  assert.match(run2.out, /^cairn: initialized; init record [0-9a-f]{40} \(signed by the developer key\)\n$/);
+
+  const repo2 = await makeRepo(); t.after(repo2.remove);
+  const bad1 = await run(['init'], repo2.dir, io);
+  const badPayload = extractPayload(bad1.out);
+  const badSignature = b64url(cryptoSign(null, Buffer.from(badPayload), privateKey));
+  const bad2 = await run(['init', '--nonce', 'a-different-nonce', '--signature', badSignature], repo2.dir, io);
+  assert.equal(bad2.code, 1);
+  assert.match(bad2.err, /does not verify against signing_key/);
+  assert.equal(await repo2.readRef('refs/cairn/log'), null);
+});
+
+test('cairn authorize: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+  const { cwd, repo, privateKey } = await signedProject(t);
+  const { sign: cryptoSign } = await import('node:crypto');
+  const run1 = await run(['authorize'], cwd);
+  assert.equal(run1.code, 1);
+  const payload = extractPayload(run1.out);
+  const nonce = JSON.parse(payload).nonce;
+  const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
+  const run2 = await run(['authorize', '--nonce', nonce, '--signature', signature], cwd);
+  assert.equal(run2.code, 0);
+  assert.match(run2.out, /^cairn: authorization [0-9a-f]{40} \(signed by the developer key\)\n$/);
+
+  await repo.write('AGENTS.md', '# changed\n'); await repo.commit('change');
+  const bad1 = await run(['authorize'], cwd);
+  const badPayload = extractPayload(bad1.out);
+  const badSignature = b64url(cryptoSign(null, Buffer.from(badPayload), privateKey));
+  const bad2 = await run(['authorize', '--nonce', 'a-different-nonce', '--signature', badSignature], cwd);
+  assert.equal(bad2.code, 1);
+  assert.match(bad2.err, /does not verify against signing_key/);
+});
+
+test('cairn decisions --read: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+  const { cwd, privateKey } = await signedProject(t);
+  const { sign: cryptoSign } = await import('node:crypto');
+  const run1 = await run(['decisions', '--read', '01J0000000000000000000ABCD'], cwd);
+  assert.equal(run1.code, 1);
+  const payload = extractPayload(run1.out);
+  const nonce = JSON.parse(payload).nonce;
+  const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
+  const run2 = await run(['decisions', '--read', '01J0000000000000000000ABCD', '--nonce', nonce, '--signature', signature], cwd);
+  assert.equal(run2.code, 0);
+  assert.match(run2.out, /^cairn: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(signed by the developer key\)\n$/);
+
+  const bad1 = await run(['decisions', '--read', '01J0000000000000000000WXYZ'], cwd);
+  const badPayload = extractPayload(bad1.out);
+  const badSignature = b64url(cryptoSign(null, Buffer.from(badPayload), privateKey));
+  const bad2 = await run(['decisions', '--read', '01J0000000000000000000WXYZ', '--nonce', 'a-different-nonce', '--signature', badSignature], cwd);
+  assert.equal(bad2.code, 1);
+  assert.match(bad2.err, /does not verify against signing_key/);
 });

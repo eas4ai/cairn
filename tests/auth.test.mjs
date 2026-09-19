@@ -1,8 +1,11 @@
 // tests/auth.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { makeRepo } from './helpers/repo.mjs';
 
 // Plan 01's makeRepo() returns {dir, git, write, commit, readRef, remove}; this wrapper
@@ -55,7 +58,7 @@ test('protectedDigests carries agreement null when AGENTS.md is absent', async (
 });
 
 import { generateKeyPairSync, sign as cryptoSign } from 'node:crypto';
-import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence, AuthError } from '../lib/auth.mjs';
+import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence } from '../lib/auth.mjs';
 
 function keyPair() {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -109,18 +112,51 @@ test('unsigned-local: a declined confirmation is refused', async () => {
     /^AuthError: cairn: the developer did not confirm read D1/);
 });
 
-test('unsigned-local: no controlling terminal is refused', async () => {
-  const { cwd } = await repoWith({});
-  const noTty = async () => { throw new AuthError('cairn: no controlling terminal; unsigned-local confirmation needs a TTY'); };
-  await assert.rejects(
-    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm: noTty }),
-    /no controlling terminal/);
+// Fix round 1, item 6: the deleted test injected a confirm function that itself threw the exact
+// message the assertion checked for, so no line of ttyConfirm ever ran; it could not have caught a
+// regression in ttyConfirm at all. This drives the real ttyConfirm in a child process detached into
+// its own session (no controlling terminal, per setsid(2)) with piped, not inherited, stdio, and
+// checks its actual refusal.
+test('ttyConfirm refuses without a controlling terminal', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'cairn-tty-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const authPath = fileURLToPath(new URL('../lib/auth.mjs', import.meta.url));
+  const scriptPath = join(dir, 'run.mjs');
+  writeFileSync(scriptPath, `
+    import(${JSON.stringify(authPath)}).then(async ({ ttyConfirm }) => {
+      try { await ttyConfirm('confirm?'); process.stdout.write('UNEXPECTED_SUCCESS'); process.exit(0); }
+      catch (e) { process.stderr.write(String(e.message)); process.exit(1); }
+    });
+  `);
+  const { code, stdout, stderr } = await new Promise((resolve) => {
+    const child = spawn(process.execPath, [scriptPath], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', (d) => { stdout += d; });
+    child.stderr.on('data', (d) => { stderr += d; });
+    child.on('close', (code) => resolve({ code, stdout, stderr }));
+  });
+  assert.equal(stdout, '');
+  assert.equal(code, 1);
+  assert.equal(stderr, 'cairn: no controlling terminal; unsigned-local confirmation needs a TTY');
 });
 
 test('verifyEvidence refuses unsigned-local evidence when a signing key is set', () => {
   const ev = { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
     author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
   assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
+});
+
+// Fix round 1, item 11: verifyEvidence previously took no expected purpose/subject, so evidence
+// lifted from a different record (right shape, wrong subject) verified anyway; and a settings
+// object that omits the signing_key key entirely fell open to the unsigned-local branch, the same
+// as an explicit signing_key: null.
+test('verifyEvidence checks the expected purpose and subject, and refuses a settings object without signing_key', () => {
+  const ev = { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
+    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
+  assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'D1' }), true);
+  assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'authorize', subject: 'D1' }), false);
+  assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'other' }), false);
+  assert.equal(verifyEvidence({}, ev), false);
 });
 
 import { appendRecord, readLog, decodeRecord } from '../lib/records.mjs';
@@ -226,6 +262,38 @@ test('a settings change needs a new authorization naming the new digest', async 
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.cairn\/settings\.json changed to/);
   await authorize(cwd, { confirm: yes });
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+});
+
+// Fix round 1, item 2: appendRecord is not developer-gated, so a record with schema-valid but
+// never-actually-verified evidence could previously be appended directly and would still be trusted
+// by isAuthorized and refuseUnauthorizedProtected, which read the log without ever calling
+// verifyEvidence. This drives a signed-key project, forges an 'authorization' record binding a real
+// digest transition with a signature that was never checked against the key, and asserts the
+// protected check still refuses it.
+test('the protected check re-verifies chain record evidence and refuses a forged authorization', async () => {
+  const { generateKeyPairSync, sign: cryptoSign2 } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const s = JSON.parse(SETTINGS); s.signing_key = pem;
+  const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+  const { cwd } = await repoWith(files);
+  const sign = async (bytes) => new Uint8Array(cryptoSign2(null, bytes, privateKey));
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes, sign });
+  await authorize(cwd, { sign });
+  const d1 = await protectedDigests(cwd);
+  writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
+  const d2 = await protectedDigests(cwd);
+  // A forged authorization: schema-valid evidence, syntactically shaped as 'signed', but the
+  // signature was never produced by (or checked against) the real key.
+  await appendRecord(cwd, 'authorization', 'protected', {
+    spec_digest: d2.spec, agreement_digest: d2.agreement, settings_digest: d2.settings,
+    evidence: { mode: 'signed', purpose: 'authorize',
+      subject: canonicalize({ spec: d2.spec, agreement: d2.agreement, settings: d2.settings }),
+      nonce: 'forged', signature: 'AAAA' },
+    decision: null, intent: null,
+  });
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /AuthError: cairn: the latest authorization record/);
 });
 
 import { readDecision, runDecisionsRead } from '../lib/auth.mjs';

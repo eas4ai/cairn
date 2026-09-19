@@ -15,7 +15,7 @@ async function repoWith(files) {
   return { cwd: repo.dir, repo };
 }
 import { readRef, git } from '../lib/gitx.mjs';
-import { readLog } from '../lib/records.mjs';
+import { appendRecord, readLog } from '../lib/records.mjs';
 import { loadSettings } from '../lib/settings.mjs';
 import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 
@@ -104,4 +104,41 @@ test('init refuses invalid settings and lists every refusal', async () => {
   const bad = JSON.stringify({ schema: 1, unknown_field: 1 });
   const { cwd } = await repoWith({ '.cairn/settings.json': bad });
   await assert.rejects(init(cwd, answers()), /unknown_field/);
+});
+
+// Fix round 1, item 3: the idempotent early return (created: false) used to skip the snapshot-root
+// creation entirely, so a re-run of init could not repair a lost refs/cairn/snapshots.
+test('a re-run of init repairs a missing snapshot root even on the idempotent path', async () => {
+  const { cwd } = await repoWith({});
+  const a = await init(cwd, answers());
+  assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
+  await git(['update-ref', '-d', 'refs/cairn/snapshots'], { cwd });
+  assert.equal(await readRef(cwd, 'refs/cairn/snapshots'), null);
+  const b = await init(cwd, answers({ confirm: async () => { throw new Error('must not ask again'); } }));
+  assert.equal(b.created, false);
+  assert.equal(a.sha, b.sha);
+  assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
+});
+
+// Fix round 1, item 4: previously the candidate settings object was written to disk first and
+// validated only afterward by loadSettings, so a developer who pointed chooseKey at a private key
+// file got that key written into .cairn/settings.json before the refusal. Validate in memory first.
+test('init validates a chosen signing key before writing settings; a private key is refused and nothing is written', async () => {
+  const { cwd } = await repoWith({});
+  const { generateKeyPairSync } = await import('node:crypto');
+  const { privateKey } = generateKeyPairSync('ed25519');
+  const pem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+  await assert.rejects(init(cwd, answers({ chooseKey: async () => pem })), /signing_key must be a public key/);
+  assert.equal(existsSync(join(cwd, '.cairn/settings.json')), false);
+});
+
+// Fix round 1, item 9: refs/cairn/log can exist with no record of kind 'init' in it (a corrupted or
+// non-Cairn log); reading rec.payload without checking rec exists threw a raw TypeError instead of
+// a cairn: refusal naming the repair.
+test('a log ref with no init record refuses cleanly instead of crashing', async () => {
+  const { cwd } = await repoWith({});
+  await appendRecord(cwd, 'read', '01J0000000000000000000ABCD', { decision: '01J0000000000000000000ABCD',
+    evidence: { mode: 'unsigned-local', purpose: 'read', subject: '01J0000000000000000000ABCD', nonce: 'n',
+      author: { name: 'x', email: 'y' }, confirmed: true } });
+  await assert.rejects(init(cwd, answers()), /^InitError: cairn: refs\/cairn\/log exists but has no init record/);
 });

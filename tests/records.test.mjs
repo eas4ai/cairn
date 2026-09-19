@@ -36,6 +36,9 @@ test('encodeRecord refuses unknown kinds, path targets, unknown keys, missing ke
   assert.throws(() => encodeRecord('resolution', 'hooks', { source: WS, finding: -1, snapshot: WS, explanation: 'x' }), (e) => e.reasons.some((r) => /finding/.test(r)));
   assert.throws(() => encodeRecord('calibration', 'p', { policy_digest: D, log_head: WS, predicted_agent: 60, false_downgrades: 0, bound: 1.5, criterion: 'c', result: 'pass' }), (e) => e.reasons.some((r) => /bound/.test(r)));
 });
+test('a payload key that shadows Object.prototype, such as toString, is still refused as an unknown key', () => {
+  assert.throws(() => encodeRecord('done', 'hooks', { slug: 'hooks', snapshot: WS, toString: 'x' }), (e) => e.reasons.some((r) => /unknown key toString/.test(r)));
+});
 test('decodeRecord round-trips a well-formed record', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const { body } = encodeRecord('start', 'hooks', START);

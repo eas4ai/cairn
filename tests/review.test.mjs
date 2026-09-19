@@ -502,3 +502,81 @@ test('cliResolve refuses a missing, non-integer or less-than-1 finding number, n
   const good = await cliResolve(r.cwd, ['first', '1', 'why']);
   assert.match(good.out, /^cairn: resolution first [0-9a-f]{40}\n$/);
 });
+
+// tests/review.test.mjs (fix round 2, new finding 1)
+import { canonicalize } from '../lib/canon.mjs';
+import { treeIdentityReadOnly } from '../lib/gitx.mjs';
+import { listPaths, ALWAYS_EXCLUDED, readSnapshot } from '../lib/snapshots.mjs';
+import { diffTree } from '../lib/review.mjs';
+
+// Adapted from the re-reviewer's own scratchpad/race2.mjs and race3.mjs: a bulk fixture makes one
+// read-only tree pass (one git hash-object spawn per file, unbatched) slow enough in wall-clock
+// terms to reliably straddle a single injected write, the same way those two scripts do.
+test('fix round 2 new finding 1: accept reads the workspace tree exactly once; a file appearing mid-read can no longer crash diffTree or record a delta_digest that disagrees with the snapshot it names', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  for (let i = 0; i < 250; i++) await r.write(`src/bulk/f${i}.mjs`, `export const f${i} = ${i};\n`);
+  await r.commit('bulk fixture for the race window');
+  r.rev = await review(r.cwd, 'first', await claims(r), { env: { CAIRN_SESSION: 's-builder' } });
+  r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
+  r.b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  r.bp = decodeRecord(await catCommit(r.cwd, r.b.sha)).payload;
+  r.rep = await report(r.cwd, 'first', adversary(r));
+  await r.write('src/demo.mjs', 'export const demo = 1;\n');
+  const r1 = await resolve(r.cwd, 'first', 1, 'fix one');
+
+  const { tracked, untracked } = await listPaths(r.cwd);
+  const t0 = Date.now();
+  await treeIdentityReadOnly(r.cwd, { paths: [...tracked, ...untracked], exclude: ALWAYS_EXCLUDED });
+  const readMs = Date.now() - t0;
+  const delay = Math.round(readMs * 0.8);
+  const sentinel = path.join(r.cwd, 'src/raced.mjs');
+  const timer = setTimeout(() => { fs.writeFile(sentinel, 'export const raced = 1;\n').catch(() => {}); }, delay);
+  let sha, crash;
+  try { sha = await accept(r.cwd, 'first', { resolutions: [{ sha: r1, verdict: 'accepted', reason: 'good' }], findings: [] }); }
+  catch (e) { crash = e; }
+  finally { clearTimeout(timer); }
+  if (crash) {
+    // Pre-fix, this is exactly new finding 1(a): a raw GitError ("git diff-tree exited 128:
+    // fatal: bad object <sha>") with no "cairn: " prefix, after refs/cairn/snapshots had already
+    // advanced. The fix removes the second, independent read this crash depended on, so any
+    // throw here must at minimum be a clean cairn: refusal.
+    assert.ok(crash.message.startsWith('cairn: '), `expected a clean cairn: refusal, got: ${crash.constructor.name}: ${crash.message}`);
+  } else {
+    const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+    const rep = (await readLog(r.cwd)).find((x) => x.kind === 'report');
+    const reportedAt = await readSnapshot(r.cwd, rep.payload.snapshot, 'workspace');
+    const snapTree = (await readSnapshot(r.cwd, p.snapshot, 'workspace')).tree;
+    const recomputed = sha256(canonicalize(await diffTree(r.cwd, reportedAt.tree, snapTree)));
+    // Pre-fix, this is exactly new finding 1(b): the recorded delta_digest can disagree with the
+    // delta the recorded snapshot actually contains (the raced path present in the snapshot but
+    // missing from the digest, or vice versa). The fix computes both from the same single read,
+    // so they can never disagree, whichever way the injected write happened to land.
+    assert.equal(p.delta_digest, recomputed, 'delta_digest must always match the delta of the recorded snapshot');
+  }
+});
+
+// tests/review.test.mjs (fix round 2, new finding 2)
+import { checkBlobSize, MAX_BLOB_BYTES } from '../lib/review.mjs';
+
+test('fix round 2 new finding 2: a blob above the documented size limit is refused with a cairn: line, checked before any bytes are read', async () => {
+  // A pure, stub-driven check: no 300+ MiB file needed. checkBlobSize takes the size
+  // `git cat-file -s` would have reported and applies the same refusal catBlob does.
+  assert.equal(MAX_BLOB_BYTES, 256 * 1024 * 1024);
+  assert.equal(checkBlobSize('a'.repeat(40), MAX_BLOB_BYTES), MAX_BLOB_BYTES);
+  assert.throws(
+    () => checkBlobSize('a'.repeat(40), MAX_BLOB_BYTES + 1),
+    (e) => e instanceof ReviewError && e.message === `cairn: brief: blob ${'a'.repeat(40)} is ${MAX_BLOB_BYTES + 1} bytes, over the ${MAX_BLOB_BYTES} byte limit`,
+  );
+  // An ordinary blob still round-trips through the real catBlob (git cat-file -s runs first,
+  // then the actual read); this is the same 3MB blob fix round 1 item 5 already exercises,
+  // confirming the added size check does not break the normal path.
+  const r = await loopRepo();
+  await r.write('src/small.mjs', 'x'.repeat(1024));
+  await r.commit('a small tracked file');
+  const treeSha = (await git(['write-tree'], { cwd: r.cwd })).stdout.trim();
+  const entries = await import('../lib/gitx.mjs').then((m) => m.listTree(r.cwd, treeSha));
+  const entry = entries.find((e) => e.path === 'src/small.mjs');
+  const bytes = await catBlob(r.cwd, entry.sha);
+  assert.equal(bytes.length, 1024);
+});

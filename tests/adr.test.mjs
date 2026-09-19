@@ -122,26 +122,42 @@ test('breach: a final line without its newline', async () => {
 
 // Fix round 1
 
-import { decisionFileBytes } from '../lib/adr.mjs';
+import { decisionAppendBytes } from '../lib/adr.mjs';
 
-test('Fix round 1 finding 2: decisionFileBytes validates and computes the new file bytes without writing anything', async () => {
+// Fix round 2 finding 1: renamed from decisionFileBytes and narrowed. It used to return the whole
+// file's new bytes (the existing content, read here, plus the new line), for the caller to stage
+// as a {store: 'file'} whole-file overwrite -- but that read races a concurrent command's own
+// append in the window between this call and the write actually landing under a lock (see
+// lib/tx.mjs's own 'append' store and this file's appendDecision). It now returns only the new
+// line's own bytes, with no read of the file's existing content at all, for the caller to stage as
+// a {store: 'append'} write instead.
+test("Fix round 2 finding 1: decisionAppendBytes validates and computes only the new line's own bytes, without reading the file's existing content or writing anything", async () => {
   const repo = await project();
-  const id1 = await decide(repo.cwd, draft); // one real line already on disk, to prove appending works past an existing one
+  const id1 = await decide(repo.cwd, draft); // one real line already on disk
   const before = await readFile(join(repo.cwd, ADR_PATH), 'utf8');
   const snap = await writeWorkspaceSnapshot(repo.cwd);
   const line = { kind: 'decision', level: 'Consequential', by: 'agent', ...draft, base_snap: snap, evaluation: null, interfaces: [] };
-  const { id, bytes } = await decisionFileBytes(repo.cwd, line, { command: 'decide' });
+  const { id, bytes } = await decisionAppendBytes(repo.cwd, line, { command: 'decide' });
   assert.equal(await readFile(join(repo.cwd, ADR_PATH), 'utf8'), before, 'nothing was written to disk');
-  assert.ok(bytes.startsWith(before), 'the new bytes extend the existing file');
-  const added = bytes.slice(before.length);
-  assert.equal(added.at(-1), '\n');
-  const obj = JSON.parse(added.trimEnd());
-  assert.equal(canonicalize(obj), added.trimEnd(), 'the appended line is canonical JSON');
+  assert.ok(!bytes.startsWith(before), "the returned bytes are only the new line, not the existing content plus it (unless the existing content happened to be empty)");
+  assert.equal(bytes.at(-1), '\n');
+  const obj = JSON.parse(bytes.trimEnd());
+  assert.equal(canonicalize(obj), bytes.trimEnd(), 'the returned bytes are exactly one canonical JSON line');
   assert.deepEqual([obj.id, obj.kind, obj.base_snap], [id, 'decision', snap]);
-  await writeFile(join(repo.cwd, ADR_PATH), bytes);
+  await appendFile(join(repo.cwd, ADR_PATH), bytes);
   assert.deepEqual((await readAdr(repo.cwd)).map((l) => l.id), [id1, id]);
-  // decisionFileBytes still refuses a wrongly-assigned command, before touching the file.
-  await assert.rejects(decisionFileBytes(repo.cwd, line, { command: 'realize' }), AdrError);
+  // decisionAppendBytes still refuses a wrongly-assigned command, before touching the file.
+  await assert.rejects(decisionAppendBytes(repo.cwd, line, { command: 'realize' }), AdrError);
+});
+
+import { acquireLock } from '../lib/tx.mjs';
+
+test('Fix round 2 finding 1: appendDecision takes the repository-local transaction lock, refusing while another transaction holds it', async () => {
+  const repo = await project();
+  const release = await acquireLock(repo.cwd, 'TXHELD');
+  await assert.rejects(decide(repo.cwd, draft), /holds cairn-tx\.lock/);
+  release();
+  await assert.doesNotReject(decide(repo.cwd, draft));
 });
 
 test('Fix round 1 finding 12: decide wraps a malformed named_paths entry as an AdrError, not a raw PathError', async () => {
@@ -149,11 +165,11 @@ test('Fix round 1 finding 12: decide wraps a malformed named_paths entry as an A
   await assert.rejects(decide(repo.cwd, { ...draft, named_paths: ['/etc/passwd'] }), (e) => e instanceof AdrError && /absolute path/.test(e.message));
 });
 
-test('Fix round 1 finding 11: appendDecision and decisionFileBytes still fully verify the one new line being written, even though readAdr no longer verifies existing ones by default', async () => {
+test('Fix round 1 finding 11: appendDecision and decisionAppendBytes still fully verify the one new line being written, even though readAdr no longer verifies existing ones by default', async () => {
   const repo = await project();
   const notASnapshot = '1'.repeat(40);
   const line = { kind: 'decision', level: 'Consequential', by: 'agent', ...draft, base_snap: notASnapshot, evaluation: null, interfaces: [] };
   await assert.rejects(appendDecision(repo.cwd, line, { command: 'decide' }), (e) => e instanceof AdrError && /base_snap is not a workspace snapshot/.test(e.message));
-  await assert.rejects(decisionFileBytes(repo.cwd, line, { command: 'decide' }), (e) => e instanceof AdrError && /base_snap is not a workspace snapshot/.test(e.message));
+  await assert.rejects(decisionAppendBytes(repo.cwd, line, { command: 'decide' }), (e) => e instanceof AdrError && /base_snap is not a workspace snapshot/.test(e.message));
   assert.deepEqual(await readAdr(repo.cwd), [], 'the invalid line was never written');
 });

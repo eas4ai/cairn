@@ -558,3 +558,59 @@ test('Fix round 2 finding 6: snapshot adoption verifies the candidate is a genui
   await assert.rejects(applyWrites(cwd, await readStaging(cwd, 'TXBADSNAP')),
     new RegExp(`^TxConflict: cairn: transaction TXBADSNAP cannot complete: refs/cairn/snapshots is [0-9a-f]{40}, expected [0-9a-f]{40} or a new snapshot commit`));
 });
+
+// Fix round 2 finding 1 (Important). A 'file' write overwrites its path with staged, pre-computed
+// final bytes; a caller building those bytes from the file's own prior content, read before the
+// transaction's lock is taken, silently discards anything another writer appends to that same file
+// in the window between that read and this write actually landing. 'append' never depends on the
+// file's prior content: it stages only the bytes to add, and applyWrites always appends them to
+// whatever the file actually holds when the write runs, under the transaction's lock.
+import { appendFileSync } from 'node:fs';
+
+test("Fix round 2 finding 1: an append write preserves bytes another writer appended between plan construction and staging", async () => {
+  const { cwd } = await repoWith({ 'log.txt': 'first\n' });
+  const plan = { identity: { i: 1 }, writes: [{ store: 'append', path: 'log.txt', bytes: Buffer.from('mine\n') }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  // "Plan construction": the pre-identity is captured now, before any concurrent writer's own append.
+  const pre = await preIdentities(cwd, plan);
+  // A concurrent command's own append lands in the window between plan construction and staging.
+  appendFileSync(join(cwd, 'log.txt'), 'concurrent\n');
+  await stage(cwd, 'TXAPPEND1', plan, pre);
+  await applyWrites(cwd, await readStaging(cwd, 'TXAPPEND1'));
+  assert.equal(readFileSync(join(cwd, 'log.txt'), 'utf8'), 'first\nconcurrent\nmine\n',
+    "the concurrent writer's line survives; ours is added after it, not used to overwrite the file");
+});
+
+test('Fix round 2 finding 1: crash after an append write, then recover, leaves the appended bytes exactly once', async () => {
+  const cwd = await initialized();
+  const plan = { identity: { i: 1 },
+    writes: [{ store: 'append', path: 'docs/spec/overview.md', bytes: Buffer.from('more\n') }],
+    terminal: {
+      kind: 'authorization', target: 'protected', payload: {
+        spec_digest: 'sha256:' + '0'.repeat(64), agreement_digest: 'sha256:' + '0'.repeat(64), settings_digest: 'sha256:' + '0'.repeat(64),
+        evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+        decision: null,
+      },
+    } };
+  await assert.rejects(withTransaction(cwd, { command: 'authorize', plan, failAfterWrite: 0 }, null), /simulated crash after write 0/);
+  const intent = (await readLog(cwd)).findLast((r) => r.kind === 'command-intent');
+  assert.ok(intent, 'the intent record exists even after the crash');
+  const r = await recover(cwd, intent.target);
+  assert.equal(r.completed, 'forward');
+  assert.equal(readFileSync(join(cwd, 'docs/spec/overview.md'), 'utf8'), '# k\nmore\n', 'the append landed exactly once, not zero or twice');
+});
+
+test("Fix round 2 finding 1: an append write records the resulting bytes in lib/scope.mjs's kernel-managed ledger", async () => {
+  const { cwd } = await repoWith({});
+  const plan = { identity: { i: 1 }, writes: [{ store: 'append', path: 'docs/decisions.jsonl', bytes: Buffer.from('{"a":1}\n') }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TXAPPEND3', plan, pre);
+  await applyWrites(cwd, await readStaging(cwd, 'TXAPPEND3'));
+  // The ledger's own reader (managedWriteDigest) is private to lib/scope.mjs; lib/commitment.mjs's
+  // own tests exercise it end to end (a realize() that accepts a ledger-recorded kernel-managed
+  // write). Here, at the tx.mjs level, it is enough to confirm applyWrites' 'append' branch wrote
+  // the expected line to the ledger file itself.
+  const ledger = readFileSync(await gitPath(cwd, 'cairn-managed'), 'utf8');
+  assert.match(ledger, /^docs\/decisions\.jsonl\tsha256:[0-9a-f]{64}$/m);
+});

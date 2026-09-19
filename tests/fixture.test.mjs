@@ -345,7 +345,7 @@ test("review, report, resolve, accept, build, accept, done", async () => {
 });
 
 // Task 5: promote, second start, supersede; exact record-kind sequence and coverage.
-const EVALUATOR = ["evaluation-intent", "evaluation-call", "evaluation", "calibration"];
+const EVALUATOR = ["evaluation-intent", "evaluation-call", "measurement", "calibration"];
 // Kinds the full fixture cannot reach, and why.
 const UNREACHABLE = {
   "command-abort": "written only when a multi-store command dies before any planned write; the crash fixture variant B reaches it",

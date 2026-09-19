@@ -357,16 +357,6 @@ describe('envelope', () => {
 import { evaluate } from '../lib/evaluate.mjs';
 import { readLog } from '../lib/records.mjs';
 
-// Plan 15 Task 1: settings.typesafeai no longer has a mode field or the seven route thresholds
-// (decision 55); this fixture's own typesafeai now uses weights/agent_ceiling/confidence_floors
-// instead, matching every other repo fixture in this suite. Used by 'fix round 1 finding 2' below.
-const typesafeaiEnabled = () => ({
-  enabled: true, model: 'jev-1.13.0',
-  weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
-  confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
-  min_calibration_agent_predictions: 60, request_cap_bytes: 48000,
-});
-
 // Plan 15 Task 1: this describe block used to hold seven more tests exercising evaluate() end to
 // end against a real, enabled evaluator (the shadow intent/call/evaluation sequence, identity
 // capture, the option-gate-fails-before-owner-call rule, protected drafts, transport failures, bad
@@ -429,49 +419,21 @@ describe('calibration', () => {
 // Plan 15 Task 3 rewrites lib/evaluate.mjs for the composite Score design; that design's own tests
 // belong there.
 
-// Fix round 1 finding 2: docs/spec/cairn-v2.md section 10 ("Requests omit network_exclude,
-// credential and host bytes, keys and command output. A would-be inclusion is not sent; only
-// `unavailable excluded` and its path class are recorded") requires the SPECIFIC path class
-// (network_exclude|credential|host|key|output) to survive to a persisted record, not just the
-// generic `reason: 'unavailable excluded'`. optionState/egressClass already compute the right
-// class (EgressError.klass); evaluate() used to discard it. It now reaches the 'evaluation'
-// record's own 'call' gate value (the schema field an 'unavailable ...' outcome already used for
-// a transport failure_class; gates[].value is `json`, so no schema change was needed).
-describe('fix round 1 finding 2: the excluded path class reaches the persisted record', () => {
-  const hostDomain = 'Prefix: DEMO\nHost paths: hosted/secret.txt\n\n' +
-    '[DEMO-001] The demo command prints hello for DEMO-001.\n' +
-    'Falsifier: the flag file for DEMO-001 says fail.\nMechanism: demo-001\nStatus: Agreed 2026-09-19\n';
-  const cases = [
-    { klass: 'network_exclude', path: 'fixtures/private/x.json', settingsOver: { network_exclude: ['fixtures/private/**'] } },
-    { klass: 'credential', path: '.env', settingsOver: {} },
-    { klass: 'output', path: '.cairn/output/abc', settingsOver: {} },
-    { klass: 'key', path: 'notes-with-key.txt', settingsOver: {}, needsKey: true },
-    { klass: 'host', path: 'hosted/secret.txt', settingsOver: {}, needsHost: true },
-  ];
-  for (const c of cases) {
-    test(`excluded class ${c.klass} reaches the persisted evaluation record`, async () => {
-      const r = await loopRepo({ settings: { typesafeai: typesafeaiEnabled(), ...c.settingsOver } });
-      const cwd = r.cwd;
-      if (c.needsHost) { await r.write('docs/spec/demo.md', hostDomain); await r.commit('add host paths header'); }
-      if (c.needsKey) process.env.TYPESAFEAI_API_KEY = 'tsk-live-42';
-      // Committed, not left untracked: an untracked file matching a credential pattern or
-      // network_exclude trips lib/snapshots.mjs's own, separate refuseSensitive safety net inside
-      // captureIdentity's writeWorkspaceSnapshot call before evaluate() ever reaches optionState's
-      // egress check -- a real, correct, pre-existing kernel behavior, just not what this test is
-      // about. Committing the fixture file keeps that check out of the way.
-      await r.write(c.path, c.needsKey ? 'token tsk-live-42 here' : 'SECRET');
-      await r.commit(`add ${c.klass} fixture`);
-      const d = draft({ named_paths: [c.path] });
-      const res = await evaluate(cwd, d, { transport: async () => { throw new Error('must not be called'); } });
-      assert.equal(res.reason, 'unavailable excluded');
-      const log = await readLog(cwd);
-      const ev = log.findLast((x) => x.kind === 'evaluation');
-      const callGate = ev.payload.gates.find((g) => g.gate === 'call');
-      assert.equal(callGate.value.class, c.klass);
-      if (c.needsKey) delete process.env.TYPESAFEAI_API_KEY;
-    });
-  }
-});
+// Plan 15 Task 2: the 'fix round 1 finding 2: the excluded path class reaches the persisted
+// record' describe block (five tests) that used to live here exercised evaluate() end to end
+// against a real, enabled evaluator: it wrote a real 'evaluation-intent' record with the
+// superseded owner_request/option_request fields and then a final 'evaluation' record through
+// finalize(). Both are gone -- lib/records.mjs's 'evaluation-intent' now carries source and one
+// request_digest, and 'evaluation' itself is replaced by 'measurement' with an unrelated shape
+// (composite, levels, veto, suggested, outcome). lib/evaluate.mjs still writes the old shapes
+// (it is unmodified here, per this task's scope: it belongs to plan 15 Task 3, which rewrites the
+// evaluator itself for the composite Score design section 10 describes), so every one of these
+// five tests would now fail with a RecordError from encodeRecord, not from a real behavior
+// regression. Deleted rather than patched to the new field names: patching would make the
+// evaluator's write calls appear to agree with the new schema without its actual gate logic (still
+// gates/route/would_route) ever producing a 'measurement' record, which is not a real assertion of
+// anything. Their replacements -- the excluded path class reaching the persisted measurement
+// record -- belong in Task 3's rewrite of both this file and lib/evaluate.mjs.
 
 // Plan 15 Task 1: the 'fix round 1 finding 3: the resolved model is checked against the requested
 // model' describe block that used to live here is deleted whole. Its assertions check both

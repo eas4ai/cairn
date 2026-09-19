@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRepo } from './helpers/repo.mjs';
 import { sha256 } from '../lib/canon.mjs';
@@ -156,4 +156,48 @@ test('range is the log after the last start and knows whether it is closed', asy
   await appendRecord(repo.dir, 'done', 'b', { slug: 'b', snapshot: WS });
   r = range(await readLog(repo.dir));
   assert.equal(r.closed, true);
+});
+
+const SHA = '1'.repeat(40);
+const DIGEST = 'sha256:' + '2'.repeat(64);
+function roundTrip(kind, target, payload) {
+  const { subject, body, trailers } = encodeRecord(kind, target, payload);
+  return decodeRecord({ subject, body, trailers });
+}
+
+describe('measurement-family schemas', () => {
+  test('evaluation-intent: one request, source settled before any call', () => {
+    const payload = { draft_digest: DIGEST, snapshot: SHA, log_head: SHA, adr_digest: DIGEST, settings_digest: DIGEST,
+      policy_digest: DIGEST, source: 'jev', request_digest: DIGEST };
+    assert.deepEqual(roundTrip('evaluation-intent', 'demo', payload).payload, payload);
+    assert.deepEqual(roundTrip('evaluation-intent', 'demo', { ...payload, request_digest: null }).payload.request_digest, null);
+    assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, source: null }), /expected one of/);
+    assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, owner_request: DIGEST }), /unknown key|expected/);
+  });
+  test('evaluation-call: source, transport, session, no owner/option and no not_sent', () => {
+    const payload = { intent: SHA, source: 'review', request_digest: DIGEST, outcome: 'response', model: 'claude-fable-5-1',
+      transport: 'remote', session: 'sess-1', raw: 'abcd', failure_class: null,
+      answers: [{ id: 'evidence', value: { score: 3.4, confidence: 0.7, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } } }],
+      usage: { input_tokens: 10, output_tokens: 2 } };
+    assert.deepEqual(roundTrip('evaluation-call', 'demo', payload).payload, payload);
+    assert.throws(() => encodeRecord('evaluation-call', 'demo', { ...payload, outcome: 'not_sent' }), /expected one of/);
+    assert.throws(() => encodeRecord('evaluation-call', 'demo', { ...payload, call: 'option' }), /unknown key/);
+  });
+  test('measurement replaces evaluation, with the composite fields', () => {
+    const payload = { intent: SHA, call: SHA, draft_digest: DIGEST, source: 'jev', model: 'jev-1.13.0',
+      levels: [{ dimension: 'evidence', level: 3.4, confidence: 0.7 }, { dimension: 'reach', level: 0.6, confidence: 0.5 },
+        { dimension: 'contract', level: 0.1, confidence: 0.9 }, { dimension: 'surface', level: 0, confidence: 0.8 },
+        { dimension: 'ambiguity', level: 1.0, confidence: 0.5 }],
+      composite: 0.22, veto: null, suggested: 'agent', outcome: 'composite', reason: 'composite 0.220 <= 0.35, confidences ok' };
+    assert.deepEqual(roundTrip('measurement', 'demo', payload).payload, payload);
+    assert.equal('evaluation' in SCHEMAS, false, 'the old kind name is gone, not kept alongside the new one');
+    assert.ok('measurement' in SCHEMAS);
+    assert.throws(() => encodeRecord('measurement', 'demo', { ...payload, dimension: 'evidence', level: 3.4 }), /unknown key/);
+  });
+  test('a floor-hit measurement carries no call, no levels, no composite, but source is never null: it is settled from settings alone', () => {
+    const payload = { intent: SHA, call: null, draft_digest: DIGEST, source: 'jev', model: null, levels: [],
+      composite: null, veto: null, suggested: null, outcome: 'floor', reason: 'floor:data' };
+    assert.deepEqual(roundTrip('measurement', 'demo', payload).payload, payload);
+    assert.throws(() => encodeRecord('measurement', 'demo', { ...payload, source: null }), /expected one of/);
+  });
 });

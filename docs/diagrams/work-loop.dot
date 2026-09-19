@@ -5,7 +5,7 @@ digraph work_loop {
   node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
   edge  [fontname="Helvetica", fontsize=10];
 
-  wake [shape=oval, label="cairn wake\nprints verdict, action or party, reason, predicate\n(outside a project: one line, exit 3)"];
+  wake [shape=oval, label="cairn wake: one git log of the range since the start record\nprints verdict, action or party, reason, predicate\n(outside a project, or records ref absent: one line, exit 3)"];
   verdict [shape=diamond, label="Verdict?"];
 
   // Waiting: the developer's turn
@@ -17,34 +17,35 @@ digraph work_loop {
   reply [label="reply SLUG (after ask): append the explanation\ndone := the escalation carries it"];
 
   // Done
-  stop [shape=box, peripheries=2, label="Done: nothing waits; the queue is presented; stop.\nThe developer opens /next-feature."];
+  stop [shape=box, peripheries=2, label="Done: wake writes the done record;\nthe queue is presented; stop.\nThe developer opens /next-feature."];
 
   // Resolvable
   act [label="Do the named action\nuntil its predicate holds\n(the table below, in precedence order)"];
   cannot [shape=diamond, label="Cannot act on it?"];
   escalate [label="cairn escalate with the evidence;\nthe next wake says Escalate, then Waiting"];
-  trace [label="Leave the trace:\ncommit, receipt, or record"];
+  trace [label="Leave the trace: a code commit on the branch,\nor a record on refs/cairn/log\n(receipts, reviews, items, escalations...)"];
 
   actions [shape=plaintext, fontsize=9, label=<
     <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
       <TR><TD BGCOLOR="#eeeeee"><B>Action, in precedence order</B></TD><TD BGCOLOR="#eeeeee"><B>done :=</B></TD></TR>
-      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">the in-progress record is gone; the action finished or was abandoned</TD></TR>
-      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">the path is declared, listed under outside:, or an approved retention or restoration names it</TD></TR>
-      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">Fixed by names a commit that changes no Agreed text; REQ has a current passing receipt after it</TD></TR>
-      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">the in-progress record names the action, or PATH is clean</TD></TR>
+      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">refs/cairn/in-progress is gone; the action finished or was abandoned</TD></TR>
+      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">a mechanism declares the path, outside: lists it, or a scope record with an ok answer names it</TD></TR>
+      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">a fix record names the item and a tree that changes no Agreed text; REQ has a current passing receipt at or after it</TD></TR>
+      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">in-progress names the action, or PATH matches the tree it pinned</TD></TR>
       <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean</TD></TR>
-      <TR><TD ALIGN="LEFT">repair PATH</TD><TD ALIGN="LEFT">the named record reads under its grammar; nothing else changed</TD></TR>
-      <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a mechanism names REQ (cairn declare)</TD></TR>
-      <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">a current receipt for REQ exists: input set, declaration and text digests equal now</TD></TR>
-      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">a current passing receipt for REQ; the reviewed list carries REQ with a fail receipt</TD></TR>
-      <TR><TD ALIGN="LEFT">escalate REQ</TD><TD ALIGN="LEFT">three attempts without a pass: an escalation names REQ before a fourth</TD></TR>
+      <TR><TD ALIGN="LEFT">repair PATH</TD><TD ALIGN="LEFT">the named file reads under its grammar; nothing else changed</TD></TR>
+      <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a mechanism entry names REQ (cairn declare)</TD></TR>
+      <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">a current receipt carries a result for REQ: input tree, entry digest and text digest equal now</TD></TR>
+      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">a current receipt carries pass for REQ; the reviewed list carries REQ with a fail receipt</TD></TR>
+      <TR><TD ALIGN="LEFT">escalate REQ</TD><TD ALIGN="LEFT">three attempts without a pass: an escalation concerns REQ before a fourth</TD></TR>
       <TR><TD ALIGN="LEFT">review mechanism REQ</TD><TD ALIGN="LEFT">the reviewed list carries REQ with the current text digest and a fail receipt; no code changed</TD></TR>
-      <TR><TD ALIGN="LEFT">capture PATH</TD><TD ALIGN="LEFT">the item carries Outside because:, or an escalation names it</TD></TR>
-      <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">the review names the current input set digest, answers every fixed question, no finding open</TD></TR>
-      <TR><TD ALIGN="LEFT">resolve SLUG</TD><TD ALIGN="LEFT">no finding is open; each resolution its own commit</TD></TR>
-      <TR><TD ALIGN="LEFT">report SLUG</TD><TD ALIGN="LEFT">brief issued (cairn brief); the agent starts the adversary and waits; a report names the review's and the brief's digests, answers every claim by name, and every answer and finding is carried</TD></TR>
-      <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">Realized by names a commit that resolves</TD></TR>
-      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">a Consequential decision names the item; a commitment naming only Agreed requirements; Current: moved; the item stamped</TD></TR>
+      <TR><TD ALIGN="LEFT">capture ITEM</TD><TD ALIGN="LEFT">an outside record names the item, or an escalation concerns it</TD></TR>
+      <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">a review names the current tree and answers every fixed question for every target</TD></TR>
+      <TR><TD ALIGN="LEFT">report SLUG</TD><TD ALIGN="LEFT">cairn brief writes the brief; the agent starts the adversary and waits; a report names the same tree and the brief, with an attempt against every question</TD></TR>
+      <TR><TD ALIGN="LEFT">resolve SLUG N</TD><TD ALIGN="LEFT">a resolution names finding N and the tree after the fix, or an escalation concerns it</TD></TR>
+      <TR><TD ALIGN="LEFT">accept SLUG</TD><TD ALIGN="LEFT">the adversary accepts every resolution at the current tree, or rejects one and a new resolution follows; no second report</TD></TR>
+      <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">a realized line in docs/decisions.jsonl names the decision and a tree</TD></TR>
+      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">a promotion record names a backlog item and a decision; the roadmap section names only Agreed requirements; Current: moved; a start record exists</TD></TR>
     </TABLE>>];
 
   wake -> verdict;

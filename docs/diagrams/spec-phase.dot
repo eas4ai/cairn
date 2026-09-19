@@ -14,10 +14,10 @@ digraph spec_phase {
   explain [label="Explain it another way"];
   correct [label="Apply the corrections"];
   agreed [label="Confirms: Status: Agreed <date> per block\nRules that the recommendation stands: deference decision\nat Consequential quoting their words; Status: Agreed <date>\nwith a Rationale: line naming it"];
-  commitment [label="Commitment file: Requirements: (Agreed only),\nSpecified from: or Promoted from:, done-when;\nroadmap Current:; items stamped Promoted to:"];
+  commitment [label="Roadmap section for the commitment:\nRequirements: (Agreed only), what it delivers, done-when;\nCurrent: moved to it"];
   declare [label="cairn declare for the commitment's requirements only;\na failing test is each mechanism's violating example"];
   agreement [label="AGENTS.md from the template\n(write it, or replace the copy it holds)"];
-  commit [label="Commit; cairn wake"];
+  commit [label="Commit; cairn start writes the start record\n(pins the roadmap's tree; promotions reference their items);\ncairn wake"];
   done [shape=box, peripheries=2, label="Done: wake names the first action;\nthe work loop takes over;\nConsequential decisions wait in the queue"];
 
   start -> falsifiers -> review -> lint;

@@ -8,7 +8,7 @@ digraph next_feature {
   start [shape=oval, label="Start: /next-feature"];
   isdone [shape=diamond, label="cairn wake says Done?"];
   notdone [shape=oval, label="Stop: hand the verdict\nto the working agreement"];
-  read [label="Read the spec set, the finished commitment,\nthe queue, every .cairn/next-feature/ item without\nPromoted to:, the decisions they cite, and the backlog"];
+  read [label="Read the spec set, the finished commitment's roadmap section,\nthe queue (cairn decisions), every next-feature item\nwithout a promotion (cairn items), and the backlog"];
   ask [label="The one open question:\nthe waiting items, a new feature, or both?"];
 
   subgraph cluster_change {
@@ -22,7 +22,7 @@ digraph next_feature {
     next [shape=diamond, label="More changes?"];
   }
 
-  tail [shape=box, peripheries=2, label="The spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, commitment with\nSpecified from:, items stamped, declare, commit, wake"];
+  tail [shape=box, peripheries=2, label="The spec-phase tail (spec-phase.dot):\nfalsifiers as a set, self-review,\nlint, present, confirm per block, roadmap section,\ndeclare, commit, cairn start, wake"];
 
   start -> isdone;
   isdone -> notdone [label="no"];

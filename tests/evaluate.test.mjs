@@ -477,18 +477,42 @@ const scoreState = () => ({
   option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {},
 });
 
+// Fix round 1 (controller ruling): a real jev-1.13.0 Score answer carries no `type` field --
+// see `realAnswers` below, copied verbatim from a live capture, and the Critical finding in
+// task-7-review.md. goodBody's per-dimension objects no longer carry one either, so this fixture
+// matches the real wire shape (score, confidence, legend, probabilities) rather than the brief's
+// original (incorrect) assumption.
 const goodBody = (over = {}) => JSON.stringify({
   model: 'jev-1.13.0',
   answers: {
-    evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
-    reach: { type: 'score', score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
-    contract: { type: 'score', score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
-    surface: { type: 'score', score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
-    ambiguity: { type: 'score', score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+    evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
+    reach: { score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
+    contract: { score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+    surface: { score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+    ambiguity: { score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
     ...over,
   },
   usage: { input_tokens: 10, output_tokens: 2 },
 });
+
+// A real answer object per dimension, copied verbatim from `.superpowers/bench/results.json`'s
+// `round3.rows[0]` (scenario A01, jev-1.13.0, a live HTTP 200 response -- the same capture
+// `results.md`'s "Data loss note" and this task's own tolerance fix cite). The superseded
+// gate-cascade design that produced this capture scored each option separately (`contract_1`,
+// `contract_2`, ...); this task's single-recommended-option design asks one question per
+// dimension, so `reach`/`contract`/`surface` below are that scenario's own `<dimension>_1`
+// object (the recommended option's own slot), renamed onto the current dimension id --
+// `evidence` and `ambiguity` keep their original names, since neither was ever option-scoped.
+// Scores, confidences, legend text and probabilities are unedited from the capture: this is the
+// review's requested "fixture built straight from a real recorded answer," not a hand-written
+// approximation of one, and it carries no `type` key because the real object never had one.
+const realAnswers = {
+  evidence: { score: 3.44, confidence: 0.57, legend: { 0: 'none', 1: 'a claim', 2: 'names a command or file', 3: 'quotes output or a diff', 4: 'quotes output and names the test that fails and the falsifier it maps to' }, probabilities: { 0: 0, 1: 0, 2: 0.03, 3: 0.49, 4: 0.48 } },
+  reach: { score: 0.6, confidence: 0.5, legend: { 0: 'wording or message text', 1: 'internal structure, nothing visible', 2: 'behaviour inside an agreed requirement', 3: 'output or flags existing callers depend on', 4: 'data that cannot be regenerated, a migration, or a rewrite of user files' }, probabilities: { 0: 0.77, 1: 0, 2: 0.11, 3: 0.12, 4: 0 } },
+  contract: { score: 0.07, confidence: 0.94, legend: { 0: 'implements the cited requirement as written', 1: 'chooses between readings the text allows', 2: 'adds behaviour no requirement names', 3: 'conflicts with a cited decision', 4: "changes a requirement's text or falsifier" }, probabilities: { 0: 0.96, 1: 0.03, 2: 0.01, 3: 0, 4: 0 } },
+  surface: { score: 0.53, confidence: 0.56, legend: { 0: 'no new surface', 1: 'a new file or module', 2: 'a new flag or output', 3: 'a new dependency', 4: 'a network call, credential, or external service' }, probabilities: { 0: 0.74, 1: 0, 2: 0.26, 3: 0, 4: 0 } },
+  ambiguity: { score: 1.02, confidence: 0.68, legend: { 0: 'one reading, the draft names it', 1: 'two readings, the draft picks one with a reason', 2: 'two readings, no reason', 3: 'the question asks the developer to choose a policy', 4: 'the question cannot be answered without facts the draft lacks' }, probabilities: { 0: 0.18, 1: 0.72, 2: 0.01, 3: 0.07, 4: 0.02 } },
+};
 
 describe('Score answer parsing', () => {
   test('parses all five dimensions', () => {
@@ -499,41 +523,90 @@ describe('Score answer parsing', () => {
     assert.equal(r.model, 'jev-1.13.0');
     assert.deepEqual(r.usage, { input_tokens: 10, output_tokens: 2 });
   });
+  // Fix round 1: the review's Critical finding -- reproduced against `parseScoreAnswers` before
+  // this fix, a body built from this exact real data returned `{"invalid":"answer evidence not
+  // type score"}`, rejecting a real, successful API response on the first dimension checked.
+  // This is the fixture the review's Critical fix asked for: built straight from a live capture,
+  // not from the brief's (incorrect) assumption that a `type` field exists, with float scores
+  // (`3.44`, not a rounded `3`) exercised the way the real API actually returns them.
+  test('parses a real captured jev-1.13.0 response verbatim: no type field, float scores', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const body = JSON.stringify({ model: 'jev-1.13.0', answers: realAnswers, usage: { input_tokens: 3975, output_tokens: 124 } });
+    const r = parseScoreAnswers(req, body);
+    assert.equal(r.invalid, undefined);
+    assert.deepEqual(r.levels, { evidence: 3.44, reach: 0.6, contract: 0.07, surface: 0.53, ambiguity: 1.02 });
+    assert.deepEqual(r.confidences, { evidence: 0.57, reach: 0.5, contract: 0.94, surface: 0.56, ambiguity: 0.68 });
+  });
   test('tolerates a probability sum within 0.02 of 1 (the round-3 data-loss bug, fixed)', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);
-    const body = goodBody({ evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.49, 4: 0.4 } } }); // sums to 0.99
+    const body = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.49, 4: 0.4 } } }); // sums to 0.99
     const r = parseScoreAnswers(req, body);
     assert.equal(r.invalid, undefined);
   });
   test('refuses a sum off by more than 0.02', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);
-    const body = goodBody({ evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.3, 4: 0.4 } } }); // sums to 0.8
+    const body = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.3, 4: 0.4 } } }); // sums to 0.8
     assert.ok(parseScoreAnswers(req, body).invalid);
   });
-  test('refuses out-of-range score, confidence, missing dimension, wrong type, or malformed JSON', () => {
+  // Fix round 1 (review Important 2): the tolerance's actual boundary was untested -- built from
+  // 0.2 four times plus one perturbed value each, so the sum is the direct IEEE 754 double
+  // nearest 0.98/1.02/0.979/1.021, not assembled from many small parts that could drift further
+  // from it. Reproduced by hand before this fix: with the comparison as `Math.abs(sum - 1) >
+  // POLICY.PROB_TOLERANCE` and no epsilon, a sum of the literal double 0.98 computed
+  // Math.abs(0.98 - 1) as 0.020000000000000018 -- strictly greater than the double for 0.02 --
+  // so the boundary itself was wrongly invalid; TOLERANCE_EPSILON in lib/evaluate.mjs fixes this.
+  test('the probability-sum tolerance is inclusive at its edges: 0.98 and 1.02 are valid', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const low = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0.18, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2 } } }); // sums to 0.98
+    const high = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0.22, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2 } } }); // sums to 1.02
+    assert.equal(parseScoreAnswers(req, low).invalid, undefined);
+    assert.equal(parseScoreAnswers(req, high).invalid, undefined);
+  });
+  test('the probability-sum tolerance excludes just past its edges: 0.979 and 1.021 are invalid', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const low = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0.179, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2 } } }); // sums to 0.979
+    const high = goodBody({ evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0.221, 1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2 } } }); // sums to 1.021
+    assert.ok(parseScoreAnswers(req, low).invalid);
+    assert.ok(parseScoreAnswers(req, high).invalid);
+  });
+  // Fix round 1: the brief's own "wrong type" sub-case (an answer whose `type` was `'noul'`) is
+  // dropped -- `type` is no longer part of the shape this parser checks at all (see the
+  // controller ruling above), so there is nothing left for that sub-case to exercise. The other
+  // four sub-cases from the brief's Step 1 snippet are unchanged.
+  test('refuses out-of-range score, confidence, a missing dimension, or malformed JSON', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);
     assert.ok(parseScoreAnswers(req, 'not json').invalid);
     assert.ok(parseScoreAnswers(req, JSON.stringify({ model: 'jev-1.13.0', answers: {}, usage: {} })).invalid);
-    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'noul', noul: 0.5 } })).invalid);
-    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'score', score: 5, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
-    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'score', score: 1, confidence: 1.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
+    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { score: 5, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
+    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { score: 1, confidence: 1.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
   });
-  // Not in the brief's own test list: the task's Robustness paragraph separately names "an extra
-  // question" and "a probabilities object with a missing or extra key" as defects the parser
-  // must catch -- neither is exercised by the brief's Step 1 snippet, whose probabilities check
-  // (Object.values(...).length !== 5) would miss a shifted key set entirely. These three tests
-  // cover them directly.
+  // Not in the brief's own test list: the task dispatch's own Global Constraints text separately
+  // names "an extra question" and "a probabilities object with a missing or extra key" as
+  // defects the parser must catch -- neither is exercised by the brief's Step 1 snippet, whose
+  // probabilities check (Object.values(...).length !== 5) would miss a shifted key set entirely.
+  // These tests cover them directly.
   test('refuses an answer key the request never asked for', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);
-    const body = goodBody({ sixth: { type: 'score', score: 1, confidence: 0.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } });
+    const body = goodBody({ sixth: { score: 1, confidence: 0.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } });
     assert.ok(parseScoreAnswers(req, body).invalid);
   });
   test('refuses a probabilities object with a missing or extra key even when the five values are individually valid', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);
     // Keys 0,1,2,3,5: five values, each in [0,1], summing to 1 -- would pass a value-count-only
     // check but is missing "4" and carries an extra "5" instead.
-    const body = goodBody({ evidence: { type: 'score', score: 3, confidence: 0.6, legend: {}, probabilities: { 0: 0.2, 1: 0.2, 2: 0.2, 3: 0.2, 5: 0.2 } } });
+    const body = goodBody({ evidence: { score: 3, confidence: 0.6, legend: {}, probabilities: { 0: 0.2, 1: 0.2, 2: 0.2, 3: 0.2, 5: 0.2 } } });
     assert.ok(parseScoreAnswers(req, body).invalid);
+  });
+  // Fix round 1 (review Important 3): `typeof x !== 'object'` admits arrays; a probabilities
+  // array with five individually-valid values used to pass silently. Built by mutating a parsed
+  // goodBody() rather than JSON.stringify-ing a literal containing an array in object position,
+  // so this exercises exactly the shape `JSON.parse` would hand the parser from a real malformed
+  // body (a top-level JSON array under the `probabilities` key), not a JS-only construct.
+  test('refuses a probabilities array in place of an object, even with five valid values', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const bad = JSON.parse(goodBody());
+    bad.answers.evidence.probabilities = [0.2, 0.2, 0.2, 0.2, 0.2];
+    assert.ok(parseScoreAnswers(req, JSON.stringify(bad)).invalid);
   });
   test('carries usage through when present and valid, and reports null when usage is malformed', () => {
     const req = buildScoreRequest(settings(), scoreState(), 0);

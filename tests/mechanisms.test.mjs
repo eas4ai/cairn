@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { rm } from 'node:fs/promises';
 import { canonicalize, sha256 } from '../lib/canon.mjs';
 import { declare, readMechanisms, definitionDigest, reviewDigest, MechanismError, requirementDigest } from '../lib/mechanisms.mjs';
 import { project, declared, DEFINITION } from './helpers/mechanism-fixture.mjs';
@@ -123,4 +124,39 @@ test('review mechanism refuses a pass receipt, an error receipt, another mechani
   await repo.write('docs/spec/demo.md', spec.replace('anything other than hello', 'anything else'));
   await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /text digest/);
   await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', '0'.repeat(40)), /not a record on refs\/cairn\/log/);
+});
+
+import { begin, end, readLease } from '../lib/lease.mjs';
+import { applyTouch } from '../lib/mechanisms.mjs';
+
+test('end writes a changed touched path into the definition and unbinds review metadata', async () => {
+  const repo = await declared();
+  await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  await end(repo.cwd);
+  assert.equal(await readLease(repo.cwd), null);
+  const { greeter } = await readMechanisms(repo.cwd);
+  assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
+  assert.deepEqual(greeter.review, {});
+});
+
+test('end drops an unchanged touched path and leaves the definition and review alone', async () => {
+  const repo = await declared();
+  await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
+  const before = await readMechanisms(repo.cwd);
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
+  const r = await applyTouch(repo.cwd, await readLease(repo.cwd));
+  assert.deepEqual(r, { added: [], dropped: ['helper.mjs'] });
+  await end(repo.cwd);
+  assert.deepEqual(await readMechanisms(repo.cwd), before);
+});
+
+test('a touched path that changed and was removed again is dropped', async () => {
+  const repo = await declared();
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['scratch.txt'] });
+  await repo.write('scratch.txt', 'x\n');
+  await rm(join(repo.cwd, 'scratch.txt'));
+  assert.deepEqual(await applyTouch(repo.cwd, await readLease(repo.cwd)), { added: [], dropped: ['scratch.txt'] });
+  await end(repo.cwd);
 });

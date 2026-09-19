@@ -699,7 +699,7 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `evaluation-intent` | draft digest, `<ws>`, pre-write log head, ADR digest, settings digest, policy digest, nullable owner and option request digests | evaluation recovery |
 | `evaluation-call` | intent SHA, `owner|option`, request digest, `not_sent|response|failure|indeterminate`, resolved model, raw response bytes or failure class, parsed answers when valid, reported usage | final evaluation and audit |
 | `measurement` | intent SHA, call SHA, the five Score levels with their confidences, composite, veto or null, `suggested: agent|developer`, reason, source `jev|review`, resolved model | escalation, capture, queue and calibration |
-| `calibration` | policy digest, labelled-through log head, predicted-agent count, false-downgrade count, one-sided confidence bound, criterion, `pass|fail` | route-mode validation |
+| `calibration` | policy digest, labelled-through log head, predicted-agent count, false-downgrade count, one-sided confidence bound, criterion, `pass|fail` | policy validation over labelled measurements |
 | `item` | `backlog|next-feature|defect`, slug, source requirement or changed contract, body | capture, Done and next-feature |
 | `outside` | item SHA, reason, optional evaluation SHA | capture gate |
 | `promotion` | item SHA, decision ID, intent SHA or null, results | after Done |

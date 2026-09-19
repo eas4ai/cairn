@@ -8,9 +8,9 @@
 
 **Tech Stack:** Node 24 ES modules, `node --test`, `node:assert/strict`, `node:crypto`, global `fetch` (injected). No dependencies.
 
-**Spec:** `docs/spec/cairn-v2.md`, revised 2026-09-19: section 2 (Settings' `typesafeai` and `developer` fields and their refusals; Evaluation intent, call and measurement; Calibration), section 4 (the record table's `evaluation-intent`, `evaluation-call` rows and the row this plan treats as `measurement` per the note below), section 10 (all), section 13 decisions 19, 42, 45, 53, 54, 55, 56. The map is `docs/plans/overview.md`.
+**Spec:** `docs/spec/cairn-v2.md`, revised 2026-09-19: section 2 (Settings' `typesafeai` and `developer` fields and their refusals; Evaluation intent, call and measurement; Calibration), section 4 (the record table's `evaluation-intent`, `evaluation-call`, `measurement` and `calibration` rows), section 10 (all), section 13 decisions 19, 42, 45, 53, 54, 55, 56. The map is `docs/plans/overview.md`.
 
-**Spec note on section 4:** section 4's record table still shows a row named `evaluation` ("intent SHA, every gate and value, actual route, hypothetical route in shadow, reason, owner and option call SHAs or null") from the superseded gate-cascade design. Section 10 (revised 2026-09-19) describes the third record kind differently: "The measurement holds the draft digest, the source (`jev` or `review`), the resolved model, each of the five Score dimensions with its level and confidence, the computed composite, which veto if any fired, the suggestion and the reason." A second small spec fix (in progress alongside this plan, outside this plan's own scope) turns that table row into a `measurement` row matching section 10. This plan is written against section 10's description and against the record kind name `measurement`, not the stale table row; every task below says so at the point it matters. Section 4's ADR schema field name `"evaluation":<sha|null>` on a `decision` line is unchanged by that fix (it is not part of it) and stays exactly as section 4 shows it: a nullable log SHA, now pointing at a `measurement`-kind record instead of the old `evaluation`-kind one. The `escalation` schema's own `evaluation: nullable(ref)` field is unchanged for the same reason.
+**Spec note on section 4:** the record table's third row is `measurement` (commits 0be0c314, 3be9d80a): "intent SHA, call SHA, the five Score levels with their confidences, composite, veto or null, `suggested: agent|developer`, reason, source `jev|review`, resolved model", read at "escalation, capture, queue and calibration"; the `calibration` row's own purpose is "policy validation over labelled measurements". This plan's schema (Task 2) follows that row exactly, with one qualification the table's own prose leaves implicit: `call`, `composite`, `suggested` and `model` are null exactly when no call was ever attempted or answered (the floor, or an `unavailable <class>` no-call case, section 10) -- `reason` is always a string and `source` is always `jev` or `review`, never null, because both are settled from settings alone before the floor is even checked (Task 4). The `evaluation-intent` row is untouched by that fix and still describes the superseded two-request shape; this plan's `evaluation-intent` (Task 2) is written fresh against section 10, not that stale row. The ADR `decision` schema's `"evaluation":<sha|null>` field and the `escalation` schema's `evaluation: nullable(ref)` field are unchanged by any of this and stay exactly as section 4 shows them: a nullable log SHA, now naming a `measurement`-kind record.
 
 **Depends on:** plans 01 (canon, gitx, records, snapshots), 02 (settings, paths, spec), 05 (check.attempts), 06 (commitment, adr), 09 (escalate, for the canonical draft shape `normalizeDraft`/`draftDigest`, already correct and unchanged by this plan).
 
@@ -293,11 +293,12 @@ function roundTrip(kind, target, payload) {
 }
 
 describe('measurement-family schemas', () => {
-  test('evaluation-intent: one request, a nullable source', () => {
+  test('evaluation-intent: one request, source settled before any call', () => {
     const payload = { draft_digest: DIGEST, snapshot: SHA, log_head: SHA, adr_digest: DIGEST, settings_digest: DIGEST,
       policy_digest: DIGEST, source: 'jev', request_digest: DIGEST };
     assert.deepEqual(roundTrip('evaluation-intent', 'demo', payload).payload, payload);
-    assert.deepEqual(roundTrip('evaluation-intent', 'demo', { ...payload, source: null, request_digest: null }).payload.source, null);
+    assert.deepEqual(roundTrip('evaluation-intent', 'demo', { ...payload, request_digest: null }).payload.request_digest, null);
+    assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, source: null }), /expected one of/);
     assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, owner_request: DIGEST }), /unknown key|expected/);
   });
   test('evaluation-call: source, transport, session, no owner/option and no not_sent', () => {
@@ -320,10 +321,11 @@ describe('measurement-family schemas', () => {
     assert.ok('measurement' in SCHEMAS);
     assert.throws(() => encodeRecord('measurement', 'demo', { ...payload, dimension: 'evidence', level: 3.4 }), /unknown key/);
   });
-  test('a floor-hit measurement carries no call, no levels, no composite', () => {
-    const payload = { intent: SHA, call: null, draft_digest: DIGEST, source: null, model: null, levels: [],
+  test('a floor-hit measurement carries no call, no levels, no composite, but source is never null: it is settled from settings alone', () => {
+    const payload = { intent: SHA, call: null, draft_digest: DIGEST, source: 'jev', model: null, levels: [],
       composite: null, veto: null, suggested: null, outcome: 'floor', reason: 'floor:data' };
     assert.deepEqual(roundTrip('measurement', 'demo', payload).payload, payload);
+    assert.throws(() => encodeRecord('measurement', 'demo', { ...payload, source: null }), /expected one of/);
   });
 });
 ```
@@ -345,16 +347,18 @@ const DIMENSION = oneOf('evidence', 'reach', 'contract', 'surface', 'ambiguity')
 // `const route = oneOf('agent', 'developer', 'capture');` line entirely: nothing references it once
 // 'measurement' replaces 'evaluation' below (there is no more automatic capture route, section 10).
 'evaluation-intent': { draft_digest: digest, snapshot: ws, log_head: ref, adr_digest: digest, settings_digest: digest,
-  policy_digest: digest, source: nullable(oneOf('jev', 'review')), request_digest: nullable(digest) },
+  policy_digest: digest, source: oneOf('jev', 'review'), request_digest: nullable(digest) },
 'evaluation-call': { intent: ref, source: oneOf('jev', 'review'), request_digest: digest,
   outcome: oneOf('response', 'failure', 'indeterminate'), model: nullable(str), transport: nullable(oneOf('local', 'remote')),
   session: nullable(str), raw: nullable(b64), failure_class: nullable(str),
   answers: nullable(list(obj({ id: str, value: json }))), usage: nullable(obj({ input_tokens: int, output_tokens: int })) },
-'measurement': { intent: ref, call: nullable(ref), draft_digest: digest, source: nullable(oneOf('jev', 'review')),
+'measurement': { intent: ref, call: nullable(ref), draft_digest: digest, source: oneOf('jev', 'review'),
   model: nullable(str), levels: list(obj({ dimension: DIMENSION, level: json, confidence: json })),
   composite: nullable(json), veto: nullable(oneOf('reach', 'contract', 'surface')), suggested: nullable(oneOf('agent', 'developer')),
   outcome: oneOf('floor', 'unavailable', 'veto', 'composite', 'indeterminate'), reason: str },
 ```
+
+`source` matches the fixed table row exactly (`jev|review`, never null). `evaluation-intent`'s own `source` field (that row is not part of the fix; this plan designs it fresh, Task 4) is non-nullable for the same reason and by the same value: both records settle `source` from `settings.typesafeai.enabled` before the floor is even checked, so it is always known, whether or not a call ever happens.
 
 Remove the old `'evaluation':` row entirely (do not keep both kinds side by side; nothing in this codebase writes `'evaluation'` once Task 9 lands, and `KINDS` must not carry a dead kind a future caller could accidentally target).
 
@@ -1135,8 +1139,9 @@ describe('measure()', () => {
     assert.equal(called, false); assert.equal(r.outcome, 'floor'); assert.equal(r.reason, 'floor:data');
     const log = await readLog(cwd);
     assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
-    assert.equal(log.at(-2).payload.source, null); assert.equal(log.at(-2).payload.request_digest, null);
-    assert.equal(log.at(-1).payload.call, null); assert.deepEqual(log.at(-1).payload.levels, []);
+    assert.equal(log.at(-2).payload.source, 'jev', 'source is settled from settings before the floor is checked, never null');
+    assert.equal(log.at(-2).payload.request_digest, null);
+    assert.equal(log.at(-1).payload.call, null); assert.equal(log.at(-1).payload.source, 'jev'); assert.deepEqual(log.at(-1).payload.levels, []);
   });
   test('a failed transport call is unavailable <class>, recorded and routed', async () => {
     const cwd = await repoWithCommitment();
@@ -1219,7 +1224,7 @@ async function appendCall(cwd, slug, intentSha, extra) {
     model: null, raw: null, failure_class: null, answers: null, usage: null, ...extra });
 }
 
-export async function finalizeMeasurement(cwd, slug, intentSha, { call = null, draftDigestValue, source = null, model = null,
+export async function finalizeMeasurement(cwd, slug, intentSha, { call = null, draftDigestValue, source, model = null,
   levels = {}, confidences = {}, settings = null, outcome, reason }) {
   let veto = null, composite = null, suggested = null;
   const levelList = Object.keys(levels).map((d) => ({ dimension: d, level: levels[d], confidence: confidences[d] }));
@@ -1255,6 +1260,10 @@ export async function measure(cwd, draft, { transport = post } = {}) {
   await recoverMeasurement(cwd);
   const D = normalizeDraft(draft);
   const { settings, digest: settingsDigest } = await loadSettings(cwd);
+  // source is settled here, from settings alone, before the floor is even checked: both records
+  // that name it (evaluation-intent, measurement) carry it whether or not a call ever happens
+  // (spec section 4's fixed measurement row: "source jev|review", never null).
+  const source = settings.typesafeai.enabled ? 'jev' : 'review';
   const id = await captureIdentity(cwd, D, settingsDigest);
   const f = await kernelFacts(cwd, D); f.ws = id.ws;
   const slug = f.slug ?? D.commitment;
@@ -1262,23 +1271,22 @@ export async function measure(cwd, draft, { transport = post } = {}) {
   const intentBase = { draft_digest: id.draft_digest, snapshot: id.ws, log_head: id.log_head, adr_digest: id.adr_digest, settings_digest: id.settings_digest, policy_digest: policyDigest(settings) };
 
   if (floor.length) {
-    const intentSha = await appendRecord(cwd, 'evaluation-intent', slug, { ...intentBase, source: null, request_digest: null });
-    return finalizeMeasurement(cwd, slug, intentSha, { draftDigestValue: id.draft_digest, outcome: 'floor', reason: `floor:${floor[0]}` });
+    const intentSha = await appendRecord(cwd, 'evaluation-intent', slug, { ...intentBase, source, request_digest: null });
+    return finalizeMeasurement(cwd, slug, intentSha, { draftDigestValue: id.draft_digest, source, outcome: 'floor', reason: `floor:${floor[0]}` });
   }
   const n = D.options.indexOf(D.recommendation);
   const C = await contractState(cwd, f);
   let state, unavailable = null;
   try { ({ state } = await measureState(cwd, D, n, C, f)); }
   catch (e) { if (!(e instanceof EgressError)) throw e; unavailable = 'excluded'; }
-  const source = settings.typesafeai.enabled ? 'jev' : 'review';
-  let request = null, cap = null;
+  let request = null;
   if (!unavailable) {
     request = buildScoreRequest(settings, state, n);
-    if (source === 'jev') { cap = sizeCheck(settings, request); unavailable = cap; }
+    if (source === 'jev') unavailable = sizeCheck(settings, request);
   }
   const intentSha = await appendRecord(cwd, 'evaluation-intent', slug, { ...intentBase,
-    source: unavailable ? null : source, request_digest: unavailable ? null : requestDigest(request) });
-  if (unavailable) return finalizeMeasurement(cwd, slug, intentSha, { draftDigestValue: id.draft_digest, outcome: 'unavailable', reason: `unavailable ${unavailable}` });
+    source, request_digest: unavailable ? null : requestDigest(request) });
+  if (unavailable) return finalizeMeasurement(cwd, slug, intentSha, { draftDigestValue: id.draft_digest, source, outcome: 'unavailable', reason: `unavailable ${unavailable}` });
   if (source === 'review') return { pending: 'review', intentSha, slug, request, n };
 
   const digest = requestDigest(request);

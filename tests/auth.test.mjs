@@ -182,6 +182,19 @@ test('protectedClass names the three developer-owned classes', () => {
   assert.equal(protectedClass('docs/spec/a/b.md'), 'spec');
   assert.equal(protectedClass('docs/decisions.jsonl'), null);
   assert.equal(protectedClass('src/x.mjs'), null);
+  // Pre-review fix: docs/spec/roadmap.md is kernel-edited at start and promote (section 2) and
+  // is bound structurally, not by digest; specDigest already excludes it, so protectedClass must
+  // agree rather than classing it as an ordinary spec path.
+  assert.equal(protectedClass('docs/spec/roadmap.md'), null);
+});
+
+test('a roadmap change needs no authorization while a docs/spec change does', async () => {
+  const cwd = await initialized();
+  await authorize(cwd, { confirm: yes });
+  writeFileSync(join(cwd, 'docs/spec/roadmap.md'), 'Current: hooks\n');
+  await refuseUnauthorizedProtected(cwd, await readLog(cwd)); // does not throw: roadmap is excepted
+  writeFileSync(join(cwd, 'docs/spec/overview.md'), 'changed\n');
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /docs\/spec changed to/);
 });
 
 test('a protected change is authorized only by a record naming its before and after digests', async () => {

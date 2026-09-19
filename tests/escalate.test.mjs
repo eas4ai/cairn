@@ -1,42 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateDraft, draftDigest, parseConcern, DraftError } from '../lib/escalate.mjs';
-import { loopRepo } from './helpers/loop.mjs';
-import { readLog, decodeRecord, KINDS } from '../lib/records.mjs';
-import { catCommit } from '../lib/gitx.mjs';
-import { escalate, escalationsFor } from '../lib/escalate.mjs';
-import { readAdr } from '../lib/adr.mjs';
-import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
-
-// Deviation from the plan text: validateSettings (lib/settings.mjs, already committed) requires
-// every typesafeai.* threshold key to be present (a closed-object schema); the plan's partial
-// stub `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
-// when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
-// already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
-const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0',
-  route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
-  reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
-  min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
-const EV = 'e'.repeat(40);
-import { answer, escalationState, unanswered, describeEvidence } from '../lib/escalate.mjs';
-
-const asDev = { confirm: async () => true };
-import { reply } from '../lib/escalate.mjs';
-import { dispute, disputes } from '../lib/escalate.mjs';
-
-import { concerns, escalatedRequirement } from '../lib/escalate.mjs';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { fileURLToPath } from 'node:url';
-import { wake, render } from '../lib/wake.mjs';
-const run = promisify(execFile);
-const BIN = fileURLToPath(new URL('../bin/cairn.mjs', import.meta.url));
-
-const disputeFields = (record, n) => ({
-  commitment: 'first', record, n,
-  question: `Is finding ${n} a defect?`, recommendation: 'No: the check reads the declared fixture.',
-  because: 'hello.txt is in the mechanism inputs.', if_wrong: 'A hidden input goes undeclared.', instead: 'Declare it and re-run.',
-});
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -78,6 +42,11 @@ test('unknown keys, missing keys, an empty concern list and malformed tokens are
   assert.deepEqual(parseConcern('cycle'), { kind: 'cycle', ref: null, n: null });
 });
 
+import { loopRepo } from './helpers/loop.mjs';
+import { readLog, decodeRecord, KINDS } from '../lib/records.mjs';
+import { catCommit } from '../lib/gitx.mjs';
+import { escalate, escalationsFor } from '../lib/escalate.mjs';
+
 test('escalate writes an escalation record targeted at the commitment with the five fields, joined concerns and evaluation', async () => {
   for (const k of ['escalation', 'answer', 'reply']) assert.ok(KINDS.has(k), `${k} is a log kind`);
   const r = await loopRepo();
@@ -106,6 +75,20 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
   await assert.rejects(escalate(r.cwd, draft({ concerns: ['item:' + rev] })), /no item record/);
   assert.match(await escalate(r.cwd, draft({ concerns: [`finding:${rev}#1`] })), /^[0-9a-f]{40}$/);
 });
+
+import { readAdr } from '../lib/adr.mjs';
+import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
+
+// Deviation from the plan text: validateSettings (lib/settings.mjs, already committed) requires
+// every typesafeai.* threshold key to be present (a closed-object schema); the plan's partial
+// stub `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
+// when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
+// already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
+const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0',
+  route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
+  reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
+  min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
+const EV = 'e'.repeat(40);
 
 test('with the evaluator disabled the route is developer and the evaluator is never loaded', async () => {
   const r = await loopRepo();
@@ -145,6 +128,10 @@ test('cairn decide --consequential accepts the same canonical draft and writes t
   const line = (await readAdr(r.cwd)).find((l) => l.id === id);
   assert.deepEqual([line.kind, line.evaluation, line.body, line.wrong_if], ['decision', null, `${draft().recommendation} Instead: ${draft().instead}`, draft().if_wrong]);
 });
+
+import { answer, escalationState, unanswered, describeEvidence } from '../lib/escalate.mjs';
+
+const asDev = { confirm: async () => true };
 
 test('answer refuses without developer evidence: no terminal, or a declined confirmation', async () => {
   const r = await loopRepo();
@@ -205,6 +192,8 @@ test('describeEvidence says unsigned-local is evidence, not authentication', () 
   assert.equal(describeEvidence({ mode: 'signed', author: 'Dev', signature: 'AQID' }), 'signed by Dev, verified against signing_key');
 });
 
+import { reply } from '../lib/escalate.mjs';
+
 test('reply names the open ask; after it the escalation awaits the developer again', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
@@ -219,6 +208,14 @@ test('reply names the open ask; after it the escalation awaits the developer aga
   await assert.rejects(reply(r.cwd, 'first', 'Again.'), /no open ask/);
   await answer(r.cwd, 'first', 'instead', 'Fourteen days.', asDev);
   assert.equal(escalationState(await r.log(), esc).final.payload.text, 'Fourteen days.');
+});
+
+import { dispute, disputes } from '../lib/escalate.mjs';
+
+const disputeFields = (record, n) => ({
+  commitment: 'first', record, n,
+  question: `Is finding ${n} a defect?`, recommendation: 'No: the check reads the declared fixture.',
+  because: 'hello.txt is in the mechanism inputs.', if_wrong: 'A hidden input goes undeclared.', instead: 'Declare it and re-run.',
 });
 
 test('a dispute names finding N on its exact source record and is settled by the developer\'s final answer', async () => {
@@ -237,6 +234,8 @@ test('a dispute names finding N on its exact source record and is settled by the
   assert.equal(disputes(log, rev, 2), null);
 });
 
+import { concerns, escalatedRequirement } from '../lib/escalate.mjs';
+
 test('an escalation concerning a requirement is found by identifier, answered or not', async () => {
   const r = await loopRepo({ reqs: ['DEMO-001', 'DEMO-002'] });
   assert.equal(escalatedRequirement(await r.log(), 'DEMO-001'), false);
@@ -250,6 +249,13 @@ test('an escalation concerning a requirement is found by identifier, answered or
   log = await r.log();
   assert.equal(escalatedRequirement(log, 'DEMO-001'), true);
 });
+
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { wake, render } from '../lib/wake.mjs';
+const run = promisify(execFile);
+const BIN = fileURLToPath(new URL('../bin/cairn.mjs', import.meta.url));
 
 test('the five fields reach the terminal byte for byte: double spaces, trailing space, quotes and a tab survive', async () => {
   const r = await loopRepo();
@@ -266,4 +272,34 @@ test('the five fields reach the terminal byte for byte: double spaces, trailing 
   const { stdout } = await run(process.execPath, [BIN, 'wake'], { cwd: r.cwd, encoding: 'buffer' });
   assert.ok(stdout.indexOf(expected) >= 0, 'stdout carries the exact bytes');
   assert.ok(stdout.indexOf(Buffer.from('answer: cairn answer first ok | instead <text> | ask <text>\n')) >= 0);
+});
+
+import { parseEscalateArgs, cliEscalate, cliAnswer, cliReply, cliDispute } from '../lib/escalate.mjs';
+
+const argv = ['--commitment', 'first', '--concern', 'DEMO-001', '--question', draft().question, '--recommendation', draft().recommendation,
+  '--because', draft().because, '--if-wrong', draft().if_wrong, '--instead', draft().instead, '--path', 'src/demo.mjs'];
+
+test('the escalate command parses the five fields and concern tokens into the canonical draft', () => {
+  assert.deepEqual(parseEscalateArgs(argv), draft());
+  assert.throws(() => parseEscalateArgs(argv.slice(0, -4)), /missing --instead/);
+  assert.throws(() => parseEscalateArgs([...argv, '--bogus', 'x']), /unknown flag --bogus/);
+  assert.deepEqual(parseEscalateArgs([...argv, '--concern', 'cycle']).concerns, ['DEMO-001', 'cycle']);
+});
+
+test('escalate, answer, reply and dispute commands print one line and use exit codes 0 and 1', async () => {
+  const r = await loopRepo();
+  const e = await cliEscalate(r.cwd, argv);
+  assert.equal(e.code, 0);
+  assert.match(e.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+  const bad = await cliAnswer(r.cwd, ['first', 'ok'], { confirm: async () => false });
+  assert.equal(bad.code, 1);
+  assert.match(bad.out, /^cairn: .*\n$/);
+  const ask = await cliAnswer(r.cwd, ['first', 'ask', 'Why?'], asDev);
+  assert.match(ask.out, /^cairn: answer first [0-9a-f]{40}\n$/);
+  const rp = await cliReply(r.cwd, ['first', 'Because.']);
+  assert.match(rp.out, /^cairn: reply first [0-9a-f]{40}\n$/);
+  await cliAnswer(r.cwd, ['first', 'ok'], asDev);
+  const rev = await r.review([{ n: 1, text: 'x' }]);
+  const d = await cliDispute(r.cwd, ['--commitment', 'first', '--record', rev, '--n', '1', '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it']);
+  assert.match(d.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
 });

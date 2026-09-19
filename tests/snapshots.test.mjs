@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { makeRepo } from './helpers/repo.mjs';
 import { git, emptyTree, listTree, updateRefCAS, CasError } from '../lib/gitx.mjs';
 import { sha256 } from '../lib/canon.mjs';
-import { writeWorkspaceSnapshot, readSnapshot, globToRegExp, SnapshotError, KindError, SNAPSHOTS_REF } from '../lib/snapshots.mjs';
+import { writeWorkspaceSnapshot, writeWorkspaceSnapshotFromTree, readSnapshot, globToRegExp, SnapshotError, KindError, SNAPSHOTS_REF } from '../lib/snapshots.mjs';
+import { writeTreeFromPaths } from '../lib/gitx.mjs';
 
 const paths = async (repo, sha, kind) => (await listTree(repo.dir, (await readSnapshot(repo.dir, sha, kind)).tree)).map((e) => e.path);
 
@@ -170,4 +171,26 @@ test('writeInputSnapshot treats an input as a literal path, not a glob pattern',
   await repo.write('a*b', 'literal'); await repo.write('axyzb', 'glob-lookalike'); await repo.commit('base');
   const sha = await writeInput(repo.dir, { mechanism: 'm', inputs: ['a*b'] });
   assert.deepEqual(await paths(repo, sha, 'input'), ['a*b']);
+});
+
+// Fix round 2 finding 3: writeWorkspaceSnapshotFromTree commits exactly the tree it is given,
+// rather than re-reading the working tree itself the way writeWorkspaceSnapshot does -- so a
+// caller that already built a tree for some other comparison (lib/commitment.mjs's
+// realizationDelta) can commit precisely that tree, guaranteeing the durable snapshot is the same
+// tree any check already ran against, not a second, independent re-read of a live working tree.
+test('writeWorkspaceSnapshotFromTree commits exactly the given tree as a workspace snapshot', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a.txt', 'one\n'); await repo.commit('base');
+  const tree = await writeTreeFromPaths(repo.dir, { paths: ['a.txt'], exclude: [] });
+  const sha = await writeWorkspaceSnapshotFromTree(repo.dir, tree);
+  const snap = await readSnapshot(repo.dir, sha, 'workspace');
+  assert.equal(snap.kind, 'workspace');
+  assert.equal(snap.tree, tree);
+  // Dirtying the working tree after building `tree` must not change what got committed: the
+  // function never re-reads the working tree itself.
+  await repo.write('a.txt', 'two\n');
+  const tree2 = await writeTreeFromPaths(repo.dir, { paths: ['a.txt'], exclude: [] });
+  assert.notEqual(tree2, tree);
+  const sha2 = await writeWorkspaceSnapshotFromTree(repo.dir, tree);
+  assert.equal((await readSnapshot(repo.dir, sha2, 'workspace')).tree, tree, 'still the original tree, not a re-read of the now-dirty working tree');
 });

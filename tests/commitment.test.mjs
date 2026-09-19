@@ -349,6 +349,7 @@ test('promote refuses while a commitment is open, a section naming Draft text, a
 
 import { realize, RealizationError } from '../lib/commitment.mjs';
 import { decide } from '../lib/adr.mjs';
+import { recordManagedWrite } from '../lib/scope.mjs';
 
 const buildDraft = { title: 'Split main', rests_on: ['DEMO-001'], wrong_if: 'the split hides the greeting', body: 'Move the greeting into a module.' };
 
@@ -406,6 +407,16 @@ test('Fix round 1 finding 5: realize stops on a hand-edited mechanism file that 
   assert.equal((await readAdr(repo.cwd)).some((l) => l.kind === 'realized'), false);
 });
 
+test('Fix round 2 finding 4: realize uses the shared, ledger-based kernelManagedValid (lib/scope.mjs), accepting a mechanism write the ledger actually recorded', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, buildDraft);
+  const bytes = Buffer.from('{"schema":1}\n');
+  await repo.write('.cairn/mechanisms/greeter.json', bytes);
+  await recordManagedWrite(repo.cwd, '.cairn/mechanisms/greeter.json', bytes);
+  await assert.doesNotReject(realize(repo.cwd, id, { subject: 'ledger-recorded mechanism write' }));
+});
+
 test('Fix round 1 finding 12: realize takes no durable snapshot when the stop check does not pass', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
@@ -440,6 +451,15 @@ test('Fix round 1 finding 1: promote crashed after each write recovers to exactl
     assert.equal((await readAdr(repo.cwd)).length, 1, `write ${n}: exactly one ADR line, not one per crash-and-recover attempt`);
     assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m, `write ${n}: Current: moved exactly once`);
   }
+});
+
+test('Fix round 2 finding 5: promote\'s transaction identity names the item SHA', async () => {
+  const repo = await project();
+  const b = await finished(repo);
+  await promote(repo.cwd, b);
+  const intent = (await readLog(repo.cwd)).findLast((r) => r.kind === 'command-intent' && r.payload.command === 'promote');
+  assert.ok(intent, 'a promote command-intent record was written');
+  assert.equal(intent.payload.identity.item, b);
 });
 
 test('Fix round 1 finding 2: promote on a roadmap with no Current: line leaves no ADR line', async () => {

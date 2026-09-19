@@ -1,10 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRepo } from './helpers/repo.mjs';
-import { git, listTree, updateRefCAS, CasError } from '../lib/gitx.mjs';
+import { git, emptyTree, listTree, updateRefCAS, CasError } from '../lib/gitx.mjs';
+import { sha256 } from '../lib/canon.mjs';
 import { writeWorkspaceSnapshot, readSnapshot, globToRegExp, SnapshotError, KindError, SNAPSHOTS_REF } from '../lib/snapshots.mjs';
 
 const paths = async (repo, sha, kind) => (await listTree(repo.dir, (await readSnapshot(repo.dir, sha, kind)).tree)).map((e) => e.path);
+
+// Builds a snapshot commit with a chosen body and trailers directly, bypassing writeWorkspaceSnapshot,
+// so envelope violations (bad digest, noncanonical JSON) can be tested the same way tests/records.test.mjs does.
+async function rawSnapshotCommit(repo, subject, body, trailers) {
+  const tree = await emptyTree(repo.dir);
+  const head = Buffer.from(`tree ${tree}\nauthor A <a@b.c> 0 +0000\ncommitter A <a@b.c> 0 +0000\n\n`);
+  const message = Buffer.concat([Buffer.from(`${subject}\n\n`), Buffer.from(body), Buffer.from('\n\n' + trailers.map(([k, v]) => `${k}: ${v}`).join('\n') + '\n')]);
+  const r = await git(['hash-object', '-t', 'commit', '-w', '--literally', '--stdin'], { cwd: repo.dir, input: Buffer.concat([head, message]) });
+  return r.stdout.trim();
+}
 
 test('globToRegExp: ** spans segments, * and ? stay inside one', () => {
   const m = (p, s) => globToRegExp(p).test(s);
@@ -35,6 +46,15 @@ test('the kind is checked at every reference', async (t) => {
   const sha = await writeWorkspaceSnapshot(repo.dir);
   await assert.rejects(readSnapshot(repo.dir, sha, 'input'), KindError);
   await assert.rejects(readSnapshot(repo.dir, await repo.readRef('HEAD'), 'workspace'), KindError);
+});
+test('readSnapshot checks the same integrity envelope as decodeRecord: digest mismatch and noncanonical JSON are both refused', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const goodBody = '{"kind":"workspace"}';
+  const badDigest = await rawSnapshotCommit(repo, 'cairn: snapshot workspace', goodBody, [['Cairn-Schema', '1'], ['Cairn-Digest', sha256('other')]]);
+  await assert.rejects(readSnapshot(repo.dir, badDigest, 'workspace'), (e) => e instanceof SnapshotError && /digest/.test(e.message));
+  const nonCanonBody = '{"kind": "workspace"}';
+  const nonCanon = await rawSnapshotCommit(repo, 'cairn: snapshot workspace', nonCanonBody, [['Cairn-Schema', '1'], ['Cairn-Digest', sha256(nonCanonBody)]]);
+  await assert.rejects(readSnapshot(repo.dir, nonCanon, 'workspace'), (e) => e instanceof SnapshotError && /noncanonical/.test(e.message));
 });
 test('a snapshot refuses untracked credential paths and network_exclude matches, by entry path only', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);

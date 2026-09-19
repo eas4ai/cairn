@@ -230,7 +230,7 @@ test('an unnamed path under .cairn is a breach', async () => {
 });
 
 import { allowedBase } from '../lib/snapshots.mjs';
-import { dispose } from '../lib/scope.mjs';
+import { dispose, ScopeError } from '../lib/scope.mjs';
 
 test('the first-observed snapshot and snapshots written under an open breach are not allowed bases', async () => {
   const r = await loopRepo();
@@ -243,4 +243,40 @@ test('the first-observed snapshot and snapshots written under an open breach are
   const scopeSha = await dispose(r.cwd, b, 'restore');
   const log = await r.log();
   assert.equal(await allowedBase(r.cwd, log), log.find((x) => x.sha === scopeSha).payload.snapshot);
+});
+
+// Deviation from the plan text: the plan's answer() helper builds evidence as
+// { mode: 'unsigned-local', author: 'Dev <dev@example.test>' }, but the shared `evidence` schema
+// (also used by 'authorization', reused unchanged from Task 6's fix) needs the full closed
+// 'unsigned-local' variant -- purpose, subject, nonce and author as {name, email}, not a string --
+// the same shape tests/init.test.mjs's own fixtures already build.
+const escalate = (r, b) => r.add('escalation', r.slug, { slug: r.slug, question: 'Keep src/stray.mjs?', recommendation: 'keep', because: 'it is the helper the fix needs', if_wrong: 'delete it', instead: 'restore', concerns: `scope-breach:${b}`, evaluation: null });
+const answer = (r, esc, kind) => r.add('answer', r.slug, { escalation: esc, kind, text: '', owner: null, evidence: { mode: 'unsigned-local', purpose: 'answer', subject: r.slug, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true } });
+
+test('keep is refused without an escalation answered ok, and closes the breach with one', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns scope-breach:${b}`);
+  const esc = await escalate(r, b);
+  await answer(r, esc, 'ask');
+  await assert.rejects(dispose(r.cwd, b, 'keep'), ScopeError);
+  const ans = await answer(r, esc, 'ok');
+  const s = await dispose(r.cwd, b, 'keep');
+  const rec = (await r.log()).find((x) => x.sha === s);
+  assert.deepEqual([rec.kind, rec.payload.breach, rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['scope', b, 'keep', esc, ans]);
+  assert.equal(openBreaches(await r.log()).length, 0);
+  assert.equal(await allowedBase(r.cwd, await r.log()), rec.payload.snapshot);
+});
+
+test('restore is refused while the path differs from its allowed base', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `cairn: src/stray.mjs still differs from its allowed base ${r.startSnapshot}`);
+  await r.remove('src/stray.mjs');
+  const s = await dispose(r.cwd, b, 'restore');
+  const rec = (await r.log()).find((x) => x.sha === s);
+  assert.deepEqual([rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['restore', null, null]);
+  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `cairn: scope-breach ${b} already has a disposition`);
 });

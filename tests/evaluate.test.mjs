@@ -371,14 +371,28 @@ describe('the Score request', () => {
     assert.deepEqual(Object.keys(req.questions).sort(), ['ambiguity', 'contract', 'evidence', 'reach', 'surface']);
     assert.match(req.questions.evidence.instructions, /`state\.five\.because`/);
     assert.match(req.questions.ambiguity.instructions, /`state\.five\.question`/);
-    for (const d of ['reach', 'contract', 'surface']) assert.match(req.questions[d].instructions, /`state\.option`.*\[0\]|`state\.option`/);
+    // Fix round 1 (review Important 1): a conjunction, not the brief's own alternation
+    // regex (`` `state\.option`.*\[0\]|`state\.option` `` reduces to just the second
+    // alternative, since alternation is lowest-precedence, so the `[0]` clause was dead --
+    // this passed for any instructions text that merely mentioned `state.option` at all).
+    // Each of the three option-scoped dimensions must carry both the backticked state path
+    // and the literal zero-based index text the recommended option's own array slot uses.
+    for (const d of ['reach', 'contract', 'surface']) {
+      const t = req.questions[d].instructions;
+      assert.ok(t.includes('`state.option`'), `${d} instructions missing the backticked state.option path`);
+      assert.ok(t.includes('draft.options[0]'), `${d} instructions missing the zero-based option index`);
+    }
     for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.deepEqual(req.questions[d].criteria.length, 5);
     assert.equal(req.model, settings().typesafeai.model);
   });
-  test('the recommended-option index in the request text tracks n, zero-based', () => {
+  test('the recommended-option index in the request text tracks n, zero-based, for every option-scoped dimension', () => {
     const state = { five: { question: 'q', recommendation: 'daily', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'daily', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
     const req = buildScoreRequest(settings(), state, 1);
-    assert.match(req.questions.reach.instructions, /\[1\]/);
+    // Fix round 1 (review Important 1): the brief's own test checked only 'reach' at n=1;
+    // 'contract' and 'surface' interpolate the same ${n} into their own instructions text
+    // (lib/evaluate.mjs) and need the same check, or a future edit could drop the index
+    // from either one with nothing here to catch it.
+    for (const d of ['reach', 'contract', 'surface']) assert.ok(req.questions[d].instructions.includes('draft.options[1]'), `${d} instructions missing draft.options[1]`);
   });
   test('requests round-trip through canonical JSON: equal state yields byte-identical requests', () => {
     const state = { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
@@ -392,5 +406,61 @@ describe('the Score request', () => {
     const big = buildScoreRequest(settings(), { five: { question: 'q', recommendation: 'r', because: 'x'.repeat(200000), if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} }, 0);
     assert.equal(sizeCheck(settings(), big), 'oversize');
     assert.equal(sizeCheck({ typesafeai: { ...settings().typesafeai, request_cap_bytes: 10 } }, small), 'oversize');
+  });
+  // Fix round 1 (review Important 2): the test above only covers a clearly-small request, a
+  // clearly-huge one (roughly 2.7x the state limit) and a toy request_cap_bytes: 10 override --
+  // none of it lands near either real `> limit` boundary in lib/evaluate.mjs's sizeCheck, so an
+  // off-by-one (`>=` vs `>`) or a wrong operand (e.g. dropping `* factor`, an 8x difference)
+  // would pass every assertion here unnoticed. This test hits each of sizeCheck's three
+  // thresholds exactly, then one byte past it, with every target computed from POLICY.LIMITS
+  // and settings() rather than hardcoded, so a limit change moves the test with it.
+  test('sizeCheck refuses exactly one byte past each of its three real boundaries', () => {
+    const { requestTokens, stateTokens, bytesPerToken, factor } = POLICY.LIMITS;
+    const requestLimit = requestTokens * bytesPerToken * factor;
+    const stateLimit = stateTokens * bytesPerToken * factor;
+    const len = (v) => Buffer.byteLength(canonicalize(v));
+
+    // A minimal, fixed-shape request (not run through buildScoreRequest -- sizeCheck only
+    // ever reads request.state and request.questions, per its own implementation, so this
+    // is a faithful unit test of sizeCheck itself) with exactly one padded field per check,
+    // so each boundary can be hit by padding plain ASCII 'x' characters -- canonicalize adds
+    // no escaping for those, so every added character adds exactly one byte, and the padding
+    // length needed to land exactly on a limit is `limit - <measured base size>`, never a
+    // hardcoded byte count.
+    const question = { type: 'score', instructions: 'i', criteria: ['a', 'b', 'c', 'd', 'e'] };
+    const emptyState = { five: {}, option: {}, contract: {}, facts: {} };
+    const questionBytes = len(question);
+    const req = (modelPad, statePad) => ({
+      model: 'x'.repeat(modelPad),
+      questions: { q: question },
+      state: { ...emptyState, pad: 'x'.repeat(statePad) },
+    });
+    const base = req(0, 0);
+    const totalBase = len(base), stateBase = len(base.state);
+
+    // (1) requestTokens * bytesPerToken * factor: request_cap_bytes is raised well above it
+    // so Math.min picks this clause, and state stays unpadded so the much smaller
+    // state-plus-longest-question check never fires -- only the whole-request clause is
+    // under test here.
+    const highCap = { typesafeai: { ...settings().typesafeai, request_cap_bytes: requestLimit + 1000 } };
+    const padA = requestLimit - totalBase;
+    assert.equal(sizeCheck(highCap, req(padA, 0)), null);
+    assert.equal(sizeCheck(highCap, req(padA + 1, 0)), 'oversize');
+
+    // (2) stateTokens * bytesPerToken * factor: padded through state.pad so len(state) plus
+    // the one question's bytes lands exactly on it; request_cap_bytes is still raised so the
+    // whole-request clause cannot be what fires here.
+    const padB = stateLimit - questionBytes - stateBase;
+    assert.equal(sizeCheck(highCap, req(0, padB)), null);
+    assert.equal(sizeCheck(highCap, req(0, padB + 1)), 'oversize');
+
+    // (3) settings.typesafeai.request_cap_bytes at its real value (48000, from this file's
+    // own settings() helper, not a toy override) -- no cap override; state is unpadded, so
+    // it sits far under the 72000 state limit and the cap is what fires first, the way it
+    // does for any project whose settings cap is this far below the token limits.
+    const cap = settings().typesafeai.request_cap_bytes;
+    const padC = cap - totalBase;
+    assert.equal(sizeCheck(settings(), req(padC, 0)), null);
+    assert.equal(sizeCheck(settings(), req(padC + 1, 0)), 'oversize');
   });
 });

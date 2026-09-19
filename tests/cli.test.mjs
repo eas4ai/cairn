@@ -41,3 +41,18 @@ test('bin/cairn.mjs runs', async () => {
   const { stdout } = await promisify(execFile)(process.execPath, ['bin/cairn.mjs', '--help']);
   assert.match(stdout, /usage: cairn/);
 });
+test('cairn lint docs/spec prints findings and exits 1, exits 0 when clean, refuses other paths', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('docs/spec/overview.md', '| File | Prefix |\n|---|---|\n| a.md | A |\n');
+  await repo.write('docs/spec/roadmap.md', 'Current: x\n\n## x\n\nRequirements: A-001\n');
+  await repo.write('docs/spec/a.md', 'Prefix: A\n\n[A-001] x\nFalsifier: f\nMechanism: m\nStatus: Agreed 2026-09-19\n');
+  const clean = await run(['lint', 'docs/spec'], repo.dir);
+  assert.deepEqual([clean.code, clean.out, clean.err], [0, '', '']);
+  await repo.write('docs/spec/a.md', 'Prefix: A\n\n[A-001] x\nStatus: Draft\n');
+  const dirty = await run(['lint', 'docs/spec'], repo.dir);
+  assert.equal(dirty.code, 1);
+  assert.match(dirty.out, /^docs\/spec\/a.md:3: A-001: missing Falsifier:/m);
+  assert.match(dirty.err, /^cairn: lint found \d+ problems\n$/);
+  const other = await run(['lint', 'docs'], repo.dir);
+  assert.equal(other.code, 1); assert.match(other.err, /^cairn: lint takes docs\/spec/);
+});

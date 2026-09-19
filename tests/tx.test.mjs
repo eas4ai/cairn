@@ -121,3 +121,49 @@ test('a store showing neither the pre nor the planned identity is a conflict nam
   await assert.rejects(applyWrites(cwd, await readStaging(cwd, 'TX6')),
     new RegExp(`^TxConflict: cairn: transaction TX6 cannot complete: docs/spec/overview.md is ${sha256('someone else\n')}, expected ${sha256('# k\n')} or ${sha256('v2\n')}; restore it to ${sha256('# k\n')} then run cairn recover TX6`));
 });
+
+import { withTransaction } from '../lib/tx.mjs';
+
+test('withTransaction refuses every command that is not one of the four', async () => {
+  const cwd = await initialized();
+  for (const command of ['check', 'begin', 'review', 'escalate', 'done', 'declare']) {
+    await assert.rejects(withTransaction(cwd, { command, plan: filePlan() }, async () => ({})),
+      new RegExp(`^TxError: cairn: ${command} writes one store and needs no transaction`));
+  }
+  assert.equal(existsSync(await gitPath(cwd, 'cairn-tx.lock')), false);
+});
+
+// Deviation from the plan text: the plan's own comment says the authorization schema "is closed"
+// at Task 6, and this fn's payload carries an extra snapshot_check key "to show results reaching
+// fn" until then. On this branch the authorization schema was already closed to exactly
+// {spec_digest, agreement_digest, settings_digest, evidence, decision, intent} before Task 3 (see
+// the records.mjs deviation note near the 'authorization' entry), so appendRecord would refuse the
+// extra key immediately, not just from Task 6 onward. The demonstration that results reaches fn is
+// kept as an assertion inside fn instead of as an extra payload field, and the payload already uses
+// Task 6's closed shape.
+test('withTransaction appends intent, performs the writes, appends the terminal record naming the intent, and cleans staging', async () => {
+  const cwd = await initialized();
+  const plan = filePlan();
+  const logBefore = (await readLog(cwd)).length;
+  const r = await withTransaction(cwd, { command: 'authorize', plan }, async ({ results }) => {
+    assert.equal(results[2], await readRef(cwd, 'refs/cairn/snapshots'), 'results reaches fn');
+    return { spec_digest: sha256('v2\n'), agreement_digest: sha256('# a\n'), settings_digest: 'sha256:' + '0'.repeat(64),
+       evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+       decision: null };
+  });
+  const log = await readLog(cwd);
+  const kinds = log.slice(logBefore).map((x) => x.kind);
+  assert.deepEqual(kinds, ['command-intent', 'read', 'authorization']);
+  const intent = log[logBefore];
+  assert.equal(intent.sha, r.intentSha);
+  assert.equal(intent.target, r.tx);
+  assert.equal(intent.payload.command, 'authorize');
+  assert.deepEqual(intent.payload.identity, { i: 1 });
+  assert.equal(intent.payload.pre.head.length, 40);
+  assert.deepEqual(intent.payload.writes.map((w) => w.store), ['file', 'branch', 'snapshot', 'log']);
+  assert.equal(intent.payload.writes[0].digest, sha256('v2\n'));
+  assert.equal(log.at(-1).payload.intent, r.intentSha);
+  assert.equal(log.at(-1).sha, r.terminalSha);
+  assert.equal(existsSync(await gitPath(cwd, `cairn-tx/${r.tx}`)), false);
+  assert.equal(existsSync(await gitPath(cwd, 'cairn-tx.lock')), false);
+});

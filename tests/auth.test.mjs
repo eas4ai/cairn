@@ -250,3 +250,24 @@ test('runDecisionsRead exits 1 with one cairn: line when the signature is missin
   assert.match(err[0], /^cairn: signing_key is set; pass --signature or CAIRN_SIGNATURE/);
   assert.match(out[0], /^cairn: sign this payload: \{"nonce":/);
 });
+
+import { encodeRecord } from '../lib/records.mjs';
+
+test('init, authorization and read records round-trip and refuse unknown or missing keys', async () => {
+  const cwd = await initialized();
+  await authorize(cwd, { confirm: yes });
+  await readDecision(cwd, '01J0000000000000000000ABCD', { confirm: yes });
+  for (const rec of await readLog(cwd)) {
+    const commit = await catCommit(cwd, rec.sha);
+    assert.deepEqual(decodeRecord(commit), { kind: rec.kind, target: rec.target, payload: rec.payload });
+    // Deviation from the plan text: catCommit (lib/gitx.mjs, already committed) returns both `body`
+    // (string) and `bodyBytes` (Buffer); verifyEnvelope hashes and parses bodyBytes when present, so
+    // mutating only `body` (as the plan's literal spread does) leaves decodeRecord looking at the
+    // original, untouched bytes and never throwing. bodyBytes is mutated to match here so the digest
+    // trailer stops matching, as the assertion intends.
+    const tamperedBody = commit.body.replace(/}$/, ',"extra":1}');
+    assert.throws(() => decodeRecord({ ...commit, body: tamperedBody, bodyBytes: Buffer.from(tamperedBody, 'utf8') }));
+  }
+  assert.throws(() => encodeRecord('init', 'project', { settings_digest: 'sha256:' + '0'.repeat(64) }), /authority_remote/);
+  assert.throws(() => encodeRecord('read', 'X', { decision: 'X', evidence: {}, more: 1 }), /more/);
+});

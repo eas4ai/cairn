@@ -176,3 +176,27 @@ test('withLoop settles after a state-changing command and leaves wake pure', asy
   const c = await (await import('../lib/cycle.mjs')).readCounter(r.cwd);
   assert.deepEqual(c.last, { action: 'run', target: 'DEMO-001' });
 });
+
+// Fix round 2 finding 15 (plan 09 re-review): the counter's temp file (<gitdir>/cairn-cycle.json.tmp)
+// was a fixed name, so two concurrent state-changing commands racing to settle() at the same
+// moment could each write their own record, print success, and still exit 1 on an unrelated
+// "ENOENT: no such file or directory, rename '.../cairn-cycle.json.tmp' -> '.../cairn-cycle.json'"
+// -- whichever renamed second found its own .tmp already gone. Reproduced with the reviewer's own
+// method: 8 concurrent main(['escalate', ...]) calls. main(), for a state-changing command, always
+// calls settle() after the command runs (lib/cli.mjs's withLoop), win or lose the escalation's own
+// log CAS race (finding 12's territory), so every one of the 8 hits writeCounter() concurrently
+// regardless of which escalate calls actually land.
+import { main } from '../lib/cli.mjs';
+
+test('8 concurrent state-changing commands never collide on the cycle counter temp file (finding 15)', async () => {
+  const r = await loopRepo();
+  const run = (i) => {
+    let out = '', err = '';
+    const argv = ['escalate', '--commitment', 'first', '--concern', 'DEMO-001', '--question', `Racer ${i}?`,
+      '--recommendation', 'R', '--because', 'B', '--if-wrong', 'W', '--instead', 'I'];
+    return main(argv, { cwd: r.cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } })
+      .then((code) => ({ code, out, err }));
+  };
+  const results = await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(run));
+  for (const res of results) assert.equal(/ENOENT.*cairn-cycle\.json\.tmp/.test(res.err), false, res.err);
+});

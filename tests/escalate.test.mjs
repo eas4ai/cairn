@@ -129,7 +129,8 @@ test('cairn decide --consequential accepts the same canonical draft and writes t
   assert.deepEqual([line.kind, line.evaluation, line.body, line.wrong_if], ['decision', null, `${draft().recommendation} Instead: ${draft().instead}`, draft().if_wrong]);
 });
 
-import { answer, escalationState, unanswered, describeEvidence } from '../lib/escalate.mjs';
+import { answer, escalationState, unanswered } from '../lib/escalate.mjs';
+import { describeEvidence } from '../lib/auth.mjs';
 
 const asDev = { confirm: async () => true };
 
@@ -187,9 +188,18 @@ test('two open escalations: the oldest is answered first unless --escalation nam
   assert.equal(decodeRecord(await catCommit(r.cwd, s1)).payload.escalation, a);
 });
 
-test('describeEvidence says unsigned-local is evidence, not authentication', () => {
-  assert.equal(describeEvidence({ mode: 'unsigned-local', author: 'Dev <dev@example.test>', signature: null }), 'unsigned-local, author Dev <dev@example.test>: evidence, not authentication');
-  assert.equal(describeEvidence({ mode: 'signed', author: 'Dev', signature: 'AQID' }), 'signed by Dev, verified against signing_key');
+// Fix round 1 finding 6 (plan 09 review): escalate.mjs's own describeEvidence read ev.author as
+// a string, but the answer record's real stored evidence (authenticateDeveloper's return value,
+// stored as-is since Task 4) has author: {name, email} for unsigned-local -- so calling it on a
+// real stored record produced "unsigned-local, author [object Object]: evidence, not
+// authentication". lib/auth.mjs already exports a describeEvidence that reads the real shape;
+// checked here against a real stored answer record instead of a hand-built flat object.
+test('describeEvidence (lib/auth.mjs) reads a real stored answer record: unsigned-local is evidence, not authentication', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const rec = decodeRecord(await catCommit(r.cwd, sha));
+  assert.equal(describeEvidence(rec.payload.evidence), 'unsigned-local: terminal confirmation by Cairn Test <test@example.invalid>; evidence, not authentication');
 });
 
 import { reply } from '../lib/escalate.mjs';

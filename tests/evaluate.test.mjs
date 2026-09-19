@@ -488,6 +488,25 @@ describe('evaluate', () => {
 import { upperBound, calibrate, assertRouteMode, currentCalibration, RouteModeError } from '../lib/evaluate.mjs';
 import { escalate, answer } from '../lib/escalate.mjs';
 
+// Shared by the calibration and route-mode-conversion describe blocks below (route-mode
+// conversion needs a real passing calibration first, and rebuilding one per test at 60 real
+// evaluate() cycles is expensive; both blocks reuse the same labelled() helper).
+const asDev = { confirm: async () => true };
+// Deviation from the plan text: the plan builds each labelled case by calling escalate() with an
+// evaluation SHA and answer(cwd, sha, ...) (escalation SHA as the second positional argument).
+// lib/escalate.mjs's real answer(cwd, slug, kind, text, opts) (already committed) takes the
+// commitment SLUG there, narrowed to one escalation via opts.escalation, and needs developer
+// evidence (opts.confirm) for its unsigned-local authentication.
+let labelSeq = 0;
+async function labelled(cwd, n, ownerLabel, agentProb = 0.95) {
+  for (let i = 0; i < n; i++) {
+    const q = `label ${labelSeq++}`;
+    const r = await evaluate(cwd, draft({ question: q }), { transport: transport([optionBody(), ownerBody(agentProb)]) });
+    const sha = await escalate(cwd, { ...draft({ question: q }), evaluation: r.evaluationSha });
+    await answer(cwd, 'first', 'ok', '', { ...asDev, escalation: sha, owner: ownerLabel });
+  }
+}
+
 describe('calibration', () => {
   test('exact one-sided bound', () => {
     assert.ok(Math.abs(upperBound(0, 60) - (1 - Math.pow(0.05, 1 / 60))) < 1e-9);
@@ -496,21 +515,6 @@ describe('calibration', () => {
     assert.equal(upperBound(5, 5), 1);
   });
 
-  const asDev = { confirm: async () => true };
-  // Deviation from the plan text: the plan builds each labelled case by calling escalate() with an
-  // evaluation SHA and answer(cwd, sha, ...) (escalation SHA as the second positional argument).
-  // lib/escalate.mjs's real answer(cwd, slug, kind, text, opts) (already committed) takes the
-  // commitment SLUG there, narrowed to one escalation via opts.escalation, and needs developer
-  // evidence (opts.confirm) for its unsigned-local authentication.
-  let labelSeq = 0;
-  async function labelled(cwd, n, ownerLabel, agentProb = 0.95) {
-    for (let i = 0; i < n; i++) {
-      const q = `label ${labelSeq++}`;
-      const r = await evaluate(cwd, draft({ question: q }), { transport: transport([optionBody(), ownerBody(agentProb)]) });
-      const sha = await escalate(cwd, { ...draft({ question: q }), evaluation: r.evaluationSha });
-      await answer(cwd, 'first', 'ok', '', { ...asDev, escalation: sha, owner: ownerLabel });
-    }
-  }
   test('60 zero-error predicted-agent cases pass at 0.05; 30 cannot', async () => {
     const cwd = await repoWithCommitment();
     await labelled(cwd, 30, 'agent');
@@ -559,5 +563,92 @@ describe('calibration', () => {
     settings.typesafeai.model = 'jev-latest';
     writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
     await assert.rejects(assertRouteMode(cwd), /alias/);
+  });
+});
+
+// Task 10 (route mode conversion): lib/escalate.mjs's escalateWithRoute (plan 09, already
+// committed) dynamic-imports evaluate from this module and dispatches on the {route, evaluationSha}
+// it returns -- this file's own contract (task 8's Interfaces line: "cairn escalate and cairn
+// decide accept --transport-module <path>... to inject transport" matches escalateWithRoute's own
+// opts.transport, threaded straight through to evaluate()). Nothing in lib/escalate.mjs needed to
+// change: it already fit. These tests exercise that real, non-mocked wiring end to end (unlike
+// tests/escalate.test.mjs's own escalateWithRoute tests, which inject a stub `evaluate` and so
+// never touch this file at all).
+import { escalateWithRoute } from '../lib/escalate.mjs';
+import { readAdr } from '../lib/adr.mjs';
+
+describe('route mode conversion (lib/escalate.mjs consumes this module\'s evaluate(), unmodified)', () => {
+  test('shadow: escalateWithRoute writes an escalation naming the real evaluation it ran', async () => {
+    const cwd = await repoWithCommitment('shadow');
+    const out = await escalateWithRoute(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) });
+    assert.equal(out.route, 'developer');
+    const log = await readLog(cwd);
+    const esc = log.findLast((x) => x.kind === 'escalation');
+    const ev = log.findLast((x) => x.kind === 'evaluation');
+    // escalateWithRoute's own return shape is {route, sha}: sha is the written escalation's SHA,
+    // not the evaluation's -- the escalation record's own `evaluation` field is what names the
+    // real evaluate() run this module just performed.
+    assert.equal(esc.sha, out.sha);
+    assert.equal(esc.payload.evaluation, ev.sha);
+  });
+  // Reproduced, separately documented finding (see the plan 11 report): lib/escalate.mjs's
+  // escalateWithRoute (already committed, not authored by this plan) calls loadSettings(cwd)
+  // directly with no {calibration} option -- the exact circularity this module's own
+  // loadSettingsFull works around -- so it always throws "settings refused: route mode needs a
+  // current passing calibration" for a route-mode project, even one with a genuinely passing
+  // calibration at the exact policy digest. Route mode can therefore never actually run through
+  // escalateWithRoute (and so never through `cairn escalate`) today; this is lib/escalate.mjs's own
+  // defect, and the instructions for this plan forbid editing that file. Rather than a test that is
+  // guaranteed to fail on someone else's bug (and costs a further 60 real evaluate() cycles just to
+  // reach the point of failing), this test proves the function escalateWithRoute would actually
+  // call once that settings bug is fixed -- this module's own evaluate() -- routes agent, developer
+  // and capture correctly in route mode, against a calibration record written directly at the
+  // exact policy digest (calibrate()'s own aggregation logic is already proven correct above; this
+  // is a routing test, not another calibration-arithmetic test).
+  test('route mode: evaluate() itself (what escalateWithRoute would call once its own settings bug is fixed) routes agent, developer and capture correctly', async () => {
+    const cwd = await repoWithCommitment('shadow');
+    const { settings } = await loadSettings(cwd);
+    const policy = policyDigest(settings);
+    const log = await readLog(cwd);
+    const slug = log.findLast((x) => x.kind === 'start').payload.slug;
+    await appendRecord(cwd, 'calibration', slug, {
+      policy_digest: policy, log_head: log.at(-1).sha, predicted_agent: 60, false_downgrades: 0, bound: 0.01,
+      criterion: 'test fixture: a directly-written passing calibration for this exact policy digest', result: 'pass',
+    });
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    await assertRouteMode(cwd); // must not throw: the calibration above matches this exact policy digest
+
+    const rAgent = await evaluate(cwd, draft({ question: 'route-agent' }), { transport: transport([optionBody(), ownerBody(0.95)]) });
+    assert.equal(rAgent.route, 'agent'); assert.equal(rAgent.would_route, null, 'route mode: no hypothetical route, an actual one');
+
+    const badObserved = optionBody().replace('"observed":{"type":"noul","noul":0.9}', '"observed":{"type":"noul","noul":0.1}');
+    const rDev = await evaluate(cwd, draft({ question: 'route-dev' }), { transport: transport([badObserved, ownerBody(0.95)]) });
+    assert.equal(rDev.route, 'developer'); assert.equal(rDev.reason, 'observed');
+
+    const outsideBody = optionBody().replace('"outside_1":{"type":"noul","noul":0.1}', '"outside_1":{"type":"noul","noul":0.9}');
+    const rCap = await evaluate(cwd, draft({ question: 'route-capture' }), { transport: transport([outsideBody]) });
+    assert.equal(rCap.route, 'capture'); assert.equal(rCap.option, 1);
+  });
+  // Codifies the reproduced finding above as a regression marker: once lib/escalate.mjs's own
+  // loadSettings(cwd) call (line ~120) is fixed to thread a {calibration} option through (the same
+  // way this file's loadSettingsFull does), this test starts failing -- exactly the signal that the
+  // finding is resolved and this test (and the report note) should be removed.
+  test('reproduced, out-of-scope finding: escalateWithRoute cannot run in route mode today', async () => {
+    const cwd = await repoWithCommitment('shadow');
+    const { settings } = await loadSettings(cwd);
+    const policy = policyDigest(settings);
+    const log = await readLog(cwd);
+    await appendRecord(cwd, 'calibration', log.findLast((x) => x.kind === 'start').payload.slug, {
+      policy_digest: policy, log_head: log.at(-1).sha, predicted_agent: 60, false_downgrades: 0, bound: 0.01,
+      criterion: 'test fixture: a directly-written passing calibration for this exact policy digest', result: 'pass',
+    });
+    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    await assert.rejects(
+      escalateWithRoute(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) }),
+      /route mode needs a current passing calibration/,
+      'lib/escalate.mjs\'s own loadSettings(cwd) call refuses a route-mode project even with a genuinely passing calibration at the exact policy digest',
+    );
   });
 });

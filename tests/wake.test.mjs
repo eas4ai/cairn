@@ -370,6 +370,9 @@ test('every finding on the review, report or an acceptance needs a resolution or
 
 // Fix round 1, item 9(a): a second rejection of resolutions for the same finding names 'escalate'
 // itself, not just a longer 'resolve' reason.
+// Fix round 2, finding 5: the predicate text is PREDICATES.resolve itself, the spec's own section
+// 5 row for this action ("a resolution names finding N of its exact source record, or an
+// escalation disputes it"), not an invented sentence.
 test('a second rejection of a resolution for the same finding escalates', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
@@ -381,7 +384,7 @@ test('a second rejection of a resolution for the same finding escalates', async 
   await r.accept({ rejected: [res2] });
   const v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['escalate', 'first 1']);
-  assert.equal(v.predicate, 'an escalation concerns the finding');
+  assert.equal(v.predicate, PREDICATES.resolve);
 });
 
 test('post-report resolutions or a changed workspace need an acceptance at the current snapshot', async () => {

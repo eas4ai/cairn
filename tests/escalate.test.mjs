@@ -146,6 +146,39 @@ test('an evaluation that routes to the developer writes the escalation with its 
   assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).payload.evaluation, EV);
 });
 
+// Fix round 1 finding 4 (plan 09 review): the capture branch built the item as
+// { slug: d.commitment, source: d.concerns[0], body: d.recommendation }. (a) d.concerns[0] is a
+// concern token, and lib/commitment.mjs's item() requires source to be an Agreed requirement for
+// a backlog item -- any concern that is not a requirement identifier (finding:<sha>#n, cycle,
+// item:<sha>, breach:<sha>, transaction:<sha>, contract:<path>) made item() throw. (b) the item
+// slug was the commitment slug, and item() refuses a taken slug, so at most one capture could
+// ever happen per commitment. Fixed to look for a requirement-kind concern among every concern
+// (not just concerns[0]) and to mint a fresh slug per capture.
+test('the capture route names the item from a requirement concern, with a fresh slug per capture', async () => {
+  const r = await loopRepo({ settings: enabled });
+  const out1 = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) });
+  assert.equal(out1.route, 'capture');
+  const outsideRec1 = decodeRecord(await catCommit(r.cwd, out1.sha));
+  assert.equal(outsideRec1.kind, 'outside');
+  assert.equal(outsideRec1.payload.evaluation, EV);
+  const itemRec1 = decodeRecord(await catCommit(r.cwd, outsideRec1.payload.item));
+  assert.deepEqual([itemRec1.kind, itemRec1.payload.kind, itemRec1.payload.source, itemRec1.payload.body], ['item', 'backlog', 'DEMO-001', draft().recommendation]);
+
+  const out2 = await escalateWithRoute(r.cwd, draft({ question: 'Second capture?' }), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) });
+  const outsideRec2 = decodeRecord(await catCommit(r.cwd, out2.sha));
+  const itemRec2 = decodeRecord(await catCommit(r.cwd, outsideRec2.payload.item));
+  assert.notEqual(itemRec2.target, itemRec1.target);
+});
+
+test('the capture route refuses with its own message when no concern names a requirement', async () => {
+  const r = await loopRepo({ settings: enabled });
+  const rev = await r.review([{ n: 1, text: 'x' }]);
+  await assert.rejects(
+    escalateWithRoute(r.cwd, draft({ concerns: [`finding:${rev}#1`] }), { evaluate: async () => ({ route: 'capture', evaluationSha: EV }) }),
+    /capture needs a requirement concern to name as the item's source/,
+  );
+});
+
 test('cairn decide --consequential accepts the same canonical draft and writes the same line without an evaluation', async () => {
   const r = await loopRepo();
   await assert.rejects(decideConsequential(r.cwd, draft({ because: '' })), DraftError);

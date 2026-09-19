@@ -60,6 +60,10 @@ test('S7: an unrelated problem that quotes the word status does not suppress a g
   assert.ok(problems.some((r) => /unexpected line after Falsifier:/.test(r)));
   assert.ok(problems.some((r) => /missing Status:/.test(r)));
 });
+test('S8: two blocks with no blank line between them is a grammar problem, not two valid blocks', () => {
+  const problems = parseDomainFile('[A-001] x\nFalsifier: f\nStatus: Draft\n[A-002] y\nFalsifier: f\nStatus: Draft\n').problems.map((p) => p.reason);
+  assert.ok(problems.some((r) => /missing blank line before the next requirement block/.test(r)));
+});
 
 import { parseRoadmap } from '../lib/spec.mjs';
 
@@ -113,6 +117,10 @@ test('lint refuses references to absent identifiers', async (t) => {
 test('S2: lint refuses a second Requirements: line in one roadmap section', async (t) => {
   const repo = await specRepo(t, { 'roadmap.md': '# Roadmap\n\nCurrent: first\n\n## first\n\nRequirements: LOOP-001\nRequirements: LOOP-001\n' });
   assert.match((await reasons(repo)).join(), /docs\/spec\/roadmap.md:8: second Requirements: line in section first/);
+});
+test('S8: lint refuses two blocks with no blank line between them', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nFalsifier: f\nMechanism: m\nStatus: Draft\n[UI-002] y\nFalsifier: f\nMechanism: m\nStatus: Draft\n' });
+  assert.match((await reasons(repo)).join(), /missing blank line before the next requirement block/);
 });
 test('lint refuses a missing falsifier', async (t) => {
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nMechanism: m\nStatus: Draft\n' });

@@ -79,6 +79,8 @@ test('parseRoadmap reads only Current: and Requirements: under the matching head
   assert.equal(parseRoadmap('no current line').current, null);
 });
 
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 import { lint, parseSpecMap } from '../lib/spec.mjs';
 
@@ -130,6 +132,12 @@ test('S6: lint checks a reference on the opening line of a block and flags a mis
   const r = (await reasons(repo)).join();
   assert.match(r, /docs\/spec\/ui.md:3: reference to absent identifier UI-999/);
   assert.match(r, /docs\/spec\/glossary.md:1: reference to absent identifier LOP-001/);
+});
+test('Q4: lint reports an unreadable spec entry, e.g. a directory named x.md, instead of crashing', async (t) => {
+  const repo = await specRepo(t);
+  await mkdir(join(repo.dir, 'docs/spec/x.md'), { recursive: true });
+  const r = (await reasons(repo)).join();
+  assert.match(r, /docs\/spec\/x.md:1: x.md is not a readable file/);
 });
 test('lint refuses a missing falsifier', async (t) => {
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nMechanism: m\nStatus: Draft\n' });

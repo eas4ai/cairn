@@ -532,7 +532,10 @@ the builder resolves again. No second report.
 **The adversary's model.** A different model has different blind spots,
 which is what idea 5 wants; a second session of the same model only
 has less context. Settings name, per harness, the model the adversary
-is started on (`harness.<name>.adversary_model`). The session-start
+is started on (`harness.<name>.adversary_model`): the exact identifier
+that harness's subagent launch accepts, verbatim, which for an
+API-driven harness is the API model id. The kernel passes the string
+through and never maps names. The session-start
 hook records which harness is running, in the Git directory beside the
 check lock, never tracked; `cairn brief` reads it and prints the
 instruction: start the adversary on that model, with none of your
@@ -693,8 +696,8 @@ trailer is the alias rather than the resolved version.
   "signing_key": null,
   "attribution": "forbidden",
   "harness": {
-    "claude_code": { "adversary_model": "fable" },
-    "codex":       { "adversary_model": "gpt-5" },
+    "claude_code": { "adversary_model": "claude-fable-5-1" },
+    "codex":       { "adversary_model": "gpt-5-codex" },
     "muse":        { "adversary_model": null }
   },
   "typesafeai": {
@@ -710,8 +713,10 @@ trailer is the alias rather than the resolved version.
 
 `interfaces` and `data` sit at the top level because the scope gate and
 the adversary's brief use them whether or not the evaluator is on.
-`harness` is keyed by the name the session-start hook records; an
-entry may later carry the facts the kernel needs per harness (whether
+`harness` is keyed by the name the session-start hook records, and
+`adversary_model` is the exact identifier that harness accepts when it
+starts a subagent, passed through verbatim; an entry may later carry
+the facts the kernel needs per harness (whether
 a per-turn hook exists, whether subagents exist), filled by the
 install skill rather than written by the developer.
 

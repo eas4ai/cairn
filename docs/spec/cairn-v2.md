@@ -683,11 +683,16 @@ and the draft's own words.
 judgment: a touched path under `docs/spec/`. The same fact feeds
 `outside_n`. Nothing is matched in the agent's prose.
 
-The code row fills in order until `state_cap_bytes` is spent: the diff
-of the touched paths since the tree in-progress pinned; the whole files
-that diff touches; the remaining declared inputs in declaration order,
-whole files. The cap is in bytes because the kernel can count bytes
-without a tokenizer, so truncation is deterministic. Only the code row
+The code row fills in order until `state_cap_bytes` is spent, through
+at most `code_tiers` tiers: 1, the diff of the touched paths since the
+tree in-progress pinned; 2, the whole files that diff touches; 3, the
+remaining declared inputs in declaration order, whole files. The
+default is two tiers. Tier 3 is the content no question references,
+and the model's documented weak point is large irrelevant state:
+accuracy falls as unrelated context grows. So the cap serves relevance
+before it serves size, and every part of the state is there because a
+question reads it. The cap is in bytes because the kernel can count
+bytes without a tokenizer, so truncation is deterministic. Only the code row
 is ever cut: the parts above it are sent whole or not at all. When
 they alone exceed the cap, the kernel does not call; the record says
 `unavailable oversize` and the escalation stands, because a half-sent
@@ -695,13 +700,15 @@ commitment is worse than none. The record says which tier was reached
 and how many bytes were cut, and the token count the API reports
 beside it, which is how the developer sees whether the byte cap maps
 to the token budget for this project's mix of prose and code. The cap
-is Cairn's rule, a default of 80,000 bytes, chosen so that the state
-stays under a 32k-token budget at either end of the byte-per-token
-range (about 4 for prose, about 3 for code and JSON), with the fixed
-tier, under 20 KB for thirty blocks and a section, leaving most of it
-for the diff; and because a Consequential decision that cannot be
-judged from its diff, its files, its commitment and its cited decisions
-is a decision that should be smaller. It is not an API limit.
+is Cairn's rule, a default of 48,000 bytes (about 12k to 16k tokens),
+chosen to hold the fixed tier, under 20 KB for thirty blocks and a
+section, plus a real diff and the files it touches, and to stay in the
+range where the model is documented to be accurate; the ceiling of
+96,000 in validation is the overflow bound, 32k tokens at three bytes
+per token, not the recommended size. A Consequential decision that
+cannot be judged from its diff, its files, its commitment and its cited
+decisions is a decision that should be smaller. Neither number is an
+API limit.
 
 **The questions.** One call, all questions at once:
 
@@ -788,10 +795,11 @@ for; count those per commitment. No new field.
 
 **Validation.** The kernel refuses `enabled: true` with no `model`, a
 `schema` it does not read, a path in both `outside` and `source`, any
-key-shaped field, and a `state_cap_bytes` above 96,000: that is 32k
-tokens at three bytes per token, the dense end of the range, so a
-larger cap can overflow the state budget on a code-heavy state whatever
-the tiered cut does. The refusal names the ceiling and the reason.
+key-shaped field, a `code_tiers` outside 1 to 3, and a
+`state_cap_bytes` above 96,000: that is 32k tokens at three bytes per
+token, the dense end of the range, so a larger cap can overflow the
+state budget on a code-heavy state whatever the tiered cut does. The
+refusal names the ceiling and the reason.
 Weights that do not sum to 1 are normalized and the record says so.
 `attribution` is `forbidden` or `allowed`.
 
@@ -840,7 +848,8 @@ accepted.
     "route_confidence": 0.8,
     "sufficient_threshold": 0.7,
     "outside_threshold": 0.8,
-    "state_cap_bytes": 80000
+    "state_cap_bytes": 48000,
+    "code_tiers": 2
   }
 }
 ```

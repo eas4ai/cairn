@@ -286,3 +286,14 @@ test('cairn recover prints the result and exits 3 with the repair line when bloc
   assert.match(out[0], /^cairn: transaction TXB cannot complete/);
   assert.equal(err.length, 0);
 });
+
+// --- Fix round 1 ---
+
+test('Fix round 1 finding 13: stage refuses a planned file write whose path escapes the worktree', async () => {
+  const cwd = await initialized();
+  const plan = { identity: { i: 1 }, writes: [{ store: 'file', path: '../escape.md', bytes: Buffer.from('x\n') }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(cwd, plan);
+  await assert.rejects(stage(cwd, 'TXESCAPE', plan, pre), /PathError|component in/);
+  assert.equal(existsSync(join(cwd, '..', 'escape.md')), false, 'nothing was written outside the worktree');
+});

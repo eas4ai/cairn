@@ -404,6 +404,27 @@ test('an unrealized Consequential decision is build until a realized line names 
   assert.notEqual((await wake(r.cwd)).action, 'build');
 });
 
+// Fix round 1, item 5: doneRule's bullet 4 used to select every non-'decision' ADR line (a 'read'
+// line included) as closing a Consequential decision, and separately never checked
+// level === 'Consequential' at all. A 'read' line (`cairn decisions --read`, a developer
+// acknowledgment, not a realization) must not close it; a 'realized' line must.
+test('a read line does not close a Consequential decision for the Done rule, but a realized line does', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  const id = await r.decide();
+  await r.commit('record decision');
+  await r.accept();
+  assert.ok((await doneRule(await readState(r.cwd))).failed.includes('obligations'));
+  await appendDecision(r.cwd, { kind: 'read', of: id, record: r.startSha }, { command: 'decisions --read' });
+  await r.commit('read decision');
+  await r.accept();
+  assert.ok((await doneRule(await readState(r.cwd))).failed.includes('obligations'));   // a read line alone never closes it
+  await appendDecision(r.cwd, { kind: 'realized', of: id, base_snap: r.startSnapshot, snap: await r.snap(), subject: 'done', interfaces: [] }, { command: 'realize' });
+  await r.commit('realize decision');
+  await r.accept();
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
+});
+
 async function finished() {
   const r = await loopRepo();
   await r.passReq('DEMO-001'); await r.review(); await r.report();

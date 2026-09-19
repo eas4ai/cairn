@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loopRepo, mechanismFor } from './helpers/loop.mjs';
+import { makeProject } from './helpers/repo.mjs';
 import { declare } from '../lib/mechanisms.mjs';
 import { appendDecision } from '../lib/adr.mjs';
 import { git } from '../lib/gitx.mjs';
@@ -531,4 +532,13 @@ test('the report and accept predicates do not crash when asked about a state wit
   const rv = await reportP.test(st);
   assert.equal(rv.action, 'report');
   assert.equal(await acceptP.test(st), null);
+});
+
+// Fix round 1, item 8: a fifth exit-3 case beyond section 2's four. makeProject() (plan 01/03)
+// initializes settings, the init record and both durable refs but writes no start record at all --
+// exactly the pending-initialization state between `cairn init` and the spec-phase tail's
+// `cairn start`. The existing-project skill is what resumes it.
+test('a project with durable refs but no start record at all names the pending-initialization skill', async () => {
+  const { cwd } = await makeProject();
+  assert.deepEqual(await wake(cwd), { exit: 3, line: 'cairn: no commitment started; run /new-project or /existing-project' });
 });

@@ -9,7 +9,7 @@ import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { makeProject } from './helpers/repo.mjs';
 import { declare } from '../lib/mechanisms.mjs';
 import { appendDecision } from '../lib/adr.mjs';
-import { git } from '../lib/gitx.mjs';
+import { git, readRef, catCommit, commitTree, updateRefCAS } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
 import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule, predicates } from '../lib/wake.mjs';
@@ -557,4 +557,27 @@ test('the report and accept predicates do not crash when asked about a state wit
 test('a project with durable refs but no start record at all names the pending-initialization skill', async () => {
   const { cwd } = await makeProject();
   assert.deepEqual(await wake(cwd), { exit: 3, line: 'cairn: no commitment started; run /new-project or /existing-project' });
+});
+
+// Fix round 1, item 11(a): nothing bound the predicates array's own registration order to ORDER
+// itself -- a define() call placed at the wrong point in the file would silently reorder
+// precedence with no test failing. 'supersession' is the one predicates entry with no ORDER
+// position (it is the exit-3 gate tested between recover and reconcile, not a section 5 action).
+test("the predicates array is registered in exactly ORDER's precedence, aside from the supersession exit-3 gate", () => {
+  assert.deepEqual(predicates.filter((p) => p.name !== 'supersession').map((p) => p.name), ORDER);
+});
+
+// Fix round 1, item 11(f): a corrupted action lease commit (body that is not canonical JSON) used
+// to propagate a raw CanonError straight out of readState/wake instead of becoming a clean
+// 'repair' verdict, the same way a corrupted settings, mechanisms or ADR read already does.
+test('a corrupted action lease is a repair refusal, not a crash', async () => {
+  const r = await loopRepo();
+  await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] });
+  const leaseSha = await readRef(r.cwd, 'refs/cairn/in-progress');
+  const { tree } = await catCommit(r.cwd, leaseSha);
+  const badSha = await commitTree(r.cwd, { tree, parents: [], subject: 'cairn: lease implement DEMO-001', body: 'not json', trailers: [] });
+  await updateRefCAS(r.cwd, 'refs/cairn/in-progress', badSha, leaseSha);
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Resolvable');
+  assert.equal(v.action, 'repair');
 });

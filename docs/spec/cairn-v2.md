@@ -856,9 +856,9 @@ measurement is missing, stale, or built from a different draft digest.
 Waiting for a Consequential decision arises only two ways: the narrow floor
 in section 10 sends it to the developer before any call is made, or the
 agent, having read the measurement, chooses to escalate anyway. A
-measurement that clears the composite is information, not consent; the agent
-may still escalate past it toward the developer, but nothing routes a floor-
-caught or vetoed draft to the agent.
+measurement whose suggestion is `agent` is information, not consent; the
+agent may still escalate past it toward the developer, but nothing routes a
+floor-caught or vetoed draft to the agent.
 
 Revised 2026-09-19: new. Section 10 replaces a deterministic gate cascade
 with one composite measurement the agent itself reads and acts on; this
@@ -933,13 +933,15 @@ do not nag.
 Settings' `developer` field states whether a human can ever answer that
 Waiting. `developer: absent` is what an autonomous benchmark runs with: the
 narrow floor in section 10 is the only path left to the developer, since the
-agent's own choice to escalate past a clearing measurement would have no one
-to answer it either. When the floor names the developer and `developer:
-absent`, the run records the floor decision as an escalation on the log
-exactly as it would with a developer present, then exits 4 instead of
-waiting for an answer that cannot come. Exit 4 is distinct from wake's exit 3
-for a non-verdict state (section 2): a floor hit in absent mode is a real
-Waiting verdict, just one this run cannot resolve.
+agent's own choice to escalate past a `suggested: agent` measurement would
+have no one to answer it either. When the floor names the developer and
+`developer: absent`: the run records the floor decision as an escalation on
+the log exactly as it would with a developer present; wake prints that
+escalation's five fields exactly as Waiting always prints them; and the run
+then exits 4, instead of sitting at Waiting for an answer that cannot come.
+Exit 4 is distinct from wake's exit 3 for a non-verdict state (section 2,
+exit-code table): a floor hit in absent mode is a real Waiting verdict, just
+one this run cannot resolve, so it stops there rather than looping on wake.
 
 Revised 2026-09-19: new. This states what section 5's own Waiting rule does
 in the one mode where nobody can end it, which the developer's stated reason

@@ -345,3 +345,23 @@ test('escalate, answer, reply and dispute commands print one line and use exit c
   const d = await cliDispute(r.cwd, ['--commitment', 'first', '--record', rev, '--n', '1', '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it']);
   assert.match(d.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
 });
+
+// Fix round 1 finding 10 (plan 09 review): cliDispute coerced --n with bare Number() and let a
+// missing or malformed value flow straight into the concern token, so the refusal named the
+// record ("concern token finding:<sha>#NaN needs a log SHA") instead of the actual problem: --n
+// itself. Reproduced exactly as the review found it (no --n, --n 0, --n abc); each now refuses
+// with a message naming the finding number, before dispute() or escalate() ever runs.
+test('cairn dispute refuses a missing, non-integer or non-positive --n with a message naming the finding number', async () => {
+  const r = await loopRepo();
+  const rev = await r.review([{ n: 1, text: 'x' }]);
+  const base = ['--commitment', 'first', '--record', rev, '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it'];
+  const noN = await cliDispute(r.cwd, base);
+  assert.equal(noN.code, 1);
+  assert.match(noN.out, /^cairn: --n must be a positive integer naming the finding number/);
+  const zero = await cliDispute(r.cwd, [...base, '--n', '0']);
+  assert.equal(zero.code, 1);
+  assert.match(zero.out, /^cairn: --n must be a positive integer naming the finding number/);
+  const notANumber = await cliDispute(r.cwd, [...base, '--n', 'abc']);
+  assert.equal(notANumber.code, 1);
+  assert.match(notANumber.out, /^cairn: --n must be a positive integer naming the finding number/);
+});

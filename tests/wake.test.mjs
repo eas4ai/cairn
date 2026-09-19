@@ -493,17 +493,23 @@ test('a closed range with a backlog item names promote; without one the verdict 
   assert.equal((await wake(r.cwd)).verdict, 'Done');   // a next-feature item waits for the developer
 });
 
+// Fix round 1, item 7: the Waiting render no longer appends an `answer: cairn answer ...` line
+// (section 6 names verdict, action or party, one reason line and the predicate; Waiting's own
+// five fields never claimed an answer line too). Checked here against the exact stdout bytes, not
+// just a slice, so a stray extra line would fail this test.
 test('cairn wake prints verdict, action or party, one reason line and the predicate; Waiting adds the five fields', async () => {
   const r = await loopRepo();
   let out = r.runWake();
   assert.equal(out.status, 0);
   assert.deepEqual(out.stdout.split('\n').slice(0, 4), ['verdict: Resolvable', 'action: run DEMO-001', 'reason: no current receipt carries a result for DEMO-001', `predicate: ${PREDICATES.run}`]);
-  await r.escalate('DEMO-001');
+  const esc = await r.escalate('DEMO-001');
   out = r.runWake();
-  const lines = out.stdout.split('\n');
-  assert.deepEqual(lines.slice(0, 2), ['verdict: Waiting', 'party: developer']);
-  assert.match(lines[2], /^reason: escalation [0-9a-f]{7} awaits an answer$/);
-  assert.deepEqual(lines.slice(3, 10), ['question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I', `predicate: ${PREDICATES.waiting}`, 'answer: cairn answer first ok | instead <text> | ask <text>']);
+  assert.equal(out.status, 0);
+  assert.equal(out.stdout, [
+    'verdict: Waiting', 'party: developer', `reason: escalation ${esc.slice(0, 7)} awaits an answer`,
+    'question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I',
+    `predicate: ${PREDICATES.waiting}`, '',
+  ].join('\n'));
   const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
   const none = spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, 'wake'], { cwd: dir, encoding: 'utf8' });
   assert.equal(none.status, 3);

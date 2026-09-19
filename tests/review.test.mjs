@@ -293,3 +293,40 @@ test('three acceptance rounds without Done create the cycle escalation through p
   assert.equal(cycle.payload.concerns, 'cycle');
   assert.match(cycle.payload.question, /3 acceptance rounds after the report have not reached Done/);
 });
+
+// tests/review.test.mjs (append)
+import { cliReview, cliBrief, cliReport, cliResolve, cliAccept } from '../lib/review.mjs';
+
+test('the five commands print one line each and exit 1 with a cairn: line on refusal', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  await r.commit('interface change');
+  const file = async (name, obj) => { const p = path.join(r.cwd, '.cairn/output', name); await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p, JSON.stringify(obj)); return p; };
+  // Deviation from the plan text: the plan's own literal call gave the review a finding
+  // ({n: 1, text: 'x'}), which is never resolved anywhere in this test, so the later
+  // `reviewState(...).ready === true` assertion cannot hold together with a correct reviewState
+  // (section 5's Done rule: "every finding on the review, report or any acceptance is resolved or
+  // developer-disputed" -- Task 6's own tests exercise exactly this rule). Passing no findings here
+  // keeps the CLI round-trip this test is actually checking (all five commands, each argument shape)
+  // without contradicting the readiness rule Task 6 already covers.
+  const rv = await cliReview(r.cwd, ['first', '--file', await file('rv.json', await claims(r, { findings: [] }))], { env: { CAIRN_SESSION: 'b' } });
+  assert.match(rv.out, /^cairn: review first [0-9a-f]{40}\n$/);
+  r.rev = rv.out.trim().split(' ')[3];
+  r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
+  const br = await cliBrief(r.cwd, ['first', '--harness', 'claude_code']);
+  assert.equal(br.code, 0);
+  assert.match(br.out, /^cairn: brief first [0-9a-f]{40}\nbrief: .*\nbrief digest: sha256:[0-9a-f]{64}\nprojection: .*\nprojection digest: sha256:[0-9a-f]{64}\nharness: claude_code\nmodel: claude-fable-5-1\ntransport: remote\nboundary: unenforced\nstart: in claude_code, .*\n$/);
+  r.bp = decodeRecord(await catCommit(r.cwd, br.out.split('\n')[0].split(' ')[3])).payload;
+  const bad = await cliReport(r.cwd, ['first', '--file', await file('bad.json', adversary(r, { model: 'x' }))]);
+  assert.deepEqual([bad.code, bad.out.startsWith('cairn: report: model x does not match')], [1, true]);
+  const rp = await cliReport(r.cwd, ['first', '--file', await file('rp.json', adversary(r))]);
+  assert.match(rp.out, /^cairn: report first [0-9a-f]{40}\n$/);
+  await r.write('src/demo.mjs', 'export const demo = 9;\n');
+  const rs = await cliResolve(r.cwd, ['first', '1', 'fixed', '--source', rp.out.trim().split(' ')[3]]);
+  assert.match(rs.out, /^cairn: resolution first [0-9a-f]{40}\n$/);
+  const ac = await cliAccept(r.cwd, ['first', '--file', await file('ac.json', { resolutions: [{ sha: rs.out.trim().split(' ')[3], verdict: 'accepted', reason: '' }], findings: [] })]);
+  assert.match(ac.out, /^cairn: acceptance first [0-9a-f]{40}\n$/);
+  assert.equal((await reviewState(r.cwd, 'first')).ready, true);
+  const nofile = await cliAccept(r.cwd, ['first']);
+  assert.deepEqual([nofile.code, nofile.out], [1, 'cairn: --file <path> is required\n']);
+});

@@ -126,3 +126,17 @@ test('lint refuses a spec map that does not match domain prefixes', async (t) =>
   const noHeader = await specRepo(t, { 'ui.md': '[UI-001] x\nFalsifier: f\nStatus: Draft\n' });
   assert.match((await reasons(noHeader)).join(), /docs\/spec\/ui.md:1: no Prefix: header/);
 });
+
+import { requirementSet, SpecError } from '../lib/spec.mjs';
+
+test('requirementSet is the section plus every Agreed Scope: every commitment block, Agreed only', async (t) => {
+  const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\nScope: every commitment\n\n[UI-001] x\nFalsifier: f\nMechanism: cli\nStatus: Agreed 2026-09-19\n\n[UI-002] y\nFalsifier: f\nMechanism: cli\nStatus: Draft\n' });
+  const set = await requirementSet(repo.dir, 'first');
+  assert.deepEqual(set.map((r) => r.id), ['LOOP-001', 'UI-001']);
+  assert.match(set[0].textDigest, /^sha256:[0-9a-f]{64}$/);
+  await assert.rejects(requirementSet(repo.dir, 'none'), (e) => e instanceof SpecError && /no roadmap section none/.test(e.message));
+  const draft = await specRepo(t, { 'roadmap.md': 'Current: first\n\n## first\n\nRequirements: LOOP-002\n' });
+  await assert.rejects(requirementSet(draft.dir, 'first'), /LOOP-002 is Draft, not Agreed/);
+  const absent = await specRepo(t, { 'roadmap.md': 'Current: first\n\n## first\n\nRequirements: LOOP-009\n' });
+  await assert.rejects(requirementSet(absent.dir, 'first'), /LOOP-009 is not defined/);
+});

@@ -166,6 +166,11 @@ test('lint refuses a spec map that does not match domain prefixes', async (t) =>
 
 import { requirementSet, SpecError } from '../lib/spec.mjs';
 
+test('Q5: lint refuses cleanly when docs/spec is missing, without an absolute path', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await assert.rejects(lint(repo.dir), (e) => e instanceof SpecError && e.message === 'docs/spec is missing' && !e.message.includes(repo.dir));
+});
+
 test('requirementSet is the section plus every Agreed Scope: every commitment block, Agreed only', async (t) => {
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\nScope: every commitment\n\n[UI-001] x\nFalsifier: f\nMechanism: cli\nStatus: Agreed 2026-09-19\n\n[UI-002] y\nFalsifier: f\nMechanism: cli\nStatus: Draft\n' });
   const set = await requirementSet(repo.dir, 'first');

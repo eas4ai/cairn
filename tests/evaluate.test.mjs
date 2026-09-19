@@ -55,3 +55,62 @@ describe('policy constants and digests', () => {
     assert.equal(base, policyDigest(s6), 'enabled is a source choice, not policy');
   });
 });
+
+import { kernelFacts, floorReasons, authorityProjection } from '../lib/evaluate.mjs';
+import { makeProject } from './helpers/repo.mjs';
+
+// A hand-built kernelFacts() result, for floorReasons/authorityProjection unit tests that do not
+// need a real repository. kernelFacts() itself is exercised separately below, against a real
+// makeProject() fixture.
+const facts = (over = {}) => ({ slug: 'auth-tokens', set: [{ requirement: 'AUTH-003', text_digest: 'sha256:' + 'a'.repeat(64) }],
+  concerns: [{ id: 'AUTH-003', valid: true }], pathClasses: { 'src/auth/rotate.mjs': 'source' }, attempts: { 'AUTH-003': 1 },
+  openObligations: { escalations: 0, findings: 0, defects: 0, breaches: 0 }, decisions: [], lease: { action: 'implement', target: 'AUTH-003' },
+  D: normalizeDraft(draft()), ...over });
+
+describe('the narrow floor', () => {
+  test('a clean draft does not fire the floor and projects completely', () => {
+    assert.deepEqual(floorReasons(facts()), []);
+    const A = authorityProjection(facts());
+    assert.equal(A.option_index, 0);
+    assert.equal(A.option_count, 2);
+  });
+  test('each floor reason routes with no call', () => {
+    assert.deepEqual(floorReasons(facts({ pathClasses: { 'migrations/1.sql': 'data' } })), ['data']);
+    assert.deepEqual(floorReasons(facts({ pathClasses: { 'docs/spec/auth.md': 'protected' } })), ['contract']);
+    assert.deepEqual(floorReasons(facts({ pathClasses: { 'AGENTS.md': 'protected' } })), ['agreement']);
+    assert.deepEqual(floorReasons(facts({ pathClasses: { '.cairn/settings.json': 'protected' } })), ['settings']);
+    assert.deepEqual(floorReasons(facts({ pathClasses: { '.cairn/mechanisms': 'kernel-managed' } })), ['reserved']);
+    assert.deepEqual(floorReasons(facts({ attempts: { 'AUTH-003': 3 } })), ['fourth-attempt']);
+    assert.deepEqual(floorReasons(facts({ concerns: [{ id: 'breach:' + 'b'.repeat(40), valid: true }] })), ['scope-ruling']);
+    assert.deepEqual(floorReasons(facts({ D: { ...normalizeDraft(draft()), recommendation: '  ' } })), ['missing-recommendation']);
+    assert.deepEqual(floorReasons(facts({ concerns: [{ id: 'AUTH-999', valid: false }] })), ['incomplete-projection']);
+  });
+  test('a recommendation not present in options is also incomplete-projection', () => {
+    assert.deepEqual(floorReasons(facts({ D: { ...normalizeDraft(draft()), recommendation: 'weekly' } })), ['incomplete-projection']);
+  });
+  // Ruling 5 (plan 15's progress ledger) carries this subject forward by name from the superseded
+  // evaluator's test 'an agent-written cited decision reaches A(D) only as id and read flag'
+  // (tests/evaluate.test.mjs at b40fd65c, describe('protected(D) and A(D)')): unread decisions are
+  // a kernel fact the floor itself sees and exposes -- A(D) carries a cited decision's id and
+  // whether the developer has read it, never the agent's own prose, and an unread one must show up
+  // as read: false rather than being silently dropped or coerced to true.
+  test('an agent-written cited decision reaches A(D) only as id and read flag', () => {
+    const A = authorityProjection(facts({ decisions: [{ id: '01J', by: 'agent', read: false, body: 'long agent prose', title: 't' }] }));
+    assert.deepEqual(A.cited, [{ id: '01J', read: false }]);
+    assert.ok(!JSON.stringify(A).includes('long agent prose'));
+  });
+  // Deviation from the brief text: the brief's Step 1 snippet builds this fixture's draft with
+  // `concerns: []`. lib/escalate.mjs's validateDraft (this module's normalizeDraft) refuses an
+  // empty concerns list ("draft needs at least one concern"), so that literal fixture throws
+  // DraftError before kernelFacts is ever reached -- it never has, on any commit on this branch,
+  // per the same escalate.mjs read noted above. The superseded evaluator's own equivalent test hit
+  // this identical wall and used 'cycle' instead (git show b40fd65c:tests/evaluate.test.mjs): the
+  // one concern kind that names no record and needs no open commitment, standing in for "no
+  // meaningful concern" here too.
+  test('kernelFacts reads a real project', async () => {
+    const { cwd } = await makeProject();
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), commitment: 'none', concerns: ['cycle'], named_paths: [] }));
+    assert.equal(f.lease, null);
+    assert.deepEqual(f.openObligations, { escalations: 0, findings: 0, defects: 0, breaches: 0 });
+  });
+});

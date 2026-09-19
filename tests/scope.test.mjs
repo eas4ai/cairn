@@ -154,3 +154,49 @@ test('a change removed before Cairn observes it leaves no breach', async () => {
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
   assert.equal(openBreaches(await r.log()).length, 0);
 });
+
+import { begin, end } from '../lib/lease.mjs';
+
+test('a path touched under a lease is declared from begin and is not a breach', async () => {
+  const r = await loopRepo();
+  await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: ['src/new.mjs'] });
+  await r.write('src/new.mjs', 'export const n = 1;\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  await end(r.cwd);
+});
+
+test('a protected path changed during a commitment without an authorization is a breach', async () => {
+  const r = await loopRepo();
+  await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.equal(shas.length, 1);
+  assert.equal(openBreaches(await r.log())[0].path, 'AGENTS.md');
+});
+
+// Deviation from the plan text: the plan's own authorization payload uses spec/agreement/settings
+// keys and omits intent/results; the real 'authorization' schema (lib/records.mjs) requires
+// spec_digest/agreement_digest/settings_digest plus intent and results (nullable(ref) and
+// list(storeIdentity), both closed keys appendRecord's schema check refuses to see missing), and
+// its evidence field is the same closed 'unsigned-local' variant tests/init.test.mjs already
+// builds: {mode, purpose, subject, nonce, author: {name, email}, confirmed}, not a bare author
+// string.
+test('a protected change named by an authorization record is not a breach', async () => {
+  const r = await loopRepo();
+  await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
+  const d = await protectedDigests(r.cwd);
+  await r.add('authorization', 'developer', {
+    spec_digest: d.spec, agreement_digest: d.agreement, settings_digest: d.settings,
+    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 'test', nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true },
+    decision: null, intent: null, results: [],
+  });
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});
+
+test('cairn authorize itself and the gap between commitments exempt protected paths', async () => {
+  const r = await loopRepo();
+  await r.write('docs/spec/demo.md', (await readFile(join(r.cwd, 'docs/spec/demo.md'), 'utf8')) + '\n[DEMO-002] The demo exits zero.\nFalsifier: the exit code is not zero.\nMechanism: demo-002\nStatus: Draft\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'authorize' }), []);
+  await r.add('done', r.slug, { slug: r.slug, snapshot: await r.snap() });
+  await r.write('docs/spec/glossary.md', '# Glossary\n\n- demo: the sample program.\n- flag: a file that says pass or fail.\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});

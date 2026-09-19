@@ -84,3 +84,42 @@ test('the parser rejects subjects that are not kind and token', async (t) => {
   await assert.rejects(decodeRaw(repo, 'cairn: done docs/spec/a.md', body), /target/);
   await assert.rejects(decodeRaw(repo, 'Release 2.0', body), /subject/);
 });
+
+import { updateRefCAS, CasError } from '../lib/gitx.mjs';
+import { appendRecord, readLog, range, LOG_REF } from '../lib/records.mjs';
+
+test('appendRecord chains empty commits on refs/cairn/log and readLog returns them oldest first', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const s1 = await appendRecord(repo.dir, 'start', 'hooks', START);
+  const s2 = await appendRecord(repo.dir, 'done', 'hooks', { slug: 'hooks', snapshot: WS });
+  const log = await readLog(repo.dir);
+  assert.deepEqual(log.map((r) => [r.sha, r.kind, r.parent]), [[s1, 'start', null], [s2, 'done', s1]]);
+  assert.equal((await catCommit(repo.dir, s2)).tree, await emptyTree(repo.dir));
+  assert.equal(await repo.git('rev-parse', 'refs/cairn/log'), s2);
+});
+test('the log ref refuses a stale old OID', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const s1 = await appendRecord(repo.dir, 'start', 'hooks', START);
+  const s2 = await appendRecord(repo.dir, 'done', 'hooks', { slug: 'hooks', snapshot: WS });
+  await assert.rejects(updateRefCAS(repo.dir, LOG_REF, s1, s1), CasError);
+  assert.equal(await repo.git('rev-parse', LOG_REF), s2);
+});
+test('readLog refuses a commit on the log that is not a record', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const plain = await repo.commit('not a record');
+  await updateRefCAS(repo.dir, LOG_REF, plain, null);
+  await assert.rejects(readLog(repo.dir), RecordError);
+});
+test('range is the log after the last start and knows whether it is closed', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  assert.deepEqual(range([]), { start: null, records: [], closed: false });
+  await appendRecord(repo.dir, 'start', 'a', { ...START, slug: 'a' });
+  await appendRecord(repo.dir, 'done', 'a', { slug: 'a', snapshot: WS });
+  const s2 = await appendRecord(repo.dir, 'start', 'b', { ...START, slug: 'b' });
+  const item = await appendRecord(repo.dir, 'item', 'b', { kind: 'backlog', slug: 'b', source: 'LOOP-001', body: 'idea' });
+  let r = range(await readLog(repo.dir));
+  assert.deepEqual([r.start.sha, r.records.map((x) => x.sha), r.closed], [s2, [item], false]);
+  await appendRecord(repo.dir, 'done', 'b', { slug: 'b', snapshot: WS });
+  r = range(await readLog(repo.dir));
+  assert.equal(r.closed, true);
+});

@@ -156,3 +156,94 @@ describe('protected(D) and A(D)', () => {
     assert.deepEqual(f.openObligations, { escalations: 0, findings: 0, defects: 0, breaches: 0 });
   });
 });
+
+import { contractState, ownerState, optionState, EgressError } from '../lib/evaluate.mjs';
+import { writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import { loopRepo } from './helpers/loop.mjs';
+import { loadSettings } from '../lib/settings.mjs';
+
+// A hand-built facts object for a repository-backed draft, used by the states/egress tests below
+// that do not need kernelFacts' own log/ADR/lease reads. `set: []` matches kernelFacts' own shape
+// (added for contractState's benefit); `settings` matters for optionState's egress classification.
+function factsFor(D, settings, over = {}) {
+  return {
+    slug: 'first', set: [], concerns: D.concerns.map((id) => ({ id, valid: true })),
+    pathClasses: Object.fromEntries(D.named_paths.map((p) => [p, 'source'])),
+    attempts: {}, openObligations: { escalations: 0, findings: 0, defects: 0, breaches: 0 },
+    decisions: [], lease: null, D, settings, ...over,
+  };
+}
+
+describe('states and egress', () => {
+  test('owner state carries the five fields, options, contract, facts and nothing else', async () => {
+    const { cwd } = await makeProject();
+    // because is deliberately reworded here so the assertion below (no named_paths leakage) is not
+    // confused by the path also legitimately appearing inside the five fields' own prose text.
+    const D = normalizeDraft(draft({ because: 'observed: the mechanism already runs and passes' }));
+    const C = { rule: POLICY.RULE, keystone: 'k', commitment: 'c', glossary: 'g', requirements: [], decisions: [] };
+    const { settings } = await loadSettings(cwd);
+    const A = authorityProjection(factsFor(D, settings));
+    const s = ownerState(D, C, A);
+    assert.deepEqual(Object.keys(s).sort(), ['because', 'contract', 'facts', 'if_wrong', 'instead', 'options', 'question', 'recommendation']);
+    assert.ok(!('named_paths' in s) && !('because_paths' in s));
+    assert.ok(!JSON.stringify(s).includes('src/demo.mjs'));
+  });
+  test('contract state holds only developer-written cited decisions', async () => {
+    const { cwd } = await makeProject();
+    const D = normalizeDraft(draft());
+    const f = { ...factsFor(D, (await loadSettings(cwd)).settings),
+      decisions: [{ id: 'A', by: 'agent', read: true, body: 'agent body' }, { id: 'B', by: 'developer', read: true, body: 'dev body', title: 't' }] };
+    const C = await contractState(cwd, f);
+    assert.deepEqual(C.decisions.map((d) => d.id), ['B']);
+    assert.ok(!JSON.stringify(C).includes('agent body'));
+    assert.equal(C.rule, POLICY.RULE);
+  });
+  test('option state reads touched files from the tree in path order and lists omissions', async () => {
+    const { cwd } = await makeProject();
+    mkdirSync(join(cwd, 'src'), { recursive: true });
+    writeFileSync(join(cwd, 'src/b.mjs'), 'export const b = 1;\n'); writeFileSync(join(cwd, 'src/a.mjs'), 'export const a = 1;\n');
+    const D = normalizeDraft({ ...draft(), named_paths: ['src/b.mjs', 'src/a.mjs'] });
+    const { settings } = await loadSettings(cwd);
+    const { state, excluded } = await optionState(cwd, D, { rule: POLICY.RULE }, factsFor(D, settings));
+    assert.deepEqual(state.code.files.map((f) => f.path), ['src/a.mjs', 'src/b.mjs']);
+    assert.deepEqual(Object.keys(state).sort(), ['code', 'context', 'contract', 'draft', 'facts', 'open_obligations', 'rule']);
+    assert.deepEqual(excluded, []); assert.deepEqual(state.code.omitted, []);
+  });
+  test('excluded classes never enter the state', async () => {
+    const { cwd } = await makeProject({ settings: { network_exclude: ['fixtures/private/**'] } });
+    for (const [p, klass] of [['fixtures/private/x.json', 'network_exclude'], ['.env', 'credential'], ['keys/id.pem', 'credential'], ['.cairn/output/abc', 'output']]) {
+      mkdirSync(join(cwd, p, '..'), { recursive: true }); writeFileSync(join(cwd, p), 'SECRET');
+      const D = normalizeDraft({ ...draft(), named_paths: [p] });
+      const { settings } = await loadSettings(cwd);
+      await assert.rejects(optionState(cwd, D, { rule: POLICY.RULE }, factsFor(D, settings)),
+        (e) => e instanceof EgressError && e.klass === klass && !e.message.includes('SECRET'), p);
+    }
+  });
+  test('a file carrying the API key value is class key', async () => {
+    process.env.TYPESAFEAI_API_KEY = 'tsk-live-42';
+    const { cwd } = await makeProject();
+    writeFileSync(join(cwd, 'notes.txt'), 'token tsk-live-42 here');
+    const D = normalizeDraft({ ...draft(), named_paths: ['notes.txt'] });
+    const { settings } = await loadSettings(cwd);
+    await assert.rejects(optionState(cwd, D, { rule: POLICY.RULE }, factsFor(D, settings)), (e) => e.klass === 'key');
+    delete process.env.TYPESAFEAI_API_KEY;
+  });
+  test('a symlink is link text, never its target', async () => {
+    const { cwd } = await makeProject();
+    writeFileSync(join(cwd, 'real.txt'), 'REAL');
+    symlinkSync('/etc/hostname', join(cwd, 'link'));
+    const D = normalizeDraft({ ...draft(), named_paths: ['link'] });
+    const { settings } = await loadSettings(cwd);
+    const { state } = await optionState(cwd, D, { rule: POLICY.RULE }, factsFor(D, settings));
+    assert.equal(state.code.files[0].mode, '120000'); assert.equal(state.code.files[0].text, '/etc/hostname');
+  });
+  test('option state against a real repository names the relevant mechanism and lease diff', async () => {
+    const r = await loopRepo();
+    const D = normalizeDraft({ ...draft({ named_paths: ['src/demo.mjs'] }) });
+    const f = await kernelFacts(r.cwd, D);
+    const { state } = await optionState(r.cwd, D, await contractState(r.cwd, f), f);
+    assert.ok('demo-001' in state.context.mechanisms, 'the mechanism declaring DEMO-001 is included');
+    assert.equal(state.code.diff, '', 'no lease: no diff');
+  });
+});

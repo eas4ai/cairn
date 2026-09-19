@@ -55,7 +55,7 @@ test('protectedDigests carries agreement null when AGENTS.md is absent', async (
 });
 
 import { generateKeyPairSync, sign as cryptoSign } from 'node:crypto';
-import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence } from '../lib/auth.mjs';
+import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence, AuthError } from '../lib/auth.mjs';
 
 function keyPair() {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -88,4 +88,37 @@ test('signed mode: a bad signature is refused, not recorded', async () => {
 test('signingPayload is the canonical JSON of purpose, subject and nonce', () => {
   const bytes = signingPayload({ purpose: 'read', subject: 'D1', nonce: 'x' });
   assert.equal(Buffer.from(bytes).toString(), '{"nonce":"x","purpose":"read","subject":"D1"}');
+});
+
+test('unsigned-local: terminal confirmation records the Git author as evidence', async () => {
+  const { cwd } = await repoWith({});
+  const prompts = [];
+  const confirm = async (prompt) => { prompts.push(prompt); return true; };
+  const ev = await authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm, nonce: 'n' });
+  assert.deepEqual(ev, { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
+    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true });
+  assert.match(prompts[0], /read D1/);
+  assert.equal(verifyEvidence({ signing_key: null }, ev), true);
+  assert.match(describeEvidence(ev), /evidence, not authentication/);
+});
+
+test('unsigned-local: a declined confirmation is refused', async () => {
+  const { cwd } = await repoWith({});
+  await assert.rejects(
+    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm: async () => false }),
+    /^AuthError: cairn: the developer did not confirm read D1/);
+});
+
+test('unsigned-local: no controlling terminal is refused', async () => {
+  const { cwd } = await repoWith({});
+  const noTty = async () => { throw new AuthError('cairn: no controlling terminal; unsigned-local confirmation needs a TTY'); };
+  await assert.rejects(
+    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm: noTty }),
+    /no controlling terminal/);
+});
+
+test('verifyEvidence refuses unsigned-local evidence when a signing key is set', () => {
+  const ev = { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
+    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
+  assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
 });

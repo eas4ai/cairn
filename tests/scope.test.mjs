@@ -319,3 +319,27 @@ test('the state-changing set names every writing command and no reader', () => {
   for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
   for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
 });
+
+import { spawnSync } from 'node:child_process';
+const cairn = (cwd, ...args) => spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, ...args], { cwd, encoding: 'utf8' });
+
+test('cairn scope <breach> restore writes the disposition and refuses a wrong one on stderr', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  const bad = cairn(r.cwd, 'scope', b, 'keep');
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /^cairn: keep needs an escalation answered ok/);
+  await r.remove('src/stray.mjs');
+  const ok = cairn(r.cwd, 'scope', b, 'restore');
+  assert.equal(ok.status, 0);
+  assert.equal(openBreaches(await r.log()).length, 0);
+});
+
+test('a state-changing command records the breach before its own work', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const out = cairn(r.cwd, 'begin', 'implement', 'DEMO-001');
+  assert.equal(out.status, 0);
+  assert.deepEqual(openBreaches(await r.log()).map((x) => x.path), ['src/stray.mjs']);
+});

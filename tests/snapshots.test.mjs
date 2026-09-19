@@ -142,3 +142,12 @@ test('writeInputSnapshot refuses an input that begins with a colon before it rea
   await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: [':(exclude)a.txt'] }), PathError);
   await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: ['a.txt', ':!b.txt'] }), PathError);
 });
+// Q9: an input is passed to git as a literal path (:(literal)<path>), never a wildcard pathspec,
+// so a file literally named 'a*b' cannot be widened by git into matching every file that happens
+// to start with 'a' and end with 'b'.
+test('writeInputSnapshot treats an input as a literal path, not a glob pattern', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a*b', 'literal'); await repo.write('axyzb', 'glob-lookalike'); await repo.commit('base');
+  const sha = await writeInput(repo.dir, { mechanism: 'm', inputs: ['a*b'] });
+  assert.deepEqual(await paths(repo, sha, 'input'), ['a*b']);
+});

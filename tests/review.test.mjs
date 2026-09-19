@@ -197,3 +197,41 @@ test('report refuses a missing question or interface attempt, and the session th
   const anon = await report(r.cwd, 'first', adversary(r, { session: null }));
   assert.equal(decodeRecord(await catCommit(r.cwd, anon)).payload.session, null);
 });
+
+// tests/review.test.mjs (append)
+import { resolve, ledger } from '../lib/review.mjs';
+import { dispute, answer } from '../lib/escalate.mjs';
+
+export async function reported(over = {}) {
+  const r = await briefed();
+  r.rep = await report(r.cwd, 'first', adversary(r, over));
+  return r;
+}
+export async function fixed(r, n, text, opts) {
+  await r.write('src/demo.mjs', `export const demo = ${JSON.stringify(text)};\n`);
+  return resolve(r.cwd, 'first', n, text, opts);
+}
+
+test('resolve names finding N on its exact source record and the snapshot after the fix', async () => {
+  const r = await reported();
+  await assert.rejects(resolve(r.cwd, 'first', 2, 'x'), /no unresolved finding 2/);
+  await assert.rejects(resolve(r.cwd, 'first', 1, ''), /explanation needs text/);
+  const sha = await fixed(r, 1, 'trim before the guard');
+  const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+  assert.deepEqual([p.source, p.finding, p.explanation], [r.rep, 1, 'trim before the guard']);
+  assert.notEqual(p.snapshot, r.revPayload.snapshot);
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.source, f.n, f.status]), [[r.rep, 1, 'submitted']]);
+  await assert.rejects(fixed(r, 1, 'again'), /finding 1 on .* awaits acceptance/);
+});
+
+test('the same number on two records is ambiguous until --source names one; a settled dispute closes a finding', async () => {
+  const r = await briefed({ findings: [{ n: 1, text: 'builder finding' }] });
+  r.rep = await report(r.cwd, 'first', adversary(r));
+  await assert.rejects(resolve(r.cwd, 'first', 1, 'x'), new RegExp(`finding 1 is on ${r.rev} and ${r.rep}; pass --source`));
+  const sha = await resolve(r.cwd, 'first', 1, 'x', { source: r.rev });
+  assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.source, r.rev);
+  await dispute(r.cwd, { commitment: 'first', record: r.rep, n: 1, question: 'Defect?', recommendation: 'No.', because: 'whitespace is valid here', if_wrong: 'bad input passes', instead: 'trim' });
+  await assert.rejects(resolve(r.cwd, 'first', 1, 'y', { source: r.rep }), /is under escalation/);
+  await answer(r.cwd, 'first', 'ok', '', { confirm: async () => true });
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.source, f.status]), [[r.rev, 'submitted'], [r.rep, 'disputed']]);
+});

@@ -204,6 +204,33 @@ test('an unfixed defect against a set requirement is named before dirty inputs',
   assert.notEqual((await wake(r.cwd)).action, 'fix');
 });
 
+// Fix round 1, item 4: protectedChanged used to treat every docs/spec/** path as protected, with
+// no exception for the roadmap (docs/spec/roadmap.md), so a fix snapshot that happened to also
+// touch the roadmap was refused forever -- there was no way to ever satisfy 'fix' again. It now
+// classifies with lib/paths.mjs's real classify(), which carries PROTECTED_EXCEPT the same way
+// scope.mjs's own preflight() does.
+test('a fix snapshot may edit the roadmap (excepted from protected) but a genuinely protected path still refuses it', async () => {
+  const r = await loopRepo();
+  const item = await r.item('defect', 'DEMO-001', 'wrong-greeting');
+  await r.write('src/demo.mjs', 'console.log("hey");\n');
+  const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap + '\n');
+  await r.commit('fix greeting and touch the roadmap');
+  await r.add('fix', 'wrong-greeting', { item, snapshot: await r.snap() });
+  await r.passReq('DEMO-001');
+  assert.notEqual((await wake(r.cwd)).action, 'fix');   // the roadmap edit alone does not block fix
+
+  const item2 = await r.item('defect', 'DEMO-001', 'wrong-greeting-2');
+  await r.write('src/demo.mjs', 'console.log("hey");\n');
+  await r.write('AGENTS.md', '# Working agreement\nedited\n');
+  await r.commit('fix greeting and touch AGENTS.md');
+  await r.add('fix', 'wrong-greeting-2', { item: item2, snapshot: await r.snap() });
+  await r.passReq('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.equal(v.action, 'fix');
+  assert.match(v.reason, /protected/);
+});
+
 // Deviation from the plan text: lib/lease.mjs's real ACTIONS set (plan 04) is
 // {implement, build, run, review, declare, repair, promote, resolve, fix, scope}; it has no
 // 'build-decision' member, so begin() with that action throws LeaseError. Any action whose

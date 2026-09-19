@@ -6,8 +6,12 @@
 > Read this file and `docs/spec/cairn-v2.md` before any plan.
 
 **Goal:** build the Cairn 2 kernel, hooks, skills and optional evaluator
-from the revision 5 specification, on the `v2` branch, as fourteen plans
-that each end in tested, working software.
+from the revision 5 specification, on the `v2` branch, as eighteen plans
+that each end in tested, working software. Plans 01-14 build the v2
+kernel and cut it over from 1.x; plans 15-18 are the next iteration on
+that same branch, replacing plan 11's superseded evaluator design with
+the composite measurement in spec section 10 (revised 2026-09-19,
+decisions 53-56), before cutover is actually run.
 
 **Spec:** `docs/spec/cairn-v2.md` (revision 5, commit `b4cc2526`). The
 six digraphs in `docs/diagrams/` are part of it; where they disagree,
@@ -89,7 +93,8 @@ lib/cycle.mjs            local admin-action counter, liveness bound
 lib/wake.mjs             predicates, precedence, Done rule, verdict
 lib/escalate.mjs         escalate, answer, reply, dispute
 lib/review.mjs           review, brief, projection, report, resolve, accept
-lib/evaluate.mjs         envelope, state construction, intent/call/result, calibrate
+lib/evaluate.mjs         the narrow floor, measurement state M(D), the Score request/answer,
+                         veto, composite, measure(), currentMeasurement(), calibrate (plans 15-16)
 lib/travel.mjs           refspecs, ordered push, fetch validation
 hooks/session-start.sh   prints state; writes nothing
 hooks/turn.sh            per-turn wake (harnesses that have it)
@@ -218,8 +223,11 @@ escalate(cwd, draft) -> sha; answer(cwd, slug, kind, text) -> sha; reply(cwd, sl
 review(cwd, slug, answers) -> sha; brief(cwd, slug) -> {sha, projectionDir}
 report(cwd, slug, body) -> sha; resolve(cwd, slug, n, explanation) -> sha; accept(cwd, slug, body) -> sha
 
-// lib/evaluate.mjs
-evaluate(cwd, draft, {transport}) -> {route, evaluationSha}   // cairn escalate and cairn decide accept --transport-module <path> (test-only) to inject transport
+// lib/evaluate.mjs (plans 15-16; replaces plan 11's evaluate()/route shape, see the note above the
+// record-kinds table)
+measure(cwd, draft, {transport, session, harness, env}) -> {outcome, veto, composite, suggested, measurementSha, intentSha} | {pending: 'review', intentSha, state, request, n, launch}
+  // cairn measure is the only place a transport is invoked; --transport-module <path> (test-only) injects it
+currentMeasurement(cwd, D) -> measurementRecord   // throws MeasurementError: missing, stale, or a different draft digest
 calibrate(cwd) -> {pass, sample, errors, bound}
 // bin/typesafeai.mjs
 post(request, {key, fetchImpl}) -> {status, body}
@@ -254,6 +262,23 @@ reverse.
 | 12 Travel | [12-travel.md](12-travel.md) | 4 (travel with the code) | 01, 03 |
 | 13 Hooks, skills and distribution | [13-hooks-skills-distribution.md](13-hooks-skills-distribution.md) | 3 (install and the four flows), 6, 11 | 08 |
 | 14 End-to-end fixture and cutover | [14-fixture-cutover.md](14-fixture-cutover.md) | 3 (work loop), 5 (Done), 12, 14 | all |
+| 15 Measurement core | [15-measurement-core.md](15-measurement-core.md) | 2 (typesafeai and developer settings; evaluation intent, call and measurement; calibration), 4 (the record table's measurement row), 10 (all) | 01, 02, 05, 06, 09 |
+| 16 Measure step and review source | [16-measure-and-review-source.md](16-measure-and-review-source.md) | 5 (the Consequential-decision paragraph; Waiting and liveness; the exit-code table), 8 (Escalation), 9 (session refusal), 10 (Two sources) | 06, 08, 09, 10, 15 |
+| 17 Agent text and docs | [17-agent-text-and-docs.md](17-agent-text-and-docs.md) | 10 (accurate agent-facing description), 13 decisions 53-56 (quoted into the docs) | 13, 15, 16 |
+| 18 Benchmark | [18-benchmark.md](18-benchmark.md) | 10 (all; this plan measures plans 15-16's implementation) | 03, 04, 05, 06, 15, 16 |
+
+Plan 11 (`11-evaluator.md`) built the option-gate, owner-call, shadow-mode
+evaluator spec section 10 named before its 2026-09-19 revision (decisions
+18, 26, 27, 51). `.superpowers/bench/results.md` ran that design live and
+found 0 of 12 agent-expected drafts ever reached the agent; decisions
+53-56 supersede it with the composite measurement plans 15-16 build.
+Plan 11's transport work (`bin/typesafeai.mjs`'s retry, timeout and
+redaction) survives unchanged and is reused, not rebuilt; its
+option-gate envelope, shadow mode and route-mode calibration gate do
+not, and plan 15 rewrites `lib/evaluate.mjs` from that state rather than
+extending it. Plan 11's own file is left as committed history, not
+edited or deleted: it is superseded, the same way a decision record is
+superseded rather than rewritten.
 
 ## What every plan must contain
 
@@ -286,7 +311,7 @@ The section 4 table, assigned. A kind is written by exactly one plan.
 | scope-breach, scope | 07 |
 | escalation, answer, reply | 09 |
 | review, brief, report, resolution, acceptance | 10 |
-| evaluation-intent, evaluation-call, evaluation, calibration | 11 |
+| evaluation-intent, evaluation-call, measurement, calibration | 15 (superseding plan 11's `evaluation` kind, renamed and reshaped for the composite design) |
 
 Plan 01 defines the schema table for all of them so that plan 08 can
 read any record before its writer exists; a writer plan adds tests that

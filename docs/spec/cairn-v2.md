@@ -787,9 +787,13 @@ captured from is one the deferral rule then demands an outside record
 for; count those per commitment. No new field.
 
 **Validation.** The kernel refuses `enabled: true` with no `model`, a
-`schema` it does not read, a path in both `outside` and `source`, and
-any key-shaped field. Weights that do not sum to 1 are normalized and
-the record says so. `attribution` is `forbidden` or `allowed`.
+`schema` it does not read, a path in both `outside` and `source`, any
+key-shaped field, and a `state_cap_bytes` above 96,000: that is 32k
+tokens at three bytes per token, the dense end of the range, so a
+larger cap can overflow the state budget on a code-heavy state whatever
+the tiered cut does. The refusal names the ceiling and the reason.
+Weights that do not sum to 1 are normalized and the record says so.
+`attribution` is `forbidden` or `allowed`.
 
 **The kill switch.** A downgrade is safe only because the queue is read.
 When a done record is written with unread Consequential decisions, the
@@ -810,7 +814,8 @@ the last Done; a settings file carrying a key; a record whose model
 trailer is the alias rather than the resolved version; a capture
 refusal where the recommended option's `outside` is under
 `outside_threshold`; a decision or escalation written where it is at
-or above it.
+or above it; a settings file with `state_cap_bytes` above 96,000
+accepted.
 
 **Settings shape.**
 

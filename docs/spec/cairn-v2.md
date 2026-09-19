@@ -389,9 +389,10 @@ Routine and Judged guidance, but they leave no record.
 **Verdict.** What wake prints. `Resolvable` names an action and its predicate.
 `Waiting` prints an unanswered escalation's five fields. `Done` means a done
 record exists and no promotion waits. Wake is read-only. Outside a project, on
-missing durable refs, during a pending supersession, or with an interrupted
-transaction, it prints one line naming the command or skill that continues and
-exits 3; none is a verdict.
+missing durable refs, during a pending supersession, with an interrupted
+transaction, or with no commitment started (`cairn: no commitment started; run
+/new-project or /existing-project`), it prints one line naming the command or
+skill that continues and exits 3; none is a verdict.
 
 **Predicate.** The exact record state that completes an action. It is printed
 with the action.

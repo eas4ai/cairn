@@ -208,8 +208,8 @@ The settings shape is shown once here:
     },
     "agent_ceiling": 0.35,
     "confidence_floors": {
-      "evidence": 0.5, "reach": 0.5, "contract": 0.5,
-      "surface": 0.5, "ambiguity": 0.5
+      "evidence": 0.0, "reach": 0.0, "contract": 0.0,
+      "surface": 0.0, "ambiguity": 0.0
     },
     "min_calibration_agent_predictions": 60,
     "request_cap_bytes": 48000

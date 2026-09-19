@@ -64,6 +64,9 @@ test('parseRoadmap reads only Current: and Requirements: under the matching head
   assert.deepEqual(r.sections.records, { requirements: ['LOOP-001', 'LOOP-002'], line: 5 });
   assert.deepEqual(r.sections.hooks.requirements, ['LOOP-003', 'LOOP-001']);
   assert.deepEqual(r.sections.notes.requirements, []);
+  // S2: the parser still keeps reading only the first Requirements: line, but the second one
+  // (line 14, 'Requirements: LOOP-999') is now recorded as a grammar problem for lint to refuse.
+  assert.deepEqual(r.problems, [{ line: 14, reason: 'second Requirements: line in section hooks' }]);
   assert.equal(parseRoadmap('no current line').current, null);
 });
 
@@ -101,6 +104,10 @@ test('lint refuses references to absent identifiers', async (t) => {
   const r = (await reasons(repo)).join();
   assert.match(r, /docs\/spec\/roadmap.md:7: reference to absent identifier LOOP-007/);
   assert.match(r, /docs\/spec\/glossary.md:1: reference to absent identifier UI-009/);
+});
+test('S2: lint refuses a second Requirements: line in one roadmap section', async (t) => {
+  const repo = await specRepo(t, { 'roadmap.md': '# Roadmap\n\nCurrent: first\n\n## first\n\nRequirements: LOOP-001\nRequirements: LOOP-001\n' });
+  assert.match((await reasons(repo)).join(), /docs\/spec\/roadmap.md:8: second Requirements: line in section first/);
 });
 test('lint refuses a missing falsifier', async (t) => {
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nMechanism: m\nStatus: Draft\n' });

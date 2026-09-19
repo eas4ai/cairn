@@ -44,7 +44,7 @@ function retryAfterHeader(res, name) {
 // doubling per attempt and capped at BACKOFF_MAX_MS, with 25% jitter applied as
 // round(exponential * (1 - random() * JITTER)). `attempt` is the number of retries
 // already made (0 for the delay before the first retry).
-function retryDelayMs(res, attempt, randomImpl) {
+export function retryDelayMs(res, attempt, randomImpl) {
   const msHeader = retryAfterHeader(res, 'retry-after-ms');
   if (msHeader != null) {
     const ms = Number.parseFloat(msHeader);
@@ -79,17 +79,24 @@ export async function post(request, opts = {}) {
     const controller = new AbortController();
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
-    let res;
+    // The timeout covers the whole exchange, not just the connection: res stays
+    // undefined until fetchImpl itself resolves, so a rejection with res still
+    // undefined is the connection failing, and a rejection after that is the body
+    // read failing -- both are 'timeout' when the abort fired, and an unclassified
+    // body-read failure otherwise propagates unchanged, as it always has.
+    let res, text;
     try {
       res = await fetchImpl(ENDPOINT, { method: 'POST', headers, body, signal: controller.signal });
-    } catch {
-      throw new TransportError(timedOut ? 'timeout' : 'network');
+      text = await res.text();
+    } catch (e) {
+      if (timedOut) throw new TransportError('timeout');
+      if (res === undefined) throw new TransportError('network');
+      throw e;
     } finally {
       clearTimeout(timer);
     }
 
     if (res.status !== 200) {
-      const text = await res.text();
       if (isRetryableStatus(res.status) && attempt < MAX_RETRIES) {
         const delay = retryDelayMs(res, attempt, randomImpl);
         attempt += 1;
@@ -99,7 +106,6 @@ export async function post(request, opts = {}) {
       throw new TransportError(classify(res.status, text), res.status, text);
     }
 
-    const text = await res.text();
     let parsed;
     try { parsed = JSON.parse(text); } catch { throw new TransportError('malformed', 200, text); }
     if (!parsed || typeof parsed !== 'object' || typeof parsed.model !== 'string') throw new TransportError('malformed', 200, text);

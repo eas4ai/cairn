@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { post, ENDPOINT, TransportError } from '../bin/typesafeai.mjs';
+import { post, ENDPOINT, TransportError, retryDelayMs } from '../bin/typesafeai.mjs';
 
 const req = { state: 's', model: 'jev-1.13.0', questions: { q: { type: 'noul', instructions: 'x?' } } };
 
@@ -190,4 +190,28 @@ test('a fetch rejection with no timeout in flight is still classified network', 
   await assert.rejects(
     post(req, { key: 'k', fetchImpl: async () => { throw new Error('ECONNRESET'); }, timeoutMs: 1000 }),
     (e) => e instanceof TransportError && e.klass === 'network');
+});
+
+test('a body read slower than the timeout is classified timeout, not left hanging', async () => {
+  // Headers arrive immediately (fetchImpl resolves), but text() only settles once the
+  // signal is aborted -- proving the timeout covers the whole exchange, not just the
+  // connection.
+  const fetchImpl = async (url, init) => ({
+    status: 200,
+    headers: headers({}),
+    text: () => new Promise((resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(new DOMException('The operation was aborted.', 'AbortError')));
+    }),
+  });
+  await assert.rejects(
+    post(req, { key: 'k', fetchImpl, timeoutMs: 5 }),
+    (e) => e instanceof TransportError && e.klass === 'timeout');
+});
+
+test('retryDelayMs caps exponential backoff at 5000ms', () => {
+  const res = { headers: headers({}) }; // no retry-after headers, so backoff applies
+  // 500 * 2**4 = 8000, capped to BACKOFF_MAX_MS
+  assert.equal(retryDelayMs(res, 4, noJitter), 5000);
+  // 500 * 2**1 = 1000, under the cap
+  assert.equal(retryDelayMs(res, 1, noJitter), 1000);
 });

@@ -95,22 +95,18 @@ import { readAdr } from '../lib/adr.mjs';
 import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
 
 // Deviation from the plan text: validateSettings (lib/settings.mjs, already committed) requires
-// every typesafeai.* threshold key to be present (a closed-object schema); the plan's partial
-// stub `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
+// every typesafeai.* field to be present (a closed-object schema); the plan's partial stub
+// `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
 // when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
 // already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
-// Fix round 1 finding 11: kept at mode: 'shadow' rather than switched to 'route' -- 'route' mode
-// needs a current passing calibration (lib/settings.mjs's validateSettings: "route mode needs a
-// current passing calibration"), which no fixture in this plan's footprint provides (confirmed:
-// loopRepo({ settings: { ...this object, mode: 'route' } }) throws SettingsError). The mode gate
-// itself is plan 11's: lib/escalate.mjs's escalateWithRoute dispatches on whatever route the
-// `evaluate` function it is given returns, and does not read typesafeai.mode at all -- these
-// tests inject a stub `evaluate` directly, so the route below is the stub's own choice, not a
-// live shadow-mode downgrade. Spec section 8: "In shadow mode the developer still decides"; that
-// rule belongs to the real evaluator plan 11 builds, not to this stub.
-const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0',
-  route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
-  reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
+// Plan 15: mode and the seven route thresholds are gone (decision 55 -- there is no route mode
+// left to gate); weights/agent_ceiling/confidence_floors replace them. lib/escalate.mjs's
+// escalateWithRoute dispatches on whatever route the `evaluate` function it is given returns, and
+// never read typesafeai.mode at all -- these tests inject a stub `evaluate` directly, so the route
+// below is the stub's own choice, not a live evaluator decision.
+const enabled = { typesafeai: { enabled: true, model: 'jev-1.13.0',
+  weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
+  confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
   min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
 const EV = 'e'.repeat(40);
 

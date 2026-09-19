@@ -57,9 +57,9 @@ export const SPEC_PREDICATE = {
 
 export const SETTINGS = {
   schema: 1, authority_remote: "origin", outside: ["README.md", "notes/**"], source: ["src/**"], interfaces: [], data: [],
-  network_exclude: ["private/**"], signing_key: null, attribution: "forbidden",
+  network_exclude: ["private/**"], signing_key: null, attribution: "forbidden", developer: "present",
   harness: { claude_code: { adversary_model: "claude-fable-5-1", adversary_transport: "remote" } },
-  typesafeai: { enabled: false, mode: "shadow", model: "jev-1.13.0", route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3, reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 },
+  typesafeai: { enabled: false, model: "jev-1.13.0", weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35, confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 },
 };
 
 export const SPEC = {

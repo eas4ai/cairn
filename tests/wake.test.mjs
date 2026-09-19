@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -15,9 +15,6 @@ import { ulid } from '../lib/canon.mjs';
 import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule, predicates } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
-import { evaluate, calibrate, EVALUATOR_DEFAULTS } from '../lib/evaluate.mjs';
-import { escalate, answer } from '../lib/escalate.mjs';
-import { loadSettings } from '../lib/settings.mjs';
 
 test('outside a project wake exits 3 naming the skills', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
@@ -606,60 +603,4 @@ test('a declared input directory containing a __proto__ path component is curren
   await r.passReq('DEMO-001');
   const v = await wake(r.cwd);
   assert.notEqual(v.action, 'run');
-});
-
-// Fix round 3 (plan 11 review): before this round, readState's own `st.settings = (await
-// attempt('.cairn/settings.json', () => loadSettings(cwd)))?.settings ?? null;` call (above,
-// unedited by this round) threw for a route-mode project even with a genuinely passing calibration
-// at the exact current policy digest, because the plain loadSettings(cwd) it called did not know
-// route mode's calibration requirement could ever be satisfied. `attempt` turned that throw into a
-// degraded read: st.settings === null and an 'unreadable' entry for '.cairn/settings.json', which
-// made wake's own first predicate ('repair', defined above as `st.unreadable.length ? ... : null`)
-// win over every other verdict -- the kernel reported "repair .cairn/settings.json" for a project
-// that was actually fine. lib/settings.mjs's own loadSettings is now calibration-aware by itself
-// (fix round 3), so readState needed no edit at all: this test proves that claim directly, against
-// the unmodified readState/wake above, using the same stub-transport calibration fixture the
-// evaluate()/escalateWithRoute CLI route-mode tests (tests/evaluate.test.mjs) already build.
-test('wake in a route-mode project with a passing calibration reads state correctly, no degraded settings read', async () => {
-  const optionBody = (n = 2) => JSON.stringify({ model: 'jev-1.13.0', answers: Object.fromEntries([
-    ['sufficient', { type: 'noul', noul: 0.9 }], ['observed', { type: 'noul', noul: 0.9 }],
-    ...[...Array(n)].flatMap((_, i) => [[`reversible_${i + 1}`, { type: 'noul', noul: 0.9 }], [`contradicts_${i + 1}`, { type: 'noul', noul: 0.1 }], [`outside_${i + 1}`, { type: 'noul', noul: 0.1 }]])]),
-    usage: { input_tokens: 10, output_tokens: 2 } });
-  const ownerBody = (agent = 0.95) => JSON.stringify({ model: 'jev-1.13.0', answers: { owner: { type: 'choice', choice: agent >= 0.5 ? 'agent' : 'developer',
-    probabilities: { agent, developer: +(1 - agent).toFixed(6) }, confidence: 0.9 } }, usage: { input_tokens: 10, output_tokens: 2 } });
-  const transport = (bodies) => async () => { const b = bodies.shift(); return { status: 200, body: b, model: 'jev-1.13.0' }; };
-  const draft = (over = {}) => ({
-    commitment: 'first', concerns: ['DEMO-001'],
-    question: 'Should the demo mechanism run hourly?', recommendation: 'hourly',
-    because: 'observed: node --test tests/typesafeai.test.mjs passes against src/demo.mjs',
-    if_wrong: 'the demo drifts from the mechanism', instead: 'daily',
-    options: ['hourly', 'daily'], named_paths: ['src/demo.mjs'], cited_decisions: [], ...over,
-  });
-  const asDev = { confirm: async () => true };
-
-  const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0', min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 } } });
-  for (let i = 0; i < 5; i++) {
-    const q = `wake-route-label-${i}`;
-    const res = await evaluate(r.cwd, draft({ question: q }), { transport: transport([optionBody(), ownerBody(0.95)]) });
-    const sha = await escalate(r.cwd, { ...draft({ question: q }), evaluation: res.evaluationSha });
-    await answer(r.cwd, 'first', 'ok', '', { ...asDev, escalation: sha, owner: 'agent' });
-  }
-  assert.equal((await calibrate(r.cwd)).pass, true);
-  const { settings } = await loadSettings(r.cwd);
-  settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-  await writeFile(join(r.cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-
-  const st = await readState(r.cwd);
-  assert.equal(st.settings?.typesafeai?.mode, 'route', 'readState actually read the route-mode settings, not a degraded null');
-  assert.deepEqual(st.unreadable, [], 'no unreadable entry for .cairn/settings.json: loadSettings did not throw');
-
-  const v = await wake(r.cwd);
-  // Same verdict a plain (typesafeai-disabled) fresh loopRepo() gets: nothing about being in route
-  // mode with a passing calibration should change wake's own predicate loop at all. Before this
-  // round's fix, this was { verdict: 'Resolvable', action: 'repair', target: '.cairn/settings.json',
-  // ... } instead -- the degraded branch this test's name refers to.
-  assert.deepEqual(v, {
-    predicate: 'a current receipt carries a result for the requirement',
-    verdict: 'Resolvable', action: 'run', target: 'DEMO-001', reason: 'no current receipt carries a result for DEMO-001',
-  });
 });

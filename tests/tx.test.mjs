@@ -68,9 +68,9 @@ const yes = async () => true;
 // `typesafeai: { enabled, mode, model }` stub fails loadSettings. Filled in with the same defaults
 // tests/auth.test.mjs already uses.
 const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: [], source: [], interfaces: [], data: [],
-  network_exclude: [], signing_key: null, attribution: 'forbidden', harness: {}, typesafeai: { enabled: false, mode: 'shadow', model: null,
-    route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
-    reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
+  network_exclude: [], signing_key: null, attribution: 'forbidden', developer: 'present', harness: {}, typesafeai: { enabled: false, model: null,
+    weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
+    confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
     min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } });
 const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n' };
 async function initialized() {

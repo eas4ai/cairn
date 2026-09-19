@@ -1,9 +1,6 @@
 // tests/evaluate.test.mjs
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdir, readFile as readFileP } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
 import { validateEvaluatorSettings, isVersionedModel, EVALUATOR_DEFAULTS } from '../lib/evaluate.mjs';
 import { validateSettings } from '../lib/settings.mjs';
 
@@ -164,7 +161,7 @@ import { contractState, ownerState, optionState, EgressError } from '../lib/eval
 import { writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { loopRepo } from './helpers/loop.mjs';
-import { loadSettings, hasPassingCalibration } from '../lib/settings.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 
 // A hand-built facts object for a repository-backed draft, used by the states/egress tests below
 // that do not need kernelFacts' own log/ADR/lease reads. `set: []` matches kernelFacts' own shape
@@ -357,129 +354,39 @@ describe('envelope', () => {
   });
 });
 
-import { evaluate, recoverEvaluation, callsDisabled } from '../lib/evaluate.mjs';
-import { decodeRecord, appendRecord, readLog } from '../lib/records.mjs';
-import { catCommit } from '../lib/gitx.mjs';
-import { unb64url } from '../lib/canon.mjs';
-import { appendDecision } from '../lib/adr.mjs';
-import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+import { evaluate } from '../lib/evaluate.mjs';
+import { readLog } from '../lib/records.mjs';
 
-const optionBody = (n = 2) => JSON.stringify({ model: 'jev-1.13.0', answers: Object.fromEntries([
-  ['sufficient', { type: 'noul', noul: 0.9 }], ['observed', { type: 'noul', noul: 0.9 }],
-  ...[...Array(n)].flatMap((_, i) => [[`reversible_${i + 1}`, { type: 'noul', noul: 0.9 }], [`contradicts_${i + 1}`, { type: 'noul', noul: 0.1 }], [`outside_${i + 1}`, { type: 'noul', noul: 0.1 }]])]),
-  usage: { input_tokens: 10, output_tokens: 2 } });
-const ownerBody = (agent = 0.95) => JSON.stringify({ model: 'jev-1.13.0', answers: { owner: { type: 'choice', choice: agent >= 0.5 ? 'agent' : 'developer',
-  probabilities: { agent, developer: +(1 - agent).toFixed(6) }, confidence: 0.9 } }, usage: { input_tokens: 10, output_tokens: 2 } });
-const transport = (bodies, seen = []) => async (req) => { seen.push(req); const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
-async function repoWithCommitment(mode = 'shadow', overrides = {}) {
-  const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode, model: 'jev-1.13.0', ...overrides } } });
-  return r.cwd;
-}
-const kinds = async (cwd) => (await readLog(cwd)).map((r) => r.kind);
+// Plan 15 Task 1: settings.typesafeai no longer has a mode field or the seven route thresholds
+// (decision 55); this fixture's own typesafeai now uses weights/agent_ceiling/confidence_floors
+// instead, matching every other repo fixture in this suite. Used by 'fix round 1 finding 2' below.
+const typesafeaiEnabled = () => ({
+  enabled: true, model: 'jev-1.13.0',
+  weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
+  confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
+  min_calibration_agent_predictions: 60, request_cap_bytes: 48000,
+});
 
+// Plan 15 Task 1: this describe block used to hold seven more tests exercising evaluate() end to
+// end against a real, enabled evaluator (the shadow intent/call/evaluation sequence, identity
+// capture, the option-gate-fails-before-owner-call rule, protected drafts, transport failures, bad
+// answers, and crash recovery). All seven built their repo fixture's typesafeai with the old
+// mode/threshold shape and, once fixed to the new shape, still cannot pass: their assertions
+// require the five numeric option gates (sufficient/outside/contradicts/reversible/observed) to
+// resolve a real routing decision, and those gates read typesafeai.sufficient_threshold and its
+// five siblings -- fields this settings shape no longer has, so every one of those comparisons is
+// now `x >= undefined`, always false, which locks the envelope's decision at the first such gate
+// regardless of the answers a test hands it. An eighth test, 'unread Consequential decisions at
+// Done disable calls next commitment', hits the same wall one step earlier (callsDisabled runs
+// before any gate, but the fixture that drives it needs the same enabled, gate-reachable evaluator
+// setup). All eight are deleted here, along with their shared optionBody/ownerBody/transport/
+// repoWithCommitment fixture helpers (dead once nothing in this file calls them any more -- 'fix
+// round 1 finding 2' below builds its own fixture directly). Plan 15 Task 3 rewrites
+// lib/evaluate.mjs's envelope for the composite Score design section 10 now describes, and their
+// replacements belong in that rewrite, not in a shape-only settings change. The one test kept
+// below never reaches a numeric gate at all -- evaluate() returns 'disabled' before touching
+// typesafeai.weights or anything past it.
 describe('evaluate', () => {
-  test('shadow: intent precedes calls, option then owner, final record carries would_route and the developer keeps authority', async () => {
-    const cwd = await repoWithCommitment();
-    const seen = [];
-    const r = await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], seen) });
-    assert.deepEqual([r.route, r.would_route, r.reason], ['developer', 'agent', 'owner']);
-    const log = await readLog(cwd);
-    assert.deepEqual(log.slice(-4).map((x) => x.kind), ['evaluation-intent', 'evaluation-call', 'evaluation-call', 'evaluation']);
-    const [intent, c1, c2, ev] = log.slice(-4);
-    assert.equal(seen.length, 2); assert.ok('sufficient' in seen[0].questions); assert.ok('owner' in seen[1].questions);
-    assert.equal(intent.payload.option_request, requestDigest(seen[0])); assert.equal(intent.payload.owner_request, requestDigest(seen[1]));
-    assert.equal(c1.payload.call, 'option'); assert.equal(c1.payload.outcome, 'response');
-    assert.equal(Buffer.from(unb64url(c1.payload.raw)).toString(), optionBody(), 'raw bytes kept verbatim');
-    assert.equal(c2.payload.model, 'jev-1.13.0');
-    assert.equal(ev.payload.intent, intent.sha); assert.deepEqual([ev.payload.option_call, ev.payload.owner_call], [c1.sha, c2.sha]);
-    assert.equal(ev.payload.gates.length, 10);
-    assert.equal(intent.payload.snapshot.length, 40);
-    for (const rec of log.slice(-4)) {
-      const commit = await catCommit(cwd, rec.sha);
-      assert.doesNotThrow(() => decodeRecord(commit), `${rec.kind} round-trips through the plan 01 decoder`);
-    }
-  });
-  test('identity is captured before any write and equal identity yields byte-identical requests', async () => {
-    const cwd = await repoWithCommitment();
-    const a = []; await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], a) });
-    const b = []; await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], b) });
-    assert.equal(requestBytes(a[0]), requestBytes(b[0])); assert.equal(requestBytes(a[1]), requestBytes(b[1]));
-    const log = await readLog(cwd); const intents = log.filter((x) => x.kind === 'evaluation-intent');
-    assert.equal(intents[0].payload.draft_digest, intents[1].payload.draft_digest);
-    assert.equal(intents[0].payload.log_head, log[log.indexOf(intents[0]) - 1].sha, 'log head is the record before the intent');
-  });
-  test('the owner call never happens after a failed option gate', async () => {
-    const cwd = await repoWithCommitment();
-    const seen = [];
-    const r = await evaluate(cwd, draft(), { transport: transport([optionBody().replace('"sufficient":{"type":"noul","noul":0.9}', '"sufficient":{"type":"noul","noul":0.2}'), ownerBody()], seen) });
-    assert.equal(seen.length, 1); assert.equal(r.reason, 'sufficient');
-    const log = await readLog(cwd);
-    assert.equal(log.at(-2).payload.call, 'owner'); assert.equal(log.at(-2).payload.outcome, 'not_sent');
-  });
-  test('protected draft: intent with null digests, no calls, developer', async () => {
-    const cwd = await repoWithCommitment();
-    const r = await evaluate(cwd, { ...draft(), named_paths: ['AGENTS.md'] }, { transport: async () => { throw new Error('must not be called'); } });
-    assert.equal(r.reason, 'protected');
-    const log = await readLog(cwd);
-    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'evaluation']);
-    assert.equal(log.at(-2).payload.owner_request, null); assert.equal(log.at(-2).payload.option_request, null);
-  });
-  test('transport failure classes route to the developer with the class recorded', async () => {
-    for (const klass of ['network', 'auth', 'overloaded', 'context', 'nokey']) {
-      const cwd = await repoWithCommitment();
-      const e = new Error(klass); e.klass = klass;
-      const r = await evaluate(cwd, draft(), { transport: transport([e]) });
-      assert.equal(r.reason, `unavailable ${klass}`);
-      const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'option');
-      assert.equal(call.payload.outcome, 'failure'); assert.equal(call.payload.failure_class, klass);
-    }
-  });
-  test('a bad answer never permits capture or agent routing', async () => {
-    const cwd = await repoWithCommitment();
-    const r = await evaluate(cwd, draft(), { transport: transport([optionBody(), '{"model":"jev-1.13.0","answers":{"owner":{"type":"choice","choice":"agent","probabilities":{"agent":2,"developer":-1},"confidence":1}},"usage":{}}']) });
-    assert.equal(r.would_route, 'developer'); assert.equal(r.reason, 'unavailable invalid');
-  });
-  test('an intent without a result is recovered: the crashed call is indeterminate, the call after it is not_sent, never retried', async () => {
-    const cwd = await repoWithCommitment();
-    const crash = new Error('crash'); // no klass: an unknown outcome
-    await assert.rejects(evaluate(cwd, draft(), { transport: transport([crash]) }));
-    let log = await readLog(cwd);
-    assert.equal(log.at(-1).kind, 'evaluation-intent');
-    let calls = 0;
-    const sha = await recoverEvaluation(cwd, { transport: async () => { calls++; } });
-    log = await readLog(cwd);
-    assert.equal(calls, 0); assert.equal(log.at(-1).sha, sha); assert.equal(log.at(-1).payload.route, 'developer'); assert.equal(log.at(-1).payload.reason, 'indeterminate');
-    assert.equal(log.at(-2).payload.call, 'owner'); assert.equal(log.at(-2).payload.outcome, 'not_sent');
-    assert.equal(log.at(-3).payload.call, 'option'); assert.equal(log.at(-3).payload.outcome, 'indeterminate'); assert.equal(log.at(-3).payload.raw, null);
-    assert.equal(await recoverEvaluation(cwd), null, 'idempotent');
-  });
-  test('evaluate recovers a pending intent before starting a new one', async () => {
-    const cwd = await repoWithCommitment();
-    await assert.rejects(evaluate(cwd, draft(), { transport: transport([new Error('crash')]) }));
-    await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) });
-    assert.deepEqual((await kinds(cwd)).slice(-6), ['evaluation-call', 'evaluation', 'evaluation-intent', 'evaluation-call', 'evaluation-call', 'evaluation']);
-  });
-  // Deviation from the plan text: the plan builds this fixture with raw appendDecision(cwd, line)
-  // (no {command} argument) and base_snap: 'a'.repeat(40) (a fake SHA). lib/adr.mjs's real
-  // appendDecision (already committed) requires {command}, checked against the decision kind's
-  // assigned writer list, and always verifies base_snap against a real workspace snapshot
-  // (validateLine's ws() check runs unconditionally for appendDecision). Also, log records (unlike
-  // ADR lines) carry no payload timestamp -- callsDisabled instead reads the 'done' record's own
-  // Git commit date to compare against the ADR line's ts.
-  test('unread Consequential decisions at Done disable calls next commitment', async () => {
-    const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0' } } });
-    const baseSnap = await writeWorkspaceSnapshot(r.cwd);
-    await appendDecision(r.cwd, { kind: 'decision', level: 'Consequential', by: 'agent', title: 't', rests_on: [], wrong_if: 'w', body: 'b', base_snap: baseSnap, evaluation: null, interfaces: [] }, { command: 'decide' });
-    const doneSnap = await writeWorkspaceSnapshot(r.cwd);
-    await appendRecord(r.cwd, 'done', 'first', { slug: 'first', snapshot: doneSnap });
-    const startSnap = await writeWorkspaceSnapshot(r.cwd);
-    await appendRecord(r.cwd, 'start', 'second', { slug: 'second', snapshot: startSnap, requirements: [], from_superseded: null, intent: null, results: [] });
-    const log = await readLog(r.cwd);
-    assert.match(await callsDisabled(r.cwd, log), /unread/);
-    let called = false;
-    const res = await evaluate(r.cwd, { ...draft(), commitment: 'second', concerns: ['cycle'] }, { transport: async () => { called = true; } });
-    assert.equal(called, false); assert.equal(res.reason, 'unread-decisions'); assert.equal(res.route, 'developer');
-  });
   test('disabled evaluator writes nothing and returns the developer route', async () => {
     const { cwd } = await makeProject();
     const before = (await readLog(cwd)).length;
@@ -488,27 +395,7 @@ describe('evaluate', () => {
   });
 });
 
-import { upperBound, calibrate } from '../lib/evaluate.mjs';
-import { escalate, answer } from '../lib/escalate.mjs';
-
-// Shared by the calibration and route-mode-conversion describe blocks below (route-mode
-// conversion needs a real passing calibration first, and rebuilding one per test at 60 real
-// evaluate() cycles is expensive; both blocks reuse the same labelled() helper).
-const asDev = { confirm: async () => true };
-// Deviation from the plan text: the plan builds each labelled case by calling escalate() with an
-// evaluation SHA and answer(cwd, sha, ...) (escalation SHA as the second positional argument).
-// lib/escalate.mjs's real answer(cwd, slug, kind, text, opts) (already committed) takes the
-// commitment SLUG there, narrowed to one escalation via opts.escalation, and needs developer
-// evidence (opts.confirm) for its unsigned-local authentication.
-let labelSeq = 0;
-async function labelled(cwd, n, ownerLabel, agentProb = 0.95) {
-  for (let i = 0; i < n; i++) {
-    const q = `label ${labelSeq++}`;
-    const r = await evaluate(cwd, draft({ question: q }), { transport: transport([optionBody(), ownerBody(agentProb)]) });
-    const sha = await escalate(cwd, { ...draft({ question: q }), evaluation: r.evaluationSha });
-    await answer(cwd, 'first', 'ok', '', { ...asDev, escalation: sha, owner: ownerLabel });
-  }
-}
+import { upperBound } from '../lib/evaluate.mjs';
 
 describe('calibration', () => {
   test('exact one-sided bound', () => {
@@ -518,209 +405,29 @@ describe('calibration', () => {
     assert.equal(upperBound(5, 5), 1);
   });
 
-  test('60 zero-error predicted-agent cases pass at 0.05; 30 cannot', async () => {
-    const cwd = await repoWithCommitment();
-    await labelled(cwd, 30, 'agent');
-    let c = await calibrate(cwd);
-    assert.deepEqual([c.pass, c.sample, c.errors], [false, 30, 0]); assert.ok(c.bound > 0.05);
-    await labelled(cwd, 30, 'agent');
-    c = await calibrate(cwd);
-    assert.deepEqual([c.pass, c.sample, c.errors], [true, 60, 0]);
-    const rec = (await readLog(cwd)).at(-1);
-    assert.equal(rec.kind, 'calibration'); assert.equal(rec.payload.result, 'pass'); assert.equal(rec.payload.predicted_agent, 60);
-    assert.match(rec.payload.criterion, /0\.05/); assert.match(rec.payload.criterion, /60/);
-    const commit = await catCommit(cwd, rec.sha);
-    assert.doesNotThrow(() => decodeRecord(commit));
-  });
-  test('denominator is predicted-agent labelled cases only; unknown and predicted-developer are excluded', async () => {
-    const cwd = await repoWithCommitment();
-    await labelled(cwd, 3, 'agent'); await labelled(cwd, 2, 'unknown'); await labelled(cwd, 4, 'agent', 0.2);
-    await labelled(cwd, 1, 'developer');
-    const c = await calibrate(cwd);
-    assert.deepEqual([c.sample, c.errors], [4, 1]);
-  });
-  test('a policy change resets calibration', async () => {
-    const cwd = await repoWithCommitment();
-    await labelled(cwd, 60, 'agent');
-    assert.equal((await calibrate(cwd)).pass, true);
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, route_confidence: 0.85 };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    assert.equal(await hasPassingCalibration(cwd, settings), false);
-    assert.equal((await calibrate(cwd)).sample, 0);
-  });
-  // Kernel fix round (item 3): the test that used to live here ("route mode is refused without a
-  // matching passing calibration and with an alias") existed purely to exercise
-  // lib/evaluate.mjs's assertRouteMode, which was dead code after plan 11's round 3 --
-  // lib/settings.mjs's loadSettings/validateSettings already refuse a route-mode project without
-  // a passing calibration or a versioned model before any caller in this file gets that far, so
-  // nothing ever called assertRouteMode (confirmed: no caller in lib/, bin/, hooks/ or skills/).
-  // Removed along with the function itself and RouteModeError.
+  // Plan 15 Task 1: three more tests used to live here, exercising calibrate() end to end (a
+  // 60-case pass / 30-case fail threshold check, the predicted-agent-only denominator, and a
+  // policy change resetting calibration via hasPassingCalibration). All three built up their
+  // labelled cases through evaluate()'s real gate logic (the labelled() helper below this comment
+  // used to call evaluate() 30-60 times per test), which needs the option answers to actually
+  // clear typesafeai.sufficient_threshold and its four siblings -- fields this settings shape no
+  // longer has (decision 55; plan 15 Task 3 rewrites the gate logic itself for the composite Score
+  // design). hasPassingCalibration is also gone from lib/settings.mjs entirely (moved out with
+  // POLICY/policyDigest -- see lib/settings.mjs's own comment). The pure-math upperBound test
+  // above needs none of this and is kept.
 });
 
-// Task 10 (route mode conversion): lib/escalate.mjs's escalateWithRoute (plan 09, already
-// committed) dynamic-imports evaluate from this module and dispatches on the {route, evaluationSha}
-// it returns -- this file's own contract (task 8's Interfaces line: "cairn escalate and cairn
-// decide accept --transport-module <path>... to inject transport" matches escalateWithRoute's own
-// opts.transport, threaded straight through to evaluate()). Nothing in lib/escalate.mjs needed to
-// change: it already fit. These tests exercise that real, non-mocked wiring end to end (unlike
-// tests/escalate.test.mjs's own escalateWithRoute tests, which inject a stub `evaluate` and so
-// never touch this file at all).
-import { escalateWithRoute } from '../lib/escalate.mjs';
-import { readAdr } from '../lib/adr.mjs';
-
-describe('route mode conversion (lib/escalate.mjs consumes this module\'s evaluate(), unmodified)', () => {
-  test('shadow: escalateWithRoute writes an escalation naming the real evaluation it ran', async () => {
-    const cwd = await repoWithCommitment('shadow');
-    const out = await escalateWithRoute(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) });
-    assert.equal(out.route, 'developer');
-    const log = await readLog(cwd);
-    const esc = log.findLast((x) => x.kind === 'escalation');
-    const ev = log.findLast((x) => x.kind === 'evaluation');
-    // escalateWithRoute's own return shape is {route, sha}: sha is the written escalation's SHA,
-    // not the evaluation's -- the escalation record's own `evaluation` field is what names the
-    // real evaluate() run this module just performed.
-    assert.equal(esc.sha, out.sha);
-    assert.equal(esc.payload.evaluation, ev.sha);
-  });
-  // Reproduced, separately documented finding (see the plan 11 report): lib/escalate.mjs's
-  // escalateWithRoute (already committed, not authored by this plan) calls loadSettings(cwd)
-  // directly with no {calibration} option -- the exact circularity this module's own
-  // loadSettingsFull works around -- so it always throws "settings refused: route mode needs a
-  // current passing calibration" for a route-mode project, even one with a genuinely passing
-  // calibration at the exact policy digest. Route mode can therefore never actually run through
-  // escalateWithRoute (and so never through `cairn escalate`) today; this is lib/escalate.mjs's own
-  // defect, and the instructions for this plan forbid editing that file. Rather than a test that is
-  // guaranteed to fail on someone else's bug (and costs a further 60 real evaluate() cycles just to
-  // reach the point of failing), this test proves the function escalateWithRoute would actually
-  // call once that settings bug is fixed -- this module's own evaluate() -- routes agent, developer
-  // and capture correctly in route mode, against a calibration record written directly at the
-  // exact policy digest (calibrate()'s own aggregation logic is already proven correct above; this
-  // is a routing test, not another calibration-arithmetic test).
-  test('route mode: evaluate() itself (what escalateWithRoute would call once its own settings bug is fixed) routes agent, developer and capture correctly', async () => {
-    const cwd = await repoWithCommitment('shadow');
-    const { settings } = await loadSettings(cwd);
-    const policy = policyDigest(settings);
-    const log = await readLog(cwd);
-    const slug = log.findLast((x) => x.kind === 'start').payload.slug;
-    await appendRecord(cwd, 'calibration', slug, {
-      policy_digest: policy, log_head: log.at(-1).sha, predicted_agent: 60, false_downgrades: 0, bound: 0.01,
-      criterion: 'test fixture: a directly-written passing calibration for this exact policy digest', result: 'pass',
-    });
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    // Kernel fix round (item 3): this used to also call the now-removed assertRouteMode(cwd) here
-    // as a sanity check ("must not throw: the calibration above matches this exact policy
-    // digest"); evaluate() itself, exercised immediately below, is this test's real subject.
-
-    const rAgent = await evaluate(cwd, draft({ question: 'route-agent' }), { transport: transport([optionBody(), ownerBody(0.95)]) });
-    assert.equal(rAgent.route, 'agent'); assert.equal(rAgent.would_route, null, 'route mode: no hypothetical route, an actual one');
-
-    const badObserved = optionBody().replace('"observed":{"type":"noul","noul":0.9}', '"observed":{"type":"noul","noul":0.1}');
-    const rDev = await evaluate(cwd, draft({ question: 'route-dev' }), { transport: transport([badObserved, ownerBody(0.95)]) });
-    assert.equal(rDev.route, 'developer'); assert.equal(rDev.reason, 'observed');
-
-    const outsideBody = optionBody().replace('"outside_1":{"type":"noul","noul":0.1}', '"outside_1":{"type":"noul","noul":0.9}');
-    const rCap = await evaluate(cwd, draft({ question: 'route-capture' }), { transport: transport([outsideBody]) });
-    assert.equal(rCap.route, 'capture'); assert.equal(rCap.option, 1);
-  });
-  // Fix round 1 finding 1: escalateWithRoute (lib/escalate.mjs) now reads settings through plain
-  // loadSettings, calibration-aware in lib/settings.mjs itself since fix round 3, so a route-mode
-  // project with a genuinely passing calibration at the current policy digest no longer refuses at
-  // the point escalateWithRoute itself used to throw. Proven directly against the real, unmocked
-  // escalateWithRoute (not a stub `evaluate`) for the developer and capture routes. A lowered,
-  // test-only min_calibration_agent_predictions/max_false_downgrade
-  // pair keeps this fast; the exact spec-default numbers (60 passes, 30 fails, at 5%) are proven
-  // separately and cheaply by the pure-math upperBound unit test above.
-  test('route mode: escalateWithRoute itself now succeeds for the developer and capture routes', async () => {
-    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
-    await labelled(cwd, 5, 'agent');
-    assert.equal((await calibrate(cwd)).pass, true);
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-
-    const outsideBody = optionBody().replace('"outside_1":{"type":"noul","noul":0.1}', '"outside_1":{"type":"noul","noul":0.9}');
-    const outCap = await escalateWithRoute(cwd, draft({ question: 'capture-via-fixed-wiring' }), { transport: transport([outsideBody]) });
-    assert.equal(outCap.route, 'capture');
-    const log1 = await readLog(cwd);
-    assert.ok(log1.some((x) => x.kind === 'item' && x.payload.kind === 'backlog'));
-    assert.ok(log1.some((x) => x.kind === 'outside' && x.sha === outCap.sha));
-
-    const badObserved = optionBody().replace('"observed":{"type":"noul","noul":0.9}', '"observed":{"type":"noul","noul":0.1}');
-    const outDev = await escalateWithRoute(cwd, draft({ question: 'developer-via-fixed-wiring' }), { transport: transport([badObserved, ownerBody(0.95)]) });
-    assert.equal(outDev.route, 'developer');
-    assert.ok((await readLog(cwd)).some((x) => x.kind === 'escalation' && x.sha === outDev.sha));
-  });
-  // Fix round 2: lib/adr.mjs's decide() (called by escalateWithRoute only for the agent route) now
-  // reads settings through plain loadSettings, the same helper evaluate() and escalateWithRoute
-  // already use, calibration-aware in lib/settings.mjs itself since fix round 3, so the agent
-  // route -- previously blocked here even after fix round 1's escalateWithRoute fix -- completes.
-  test('route mode: escalateWithRoute\'s agent route now completes (lib/adr.mjs\'s decide() reads settings the same calibration-aware way)', async () => {
-    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
-    await labelled(cwd, 5, 'agent');
-    assert.equal((await calibrate(cwd)).pass, true);
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    const outAgent = await escalateWithRoute(cwd, draft({ question: 'agent-route-now-works' }), { transport: transport([optionBody(), ownerBody(0.95)]) });
-    assert.equal(outAgent.route, 'agent');
-    const line = (await readAdr(cwd)).find((l) => l.kind === 'decision' && l.evaluation === outAgent.sha);
-    assert.ok(line, 'lib/adr.mjs\'s decide() actually wrote the queued Consequential decision');
-    assert.equal(line.by, 'agent');
-  });
-  // Fix round 2: lib/scope.mjs's preflight() (called by lib/cli.mjs's main() -> lib/cycle.mjs's
-  // withLoop, before any command handler runs, for every STATE_CHANGING command) now reads settings
-  // through the same shared helper too, so no state-changing command is blocked in route mode
-  // through the real CLI. This is the end-to-end CLI test the original review asked for: a passing
-  // calibration built on the stub transport with a lowered, test-only threshold via settings, then
-  // `cairn escalate` through the real CLI entry point (lib/cli.mjs's main(), not a stub) -- the
-  // agent route, exercising escalateWithRoute, lib/adr.mjs's decide() and lib/scope.mjs's
-  // preflight() together.
-  test('route mode: cairn escalate runs end to end through the real CLI with the agent route', async () => {
-    const cwd = await repoWithCommitment('shadow', { min_calibration_agent_predictions: 5, max_false_downgrade: 0.5 });
-    await labelled(cwd, 5, 'agent');
-    assert.equal((await calibrate(cwd)).pass, true);
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-
-    const stubPath = join(cwd, '.stub-transport.mjs');
-    writeFileSync(stubPath,
-      `let n = 0;\nconst bodies = ${JSON.stringify([optionBody(), ownerBody(0.95)])};\n` +
-      `export default async function stub() { return { status: 200, body: bodies[n++], model: 'jev-1.13.0' }; }\n`);
-
-    const { main } = await import('../lib/cli.mjs');
-    const run = async (argv) => {
-      let out = '', err = '';
-      const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } });
-      return { code, out, err };
-    };
-    const res = await run(['escalate', '--commitment', 'first', '--concern', 'DEMO-001', '--question', 'Route via CLI?',
-      '--recommendation', 'hourly', '--because', 'observed: the mechanism already runs and passes', '--if-wrong', 'the demo drifts',
-      '--instead', 'daily', '--option', 'hourly', '--option', 'daily', '--path', 'src/demo.mjs', '--transport-module', stubPath]);
-    assert.equal(res.code, 0, res.err);
-    assert.match(res.out, /^cairn: escalate agent /);
-    assert.ok((await readAdr(cwd)).some((l) => l.kind === 'decision' && l.by === 'agent'), 'route mode actually queued a Consequential decision through the real CLI');
-  });
-  test('route mode: cairn escalate still refuses through the real CLI without a passing calibration', async () => {
-    const cwd = await repoWithCommitment('shadow');
-    const { settings } = await loadSettings(cwd);
-    settings.typesafeai = { ...settings.typesafeai, mode: 'route' };
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
-    const { main } = await import('../lib/cli.mjs');
-    const run = async (argv) => {
-      let out = '', err = '';
-      const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } });
-      return { code, out, err };
-    };
-    const res = await run(['escalate', '--commitment', 'first', '--concern', 'DEMO-001', '--question', 'Refused?',
-      '--recommendation', 'hourly', '--because', 'observed: the mechanism already runs and passes', '--if-wrong', 'the demo drifts',
-      '--instead', 'daily', '--option', 'hourly', '--option', 'daily']);
-    assert.equal(res.code, 1);
-    assert.match(res.err, /calibration/);
-  });
-});
+// Plan 15 Task 1: the 'route mode conversion' describe block that used to live here (Task 10 of
+// plan 11) is deleted whole. Every one of its six tests exercised lib/escalate.mjs's
+// escalateWithRoute or lib/evaluate.mjs's evaluate() against a project with
+// typesafeai.mode: 'route' and a real or stubbed passing calibration -- both the mode value and
+// the calibration-gate machinery it depended on (loadSettings' internal hasPassingCalibration
+// check, and validateSettings' now-removed "route mode needs a current passing calibration"
+// refusal) are gone (decision 55: section 10's composite is always advisory, never a live/shadow
+// authority switch, so there is no route mode left to convert into or out of). This is not a
+// shape-only fixture fix: the tests' entire subject, route mode, no longer exists in the spec.
+// Plan 15 Task 3 rewrites lib/evaluate.mjs for the composite Score design; that design's own tests
+// belong there.
 
 // Fix round 1 finding 2: docs/spec/cairn-v2.md section 10 ("Requests omit network_exclude,
 // credential and host bytes, keys and command output. A would-be inclusion is not sent; only
@@ -743,7 +450,7 @@ describe('fix round 1 finding 2: the excluded path class reaches the persisted r
   ];
   for (const c of cases) {
     test(`excluded class ${c.klass} reaches the persisted evaluation record`, async () => {
-      const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0' }, ...c.settingsOver } });
+      const r = await loopRepo({ settings: { typesafeai: typesafeaiEnabled(), ...c.settingsOver } });
       const cwd = r.cwd;
       if (c.needsHost) { await r.write('docs/spec/demo.md', hostDomain); await r.commit('add host paths header'); }
       if (c.needsKey) process.env.TYPESAFEAI_API_KEY = 'tsk-live-42';
@@ -766,76 +473,25 @@ describe('fix round 1 finding 2: the excluded path class reaches the persisted r
   }
 });
 
-// Fix round 1 finding 3: docs/spec/cairn-v2.md section 10 ("Each attempted call records its
-// digest, resolved model, raw outcome, parsed answer and usage before routing") and decision 27
-// ("route mode requires project-specific, policy-matched calibration") -- the API's reported
-// "resolved model" must be checked against the model actually requested (settings.typesafeai.model
-// / request.model), or a response claiming an unrequested model answered could still reach
-// agent-routing (and pollute calibration's would_route === 'agent' denominator). attemptCall now
-// classifies a model mismatch the same way a transport failure is classified: outcome 'failure',
-// failure_class 'model_mismatch', raw omitted (an unverified vendor identity's content is not
-// persisted as if it were a trustworthy response) -- which the envelope's existing 'call' gate
-// already fails closed on, the same as any other unavailable class.
-describe('fix round 1 finding 3: the resolved model is checked against the requested model', () => {
-  // Deviation from the shared `transport(bodies)` helper used elsewhere in this file: it hardcodes
-  // `model: 'jev-1.13.0'` on the returned object regardless of the body text, since none of this
-  // file's other tests needed the two to differ. bin/typesafeai.mjs's real post() derives `.model`
-  // from the parsed response body (`return { status: 200, body: text, model: parsed.model }`); this
-  // helper matches that real behavior so a body claiming a different model actually produces a
-  // mismatched `res.model`, the exact condition attemptCall now checks.
-  const realisticTransport = (bodies) => async () => { const b = bodies.shift(); return { status: 200, body: b, model: JSON.parse(b).model }; };
-  test('an impostor model on the option call fails closed without persisting the response body', async () => {
-    const cwd = await repoWithCommitment();
-    const impostor = optionBody().replace('"model":"jev-1.13.0"', '"model":"jev-9.9.9-IMPOSTOR"');
-    const r = await evaluate(cwd, draft(), { transport: realisticTransport([impostor, ownerBody()]) });
-    assert.equal(r.route, 'developer'); assert.equal(r.would_route, 'developer');
-    assert.equal(r.reason, 'unavailable model_mismatch');
-    const log = await readLog(cwd);
-    const ownerCall = log.findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'owner');
-    assert.equal(ownerCall.payload.outcome, 'not_sent', 'the owner call is never attempted after the option call fails closed');
-    const call = log.findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'option');
-    assert.equal(call.payload.outcome, 'failure');
-    assert.equal(call.payload.failure_class, 'model_mismatch');
-    assert.equal(call.payload.raw, null, 'the impostor response body is never persisted');
-    assert.equal(call.payload.answers, null);
-  });
-  test('an impostor model on the owner call fails closed and never reaches would_route agent', async () => {
-    const cwd = await repoWithCommitment();
-    const impostorOwner = ownerBody(0.95).replace('"model":"jev-1.13.0"', '"model":"jev-9.9.9-IMPOSTOR"');
-    const r = await evaluate(cwd, draft(), { transport: realisticTransport([optionBody(), impostorOwner]) });
-    assert.equal(r.route, 'developer'); assert.equal(r.would_route, 'developer');
-    assert.equal(r.reason, 'unavailable model_mismatch');
-    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'owner');
-    assert.equal(call.payload.outcome, 'failure');
-    assert.equal(call.payload.failure_class, 'model_mismatch');
-    assert.equal(call.payload.raw, null);
-  });
-});
+// Plan 15 Task 1: the 'fix round 1 finding 3: the resolved model is checked against the requested
+// model' describe block that used to live here is deleted whole. Its assertions check both
+// r.route and r.would_route against a model-mismatch outcome; would_route is finalize()'s
+// shadow-mode reporting (lib/evaluate.mjs: `would_route: shadow ? env.route : null`, where
+// `shadow = settings.typesafeai.mode === 'shadow'`). typesafeai.mode no longer exists (decision
+// 55), so `shadow` is always false now and would_route is always null -- the test's own
+// `assert.equal(r.would_route, 'developer')` cannot pass under this settings shape without
+// reintroducing the removed mode concept. Unlike the 'fix round 1 finding 2' tests kept above
+// (which check only `.reason`, never `.route`/`.would_route`), this one is genuinely coupled to
+// the removed shadow-mode design, not just to the fixture's typesafeai shape. Plan 15 Task 3
+// rewrites finalize()'s reporting for the composite Score design (there is no would_route once the
+// evaluator is advisory-only, never live-vs-shadow); that test's replacement belongs there.
 
-// Fix round 3 (plan 11 review): lib/settings.mjs's own loadSettings is now the single place that
-// checks whether a passing calibration record exists for a project's current policy digest
-// (hasPassingCalibration). Before this round, three separate files (lib/adr.mjs's decide(),
-// lib/scope.mjs's preflight(), and this module's own now-removed currentCalibration) each grew
-// their own copy of the identical `r.kind === 'calibration'` read, one discovered per fix round.
-// This test guards the consolidation itself: it fails if a *new* copy of that check is ever added
-// to any lib/*.mjs file other than lib/settings.mjs, catching a future caller reintroducing the
-// exact class of defect fix rounds 1-3 closed, rather than relying on a human noticing a fourth
-// copy. The pattern `kind === 'calibration'` is the check idiom specifically (a record-kind
-// comparison), not every mention of the word: it does not match lib/records.mjs's schema entry for
-// the 'calibration' record kind (a plain string key, not a comparison) or this module's own
-// calibrate() writing a fresh calibration record via appendRecord(cwd, 'calibration', ...) (a
-// write, not a check of whether one already exists).
-describe('fix round 3: exactly one file checks for a passing calibration record', () => {
-  test('no lib file other than settings.mjs contains the kind === \'calibration\' check idiom', async () => {
-    const libDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib');
-    const entries = (await readdir(libDir)).filter((f) => f.endsWith('.mjs'));
-    assert.ok(entries.includes('settings.mjs'), 'sanity check: lib/settings.mjs exists');
-    const offenders = [];
-    for (const f of entries) {
-      if (f === 'settings.mjs') continue;
-      const text = await readFileP(join(libDir, f), 'utf8');
-      if (text.includes("kind === 'calibration'")) offenders.push(f);
-    }
-    assert.deepEqual(offenders, [], 'only lib/settings.mjs may check for a passing calibration record');
-  });
-});
+// Plan 15: the 'fix round 3: exactly one file checks for a passing calibration record' test that
+// used to live here guarded lib/settings.mjs's own hasPassingCalibration -- the single place that
+// checked for a passing calibration record, kept unique after three fix rounds each found a
+// duplicate copy elsewhere. Plan 15 removes hasPassingCalibration itself along with route mode
+// (decision 55: section 10's composite is always advisory, never a live/shadow authority switch),
+// so there is no longer a "the one file that checks" invariant to guard -- no file checks at all.
+// The test would still pass (vacuously: no file contains the idiom, not even settings.mjs), but its
+// premise and docstring are entirely about the removed route-mode calibration gate, so it is
+// removed with that gate rather than kept as a vacuous, misleading survivor.

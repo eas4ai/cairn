@@ -1081,10 +1081,9 @@ kernel level directly. `cairn measure` (section 5) runs first, from `jev`
 when `typesafeai.enabled` or otherwise the harness's review model (section
 10); when neither source can be reached the draft is `unavailable <class>`
 and routes to the developer like any other technical no-call. Otherwise the
-agent reads the measurement and decides, except at the narrow floor or a
-veto, or when the agent itself chooses to escalate anyway. `typesafeai.mode:
-observe` records the same measurement without ever letting it route to the
-agent, exactly as its name states; no other level is measured.
+agent reads the measurement, including its advisory `suggested: agent |
+developer`, and decides, except at the narrow floor or a veto, or when the
+agent itself chooses to escalate anyway; no other level is measured.
 
 The developer runs `cairn answer` and `cairn decisions --read`; the agent never
 does. With a signing key their records must verify. In explicit unsigned-local

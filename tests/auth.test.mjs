@@ -173,3 +173,44 @@ test('authorize refuses a declined confirmation and writes nothing', async () =>
   await assert.rejects(authorize(cwd, { confirm: async () => false }), /did not confirm/);
   assert.equal((await readLog(cwd)).length, before);
 });
+
+import { isAuthorized, refuseUnauthorizedProtected, protectedClass } from '../lib/auth.mjs';
+
+test('protectedClass names the three developer-owned classes', () => {
+  assert.equal(protectedClass('.cairn/settings.json'), 'settings');
+  assert.equal(protectedClass('AGENTS.md'), 'agreement');
+  assert.equal(protectedClass('docs/spec/a/b.md'), 'spec');
+  assert.equal(protectedClass('docs/decisions.jsonl'), null);
+  assert.equal(protectedClass('src/x.mjs'), null);
+});
+
+test('a protected change is authorized only by a record naming its before and after digests', async () => {
+  const cwd = await initialized();
+  const log0 = await readLog(cwd);
+  const initDigest = log0[0].payload.settings_digest;
+  assert.equal(await isAuthorized(cwd, '.cairn/settings.json', null, initDigest), true);
+  const d1 = await protectedDigests(cwd);
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d1.agreement), false);
+  await authorize(cwd, { confirm: yes });
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d1.agreement), true);
+  assert.equal(await isAuthorized(cwd, 'docs/spec/overview.md', null, d1.spec), true);
+  writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
+  const d2 = await protectedDigests(cwd);
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)),
+    /^AuthError: cairn: AGENTS.md changed to sha256:[0-9a-f]{64} without a developer authorization; run cairn authorize/);
+  await authorize(cwd, { confirm: yes });
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), true);
+  assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d2.agreement), false, 'before digest must match the chain');
+  await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+});
+
+test('a settings change needs a new authorization naming the new digest', async () => {
+  const cwd = await initialized();
+  await authorize(cwd, { confirm: yes });
+  const s = JSON.parse(SETTINGS); s.outside = ['README.md'];
+  writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(s));
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.cairn\/settings\.json changed to/);
+  await authorize(cwd, { confirm: yes });
+  await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+});

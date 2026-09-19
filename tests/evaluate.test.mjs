@@ -345,8 +345,142 @@ describe('envelope', () => {
     const req = buildOwnerRequest(t, { q: 1 });
     const ok = parseAnswers(req, '{"model":"jev-1.13.0","answers":{"owner":{"type":"choice","choice":"agent","probabilities":{"agent":0.9,"developer":0.1},"confidence":0.8}},"usage":{"input_tokens":3,"output_tokens":1}}');
     assert.equal(ok.answers.owner.choice, 'agent'); assert.equal(ok.model, 'jev-1.13.0');
+    assert.deepEqual(ok.usage, { input_tokens: 3, output_tokens: 1 });
     assert.ok(parseAnswers(req, '{"model":"jev-1.13.0","answers":{},"usage":{}}').invalid, 'missing answer');
     assert.ok(parseAnswers(req, '{"model":"jev-1.13.0","answers":{"owner":{"type":"noul","noul":0.5}},"usage":{}}').invalid, 'wrong type');
     assert.ok(parseAnswers(req, 'nope').invalid);
+    const partial = parseAnswers(req, '{"model":"jev-1.13.0","answers":{"owner":{"type":"choice","choice":"agent","probabilities":{"agent":0.9,"developer":0.1},"confidence":0.8}},"usage":{"input_tokens":3}}');
+    assert.equal(partial.usage, null, 'a partial usage object never records a null int field');
+  });
+});
+
+import { evaluate, recoverEvaluation, callsDisabled } from '../lib/evaluate.mjs';
+import { decodeRecord, appendRecord, readLog } from '../lib/records.mjs';
+import { catCommit } from '../lib/gitx.mjs';
+import { unb64url } from '../lib/canon.mjs';
+import { appendDecision } from '../lib/adr.mjs';
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+
+const optionBody = (n = 2) => JSON.stringify({ model: 'jev-1.13.0', answers: Object.fromEntries([
+  ['sufficient', { type: 'noul', noul: 0.9 }], ['observed', { type: 'noul', noul: 0.9 }],
+  ...[...Array(n)].flatMap((_, i) => [[`reversible_${i + 1}`, { type: 'noul', noul: 0.9 }], [`contradicts_${i + 1}`, { type: 'noul', noul: 0.1 }], [`outside_${i + 1}`, { type: 'noul', noul: 0.1 }]])]),
+  usage: { input_tokens: 10, output_tokens: 2 } });
+const ownerBody = (agent = 0.95) => JSON.stringify({ model: 'jev-1.13.0', answers: { owner: { type: 'choice', choice: agent >= 0.5 ? 'agent' : 'developer',
+  probabilities: { agent, developer: +(1 - agent).toFixed(6) }, confidence: 0.9 } }, usage: { input_tokens: 10, output_tokens: 2 } });
+const transport = (bodies, seen = []) => async (req) => { seen.push(req); const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
+async function repoWithCommitment(mode = 'shadow') {
+  const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode, model: 'jev-1.13.0' } } });
+  return r.cwd;
+}
+const kinds = async (cwd) => (await readLog(cwd)).map((r) => r.kind);
+
+describe('evaluate', () => {
+  test('shadow: intent precedes calls, option then owner, final record carries would_route and the developer keeps authority', async () => {
+    const cwd = await repoWithCommitment();
+    const seen = [];
+    const r = await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], seen) });
+    assert.deepEqual([r.route, r.would_route, r.reason], ['developer', 'agent', 'owner']);
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-4).map((x) => x.kind), ['evaluation-intent', 'evaluation-call', 'evaluation-call', 'evaluation']);
+    const [intent, c1, c2, ev] = log.slice(-4);
+    assert.equal(seen.length, 2); assert.ok('sufficient' in seen[0].questions); assert.ok('owner' in seen[1].questions);
+    assert.equal(intent.payload.option_request, requestDigest(seen[0])); assert.equal(intent.payload.owner_request, requestDigest(seen[1]));
+    assert.equal(c1.payload.call, 'option'); assert.equal(c1.payload.outcome, 'response');
+    assert.equal(Buffer.from(unb64url(c1.payload.raw)).toString(), optionBody(), 'raw bytes kept verbatim');
+    assert.equal(c2.payload.model, 'jev-1.13.0');
+    assert.equal(ev.payload.intent, intent.sha); assert.deepEqual([ev.payload.option_call, ev.payload.owner_call], [c1.sha, c2.sha]);
+    assert.equal(ev.payload.gates.length, 10);
+    assert.equal(intent.payload.snapshot.length, 40);
+    for (const rec of log.slice(-4)) {
+      const commit = await catCommit(cwd, rec.sha);
+      assert.doesNotThrow(() => decodeRecord(commit), `${rec.kind} round-trips through the plan 01 decoder`);
+    }
+  });
+  test('identity is captured before any write and equal identity yields byte-identical requests', async () => {
+    const cwd = await repoWithCommitment();
+    const a = []; await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], a) });
+    const b = []; await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()], b) });
+    assert.equal(requestBytes(a[0]), requestBytes(b[0])); assert.equal(requestBytes(a[1]), requestBytes(b[1]));
+    const log = await readLog(cwd); const intents = log.filter((x) => x.kind === 'evaluation-intent');
+    assert.equal(intents[0].payload.draft_digest, intents[1].payload.draft_digest);
+    assert.equal(intents[0].payload.log_head, log[log.indexOf(intents[0]) - 1].sha, 'log head is the record before the intent');
+  });
+  test('the owner call never happens after a failed option gate', async () => {
+    const cwd = await repoWithCommitment();
+    const seen = [];
+    const r = await evaluate(cwd, draft(), { transport: transport([optionBody().replace('"sufficient":{"type":"noul","noul":0.9}', '"sufficient":{"type":"noul","noul":0.2}'), ownerBody()], seen) });
+    assert.equal(seen.length, 1); assert.equal(r.reason, 'sufficient');
+    const log = await readLog(cwd);
+    assert.equal(log.at(-2).payload.call, 'owner'); assert.equal(log.at(-2).payload.outcome, 'not_sent');
+  });
+  test('protected draft: intent with null digests, no calls, developer', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await evaluate(cwd, { ...draft(), named_paths: ['AGENTS.md'] }, { transport: async () => { throw new Error('must not be called'); } });
+    assert.equal(r.reason, 'protected');
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'evaluation']);
+    assert.equal(log.at(-2).payload.owner_request, null); assert.equal(log.at(-2).payload.option_request, null);
+  });
+  test('transport failure classes route to the developer with the class recorded', async () => {
+    for (const klass of ['network', 'auth', 'overloaded', 'context', 'nokey']) {
+      const cwd = await repoWithCommitment();
+      const e = new Error(klass); e.klass = klass;
+      const r = await evaluate(cwd, draft(), { transport: transport([e]) });
+      assert.equal(r.reason, `unavailable ${klass}`);
+      const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call' && x.payload.call === 'option');
+      assert.equal(call.payload.outcome, 'failure'); assert.equal(call.payload.failure_class, klass);
+    }
+  });
+  test('a bad answer never permits capture or agent routing', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await evaluate(cwd, draft(), { transport: transport([optionBody(), '{"model":"jev-1.13.0","answers":{"owner":{"type":"choice","choice":"agent","probabilities":{"agent":2,"developer":-1},"confidence":1}},"usage":{}}']) });
+    assert.equal(r.would_route, 'developer'); assert.equal(r.reason, 'unavailable invalid');
+  });
+  test('an intent without a result is recovered: the crashed call is indeterminate, the call after it is not_sent, never retried', async () => {
+    const cwd = await repoWithCommitment();
+    const crash = new Error('crash'); // no klass: an unknown outcome
+    await assert.rejects(evaluate(cwd, draft(), { transport: transport([crash]) }));
+    let log = await readLog(cwd);
+    assert.equal(log.at(-1).kind, 'evaluation-intent');
+    let calls = 0;
+    const sha = await recoverEvaluation(cwd, { transport: async () => { calls++; } });
+    log = await readLog(cwd);
+    assert.equal(calls, 0); assert.equal(log.at(-1).sha, sha); assert.equal(log.at(-1).payload.route, 'developer'); assert.equal(log.at(-1).payload.reason, 'indeterminate');
+    assert.equal(log.at(-2).payload.call, 'owner'); assert.equal(log.at(-2).payload.outcome, 'not_sent');
+    assert.equal(log.at(-3).payload.call, 'option'); assert.equal(log.at(-3).payload.outcome, 'indeterminate'); assert.equal(log.at(-3).payload.raw, null);
+    assert.equal(await recoverEvaluation(cwd), null, 'idempotent');
+  });
+  test('evaluate recovers a pending intent before starting a new one', async () => {
+    const cwd = await repoWithCommitment();
+    await assert.rejects(evaluate(cwd, draft(), { transport: transport([new Error('crash')]) }));
+    await evaluate(cwd, draft(), { transport: transport([optionBody(), ownerBody()]) });
+    assert.deepEqual((await kinds(cwd)).slice(-6), ['evaluation-call', 'evaluation', 'evaluation-intent', 'evaluation-call', 'evaluation-call', 'evaluation']);
+  });
+  // Deviation from the plan text: the plan builds this fixture with raw appendDecision(cwd, line)
+  // (no {command} argument) and base_snap: 'a'.repeat(40) (a fake SHA). lib/adr.mjs's real
+  // appendDecision (already committed) requires {command}, checked against the decision kind's
+  // assigned writer list, and always verifies base_snap against a real workspace snapshot
+  // (validateLine's ws() check runs unconditionally for appendDecision). Also, log records (unlike
+  // ADR lines) carry no payload timestamp -- callsDisabled instead reads the 'done' record's own
+  // Git commit date to compare against the ADR line's ts.
+  test('unread Consequential decisions at Done disable calls next commitment', async () => {
+    const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0' } } });
+    const baseSnap = await writeWorkspaceSnapshot(r.cwd);
+    await appendDecision(r.cwd, { kind: 'decision', level: 'Consequential', by: 'agent', title: 't', rests_on: [], wrong_if: 'w', body: 'b', base_snap: baseSnap, evaluation: null, interfaces: [] }, { command: 'decide' });
+    const doneSnap = await writeWorkspaceSnapshot(r.cwd);
+    await appendRecord(r.cwd, 'done', 'first', { slug: 'first', snapshot: doneSnap });
+    const startSnap = await writeWorkspaceSnapshot(r.cwd);
+    await appendRecord(r.cwd, 'start', 'second', { slug: 'second', snapshot: startSnap, requirements: [], from_superseded: null, intent: null, results: [] });
+    const log = await readLog(r.cwd);
+    assert.match(await callsDisabled(r.cwd, log), /unread/);
+    let called = false;
+    const res = await evaluate(r.cwd, { ...draft(), commitment: 'second', concerns: ['cycle'] }, { transport: async () => { called = true; } });
+    assert.equal(called, false); assert.equal(res.reason, 'unread-decisions'); assert.equal(res.route, 'developer');
+  });
+  test('disabled evaluator writes nothing and returns the developer route', async () => {
+    const { cwd } = await makeProject();
+    const before = (await readLog(cwd)).length;
+    const r = await evaluate(cwd, draft(), { transport: async () => { throw new Error('no'); } });
+    assert.equal(r.reason, 'disabled'); assert.equal((await readLog(cwd)).length, before);
   });
 });

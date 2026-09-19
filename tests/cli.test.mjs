@@ -5,7 +5,8 @@ import { promisify } from 'node:util';
 import { makeRepo } from './helpers/repo.mjs';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot, writeInputSnapshot } from '../lib/snapshots.mjs';
-import { main, FETCH_LINE } from '../lib/cli.mjs';
+import { main } from '../lib/cli.mjs';
+import { missingRefsLine } from '../lib/travel.mjs';
 import { init } from '../lib/init.mjs';
 import { b64url, canonicalize } from '../lib/canon.mjs';
 
@@ -41,10 +42,16 @@ test('--help exits 0 and lists commands; an unknown command exits 1 with one cai
   const bad = await run(['bogus'], repo.dir);
   assert.equal(bad.code, 1); assert.match(bad.err, /^cairn: unknown command bogus/); assert.equal(bad.err.split('\n').length, 2);
 });
+// Fix round 1 item 3 (Minor, review-1.md finding 3): this used to compare against cli.mjs's own
+// placeholder "<authority>" line, which disagreed with what `cairn wake` prints for the identical
+// missing-refs, no-configured-remote condition and was not itself a runnable command.
+// requireRefs now calls the same lib/travel.mjs missingRefsLine wake itself uses, so this
+// computes its expectation the same way rather than hard-coding a second copy of the text.
 test('show exits 3 and names the fetch when the durable refs are missing', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
+  const expected = await missingRefsLine(repo.dir);
   const r = await run(['show', 'a'.repeat(40)], repo.dir);
-  assert.equal(r.code, 3); assert.equal(r.out, `cairn: durable refs missing; run: ${FETCH_LINE}\n`);
+  assert.equal(r.code, 3); assert.equal(r.out, `cairn: durable refs missing; run: ${expected}\n`);
 });
 test('show renders a record with its references resolved and kind-checked', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);

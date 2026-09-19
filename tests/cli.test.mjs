@@ -7,7 +7,7 @@ import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot, writeInputSnapshot } from '../lib/snapshots.mjs';
 import { main, FETCH_LINE } from '../lib/cli.mjs';
 import { init } from '../lib/init.mjs';
-import { b64url } from '../lib/canon.mjs';
+import { b64url, canonicalize } from '../lib/canon.mjs';
 
 // Fix round 1, item 5: extra takes the test-only confirm/confirmRemote/chooseKey/confirmDigest
 // overrides main() now passes through to init/authorize/decisions --read, so their success and
@@ -243,4 +243,43 @@ test('cairn end reports an unclaimable --touch path instead of throwing, and sti
   assert.equal(endResult.code, 0);
   assert.match(endResult.out, /cairn: lease ended/);
   assert.match(endResult.out, /cairn: touch helper\.mjs not written: no mechanism declares DEMO-999/);
+});
+
+// Fix round 2 finding 1a (Important): checkTouch used to apply a narrower rule set than
+// normalizeDefinition's, so a --touch path that could never be declared (here, an outside path
+// per the fixture's own settings.outside: ['README.md'], and a glob-shaped path) was accepted at
+// begin, creating a lease with nothing that could ever be written into a definition. Reproduced
+// exactly as the reviewer found it: `begin implement DEMO-001 --touch README.md` used to succeed.
+test('cairn begin --touch refuses an outside path or a glob metacharacter before creating a lease (finding 1a)', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const outsideResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'README.md'], repo.cwd);
+  assert.equal(outsideResult.code, 1);
+  assert.equal(outsideResult.err, 'cairn: --touch README.md is an outside path and cannot be a mechanism input\n');
+  const globResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'src/*.mjs'], repo.cwd);
+  assert.equal(globResult.code, 1);
+  assert.equal(globResult.err, 'cairn: --touch src/*.mjs has a glob metacharacter and cannot be a mechanism input\n');
+  // Neither refusal left a lease behind for `cairn end` to find.
+  const endResult = await run(['end'], repo.cwd);
+  assert.equal(endResult.code, 1);
+  assert.equal(endResult.err, 'cairn: no action lease to end\n');
+});
+
+// Fix round 2 findings 1b and 2 (Important, Minor): applyTouch's own declare() call, or the
+// readMechanisms it depends on, can still fail after the lease ref is gone -- here because the
+// mechanism file is corrupted (readMechanisms' own shape refusal, finding 9) between begin and
+// end. Before this fix that reached main()'s catch, split the already-written "lease ended" line
+// from an exit-1 refusal. It is now reported as an unclaimed touch and the command exits 0. The
+// exact printed line also demonstrates finding 2: a single "cairn:" prefix, not doubled by main().
+test('cairn end reports an unclaimed touch, with no doubled cairn: prefix, for a mechanism file corrupted after begin (findings 1b, 2)', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
+  assert.equal(beginResult.code, 0);
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  await repo.write('.cairn/mechanisms/greeter.json', canonicalize({ schema: 1, definition: {}, review: {} }));
+  const endResult = await run(['end'], repo.cwd);
+  assert.equal(endResult.code, 0, 'the lease removal and its report are never split by the write-back failure');
+  assert.equal(endResult.out,
+    'cairn: lease ended\ncairn: touch helper.mjs not written: .cairn/mechanisms/greeter.json is not a valid mechanism entry (kernel-managed path breach)\n');
 });

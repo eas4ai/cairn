@@ -35,6 +35,9 @@ test('refuses a documents path below source', () => refuses(() => {}, /documents
 test('S3: a source root nested under a documents directory is accepted, only the reverse is refused', () => {
   assert.deepEqual(validateSettings({ ...GOOD, source: [...GOOD.source, 'docs/lib/**'] }, { mechanisms: [{ inputs: ['docs'], documents: ['docs'] }] }), []);
 });
+test('fix round 2 S3: a wildcard-leading source root still catches a documents entry below it', () => {
+  refuses((s) => { s.source.push('**/lib/**'); }, /documents lib\/README.md lies below source \*\*\/lib\/\*\*/, { mechanisms: [{ inputs: ['lib/README.md'], documents: ['lib/README.md'] }] });
+});
 test('refuses a secret-shaped field or value other than the public signing_key', () => {
   refuses((s) => { s.harness.codex.api_token = 'x'; }, /secret-shaped field/);
   refuses((s) => { s.authority_remote = 'ghp_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'; }, /secret-shaped value/);
@@ -71,7 +74,7 @@ test('S5: AKIA is the real AWS key-id shape with no separator, and long hyphenat
 test('the removed weights and code_tiers fields are refused by name', () => {
   refuses((s) => { s.typesafeai.weights = {}; }, /removed field weights/); refuses((s) => { s.typesafeai.code_tiers = []; }, /removed field code_tiers/);
 });
-test('overlaps follows the literal-stem rule', () => {
+test('overlaps follows glob-vs-glob language intersection, not literal-stem containment', () => {
   assert.ok(overlaps('src/**', 'src/api/**') && overlaps('docs/spec/**', 'docs/spec/a.md') && overlaps('a/b', 'a/b') && overlaps('config/*.json', 'config/x.json'));
   assert.ok(!overlaps('src/**', 'srcx/**') && !overlaps('README.md', 'bin/**') && !overlaps('**/*.md', '**/*.js'));
 });

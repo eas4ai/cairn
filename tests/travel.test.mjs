@@ -16,6 +16,7 @@ import {
   fetchCommand, missingRefsLine,
   push, remoteOids, PUSH_COMMAND,
   validateAfterFetch,
+  AGREEMENT_PUSH_TEXT,
 } from '../lib/travel.mjs';
 import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
 
@@ -233,5 +234,20 @@ describe('validateAfterFetch', () => {
     sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
     const v = await wake(clone);
     assert.equal(v.exit, 3); assert.equal(v.line, 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots');
+  });
+});
+
+describe('working agreement text', () => {
+  test('the push paragraph names the command, the three refs, atomicity, the order and the lease', () => {
+    assert.equal(AGREEMENT_PUSH_TEXT, [
+      'Push with `cairn push`. It pushes the branch, `refs/cairn/log` and',
+      '`refs/cairn/snapshots` to the authority remote in one atomic push where the',
+      'remote supports it; otherwise snapshots first, log second and branch last,',
+      'and a failure stops the sequence. Each ref carries the expected remote OID',
+      'as a lease, so a clone that is behind is refused and told what to fetch.',
+      'Never push `refs/cairn/*` with plain `git push`; after any fetch, `cairn',
+      'wake` checks the records against the code and names the exact repair.',
+    ].join('\n'));
+    assert.ok(/^[\x20-\x7e\n]+$/.test(AGREEMENT_PUSH_TEXT), 'ASCII only');
   });
 });

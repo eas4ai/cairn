@@ -297,7 +297,7 @@ cairn realize <decision-id> --subject "what was actually built"
 
 `build <decision>` stays the wake action until that realized line names
 the decision's starting and resulting workspace snapshots, and the
-realization check, comparing the two, passes: a change touching a `data`
+realization check, comparing the two, passes. A change touching a `data`
 path, frozen Agreed text, the working agreement, or protected settings
 always stops and escalates, whatever the decision said it intended.
 
@@ -329,7 +329,7 @@ cairn declare names --file mechanism-names.json
 
 `inputs` are literal paths, never globs; a directory covers everything
 Git tracks beneath it. `documents` (optional) is a subset of `inputs` whose
-changes cost a check but never stale a review; a `documents` path may not
+changes cost a check but never stale a review. A `documents` path may not
 also sit below a `source` root in settings. With `"results":
 "per-requirement"`, the command must print one line per requirement it
 speaks for, `cairn: APP-001: pass` or `cairn: APP-001: fail`; an omitted
@@ -432,12 +432,12 @@ the brief file's path, the projection directory, and the exact instruction
 for starting the adversary: which harness, which model and transport (or
 `any`, when settings do not pin one), and to use the brief file as that
 session's entire prompt. The agent starts that adversary with none of the
-builder's conversation context and waits. The adversary tries, for each
-mechanism, to make it pass without the behavior, fail for a setup reason
-instead of the real one, and find an input it reads but the declaration
-omits; for each implemented requirement, to reach the falsifier anyway;
-and it gives every changed interface a caller-level attempt whether or not
-the builder raised it. Its findings, in a JSON file shaped like the
+builder's conversation context and waits. For each mechanism, the adversary
+tries to make it pass without the behavior, fail for a setup reason instead
+of the real one, and find an input it reads but the declaration omits. For
+each implemented requirement, it tries to reach the falsifier anyway. For
+every changed interface, it gives a caller-level attempt whether or not the
+builder raised it. Its findings, in a JSON file shaped like the
 review's but with `attempts` (one `{"question", "target", "text"}` per
 required pair) in place of `answers`, plus `interface_attempts` (one
 `{"path", "text"}` per changed interface path) and the `model` and

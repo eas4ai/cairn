@@ -33,7 +33,7 @@ digraph existing_project {
   start -> wake;
   wake -> tonext [label="Done"];
   wake -> midway [label="Resolvable | Waiting"];
-  wake -> hasspec [label="not a project, or Escalate answered"];
+  wake -> hasspec [label="not a project"];
   midway -> finish [label="finish"];
   midway -> supersede_c [label="supersede"];
   supersede_c -> hasspec;

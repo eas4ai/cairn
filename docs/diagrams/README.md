@@ -17,4 +17,5 @@ Render with Graphviz:
     done
 
 The .dot sources are the record; the .svg files are kept so the graphs
-can be read without a renderer.
+can be read without a renderer. Where a graph and the specification
+text disagree, the text is normative: the predicates live there.

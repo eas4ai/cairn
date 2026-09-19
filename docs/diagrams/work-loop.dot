@@ -9,31 +9,28 @@ digraph work_loop {
   verdict [shape=diamond, label="Verdict?"];
 
   // Waiting: the developer's turn
-  waiting [label="Waiting: the developer's turn;\nthe agent stops; the hooks print it and do not nag"];
+  waiting [label="Waiting: wake prints the escalation's five fields verbatim;\nthe agent adds nothing and stops; the hooks print it and do not nag"];
   answer [label="Developer runs cairn answer SLUG\nok | instead <text> | ask <text>\n(the agent never does)"];
-
-  // Escalate: present the question
-  present [label="Escalate SLUG: present the escalation\nin its own words; stop"];
-  reply [label="reply SLUG (after ask): append the explanation\ndone := the escalation carries it"];
+  reply [label="reply SLUG (after ask): append the explanation\ndone := a reply record names the escalation"];
 
   // Done
-  stop [shape=box, peripheries=2, label="Done: wake writes the done record;\nthe queue is presented; stop.\nThe developer opens /next-feature."];
+  stop [shape=box, peripheries=2, label="Done: a done record exists and nothing waits;\nstop. The developer opens /next-feature.\n(With a backlog item waiting, wake names promote instead.)"];
 
   // Resolvable
   act [label="Do the named action\nuntil its predicate holds\n(the table below, in precedence order)"];
   cannot [shape=diamond, label="Cannot act on it?"];
-  escalate [label="cairn escalate with the evidence;\nthe next wake says Escalate, then Waiting"];
+  escalate [label="cairn escalate with the evidence;\nthe next wake says Waiting\n(or, with the evaluator, writes the decision instead)"];
   trace [label="Leave the trace: a code commit on the branch,\nor a record on refs/cairn/log\n(receipts, reviews, items, escalations...)"];
 
   actions [shape=plaintext, fontsize=9, label=<
     <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
       <TR><TD BGCOLOR="#eeeeee"><B>Action, in precedence order</B></TD><TD BGCOLOR="#eeeeee"><B>done :=</B></TD></TR>
-      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">refs/cairn/in-progress is gone; the action finished or was abandoned</TD></TR>
-      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">a mechanism declares the path, outside: lists it, or a scope record with an ok answer names it</TD></TR>
-      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">a fix record names the item and a tree that changes no Agreed text; REQ has a current passing receipt at or after it</TD></TR>
-      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">in-progress names the action, or PATH matches the tree it pinned</TD></TR>
-      <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean</TD></TR>
       <TR><TD ALIGN="LEFT">repair PATH</TD><TD ALIGN="LEFT">the named file reads under its grammar; nothing else changed</TD></TR>
+      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">refs/cairn/in-progress is gone; the action finished or was abandoned</TD></TR>
+      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">a mechanism declares the path, outside lists it, or a scope record with an ok answer names it</TD></TR>
+      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">a fix record names the item and a tree that changes no Agreed text; REQ has a current passing receipt at or after it</TD></TR>
+      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">in-progress (cairn begin) covers PATH through its target's declared inputs, or PATH is clean</TD></TR>
+      <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean, or in-progress covers it</TD></TR>
       <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a mechanism entry names REQ (cairn declare)</TD></TR>
       <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">a current receipt carries a result for REQ: input tree, entry digest and text digest equal now</TD></TR>
       <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">a current receipt carries pass for REQ; the reviewed list carries REQ with a fail receipt</TD></TR>
@@ -42,18 +39,17 @@ digraph work_loop {
       <TR><TD ALIGN="LEFT">capture ITEM</TD><TD ALIGN="LEFT">an outside record names the item, or an escalation concerns it</TD></TR>
       <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">a review names the current tree and answers every fixed question for every target</TD></TR>
       <TR><TD ALIGN="LEFT">report SLUG</TD><TD ALIGN="LEFT">cairn brief writes the brief; the agent starts the adversary and waits; a report names the same tree and the brief, with an attempt against every question</TD></TR>
-      <TR><TD ALIGN="LEFT">resolve SLUG N</TD><TD ALIGN="LEFT">a resolution names finding N and the tree after the fix, or an escalation concerns it</TD></TR>
+      <TR><TD ALIGN="LEFT">resolve SLUG N</TD><TD ALIGN="LEFT">a resolution names finding N of the review or the report and the tree after the fix, or an escalation concerns it</TD></TR>
       <TR><TD ALIGN="LEFT">accept SLUG</TD><TD ALIGN="LEFT">the adversary accepts every resolution at the current tree, or rejects one and a new resolution follows; no second report</TD></TR>
       <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">a realized line in docs/decisions.jsonl names the decision and a tree</TD></TR>
-      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">a promotion record names a backlog item and a decision; the roadmap section names only Agreed requirements; Current: moved; a start record exists</TD></TR>
+      <TR><TD ALIGN="LEFT">done SLUG</TD><TD ALIGN="LEFT">the Done rule holds: cairn done writes the done record and prints the queue</TD></TR>
+      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">no commitment is open and a backlog item waits: a promotion record names one item and a decision; the roadmap section names only Agreed requirements; Current: moved; a start record exists</TD></TR>
     </TABLE>>];
 
   wake -> verdict;
   verdict -> waiting [label="Waiting"];
   waiting -> answer;
   answer -> wake;
-  verdict -> present [label="Escalate"];
-  present -> waiting;
   verdict -> reply [label="Resolvable: reply"];
   reply -> wake;
   verdict -> stop [label="Done"];

@@ -62,8 +62,14 @@ The kernel's terms. A term in this list means this and nothing else.
   delivers, its done-when).
 - **Requirement**: one block in a domain file: an identifier
   `[PREFIX-nnn]`, one obligation with the actor named, a `Falsifier:`
-  line naming the observable state in which it is violated, and a
-  `Status:` line. The block grammar is in section 4.
+  line naming the observable state in which it is violated, a
+  `Mechanism:` line naming the declaration that observes it, and a
+  `Status:` line. The block grammar is in section 4. A domain file
+  whose header carries `Scope: every commitment` contributes its Agreed
+  blocks to every commitment's requirement set; the Done rule reads
+  them with the roadmap section's. A header's `Host paths:` line
+  declares the absolute or home-relative paths the software's behavior
+  depends on; lint refuses an undeclared one in a block.
 - **Status**: one of `Draft` (written, not confirmed), `Observed`
   (derived from existing code; describes what is, never contract),
   `Agreed <date>` (confirmed by the developer, or by a deference
@@ -92,7 +98,10 @@ The kernel's terms. A term in this list means this and nothing else.
   come from the environment and never from a tracked file.
 - **Working agreement**: `AGENTS.md` at the repository root, copied from
   the template the plugin ships: the move for each verdict and action.
-  The kernel digests it to know when it changed; it does not parse it.
+  The kernel does not parse it. A change to it on the loop's own
+  history is a scope breach unless a next-feature item names the
+  working agreement; the spec-phase tail writes it before the start
+  record, off that history.
 
 **The tree, kernel-written:**
 
@@ -120,7 +129,10 @@ squashed and amended freely, and the loop does not care.
 - **Receipt**: a record of one mechanism run: the mechanism entry's
   digest, the input set's tree OID, whether the command ran or errored,
   and per requirement its text digest and result. Keyed by identities,
-  never by a commit.
+  never by a commit. A **fail receipt** for a requirement is one whose
+  command ran and whose result for that requirement is `fail`; an
+  `error` receipt never counts as one, so a violating example needs
+  enough of a stub to run.
 - **Input set tree OID**: the Git tree identity of the mechanism's
   declared paths as they are in the working tree, built from the index
   for tracked clean files and hashed for the rest.
@@ -133,17 +145,21 @@ squashed and amended freely, and the loop does not care.
   findings.
 - **Report**: the adversary's record for a commitment at the same tree:
   attempts against the review's claims, and findings. Written once per
-  commitment.
-- **Resolution**: a record answering one finding of a report: the tree
-  after the fix and how. **Acceptance**: the adversary's record that a
-  resolution closes its finding at the final tree. **Dispute**: an
-  escalation naming a finding the builder will not resolve; the
-  developer rules.
+  commitment, at the reviewed tree; the adversary's experiments run in
+  a throwaway worktree.
+- **Finding**: a numbered entry on a review or a report. Both kinds are
+  answered the same way: a **resolution** (the tree after the fix and
+  how) or a **dispute** (an escalation naming the finding; the
+  developer rules). **Acceptance**: the adversary's record that a
+  resolution closes its finding at the final tree.
 - **Escalation**: a record with five one-line fields (question,
-  recommendation, because, if wrong, instead). **Answer**: the
-  developer's record, `ok`, `instead <text>` or `ask <text>`, written by
-  `cairn answer`, signed when the settings name a key. An `ask` keeps it open
-  for the agent's **reply**.
+  recommendation, because, if wrong, instead). Wake prints the five
+  fields under `Waiting`; the agent does not paraphrase them.
+  **Answer**: the developer's record, `ok`, `instead <text>` or `ask
+  <text>`, written by `cairn answer`, signed when the settings name a
+  key. An `ask` keeps it open for the agent's **reply**.
+- **Evaluation**: the evaluator's record (section 10), its own record
+  naming what it judged.
 - **Item**: a record capturing an idea: kind `backlog` (work the
   Agreed requirements already cover), `next-feature` (would change
   Agreed text or the working agreement, and names what), or `defect`
@@ -153,36 +169,46 @@ squashed and amended freely, and the loop does not care.
   the start pinning the roadmap's tree OID so the requirements list at
   the moment of commitment is fixed. The **range** is the ref from the
   start record to its head.
-- **In-progress**: `refs/cairn/in-progress`, a single record the agent
-  writes before changing a declared input and deletes when the change
-  is committed: `action`, `target`, the tree OID at start, `started`,
-  `session` when the harness provides one. `cairn check` writes and
-  removes its own while a mechanism runs.
+- **In-progress**: `refs/cairn/in-progress`, a single record written by
+  `cairn begin <action> <target>` before the agent changes a declared
+  input and removed by `cairn end` when the change is committed:
+  `action`, `target`, the tree OID at start, `started`, `session` when
+  the harness provides one. While it exists, the declared inputs of its
+  target are neither `record` nor `commit` findings; the action's own
+  predicate decides. `cairn check` writes and removes its own while a
+  mechanism runs.
 
 **The ADR.** `docs/decisions.jsonl` on the working branch: one JSON
-object per line, append-only, written by `cairn decide` and `cairn
-answer` and read by `cairn decisions`. Every line has a `kind`
-(`decision`, `realized`, `superseded`, `answered`), an `id`, and a
-timestamp; a line about an earlier decision carries its `id`; no line
-is ever written twice. The kernel knows two decision levels:
-Consequential (a `decision` line, the agent continues, the developer
-reads it at Done and in next-feature) and Blocking (an escalation; its
-`answered` line names the answer record's SHA, which is where the
-signature check lives). The working agreement's guidance keeps four
-levels; Routine and Judged leave no line.
+object per line, append-only, written by `cairn decide`, `cairn
+escalate` (on a downgrade, section 10), `cairn answer` and `cairn
+decisions --read`, and read by `cairn decisions`. Every line has a
+`kind` (`decision`, `realized`, `superseded`, `answered`, `read`), an
+`id`, and a timestamp; a line about an earlier decision carries its
+`id`; no line is ever written twice. A `decision` line carries `by`
+(`agent`, `developer`, or `joint` for one made in conversation and
+recorded by the agent quoting the developer), `rests_on` (requirement
+identifiers and record SHAs), `wrong_if`, and `body`. A `read` line is
+written by the developer only, signed when the settings name a key;
+the queue is the `decision` lines without one. The kernel knows two
+decision levels: Consequential (a `decision` line, the agent continues,
+the developer reads it at Done and in next-feature) and Blocking (an
+escalation; its `answered` line names the answer record's SHA, which
+is where the signature check lives). The working agreement's guidance
+keeps four levels; Routine and Judged leave no line.
 
 **Other terms:**
 
 - **The loop's own history**: the first-parent commits of the working
   branch since the tree the start record pins. Merged branches stay off
   it.
-- **Verdict**: what wake prints. Four: `Resolvable` with an action (the
-  agent's turn), `Waiting` (the developer's turn: an escalation has
-  been presented and not answered), `Escalate` with a slug (a question
-  awaits presentation), `Done`. A pending report is the agent's wait
-  and stays Resolvable. Outside a project, or when the ref is absent
-  from a clone, wake prints one line saying so and exits 3; neither is
-  a verdict.
+- **Verdict**: what wake prints. Three: `Resolvable` with an action (the
+  agent's turn), `Waiting` with the escalation's five fields (the
+  developer's turn: an escalation exists and no answer does), `Done`.
+  Wake is the presentation, so nothing marks one; a pending report is
+  the agent's wait and stays Resolvable. Wake is read-only: it writes
+  nothing to the tree, the ref or any remote. Outside a project, or
+  when the ref is absent from a clone, wake prints one line saying so,
+  naming the command that fixes it, and exits 3; neither is a verdict.
 - **Predicate**: the condition the kernel tests on the next wake to
   decide the named action is complete: which records exist in the
   range. Printed with the action.
@@ -237,13 +263,15 @@ quoting their words); `Status: Agreed <date>` per confirmed block; the
 roadmap section and `Current:`; `cairn declare` for the commitment's
 requirements only, each with a failing test as its violating example;
 the working agreement; commit; `cairn start`, which writes the start
-record; wake.
+record and sets the `refs/cairn/*` refspecs on the project's remotes;
+wake.
 
 **The work loop** (work-loop.dot). Wake names one action with its
 predicate; the agent does it until the predicate holds, leaves the
-record, and wakes again. Escalate presents the question; Waiting is the
-developer's turn and the agent stops. Done writes the done record,
-presents the queue, and stops.
+record, and wakes again. Waiting prints the escalation and the agent
+stops. When the Done rule holds, wake names `done`; `cairn done` writes
+the done record and prints the queue; the next wake says Done, or, with
+a backlog item waiting, names `promote`.
 
 ## 4. The record set
 
@@ -268,12 +296,12 @@ record SHA; a reference into the code is a tree OID.
 | receipt | `Cairn-Receipt: <mechanism> <entry-digest> <input-tree-oid> ran\|error`, `Cairn-Result: <REQ> <text-digest> pass\|fail\|unverified` (repeated), `Cairn-Output: <digest>`, `Cairn-Exit: <code or signal>` | the input set's tree | every wake: freshness, attempts |
 | review | `Cairn-Review: <slug> <tree-oid>`, `Cairn-Examined: <text>` (repeated), `Cairn-Q: <n> <target> observed\|not-checked <text>` (repeated), `Cairn-Finding: <n> <text>` (repeated) | the tree reviewed | before the report; at Done |
 | brief | `Cairn-Brief: <slug> <review-sha> <digest>` | the review | when the report is checked |
-| report | `Cairn-Report: <slug> <tree-oid> <brief-sha> model=<name>`, `Cairn-Attempt: <q> <target> <tried> <result>` (repeated), `Cairn-Finding: <n> <text>` (repeated) | the review's tree, verified equal; the brief | at Done: every finding resolved or disputed |
-| resolution | `Cairn-Resolves: <report-sha> <n> <tree-oid> <how>` | the report; the tree after the fix | at Done |
+| report | `Cairn-Report: <slug> <tree-oid> <brief-sha> model=<name>`, per attempt `Cairn-Attempt: <n> <q> <target>`, `Cairn-Tried: <n> <text>`, `Cairn-Outcome: <n> <text>`, `Cairn-Finding: <n> <text>` (repeated) | the review's tree, verified equal; the brief | at Done: every finding resolved or disputed |
+| resolution | `Cairn-Resolves: <review-or-report-sha> <n> <tree-oid> <how>` | the record that holds the finding; the tree after the fix | at Done |
 | acceptance | `Cairn-Accepts: <resolution-sha> <tree-oid>` or `Cairn-Rejects: <resolution-sha> <text>` | the resolution; the final tree | at Done |
 | escalation | `Cairn-Escalation: <slug>`, `Cairn-Question:`, `Cairn-Recommend:`, `Cairn-Because:`, `Cairn-If-Wrong:`, `Cairn-Instead:`, `Cairn-Concerns: <REQ or record-sha>` | what it concerns | every wake until answered |
 | answer | `Cairn-Answer: <escalation-sha> ok\|instead\|ask <text>` | the escalation | every wake; verified against `signing_key` when set |
-| evaluation | `Cairn-Eval: typesafeai <resolved-model> <schema> <state-digest> tokens=<n> tier=<1\|2\|3> cut=<bytes>` or `Cairn-Eval: unavailable <reason>`, `Cairn-Eval-Option: <n> reversible=<p> contradicts=<p> interface=<yes\|no\|unknown> score=<s>` (repeated), `Cairn-Eval-Route: agent\|developer conf=<c> sufficient=<p> observed=<p>` | on an escalation or a Consequential decision's promotion record only | the queue; `cairn reversals` |
+| evaluation | `Cairn-Eval-Of: <escalation-sha> \| <decision-id>`, `Cairn-Eval: typesafeai <resolved-model> <schema> <state-digest> tokens=<n> tier=<1\|2\|3> cut=<bytes>` or `Cairn-Eval: unavailable <reason>`, `Cairn-Eval-Option: <n> reversible=<p> contradicts=<p> interface=<yes\|no\|unknown> score=<s>` (repeated), `Cairn-Eval-Route: agent\|developer conf=<c> sufficient=<p> observed=<p>` | the escalation it judged, or the decision it became | the queue; `cairn reversals` |
 | reply | `Cairn-Reply: <escalation-sha> <text>` | the escalation | after an `ask` |
 | item | `Cairn-Item: backlog\|next-feature\|defect <slug>`, `Cairn-From: <REQ>` or `Cairn-Changes: <REQ or agreement>`, `Cairn-Body: <text>` | a requirement | Done, next-feature |
 | outside | `Cairn-Outside: <item-sha> <reason>` | the item | the capture gate |
@@ -288,44 +316,54 @@ record SHA; a reference into the code is a tree OID.
 - `{"kind":"realized","id":<ulid>,"ts":..,"of":<id>,"tree":<tree-oid>,"subject":..}`
 - `{"kind":"superseded","id":<ulid>,"ts":..,"of":<id>,"by":<id>,"cause":"the stated condition occurred|an unforeseen condition occurred|it was wrong when it was made|the premise was false"}`
 - `{"kind":"answered","id":<ulid>,"ts":..,"escalation":<record-sha>,"answer":<record-sha>}`
+- `{"kind":"read","id":<ulid>,"ts":..,"of":<id>,"by":"developer","signature":<sha or null>}`
 
 `cairn decisions` renders the file; the queue is the `decision` lines
-with no `read` line, and the developer's reading is a `read` line
-`cairn decisions --read <id>` appends.
+with no `read` line. `cairn decisions --read <id>` appends the `read`
+line and is the developer's command, as `cairn answer` is: signed when
+the settings name a key, the author line as evidence otherwise, and a
+`read` line the agent wrote is a violation.
 
 **The requirement block grammar.** A block begins at a line matching
 `[PREFIX-nnn]` at the margin and ends at the next blank line. Inside
 it, in order: the identifier line, whose remainder begins the text; the
 text, continuing until a `Falsifier:` line; the `Falsifier:` line, one
-line; an optional `Rationale:` line, one line, outside the digest; the
-`Status:` line. The digest of a requirement is the identifier, the text
-and the falsifier, whitespace-normalized. A file header holds
-`Prefix:`, an optional `Scope: every commitment`, and an optional `Host
-paths:` line, each before the first block. Everything outside a block
-and the header is prose the kernel skips, fenced or not. `cairn lint
-docs/spec` refuses a file that breaks this grammar, a duplicate
+line; a `Mechanism:` line naming the declaration that observes the
+falsifier, outside the digest; an optional `Rationale:` line, one
+line, outside the digest; the `Status:` line. The digest of a
+requirement is the identifier, the text and the falsifier,
+whitespace-normalized. A file header holds `Prefix:`, an optional
+`Scope: every commitment` (section 2), and an optional `Host paths:`
+line (section 2), each before the first block. Everything outside a
+block and the header is prose the kernel skips, fenced or not. `cairn
+lint docs/spec` refuses a file that breaks this grammar, a duplicate
 identifier, a reference to an identifier that does not exist, a block
-with no falsifier, and an Agreed block whose falsifier names no
-mechanism; its refusal is the falsifier for every rule in this
-paragraph.
+with no falsifier, an Agreed block with no `Mechanism:` line, and an
+undeclared host path; its refusal is the falsifier for every rule in
+this paragraph.
 
 **The roadmap.** Parsed: `Current: <slug>` and, in the section whose
 heading is that slug, `Requirements: <identifiers>`. The rest is prose.
 
-**Commands write records.** `cairn check` writes receipts; `cairn
-review`, `cairn brief`, `cairn report`, `cairn resolve`, `cairn accept`
-write the review chain, one field per flag (`--examined`, `--observed
-<q> <target> "<text>"`, `--not-checked <q> <target>`, `--finding
-"<text>"`, `--attempt <q> <target> "<tried>" "<result>"`); `cairn
+**Commands write records.** `cairn begin` and `cairn end` write and
+remove in-progress; `cairn check` writes receipts; `cairn review`,
+`cairn brief`, `cairn report`, `cairn resolve`, `cairn accept` write
+the review chain, one field per flag (`--examined`, `--observed <q>
+<target> "<text>"`, `--not-checked <q> <target>`, `--finding "<text>"`,
+`--attempt <q> <target> --tried "<text>" --outcome "<text>"`); `cairn
 escalate`, `cairn answer`, `cairn reply`; `cairn item`, `cairn
-outside`, `cairn fix`; `cairn decide`, `cairn promote`; `cairn start`,
-and wake writes done. No command edits a record; each writes a new one.
+outside`, `cairn fix`; `cairn decide`, `cairn promote`; `cairn start`
+and `cairn done`. Wake writes nothing. No command edits a record; each
+writes a new one.
 
-**The ref travels with the code.** The install skill sets fetch and
-push refspecs for `refs/cairn/*`; wake sets them when it finds a remote
-without them; the working agreement's "push" means the branch and the
-ref together. The ref is never rewritten. The working branch is
-unconstrained: rebase, squash and amend as the project likes.
+**The ref travels with the code.** `cairn start` sets fetch and push
+refspecs for `refs/cairn/*` on the project's remotes, because refspecs
+are per repository and a fresh clone has run neither the install skill
+nor the hook; the working agreement's "push" means the branch and the
+ref together. On a clone without the ref, wake exits 3 naming `git
+fetch origin 'refs/cairn/*:refs/cairn/*'`. The ref is never rewritten.
+The working branch is unconstrained: rebase, squash and amend as the
+project likes.
 
 Records from 1.x are not read. A project moves to 2 at Done by
 re-running its checks and writing its review through the new commands.
@@ -340,10 +378,10 @@ specification.
 
 | Action | Complete when |
 |---|---|
-| `reconcile ACTION` | `refs/cairn/in-progress` is gone; the action it named finished or was abandoned |
-| `record PATH` | in-progress names the action, or PATH's tree equals the one in-progress pinned |
-| `commit PATH` | PATH is clean |
 | `repair PATH` | the named file reads under its grammar; nothing else changed |
+| `reconcile ACTION` | `refs/cairn/in-progress` is gone; the action it named finished or was abandoned |
+| `record PATH` | in-progress names an action whose target's declared inputs include PATH, or PATH is clean |
+| `commit PATH` | PATH is clean, or in-progress covers it |
 | `scope PATH` | a mechanism declares the path, `outside:` lists it, or a scope record with an `ok` answer names it |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `fix ITEM` | a fix record names the item and a tree that changes no Agreed text; the requirement has a current passing receipt at or after that tree |
@@ -354,36 +392,44 @@ specification.
 | `escalate REQ` | an escalation concerns REQ (three attempts without a pass) |
 | `review SLUG` | a review names the current tree and answers every fixed question |
 | `report SLUG` | a brief names the review; a report names the same tree and the brief; every question of the review has an attempt |
-| `resolve SLUG N` | a resolution names finding N, or an escalation concerns it |
+| `resolve SLUG N` | a resolution names finding N of the review or the report, or an escalation concerns it |
 | `accept SLUG` | every resolution has an acceptance at the current tree, or a rejection with a new resolution |
 | `build DECISION` | a `realized` line names the decision and a tree |
-| `promote` | a promotion record names a backlog item and a decision; the roadmap section names only Agreed requirements; `Current:` moved; a start record exists |
+| `done SLUG` | a done record names the commitment; the queue was printed |
+| `promote` | no commitment is open; a promotion record names one backlog item and a decision; the roadmap section names only Agreed requirements; `Current:` moved; a start record exists |
 | `reply SLUG` | a reply record names the escalation |
 
 **Precedence.** Wake tests in this order and names the first that
-fails: an in-progress ref from another session or an abandoned one
+fails: a file the kernel reads that does not read (`repair`); an
+in-progress ref from another session or an abandoned one
 (`reconcile`); an undeclared changed path on the loop's own history
-(`scope`); an escalation with no answer (`Escalate` if not yet
-presented, else `Waiting`; `reply` after an `ask`); a defect item with
-no fix (`fix`); a dirty declared input (`record`, `commit`); a
-requirement with no mechanism (`declare`); a requirement with no current
-receipt (`run`), or a failing one (`implement`, or `escalate` at three
-attempts); a revised requirement without a mechanism review (`review
-mechanism`); a capture from the commitment's own requirement without
-its reason (`capture`); no review at the current tree (`review`); no
-report at the reviewed tree (`report`); a finding with no resolution
-(`resolve`); a resolution with no acceptance at the current tree
-(`accept`); an unrealized Consequential decision (`build`); a backlog
-item with no promotion (`promote`); Done.
+(`scope`); an escalation with no answer (`Waiting`, printing its
+fields; `reply` after an `ask`); a defect item with no fix (`fix`); a
+dirty declared input in-progress does not cover (`record`, `commit`);
+a requirement with no mechanism (`declare`); a requirement with no
+current receipt (`run`), or a failing one (`implement`, or `escalate`
+at three attempts); a revised requirement without a mechanism review
+(`review mechanism`); a capture from the commitment's own requirement
+without its reason (`capture`); no review at the current tree
+(`review`); no report at the reviewed tree (`report`); a finding on
+either record with no resolution (`resolve`); a resolution with no
+acceptance at the current tree (`accept`); an unrealized Consequential
+decision (`build`); the Done rule holds and no done record exists
+(`done`); no commitment is open and a backlog item waits (`promote`);
+Done.
 
 **Done.** Every requirement in the roadmap section the start record
-pins has a current passing receipt whose mechanism's reviewed list
-carries it; a review and a report exist at the reviewed tree; every
-report finding has a resolution or an escalation concerns it; every
-resolution has an acceptance at the current tree; no escalation is
-unanswered; no changed path on the loop's own history is undeclared; no
-backlog item lacks a promotion and no defect item lacks a fix. Wake
-writes the done record and presents the queue.
+pins, plus every Agreed block under `Scope: every commitment`, has a
+current passing receipt whose mechanism's reviewed list carries it; a
+review and a report exist at the reviewed tree; every finding on either
+has a resolution or an escalation concerns it; every resolution has an
+acceptance at the current tree; no escalation is unanswered; no changed
+path on the loop's own history is undeclared; no defect item lacks a
+fix. Backlog items are not in the rule: captured means waiting, however
+long. When the rule holds, wake names `done`; `cairn done` writes the
+done record and prints the queue; the next wake prints Done, or names
+`promote` when a backlog item waits, so one commitment is open at a
+time and each promotion is one decision.
 
 **The cost of Done.** The report is written once, at the candidate
 tree. A fix after it does not stale the review: it is a resolution
@@ -391,8 +437,12 @@ against a finding, and the adversary accepts or rejects the delta at
 the final tree. Evidence for the changed inputs re-runs, as it should;
 the review does not.
 
-**Waiting.** The agent's turn ends when an escalation has been
-presented and not answered. The hooks print `Waiting` and do not nag.
+**Waiting.** The agent's turn ends when an escalation exists and no
+answer does. Wake prints `Waiting` and the escalation's five fields,
+verbatim from the record; that is the presentation, and the agent adds
+nothing to it. The hooks print the same and do not nag. A pending
+report is not Waiting: the agent started the adversary, and `report
+SLUG` stays its action until the record exists.
 
 ## 6. Hooks
 
@@ -477,8 +527,8 @@ before any promotion.
 
 **Review.** The builder's review answers the fixed questions and lists
 findings; the adversary's report attacks each claim and lists its own
-findings; each finding gets a resolution or a dispute; the adversary
-accepts each resolution at the final tree.
+findings; each finding on either record gets a resolution or a dispute;
+the adversary accepts each resolution at the final tree.
 
 **Evidence.** The receipt is on the ref. The output is in
 `.cairn/output/`, ignored by Git, named by digest in the receipt.
@@ -519,9 +569,11 @@ for each mechanism (Q1, Q2), make it pass without the behavior, make it
 fail for a setup reason, and find an input it reads that it does not
 declare; for each Q3, reach the falsifier with an input; for each Q4,
 find a touched path the claim omits; for Q5 and Q6, look where the
-builder said not to. `cairn report` refuses a worktree whose tree
-differs from the review's, a brief that is not the current one, and a
-report that leaves a question unattempted.
+builder said not to. The adversary experiments in a throwaway Git
+worktree of its own, since attacking a mechanism changes code; the
+report is written at the reviewed tree. `cairn report` refuses a
+worktree whose tree differs from the review's, a brief that is not the
+current one, and a report that leaves a question unattempted.
 
 **After the report.** Each finding gets a resolution (a fix and a
 record naming the finding and the new tree) or a dispute (an escalation
@@ -638,13 +690,20 @@ confidence is what routes:
 score(o_n) := w_rev * reversible_n + w_con * (1 - contradicts_n) + w_obs * observed
 route(D)   := sufficient >= sufficient_threshold
               and owner = agent and conf(owner) >= route_confidence
-                -> refuse the escalation; print the cairn decide line, recommendation as the decision;
-                   the decision queues with the evaluation on its record
+                -> cairn escalate writes the decision itself: a Consequential line in the ADR
+                   with the recommendation as the decision; no escalation record; it queues
               otherwise
-                -> the escalation stands, with the evaluation on its record
+                -> the escalation record is written and stands
               sufficient < sufficient_threshold
                 -> the escalation stands; reason: insufficient context; owner not consulted
 ```
+
+The evaluator is called once per input, by the command that has the
+input. `cairn escalate` writes whichever record the route selects, so
+the decision is never re-evaluated on a second command against
+possibly different state. The evaluation is its own record on the ref,
+`Cairn-Eval-Of` naming the escalation it judged or the decision it
+became; it has one shape wherever it lands.
 
 **The record.** Every evaluated record carries the trailers in section
 4: the model the response named (settings pin a version; an alias can
@@ -671,10 +730,13 @@ any key-shaped field. Weights that do not sum to 1 are normalized and
 the record says so. `attribution` is `forbidden` or `allowed`.
 
 **The kill switch.** A downgrade is safe only because the queue is read.
-When a Done finds unread Consequential decisions, the evaluator is not
-called on the next commitment, and `cairn escalate` says why, until the
-queue is read. The kernel does not edit the settings file; it refuses
-to evaluate.
+When a done record is written with unread Consequential decisions, the
+evaluator is not called on the next commitment, and `cairn escalate`
+says why, until the queue is read. Reading is the developer's act:
+`cairn decisions --read` is theirs as `cairn answer` is, signed when
+the settings name a key, and a `read` line the agent wrote is a
+violation; otherwise the agent could lift the switch with one command.
+The kernel does not edit the settings file; it refuses to evaluate.
 
 **Falsifiers.** An evaluation trailer on a record that is not an
 escalation or a Consequential decision; an escalation in an enabled
@@ -750,6 +812,9 @@ repository's own roadmap, not in this specification.
 - The autonomy and Jev modes (AUTO-001 to AUTO-018): Agreed, never
   built, never checked.
 - The stop hook's refusal, its count, stop records, and `explain`.
+- The `Escalate` verdict and the `present` action: wake prints the
+  escalation's fields under `Waiting`, so nothing is paraphrased and
+  nothing marks a presentation.
 - Reading review and item records as Markdown: the findings sweep, the
   heading, fence and markup rules, and the working agreement's
   paragraph describing them (LOOP-086, LOOP-108 to LOOP-138).
@@ -787,7 +852,11 @@ repository's own roadmap, not in this specification.
    instead of 3."
 9. Promotion never Agrees text; the agent starts a backlog commitment
    at Done without the developer (section 8).
-10. A fourth verdict, Waiting, for the developer's turn only.
+10. Three verdicts: Resolvable, Waiting, Done. Waiting is the
+    developer's turn only and prints the escalation's fields verbatim;
+    the 1.x `Escalate` verdict and `present` action are gone, since
+    nothing observable marked a presentation and the agent's paraphrase
+    shaped the developer's view.
 11. The developer runs `cairn answer`; the agent never does; signing is
     opt-in and, without it, the author line is evidence, not a check.
 12. The install skill makes the command link and sets the refspecs;
@@ -815,6 +884,18 @@ repository's own roadmap, not in this specification.
     session-start hook records the harness, the brief prints the
     instruction and the report records the model (section 9).
     Confirmed by the developer on 2026-09-18 ("confirmed").
+21. Backlog items are not in the Done rule; `cairn done` closes the
+    commitment and the next wake names `promote` for one item, so one
+    commitment is open at a time (section 5).
+22. Wake is read-only; `cairn done` and `cairn start` write what wake
+    used to, and `cairn start` sets the refspecs (section 4).
+23. A downgraded escalation is written as the decision by `cairn
+    escalate` itself, and the evaluation is its own record naming what
+    it judged (section 10).
+24. `cairn decisions --read` is the developer's command, like `cairn
+    answer` (section 4).
+25. A change to the working agreement on the loop's own history is a
+    breach unless a next-feature item names it (section 2).
 
 ## 14. Next steps
 

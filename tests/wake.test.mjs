@@ -243,3 +243,21 @@ test('an item captured from a set requirement needs an outside record or an esca
   await r.escalate(`item:${item2}`);
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
+
+test('review is named until a review at the current workspace answers every fixed question for every target', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['review', 'first']);
+  const rev = await r.review();
+  assert.equal((await wake(r.cwd)).action, 'report');
+  await r.write('src/demo.mjs', 'console.log("hello");\n// note\n'); await r.commit('later edit');
+  await check(r.cwd, 'DEMO-001');                                   // keep the receipt current: src/demo.mjs is an input
+  assert.equal((await wake(r.cwd)).action, 'review');              // no report yet: the review must be current
+  const log = await r.log();
+  const partial = { ...log.find((x) => x.sha === rev).payload, snapshot: await r.snap(), answers: [] };
+  await r.add('review', 'first', partial);
+  v = await wake(r.cwd);
+  assert.equal(v.action, 'review');
+  assert.match(v.reason, /Q1 for demo-001/);
+});

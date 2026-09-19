@@ -75,14 +75,19 @@ The kernel's terms. A term in this list means this and nothing else.
   a start record and closed by a done record on the ref. Not a Git
   commit; one commitment spans many.
 - **Settings**: `.cairn/settings.json`, hand-written, tracked, the only
-  configuration file: `outside` (paths that are nobody's input and
-  never a scope breach), `source` (directories under which no
-  `documents` or `outside` entry may lie), `signing_key` (the key
-  `cairn answer` verifies against, when the developer signs),
-  `attribution` (`forbidden` for the release script), and `typesafeai`
-  (section 10). A settings file that carries a field whose name or
-  value looks like an API key is refused; secrets come from the
-  environment and never from a tracked file.
+  configuration file: `schema` (the settings version, tied to the
+  record schema; the kernel refuses one it does not read), `outside`
+  (paths that are nobody's input and never a scope breach), `source`
+  (paths under which no `documents` or `outside` entry may lie),
+  `interfaces` (paths whose change is a public interface change),
+  `data` (paths whose change is a persisted-data change; a decision
+  touching one is the developer's), `signing_key` (the key `cairn
+  answer` verifies against, when the developer signs), `attribution`
+  (`forbidden` or `allowed`, for the release script), and `typesafeai`
+  (section 10). All path lists use one glob syntax; a path in both
+  `outside` and `source` is refused. A settings file that carries a
+  field whose name or value looks like an API key is refused; secrets
+  come from the environment and never from a tracked file.
 - **Working agreement**: `AGENTS.md` at the repository root, copied from
   the template the plugin ships: the move for each verdict and action.
   The kernel digests it to know when it changed; it does not parse it.
@@ -266,7 +271,7 @@ record SHA; a reference into the code is a tree OID.
 | acceptance | `Cairn-Accepts: <resolution-sha> <tree-oid>` or `Cairn-Rejects: <resolution-sha> <text>` | the resolution; the final tree | at Done |
 | escalation | `Cairn-Escalation: <slug>`, `Cairn-Question:`, `Cairn-Recommend:`, `Cairn-Because:`, `Cairn-If-Wrong:`, `Cairn-Instead:`, `Cairn-Concerns: <REQ or record-sha>` | what it concerns | every wake until answered |
 | answer | `Cairn-Answer: <escalation-sha> ok\|instead\|ask <text>` | the escalation | every wake; verified against `signing_key` when set |
-| evaluation | `Cairn-Eval: typesafeai <model> <schema> <state-digest> tokens=<n> tier=<1\|2\|3> cut=<n>` or `Cairn-Eval: unavailable <reason>`, `Cairn-Eval-Option: <n> reversible=<p> contradicts=<p> observed=<p> score=<s>` (repeated), `Cairn-Eval-Route: agent\|developer conf=<c> sufficient=<p>` | on an escalation or a Consequential decision's promotion record only | the queue; `cairn reversals` |
+| evaluation | `Cairn-Eval: typesafeai <resolved-model> <schema> <state-digest> tokens=<n> tier=<1\|2\|3> cut=<bytes>` or `Cairn-Eval: unavailable <reason>`, `Cairn-Eval-Option: <n> reversible=<p> contradicts=<p> interface=<yes\|no\|unknown> score=<s>` (repeated), `Cairn-Eval-Route: agent\|developer conf=<c> sufficient=<p> observed=<p>` | on an escalation or a Consequential decision's promotion record only | the queue; `cairn reversals` |
 | reply | `Cairn-Reply: <escalation-sha> <text>` | the escalation | after an `ask` |
 | item | `Cairn-Item: backlog\|next-feature\|defect <slug>`, `Cairn-From: <REQ>` or `Cairn-Changes: <REQ or agreement>`, `Cairn-Body: <text>` | a requirement | Done, next-feature |
 | outside | `Cairn-Outside: <item-sha> <reason>` | the item | the capture gate |
@@ -551,10 +556,11 @@ from the environment and nowhere else.
 
 **What is never evaluated.** An escalation that changes Agreed text or
 the working agreement, a fourth attempt after three without a pass, a
-scope retention or restoration, or one whose recommendation is empty
-is the developer's by construction and is written without a call. The
-evaluator never raises a decision's level, and never touches lint,
-receipts, mechanisms, reviews or items.
+scope retention or restoration, one whose options touch a `data` path,
+or one whose recommendation is empty is the developer's by
+construction and is written without a call. The evaluator never raises
+a decision's level, and never touches lint, receipts, mechanisms,
+reviews or items.
 
 **The state.** A deterministic function of the decision draft and the
 tree, assembled by the kernel; the agent supplies references, the
@@ -576,15 +582,17 @@ state(D) := < process,                                  -- the level rule, the b
              code >                                     -- tiered, capped, last
 ```
 
-The code row fills in order until `state_cap_tokens` is spent: the
-diff of the touched paths since the tree in-progress pinned; the whole
-files that diff touches; the remaining declared inputs in declaration
-order, whole files. The record says which tier was reached and how
-many files were cut. The cap is Cairn's rule, 32k tokens for the state
-and a default of 28k in settings, chosen because a Consequential
-decision that cannot be judged from its diff, its files, its blocks and
-its cited decisions is a decision that should be smaller; it is not an
-API limit.
+The code row fills in order until `state_cap_bytes` is spent: the diff
+of the touched paths since the tree in-progress pinned; the whole files
+that diff touches; the remaining declared inputs in declaration order,
+whole files. The cap is in bytes because the kernel can count bytes
+without a tokenizer, so truncation is deterministic. The record says
+which tier was reached and how many bytes were cut, and the token count
+the API reports beside it. The cap is Cairn's rule, a default of
+100,000 bytes (about 25k tokens, under a 32k state budget), chosen
+because a Consequential decision that cannot be judged from its diff,
+its files, its blocks and its cited decisions is a decision that should
+be smaller; it is not an API limit.
 
 **The questions.** One call, all questions at once:
 
@@ -597,26 +605,34 @@ API limit.
 | `owner` | choice | under `process`, whose decision is `D`: `agent` or `developer`? |
 
 Interface and data exposure are facts from the `interfaces` and `data`
-globs, not questions; when an option names no paths they are unknown
-and the record says so.
+globs, never questions and never weights. A `data` hit makes the
+decision the developer's before any call. An `interfaces` hit is
+recorded on the option and is a mandatory attempt for the adversary's
+report; the route may still say `agent`. When an option names no paths
+the facts are unknown and the record says so.
 
-**The route.** In code, from settings:
+**The route.** Two quantities, never blended. The composite score is
+the per-option assist the developer reads in the queue; the Choice's
+confidence is what routes:
 
 ```
 score(o_n) := w_rev * reversible_n + w_con * (1 - contradicts_n) + w_obs * observed
-route(D)   := sufficient >= sigma and owner = agent and conf(owner) >= theta
+route(D)   := sufficient >= sufficient_threshold
+              and owner = agent and conf(owner) >= route_confidence
                 -> refuse the escalation; print the cairn decide line, recommendation as the decision;
                    the decision queues with the evaluation on its record
               otherwise
                 -> the escalation stands, with the evaluation on its record
-              sufficient < sigma
+              sufficient < sufficient_threshold
                 -> the escalation stands; reason: insufficient context; owner not consulted
 ```
 
 **The record.** Every evaluated record carries the trailers in section
-4: the model the response named, the schema version, the state digest,
-the token count the API reported, the tier and the cut, one line per
-option, and the route with its confidence. A failed call writes
+4: the model the response named (settings pin a version; an alias can
+resolve to another later, so what actually answered is recorded), the
+schema version, the state digest, the token count the API reported,
+the tier and the bytes cut, one line per option, and the route with
+its confidence. A failed call writes
 `Cairn-Eval: unavailable <reason>` (`no-key`, `schema`, `overloaded`,
 or the network error) and the escalation stands; 429 and 529 are
 retried three times with backoff, in seconds, before that. "Not asked"
@@ -627,8 +643,13 @@ which evaluated decisions are superseded at the queue, by route
 confidence. Reversals climbing means the evaluator is downgrading
 decisions that were the developer's; reversals near zero with
 escalations still high means the threshold is too timid. The developer
-turns `route_threshold`, `sufficient_threshold` and the weights; the
+turns `route_confidence`, `sufficient_threshold` and the weights; the
 questions do not change.
+
+**Validation.** The kernel refuses `enabled: true` with no `model`, a
+`schema` it does not read, a path in both `outside` and `source`, and
+any key-shaped field. Weights that do not sum to 1 are normalized and
+the record says so. `attribution` is `forbidden` or `allowed`.
 
 **The kill switch.** A downgrade is safe only because the queue is read.
 When a Done finds unread Consequential decisions, the evaluator is not
@@ -639,31 +660,36 @@ to evaluate.
 **Falsifiers.** An evaluation trailer on a record that is not an
 escalation or a Consequential decision; an escalation in an enabled
 project with neither an evaluation nor an `unavailable` line; a state
-over the cap; two states at the same tree with different digests; an
-evaluated decision in the by-construction class; a call made while the
-queue holds unread decisions from the last Done; a settings file
-carrying a key.
+over `state_cap_bytes`; two states at the same tree with different
+digests; an evaluated decision in the by-construction class, a `data`
+hit included; a call made while the queue holds unread decisions from
+the last Done; a settings file carrying a key; a record whose model
+trailer is the alias rather than the resolved version.
 
 **Settings shape.**
 
 ```json
 {
-  "outside": ["README.md", "CHANGELOG.md", ".github/"],
-  "source": ["bin/", "src/"],
+  "schema": 1,
+  "outside": ["README.md", "CHANGELOG.md", ".github/**"],
+  "source": ["bin/**", "src/**"],
+  "interfaces": ["src/api/**"],
+  "data": ["src/store/**", "migrations/**"],
   "signing_key": null,
   "attribution": "forbidden",
   "typesafeai": {
     "enabled": true,
-    "model": "jev-latest",
+    "model": "jev-1.13.0",
     "weights": { "reversible": 0.4, "contradicts": 0.3, "observed": 0.3 },
-    "route_threshold": 0.8,
+    "route_confidence": 0.8,
     "sufficient_threshold": 0.7,
-    "state_cap_tokens": 28000,
-    "interfaces": ["src/api/**"],
-    "data": ["src/store/**", "migrations/**"]
+    "state_cap_bytes": 100000
   }
 }
 ```
+
+`interfaces` and `data` sit at the top level because the scope gate and
+the adversary's brief use them whether or not the evaluator is on.
 
 What this does not do, said once: it does not make the agent's
 judgment better; it makes the routing of that judgment cheaper for the
@@ -748,9 +774,10 @@ repository's own roadmap, not in this specification.
 17. `docs/commitments/` is gone; a commitment is a roadmap section
     between a start record and a done record.
 18. An optional evaluator, TypeSafe's Jev, at Consequential only, routing
-    escalations the agent could have decided into the queue; composite
-    scoring with weights in settings, one fan-out call, state capped at
-    32k tokens (section 10). The developer's direction on 2026-09-18.
+    escalations the agent could have decided into the queue; the Choice's
+    confidence routes, the composite score assists, the state is capped
+    in bytes, a `data` hit is the developer's before any call (section
+    10). The developer's direction on 2026-09-18.
 19. `.cairn/policy` becomes `.cairn/settings.json`, the only
     configuration file; the API key comes from `TYPESAFEAI_API_KEY`
     and a settings file carrying a key is refused.

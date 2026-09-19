@@ -346,10 +346,11 @@ describe('validateAfterFetch', () => {
     const repairs = await validateAfterFetch(cwd);
     assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
   });
-  // Kernel fix round (plan 14 fixture, defect 1, ruling A): section 4's after-fetch
-  // cross-reference validation is no longer run on wake's ordinary path (see lib/wake.mjs's
-  // wake() and its own comment); this is one of its two real call sites -- cairn push's own
-  // post-push check (lib/travel.mjs's push, via afterPush). A push that itself succeeds still
+  // Kernel fix round 2 (plan 14 fixture, re-review, New Important finding): kernel fix round 1's
+  // ruling A ("never on wake's ordinary path") is withdrawn -- section 4 literally names wake as
+  // the validator (see lib/wake.mjs's wake() and its own comment for the full quote). cairn
+  // push's own post-push check (lib/travel.mjs's push, via afterPush) is kept as an additional
+  // call site, for a push not preceded by a fresh cairn wake: a push that itself succeeds still
   // throws if a cross-reference this push did not and could not supply is left dangling.
   test("push's own post-push check catches a dangling reference this push did not supply", async () => {
     const { cwd } = await started();
@@ -358,6 +359,43 @@ describe('validateAfterFetch', () => {
       slug: 'first-slug', question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i', concerns: 'c', evaluation: '0'.repeat(40),
     });
     await assert.rejects(push(cwd), (e) => e instanceof TravelError && /cross-reference is still unresolved/.test(e.message));
+  });
+  // Restored (kernel fix round 2): commit ab55ca76 deleted this test when validateAfterFetch was
+  // (wrongly, per the withdrawn ruling A) removed from wake()'s ordinary path, replacing it with
+  // the push()-only test above rather than adapting it. wake() calls validateAfterFetch again,
+  // before readState/verdictOf's own transaction-drift diagnosis, so this exact state -- a second
+  // clone whose refs/cairn/snapshots is a real, older, non-ancestor commit -- is named directly
+  // instead of misdiagnosed as an incomplete transaction (the re-reviewer's own reproduction; see
+  // the next test for that exact recipe named explicitly).
+  test('wake prints the first repair and exits 3', async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
+    sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
+    const v = await wake(clone);
+    assert.equal(v.exit, 3); assert.equal(v.line, 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots');
+  });
+  // Kernel fix round 2, item 3: the re-reviewer's own exact reproduction from
+  // kernel-re-review.md's "New Important finding" -- a second clone that fetched the log ref but
+  // left refs/cairn/snapshots at a stale (real, older) value must be named by wake() itself as the
+  // fetch repair, never as `cairn recover <tx>` for a start transaction that already completed
+  // cleanly. Confirms both that validateAfterFetch(clone) and wake(clone) agree, and that wake()
+  // never reaches the 'recover' predicate for this state.
+  test("the re-reviewer's exact reproduction: a second clone with log fetched and snapshots stale names the fetch repair, never cairn recover", async () => {
+    const { cwd, remote } = await started();
+    await push(cwd);
+    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
+    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
+    sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
+    const direct = await validateAfterFetch(clone);
+    assert.deepEqual(direct.map((r) => [r.kind, r.ref, r.command]), [['fetch', 'refs/cairn/snapshots', 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots']]);
+    const v = await wake(clone);
+    assert.equal(v.exit, 3);
+    assert.equal(v.line, 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots');
+    assert.doesNotMatch(v.line, /cairn recover/);
   });
 });
 

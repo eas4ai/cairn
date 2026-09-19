@@ -304,6 +304,11 @@ and readable schema equal those computed now.
 **Review.** The builder's claims at a workspace snapshot: what was examined,
 answers to the fixed questions in section 9, and findings.
 
+**Brief.** The record `cairn brief` writes for a review: the review it names,
+the projection and payload digests, the exclusion manifest digest, and the
+launch instruction — the detected harness and the adversary model, transport
+and projection boundary fixed for that harness.
+
 **Report.** The adversary's attempts against those claims at the same workspace
 snapshot. One report is written per commitment.
 
@@ -581,7 +586,7 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `start` | slug, `<ws>` roadmap snapshot, repeated `{requirement,text_digest}`, optional `from_superseded:<sha>` | every wake; opens the range |
 | `receipt` | mechanism, definition digest, `<input>`, `ran|error`, observed declared environment, repeated requirement text digest and `pass|fail|unverified`, output digest, exit code or signal | freshness and attempts |
 | `review` | slug, `<ws>`, examined entries, one answer for every fixed question and target, findings | brief, report and Done |
-| `brief` | slug, review SHA, projection digest, payload digest, exclusion manifest digest | report validation |
+| `brief` | slug, review SHA, launch instruction (harness, model, transport, boundary), projection digest, payload digest, exclusion manifest digest | report validation |
 | `report` | slug, `<ws>`, brief SHA, model, projection digest, one attempt per question, findings, interface attempts | Done and resolution |
 | `resolution` | source record SHA, finding number, `<ws>`, explanation | acceptance and Done |
 | `acceptance` | slug, report SHA, `<ws>`, cumulative-delta digest, accepted and rejected resolution SHAs with reasons, new findings | subsequent resolution, acceptance and Done |
@@ -1015,10 +1020,11 @@ attempt whether or not the builder raised it.
 
 `cairn report` refuses a report whose snapshot differs from the review, whose
 brief or projection is stale, whose model or transport does not match the
-launch instruction, or which leaves a required question or interface
-unattempted. Where the harness reports the builder's model, the report records
-it beside the adversary model. A matching model is recorded, not refused: the
-developer chose the adversary model in settings.
+brief record's own launch instruction, or which leaves a required question or
+interface unattempted. The comparison reads the brief record, never the
+report's own body. Where the harness reports the builder's model, the report
+records it beside the adversary model. A matching model is recorded, not
+refused: the developer chose the adversary model in settings.
 
 ### Post-report delta
 

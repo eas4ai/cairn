@@ -348,7 +348,7 @@ test('promote refuses while a commitment is open, a section naming Draft text, a
 });
 
 import { realize, RealizationError } from '../lib/commitment.mjs';
-import { decide } from '../lib/adr.mjs';
+import { decide, appendDecision } from '../lib/adr.mjs';
 import { recordManagedWrite } from '../lib/scope.mjs';
 
 const buildDraft = { title: 'Split main', rests_on: ['DEMO-001'], wrong_if: 'the split hides the greeting', body: 'Move the greeting into a module.' };
@@ -589,4 +589,85 @@ test('Fix round 1 finding 4: start refuses to move Current: outside a supersessi
   const s2 = await start(repo.cwd, 'second');
   assert.equal((await readLog(repo.cwd)).find((r) => r.sha === s2).payload.from_superseded, sup);
   assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m);
+});
+
+// Fix round 3
+
+import { stage, preIdentities, readStaging, applyWrites, writeAtomic, effectsHappened } from '../lib/tx.mjs';
+import { decisionAppendBytes } from '../lib/adr.mjs';
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+import { preflight } from '../lib/scope.mjs';
+
+test('Fix round 3 finding 1: a crash between an append landing and markDone, followed by a foreign append, then recovery, leaves exactly one copy of the line and a readable ADR', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'Greet by name.' });
+  await done(repo.cwd, 'first');
+  // The same shape of ADR append write promote() itself stages.
+  const base_snap = await writeWorkspaceSnapshot(repo.cwd);
+  const { bytes: adrBytes } = await decisionAppendBytes(repo.cwd, {
+    kind: 'decision', level: 'Consequential', by: 'agent', title: 'Promote second', rests_on: [`item ${b}`],
+    wrong_if: 'the item is not covered', body: 'Greet by name.', base_snap, evaluation: null, interfaces: [],
+  }, { command: 'promote' });
+  const plan = { identity: { i: 1 }, writes: [{ store: 'append', path: 'docs/decisions.jsonl', bytes: adrBytes }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(repo.cwd, plan);
+  await stage(repo.cwd, 'TXCRASH1', plan, pre);
+  // Simulate a real crash between the bytes reaching disk and markDone recording write 0 as done:
+  // the bytes land, but done/0 is never written.
+  writeAtomic(join(repo.cwd, 'docs/decisions.jsonl'), adrBytes);
+  // A foreign command's own append -- decide(), which takes the same lock but this manual staging
+  // never held it -- lands before recovery resumes.
+  await decide(repo.cwd, { title: 'Unrelated', rests_on: ['DEMO-001'], wrong_if: 'x', body: 'x' });
+  // Recovery resumes: applyWrites re-enters write 0, since done/0 was never written.
+  await applyWrites(repo.cwd, await readStaging(repo.cwd, 'TXCRASH1'));
+  const text = await readFile(join(repo.cwd, 'docs/decisions.jsonl'), 'utf8');
+  assert.equal(text.split(adrBytes).length - 1, 1, 'exactly one copy of the promote decision line');
+  const lines = await readAdr(repo.cwd); // throws AdrError on a duplicate id, or any other breach
+  assert.equal(lines.length, 2, 'the foreign decision and the promote decision, each once');
+});
+
+test('Fix round 3 finding 2: after promote, the scope preflight records no breach for docs/decisions.jsonl', async () => {
+  const repo = await project();
+  const b = await finished(repo);
+  await promote(repo.cwd, b);
+  const shas = await preflight(repo.cwd, await readLog(repo.cwd), { command: 'item' });
+  assert.deepEqual(shas, []);
+  assert.equal((await readLog(repo.cwd)).some((r) => r.kind === 'scope-breach'), false);
+});
+
+test("Fix round 3 finding 3: effectsHappened treats a concurrent append to a planned append path as this transaction's own effect only when its staged bytes are present", async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const base_snap = await writeWorkspaceSnapshot(repo.cwd);
+  const { bytes: adrBytes } = await decisionAppendBytes(repo.cwd, {
+    kind: 'decision', level: 'Consequential', by: 'agent', title: 'Not yet written', rests_on: ['DEMO-001'],
+    wrong_if: 'x', body: 'x', base_snap, evaluation: null, interfaces: [],
+  }, { command: 'decide' });
+  const plan = { identity: { i: 1 }, writes: [{ store: 'append', path: 'docs/decisions.jsonl', bytes: adrBytes }],
+    terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(repo.cwd, plan);
+  await stage(repo.cwd, 'TXEFFECT', plan, pre);
+  // s.done is {} here and stays that way in this in-memory object even after applyWrites runs
+  // below (markDone only writes to disk); reusing this same `s` for both effectsHappened calls
+  // means the first check in effectsHappened (Object.keys(s.done).length) never short-circuits,
+  // so both calls actually exercise the append-containment path this finding is about.
+  const s = await readStaging(repo.cwd, 'TXEFFECT');
+  // A concurrent command's own append changes docs/decisions.jsonl's digest, without our own
+  // staged bytes ever landing: the old digest-comparison test misread this as "this transaction's
+  // effect already happened". Uses appendDecision directly (not decide(), which also takes its
+  // own fresh workspace snapshot as a side effect -- a real, but unrelated, effectsHappened signal
+  // this test does not want to trip) with the same base_snap, so only docs/decisions.jsonl changes.
+  await appendDecision(repo.cwd, {
+    kind: 'decision', level: 'Consequential', by: 'agent', title: 'Someone else entirely', rests_on: ['DEMO-001'],
+    wrong_if: 'x', body: 'x', base_snap, evaluation: null, interfaces: [],
+  }, { command: 'decide' });
+  const fakeIntent = { sha: '0'.repeat(40) };
+  assert.equal(await effectsHappened(repo.cwd, s, await readLog(repo.cwd), fakeIntent), false,
+    "a foreign append to the same path is not this transaction's own effect");
+  // Land our own staged bytes for real; effectsHappened now recognizes them as this
+  // transaction's own effect.
+  await applyWrites(repo.cwd, s);
+  assert.equal(await effectsHappened(repo.cwd, s, await readLog(repo.cwd), fakeIntent), true,
+    'once our own staged bytes are actually present in the file, effectsHappened recognizes them');
 });

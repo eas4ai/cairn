@@ -120,6 +120,24 @@ test('allowedBase is the newest start or scope snapshot, never merely the newest
   await assert.rejects(allowedBase(repo.dir, await readLog(repo.dir)), KindError);
 });
 
+// Fix round 1 item 7 (Minor): a record with a 40-hex snapshot field used to overwrite the base
+// outright, so a record naming an older snapshot than the one already established could move the
+// allowed base backward. A resolution record is used here since it carries a bare snapshot field
+// with no further meaning the loop needs.
+test('a record naming an older snapshot never moves the allowed base backward', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a.txt', 'a'); await repo.commit('base');
+  const A = await writeWorkspaceSnapshot(repo.dir);
+  await appendRecord(repo.dir, 'start', 's', { slug: 's', snapshot: A, requirements: [], from_superseded: null, intent: null, results: [] });
+  await repo.write('a.txt', 'b'); const B = await writeWorkspaceSnapshot(repo.dir);
+  await appendRecord(repo.dir, 'scope-breach', 'a.txt', { path: 'a.txt', snapshot: B, base: A, declarations_digest: D });
+  const breachSha = (await readLog(repo.dir)).at(-1).sha;
+  await appendRecord(repo.dir, 'scope', 'a.txt', { breach: breachSha, disposition: 'keep', snapshot: B, escalation: null, answer: null });
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), B);
+  await appendRecord(repo.dir, 'resolution', 'x', { source: breachSha, finding: 1, snapshot: A, explanation: 'names an older snapshot on purpose' });
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), B);
+});
+
 import { SettingsError } from '../lib/settings.mjs';
 import { writeInputSnapshot as writeInput } from '../lib/snapshots.mjs';
 import { PathError } from '../lib/paths.mjs';

@@ -175,22 +175,19 @@ test('a protected path changed during a commitment without an authorization is a
   assert.equal(openBreaches(await r.log())[0].path, 'AGENTS.md');
 });
 
-// Deviation from the plan text: the plan's own authorization payload uses spec/agreement/settings
-// keys and omits intent/results; the real 'authorization' schema (lib/records.mjs) requires
-// spec_digest/agreement_digest/settings_digest plus intent and results (nullable(ref) and
-// list(storeIdentity), both closed keys appendRecord's schema check refuses to see missing), and
-// its evidence field is the same closed 'unsigned-local' variant tests/init.test.mjs already
-// builds: {mode, purpose, subject, nonce, author: {name, email}, confirmed}, not a bare author
-// string.
-test('a protected change named by an authorization record is not a breach', async () => {
+// Fix round 1 item 1 (Critical): the plan's own authorization test built a hand-crafted record
+// from protectedDigests()'s own output, so it could never catch protectedDigests disagreeing with
+// what a real `cairn authorize` writes -- exactly the bug the reviewer reproduced (scope.mjs had
+// its own reimplementation, hashing docs/spec/** with Array.sort and settings.json's raw bytes,
+// while lib/auth.mjs's real specDigest excludes PROTECTED_EXCEPT and sorts with Buffer.compare, so
+// authorize()'s own digests never matched what preflight computed and an authorized protected
+// change was still flagged a breach). scope.mjs's protectedDigests is now literally lib/auth.mjs's
+// export, re-exported; this test runs the real authorize() and checks the preflight it feeds.
+import { authorize } from '../lib/auth.mjs';
+test('an authorize()-produced authorization record exempts the same protected change from a breach', async () => {
   const r = await loopRepo();
   await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
-  const d = await protectedDigests(r.cwd);
-  await r.add('authorization', 'developer', {
-    spec_digest: d.spec, agreement_digest: d.agreement, settings_digest: d.settings,
-    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 'test', nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true },
-    decision: null, intent: null, results: [],
-  });
+  await authorize(r.cwd, { confirm: async () => true });
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
 });
 
@@ -315,9 +312,22 @@ test('a breach is a log fact: squashing the branch does not clear it', async () 
   assert.equal(openBreaches(await r.log()).length, 0);
 });
 
-test('the state-changing set names every writing command and no reader', () => {
-  for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
+// Fix round 1 item 10: the plan's own test compared the STATE_CHANGING literal with itself --
+// it would still pass if runWithPreflight stopped calling preflight altogether. This drives
+// runWithPreflight itself: for every state-changing command it asserts a genuine breach was
+// actually recorded, and for a reader command it asserts one was not.
+test('runWithPreflight invokes the preflight for every state-changing command and skips it for a reader', async () => {
+  const r = await loopRepo();
+  for (const command of STATE_CHANGING) {
+    const p = `src/stray-${command}.mjs`;
+    await r.write(p, 'x\n');
+    await runWithPreflight(r.cwd, command, () => {});
+    assert.ok(openBreaches(await r.log()).some((b) => b.path === p), command);
+  }
   for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
+  await r.write('src/stray-reader.mjs', 'x\n');
+  await runWithPreflight(r.cwd, 'show', () => {});
+  assert.ok(!openBreaches(await r.log()).some((b) => b.path === 'src/stray-reader.mjs'));
 });
 
 import { spawnSync } from 'node:child_process';
@@ -342,4 +352,131 @@ test('a state-changing command records the breach before its own work', async ()
   const out = cairn(r.cwd, 'begin', 'implement', 'DEMO-001');
   assert.equal(out.status, 0);
   assert.deepEqual(openBreaches(await r.log()).map((x) => x.path), ['src/stray.mjs']);
+});
+
+// ==== Fix round 1 ====
+
+import { canonicalize } from '../lib/canon.mjs';
+
+// Item 2 (Critical): a hand edit that stays canonical and schema-valid used to pass just by
+// parsing cleanly. It must not, since it never went through declare()'s managed-write ledger.
+test('a canonical, schema-valid hand edit of a mechanism entry is still a breach', async () => {
+  const r = await loopRepo();
+  const path = '.cairn/mechanisms/demo-001.json';
+  const entry = JSON.parse(await readFile(join(r.cwd, path), 'utf8'));
+  entry.definition.inputs = [...entry.definition.inputs, 'src/util.mjs'].sort();
+  await r.write(path, canonicalize(entry));
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), [path]);
+  assert.equal(shas.length, 1);
+});
+
+// Item 2: declare()'s own write (ledger-recorded) is still exempt -- already covered by "the
+// assigned command's exact mutation of a kernel-managed path is exempt" and "declare runs the
+// preflight first...", both re-run above against the new ledger-based check.
+
+// Item 2: an otherwise-valid ADR decision line appended by hand (not through appendDecision, so
+// never ledger-recorded) is still a breach, even though it is well-formed and would parse cleanly.
+test('a hand-appended, otherwise-valid ADR decision line is still a breach', async () => {
+  const r = await loopRepo();
+  const line = {
+    kind: 'decision', id: '01J00000000000000000000001', ts: '2026-09-19T00:00:00Z',
+    level: 'Consequential', by: 'agent', title: 'Hand-added', rests_on: [], wrong_if: 'x',
+    body: 'y', base_snap: r.startSnapshot, evaluation: null, interfaces: [],
+  };
+  const existing = await readFile(join(r.cwd, 'docs/decisions.jsonl'), 'utf8').catch(() => '');
+  await r.write('docs/decisions.jsonl', existing + canonicalize(line) + '\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['docs/decisions.jsonl']);
+  assert.equal(shas.length, 1);
+});
+
+// Item 3 (Important): a missing protected file used to crash the preflight with a raw ENOENT
+// instead of recording a breach.
+test('deleting a protected file is a breach, not a crash', async () => {
+  const r = await loopRepo();
+  await r.remove('AGENTS.md');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.equal(shas.length, 1);
+  assert.equal(openBreaches(await r.log())[0].path, 'AGENTS.md');
+});
+
+// Item 3: a missing or unreadable .cairn/settings.json leaves classify() with nothing to compare
+// against; this is a clean cairn: refusal, never a raw error out of preflight.
+test('a missing settings.json refuses cleanly instead of crashing the preflight', async () => {
+  const r = await loopRepo();
+  await r.remove('.cairn/settings.json');
+  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }), (e) => e instanceof ScopeError && e.message.startsWith('cairn: '));
+});
+
+// Item 4 (Important): an unreadable mechanism file used to turn every other declared, changed
+// path into a spurious breach too (readMechanisms failing for the whole directory made
+// declaredPaths() see nothing as declared). Only the corrupted path itself is recorded; the
+// already-declared src/demo.mjs and the plain undeclared src/stray.mjs wait until it is repaired.
+test('an unreadable mechanism file is the only breach recorded; other changes wait', async () => {
+  const r = await loopRepo();
+  const path = '.cairn/mechanisms/demo-001.json';
+  await r.write(path, (await readFile(join(r.cwd, path), 'utf8')) + ' ');   // extra byte: breaks parseStrict
+  await r.write('src/demo.mjs', 'console.log("hi");\n');                   // declared by the corrupted mechanism
+  await r.write('src/stray.mjs', 'x\n');                                   // plainly undeclared
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), [path]);
+  assert.equal(shas.length, 1);
+});
+
+// Item 5 (Important, ruling): the roadmap is exempt from scope only while no commitment range is
+// open; while one is open it is a breach like any other reserved path.
+test('the roadmap is exempt from scope while no commitment range is open', async () => {
+  const r = await loopRepo();
+  await r.add('done', r.slug, { slug: r.slug, snapshot: await r.snap() });
+  await r.write('docs/spec/roadmap.md', (await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8')) + '\n## next\n\nRequirements: DEMO-001\n\nDelivers more.\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});
+test('a roadmap edit while a range is open is a breach like any other reserved path', async () => {
+  const r = await loopRepo();
+  await r.write('docs/spec/roadmap.md', (await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8')) + '\nmore text\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['docs/spec/roadmap.md']);
+  assert.equal(shas.length, 1);
+});
+
+// Item 6 (Important): an untracked credential-shaped file anywhere in the workspace used to
+// crash the preflight with a raw SnapshotError instead of a clean refusal with no breach.
+test('an untracked credential-shaped file refuses cleanly instead of crashing the preflight', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  await r.write('leaked.pem', '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n');
+  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
+    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && /looks like a credential/.test(e.message) && /leaked\.pem/.test(e.message));
+  assert.equal(openBreaches(await r.log()).length, 0);
+});
+
+// Item 7 (Minor): a scope disposition used to advance the allowed base even while another breach
+// stayed open. Two concurrently open breaches: the base holds until both are disposed.
+test('the allowed base advances only once every concurrently open breach is disposed', async () => {
+  const r = await loopRepo();
+  await r.write('src/a-stray.mjs', 'a\n');
+  await r.write('src/b-stray.mjs', 'b\n');
+  const [b1, b2] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await r.remove('src/a-stray.mjs');
+  await dispose(r.cwd, b1, 'restore');
+  assert.equal(await allowedBase(r.cwd, await r.log()), r.startSnapshot);
+  await r.remove('src/b-stray.mjs');
+  const s2 = await dispose(r.cwd, b2, 'restore');
+  const rec2 = (await r.log()).find((x) => x.sha === s2);
+  assert.equal(await allowedBase(r.cwd, await r.log()), rec2.payload.snapshot);
+});
+
+// Item 10: a renamed file (no rename tracking) is reported as a plain deletion of the old path
+// plus an addition of the new one.
+test('a renamed file is reported as the old path deleted and the new path added', async () => {
+  const r = await loopRepo();
+  const { tree } = await readSnapshot(r.cwd, r.startSnapshot, 'workspace');
+  const text = await readFile(join(r.cwd, 'src/demo.mjs'), 'utf8');
+  await r.remove('src/demo.mjs');
+  await r.write('src/renamed.mjs', text);
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), [
+    { path: 'src/demo.mjs', change: 'deleted' },
+    { path: 'src/renamed.mjs', change: 'added' },
+  ]);
 });

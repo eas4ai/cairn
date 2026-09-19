@@ -191,8 +191,49 @@ test('cairn decide --consequential accepts the same canonical draft and writes t
 import { answer, escalationState, unanswered } from '../lib/escalate.mjs';
 import { describeEvidence, verifyEvidence } from '../lib/auth.mjs';
 import { loadSettings } from '../lib/settings.mjs';
+import { ADR_PATH, AdrError } from '../lib/adr.mjs';
+import { appendFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const asDev = { confirm: async () => true };
+
+// Fix round 1 finding 2 (Important, plan 09 review): answer() used to append the answer log
+// record, then the answered ADR line, with no pre-check -- a malformed docs/decisions.jsonl (an
+// unreadable ADR, a held lock, or a liveness refusal) failed the SECOND write after the FIRST
+// already landed: the escalation reads as answered (escalationState sees the log record) but no
+// answered line exists and no command could ever write one, since answer() itself refuses "no
+// unanswered escalation" once the log record exists, and lib/adr.mjs's prepareLine refuses an
+// answered line from any command but answer. Reproduced exactly as the review found it: one
+// malformed line appended to docs/decisions.jsonl before the call.
+test('answer refuses before writing anything when the ADR file is unreadable (finding 2)', async () => {
+  const r = await loopRepo();
+  await escalate(r.cwd, draft());
+  await appendFile(join(r.cwd, ADR_PATH), 'not json\n');
+  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), (e) => e instanceof AdrError && /not canonical JSON/.test(e.message));
+  assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer'), []);
+  assert.equal(unanswered(await r.log()).length, 1);
+});
+
+// Fix round 1 finding 2: a crash between the two writes -- the log record lands, the ADR line
+// does not -- is simulated directly (appendRecord bypasses answer()'s own ADR step, the same way
+// a real crash would leave the process dead between the two calls). The NEXT cairn answer for
+// the same slug completes the missing line instead of refusing "no unanswered escalation"; it
+// returns the existing answer's sha rather than writing a duplicate one. A third call, once the
+// line exists, refuses normally: there is nothing left to answer or repair.
+test('a crash between the log record and the ADR line is completed by the next cairn answer for the same slug (finding 2)', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  const evidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
+  const danglingSha = await r.add('answer', 'first', { escalation: esc, kind: 'ok', text: '', owner: null, evidence });
+  assert.equal((await readAdr(r.cwd)).some((l) => l.kind === 'answered'), false);
+  assert.equal(escalationState(await r.log(), esc).status, 'answered');
+  const completed = await answer(r.cwd, 'first', 'ok', '', asDev);
+  assert.equal(completed, danglingSha);
+  assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer').map((x) => x.sha), [danglingSha]);
+  const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
+  assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), /no unanswered escalation for first/);
+});
 
 test('answer refuses without developer evidence: no terminal, or a declined confirmation', async () => {
   const r = await loopRepo();

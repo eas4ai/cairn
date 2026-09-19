@@ -696,9 +696,9 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `answer` | escalation SHA, `ok|instead|ask`, text, optional owner label, developer-auth evidence | wake, ADR and calibration |
 | `reply` | escalation SHA, text | wake after `ask` |
 | `read` | decision ID, developer-auth evidence | queue and ADR |
-| `evaluation-intent` | draft digest, `<ws>`, pre-write log head, ADR digest, settings digest, policy digest, nullable owner and option request digests | evaluation recovery |
-| `evaluation-call` | intent SHA, `owner|option`, request digest, `not_sent|response|failure|indeterminate`, resolved model, raw response bytes or failure class, parsed answers when valid, reported usage | final evaluation and audit |
-| `measurement` | intent SHA, call SHA, the five Score levels with their confidences, composite, veto or null, `suggested: agent|developer`, reason, source `jev|review`, resolved model | escalation, capture, queue and calibration |
+| `evaluation-intent` | draft digest, `<ws>`, pre-write log head, ADR digest, settings digest, policy digest, source `jev|review`, nullable request digest | measurement recovery |
+| `evaluation-call` | intent SHA, source `jev|review`, request digest, `response|failure|indeterminate`, resolved model, transport and session (review source only), raw response bytes or failure class, parsed answers when valid, reported usage | measurement and audit |
+| `measurement` | intent SHA, nullable call SHA, draft digest, source `jev|review`, resolved model, the five Score levels with their confidences, composite, veto or null, `suggested: agent|developer` or null, outcome `floor|unavailable|veto|composite|indeterminate`, reason | escalation, decision, calibration |
 | `calibration` | policy digest, labelled-through log head, predicted-agent count, false-downgrade count, one-sided confidence bound, criterion, `pass|fail` | policy validation over labelled measurements |
 | `item` | `backlog|next-feature|defect`, slug, source requirement or changed contract, body | capture, Done and next-feature |
 | `outside` | item SHA, reason, optional evaluation SHA | capture gate |

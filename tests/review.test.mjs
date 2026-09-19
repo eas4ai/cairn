@@ -102,13 +102,19 @@ test('a safe relative symlink is preserved as link text; absolute and out-of-tre
 import { sha256 } from '../lib/canon.mjs';
 import { detectHarness, brief, interfaceObligations, CONFINES } from '../lib/review.mjs';
 
-test('the harness comes from --harness, then CAIRN_HARNESS, then the harness environment, and must name a settings entry; the model string passes through', () => {
+// Fix round 1 item 4: rewritten per the review's ruling. Section 9: "A null or unknown entry
+// means any model, subject to the projection boundary." Read as written, a harness with no
+// settings entry at all imposes no model or transport constraint rather than blocking the brief;
+// the previous implementation refused it, and this test previously asserted that refusal. The
+// spec is the binding authority, so `muse` (absent from SETTINGS.harness entirely, the same as
+// `codex: null`) now resolves the same way `codex` does: any model, any transport.
+test('the harness comes from --harness, then CAIRN_HARNESS, then the harness environment; an absent or null settings entry means any model and any transport', () => {
   assert.deepEqual(detectHarness(SETTINGS, { harness: 'claude_code', env: {} }), { name: 'claude_code', model: 'claude-fable-5-1', transport: 'remote', boundary: 'unenforced' });
   assert.equal(detectHarness(SETTINGS, { env: { CAIRN_HARNESS: 'claude_code' } }).name, 'claude_code');
   assert.equal(detectHarness(SETTINGS, { env: { CLAUDECODE: '1' } }).name, 'claude_code');
   assert.deepEqual(detectHarness(SETTINGS, { harness: 'codex', env: {} }), { name: 'codex', model: null, transport: null, boundary: 'unenforced' });
   assert.throws(() => detectHarness(SETTINGS, { env: {} }), /no harness detected; pass --harness/);
-  assert.throws(() => detectHarness(SETTINGS, { harness: 'muse', env: {} }), /harness muse has no settings entry/);
+  assert.deepEqual(detectHarness(SETTINGS, { harness: 'muse', env: {} }), { name: 'muse', model: null, transport: null, boundary: 'unenforced' });
   assert.deepEqual(CONFINES, { claude_code: false, codex: false, muse: false });
 });
 

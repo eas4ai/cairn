@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { declare } from '../lib/mechanisms.mjs';
+import { appendDecision } from '../lib/adr.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
@@ -322,4 +323,23 @@ test('post-report resolutions or a changed workspace need an acceptance at the c
   await check(r.cwd, 'DEMO-001');
   v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['accept', 'first']);
+});
+
+// Deviation from the plan text: lib/adr.mjs's real appendDecision(cwd, line, {command}) takes a
+// required second {command} argument checked against the line kind's assigned writer list
+// (ASSIGNED.decision includes 'decide', ASSIGNED.realized is only 'realize'), and both the
+// 'decision' and 'realized' schemas carry a required `interfaces` list field the plan's payloads
+// omitted.
+test('an unrealized Consequential decision is build until a realized line names it', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  const id = await r.decide();
+  await r.commit('record decision');
+  await r.accept();                       // docs/decisions.jsonl is in the workspace: the delta needs an acceptance first
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['build', id]);
+  await appendDecision(r.cwd, { kind: 'realized', of: id, base_snap: r.startSnapshot, snap: await r.snap(), subject: 'map in place', interfaces: [] }, { command: 'realize' });
+  await r.commit('realized');
+  await r.accept();
+  assert.notEqual((await wake(r.cwd)).action, 'build');
 });

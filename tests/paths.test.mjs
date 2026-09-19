@@ -37,3 +37,13 @@ test('the reserved constants are kernel constants', () => {
   assert.deepEqual(KERNEL_MANAGED, ['.cairn/mechanisms', '.cairn/mechanisms/**', 'docs/decisions.jsonl']);
   assert.ok(CREDENTIAL_PATTERNS.includes('**/.env.*') && CREDENTIAL_PATTERNS.includes('**/id_ed25519'));
 });
+
+import { matchGlob } from '../lib/paths.mjs';
+
+test('matchGlob matches entry paths with segment-aware wildcards', () => {
+  assert.ok(matchGlob('**/.env', '.env') && matchGlob('**/.env', 'a/b/.env') && !matchGlob('**/.env', '.envrc'));
+  assert.ok(matchGlob('src/api/**', 'src/api/v1/x.js') && !matchGlob('src/api/**', 'src/apix/y.js'));
+  assert.ok(matchGlob('config/*.secret.*', 'config/db.secret.json') && !matchGlob('config/*.secret.*', 'config/x/db.secret.json'));
+  assert.ok(matchGlob('README.md', 'README.md') && !matchGlob('README.md', 'docs/README.md'));
+  assert.ok(matchGlob('a/**/b', 'a/b') && matchGlob('a/**/b', 'a/x/y/b') && matchGlob('READ?E.md', 'README.md'));
+});

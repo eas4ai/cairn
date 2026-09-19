@@ -14,7 +14,7 @@ import { wake } from '../lib/wake.mjs';
 import {
   installRefspecs, refspecsFor, DURABLE_REFS, TravelError,
   fetchCommand, missingRefsLine,
-  push, remoteOids, PUSH_COMMAND,
+  push, remoteOids, PUSH_COMMAND, ATOMIC_UNSUPPORTED,
   validateAfterFetch,
   AGREEMENT_PUSH_TEXT,
 } from '../lib/travel.mjs';
@@ -57,10 +57,18 @@ async function project({ remote = makeRemote(), authority = 'authority' } = {}) 
   await authorize(repo.dir, { confirm: yes });
   return { cwd: repo.dir, remote, authority };
 }
-async function started() {
-  const p = await project();
+async function started(opts) {
+  const p = await project(opts);
   await start(p.cwd, 'first-slug');
   return p;
+}
+// A bare remote configured to genuinely lack --atomic support (fix round 1 item 1): the exact
+// signal `push` now keys off, captured against a real repository below rather than inferred from
+// any rejection text a hook could also produce.
+function noAtomicRemote() {
+  const dir = makeRemote();
+  sh(dir, 'config', 'receive.advertiseAtomic', 'false');
+  return dir;
 }
 // A pre-receive hook that refuses any push carrying more than one ref, or any ref matching `reject`.
 function hook(remote, { multi = true, reject = null } = {}) {
@@ -139,19 +147,39 @@ describe('push', () => {
     for (const ref of ['refs/cairn/log', 'refs/cairn/snapshots', 'refs/heads/main']) assert.equal(remoteRef(remote, ref), await readRef(cwd, ref));
     assert.equal(remoteRef(remote, 'refs/cairn/in-progress'), null);
   });
-  test('ordered fallback when the remote refuses a multi-ref push: snapshots, log, branch', async () => {
-    const { cwd, remote } = await started();
-    hook(remote, { multi: true });
+  // Fix round 1 item 1 (Critical): rewritten to use a remote genuinely configured without
+  // --atomic support (receive.advertiseAtomic=false) rather than a hook that merely enforces "one
+  // ref at a time" -- that hook-level restriction is not the same fact as the remote lacking
+  // --atomic, and a fixed, exact-text detection (see ATOMIC_UNSUPPORTED below) no longer treats
+  // it as one.
+  test('ordered fallback when the remote genuinely does not support atomic pushes: snapshots, log, branch', async () => {
+    const remote = noAtomicRemote();
+    const { cwd } = await started({ remote });
     const r = await push(cwd);
     assert.equal(r.mode, 'ordered');
     assert.deepEqual(r.pushed, ['refs/cairn/snapshots', 'refs/cairn/log', 'refs/heads/main']);
     for (const ref of ['refs/cairn/log', 'refs/cairn/snapshots', 'refs/heads/main']) assert.equal(remoteRef(remote, ref), await readRef(cwd, ref));
   });
   test('a failure stops the ordered sequence and the branch is not advanced without its records', async () => {
-    const { cwd, remote } = await started();
-    hook(remote, { multi: true, reject: 'refs/cairn/log' });
+    const remote = noAtomicRemote();
+    const { cwd } = await started({ remote });
+    hook(remote, { reject: 'refs/cairn/log' });
     await assert.rejects(push(cwd), (e) => /cairn: push of refs\/cairn\/log failed after refs\/cairn\/snapshots/.test(e.message));
     assert.equal(remoteRef(remote, 'refs/cairn/snapshots'), await readRef(cwd, 'refs/cairn/snapshots'));
+    assert.equal(remoteRef(remote, 'refs/cairn/log'), null);
+    assert.equal(remoteRef(remote, 'refs/heads/main'), null);
+  });
+  // Fix round 1 item 1, reproduction 1 (review-1.md finding 1): an atomic-capable remote (default
+  // config, no advertiseAtomic=false) whose pre-receive hook rejects only refs/cairn/log. Real
+  // Git's atomic transaction refuses every ref together ("(pre-receive hook declined)" for all
+  // three, confirmed against a real bare repository), so push() must throw the rejection as is
+  // (rule 7) rather than misreading it as "remote lacks --atomic" and retrying per ref -- and,
+  // because the remote genuinely refused the whole transaction, nothing lands.
+  test('an atomic-capable remote rejecting one ref throws without any ordered fallback, and no ref lands', async () => {
+    const { cwd, remote } = await started();
+    hook(remote, { multi: false, reject: 'refs/cairn/log' });
+    await assert.rejects(push(cwd), (e) => e instanceof TravelError && !/failed after/.test(e.message));
+    assert.equal(remoteRef(remote, 'refs/cairn/snapshots'), null, 'a true atomic rejection lands nothing');
     assert.equal(remoteRef(remote, 'refs/cairn/log'), null);
     assert.equal(remoteRef(remote, 'refs/heads/main'), null);
   });
@@ -180,6 +208,14 @@ describe('push', () => {
     sh(other, 'push', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');   // wins the race after our ls-remote
     const r = await git(['push', '--atomic', `--force-with-lease=refs/cairn/log:${oids['refs/cairn/log']}`, 'authority', 'refs/cairn/log:refs/cairn/log'], { cwd, expect: [0, 1, 128] });
     assert.match(String(r.stderr), /stale info|rejected/);
+    // Fix round 1 item 1, reproduction 2 (review-1.md finding 1): real Git's stderr for a stale
+    // force-with-lease atomic push includes "atomic push failed" and "failed to push some refs" --
+    // the same words the old, broad detection matched to mean "remote lacks --atomic". Confirms
+    // the fix: this genuine lease rejection on an atomic-capable remote does not match the exact
+    // text ATOMIC_UNSUPPORTED now requires, so push() throws it as is (rule 7) instead of
+    // silently retrying per ref.
+    assert.ok(/atomic push failed|failed to push some refs/.test(String(r.stderr)), 'sanity: this is the exact failure class the old regex misclassified');
+    assert.ok(!ATOMIC_UNSUPPORTED.test(String(r.stderr)), 'a genuine lease rejection on an atomic-capable remote must not be mistaken for missing --atomic support');
   });
   test('no authority remote: refused', async () => {
     const { cwd } = await makeProject({ settings: { authority_remote: null } });

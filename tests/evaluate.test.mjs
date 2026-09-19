@@ -295,3 +295,58 @@ describe('requests and size', () => {
     assert.equal(sizeCheck({ typesafeai: { ...t, request_cap_bytes: 64000 } }, r), null);
   });
 });
+
+import { parseAnswers, applyEnvelope } from '../lib/evaluate.mjs';
+
+// Deviation from the plan text: the plan's applyEnvelope returns {gates: [{rule, value, pass}],
+// route, rule, option}. lib/records.mjs's already-committed 'evaluation' schema (plan 01) names
+// these fields differently -- gates: list({gate, value, passed}), and the deciding rule's field is
+// named `reason`, a plain string (there is no separate top-level `rule`). applyEnvelope's return
+// shape is renamed to match that schema directly (gate/passed/reason) rather than translating
+// between two parallel names at every record-writing call site in Task 8.
+describe('envelope', () => {
+  const t = { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, model: 'jev-1.13.0' } };
+  const opt = (over = {}) => ({ sufficient: 0.9, reversible_1: 0.9, contradicts_1: 0.1, outside_1: 0.1, reversible_2: 0.9, contradicts_2: 0.1, outside_2: 0.1, observed: 0.9, ...over });
+  const owner = (agent = 0.9) => ({ choice: agent >= 0.5 ? 'agent' : 'developer', probabilities: { agent, developer: 1 - agent }, confidence: Math.abs(agent - 0.5) * 2 });
+  const run = (o, w, extra = {}) => applyEnvelope(t, { protectedReasons: [], unavailable: null, optionAnswers: o, ownerAnswer: w, optionCount: 2, ...extra });
+
+  test('rules decide in order and the first match wins', () => {
+    assert.equal(run(opt(), owner()).route, 'agent');
+    assert.deepEqual(applyEnvelope(t, { protectedReasons: ['data'], optionAnswers: opt(), ownerAnswer: owner(), optionCount: 2 }).reason, 'protected');
+    assert.equal(run(opt(), owner(), { unavailable: 'oversize' }).reason, 'unavailable oversize');
+    assert.equal(run(opt(), owner(), { unavailable: 'network' }).reason, 'unavailable network');
+    assert.equal(run(opt({ sufficient: 0.69 }), owner()).reason, 'sufficient');
+    const cap = run(opt({ outside_2: 0.8 }), owner());
+    assert.deepEqual([cap.route, cap.reason, cap.option], ['capture', 'outside', 2]);
+    assert.equal(run(opt({ contradicts_1: 0.3 }), owner()).reason, 'contradicts');
+    assert.equal(run(opt({ reversible_1: 0.69 }), owner()).reason, 'reversible');
+    assert.equal(run(opt({ observed: 0.59 }), owner()).reason, 'observed');
+    assert.equal(run(opt({ outside_1: 0.9, contradicts_2: 0.9 }), owner()).reason, 'outside', 'outside precedes contradicts');
+    assert.equal(run(opt(), owner(0.7)).reason, 'otherwise');
+    assert.equal(run(opt(), { ...owner(), choice: 'developer' }).route, 'developer');
+  });
+  test('every gate is recorded with its value even after the deciding rule', () => {
+    const r = run(opt({ sufficient: 0.1 }), owner());
+    assert.deepEqual(r.gates.map((g) => g.gate), ['protected', 'oversize', 'call', 'invalid', 'sufficient', 'outside', 'contradicts', 'reversible', 'observed', 'owner']);
+    assert.equal(r.gates.find((g) => g.gate === 'observed').value, 0.9);
+  });
+  test('missing or invalid values fail closed to the developer', () => {
+    assert.equal(run(opt({ observed: undefined }), owner()).reason, 'unavailable invalid');
+    assert.equal(run(opt({ reversible_2: 'yes' }), owner()).reason, 'unavailable invalid');
+    assert.equal(run(opt({ sufficient: 1.2 }), owner()).reason, 'unavailable invalid');
+    assert.equal(run(opt(), { choice: 'agent', probabilities: { agent: 0.7, developer: 0.7 }, confidence: 0.9 }).reason, 'unavailable invalid', 'distribution must sum to 1');
+    assert.equal(run(opt(), { choice: 'agent', probabilities: { agent: 0.9, developer: 0.1, other: 0 }, confidence: 0.9 }).reason, 'unavailable invalid', 'unknown option');
+    assert.equal(run(opt(), null).reason, 'unavailable invalid');
+  });
+  test('an option gate can veto but never grant agent authority', () => {
+    assert.equal(run(opt({ sufficient: 1, observed: 1 }), owner(0.6)).route, 'developer');
+  });
+  test('parseAnswers validates shape against the request', () => {
+    const req = buildOwnerRequest(t, { q: 1 });
+    const ok = parseAnswers(req, '{"model":"jev-1.13.0","answers":{"owner":{"type":"choice","choice":"agent","probabilities":{"agent":0.9,"developer":0.1},"confidence":0.8}},"usage":{"input_tokens":3,"output_tokens":1}}');
+    assert.equal(ok.answers.owner.choice, 'agent'); assert.equal(ok.model, 'jev-1.13.0');
+    assert.ok(parseAnswers(req, '{"model":"jev-1.13.0","answers":{},"usage":{}}').invalid, 'missing answer');
+    assert.ok(parseAnswers(req, '{"model":"jev-1.13.0","answers":{"owner":{"type":"noul","noul":0.5}},"usage":{}}').invalid, 'wrong type');
+    assert.ok(parseAnswers(req, 'nope').invalid);
+  });
+});

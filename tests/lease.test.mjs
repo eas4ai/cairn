@@ -1,7 +1,10 @@
 // tests/lease.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs';
+// Fix round 1 finding 14: mkdirSync was imported per the plan's Task 7 step 1 code but never
+// called; every fixture path here is written through repo.write, which already creates its
+// directories.
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 

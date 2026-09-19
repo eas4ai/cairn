@@ -1046,21 +1046,46 @@ An interface hit does not automatically make the decision Blocking. The kernel
 records it on the decision and on the realized delta, and the adversary must
 attempt the changed interface explicitly in the report or next acceptance.
 
-The realization check is a postcondition. The evaluator judges a draft; it can
-never authorize a privileged realization the code actually performs.
+The realization check is a postcondition. A measurement only informs the
+agent's own decision on a draft; neither the measurement nor the agent's
+decision can authorize a privileged realization the code actually performs.
+
+Revised 2026-09-19: previously "The evaluator judges a draft." Section 10 no
+longer has the evaluator itself judge or decide anything; it measures, and
+the agent decides. This sentence's guarantee is unchanged either way: no
+route, high or low, waives the realization check below.
 
 ### Escalation
 
 `cairn escalate` and `cairn decide --consequential` accept the same canonical
-draft. With evaluation disabled or outside its envelope, the requested command
-uses the kernel level. In shadow mode the developer still decides. In calibrated
-route mode section 10 may convert a Consequential escalation into a queued
-agent decision or a capture; no other level is evaluated.
+draft. Only a Consequential draft is measured; every other level uses the
+kernel level directly. `cairn measure` (section 5) runs first, from `jev`
+when `typesafeai.enabled` or otherwise the harness's review model (section
+10); when neither source can be reached the draft is `unavailable <class>`
+and routes to the developer like any other technical no-call. Otherwise the
+agent reads the measurement and decides, except at the narrow floor or a
+veto, or when the agent itself chooses to escalate anyway. `typesafeai.mode:
+observe` records the same measurement without ever letting it route to the
+agent, exactly as its name states; no other level is measured.
 
 The developer runs `cairn answer` and `cairn decisions --read`; the agent never
 does. With a signing key their records must verify. In explicit unsigned-local
 mode the controlling-terminal confirmation and Git author are evidence only;
-Cairn says so wherever it reports the decision.
+Cairn says so wherever it reports the decision. With `developer: absent`,
+none of this paragraph's developer commands has anyone to run them; section
+5 states what the floor does instead.
+
+Revised 2026-09-19: previously "With evaluation disabled or outside its
+envelope, the requested command uses the kernel level. In shadow mode the
+developer still decides. In calibrated route mode section 10 may convert a
+Consequential escalation into a queued agent decision or a capture." That
+described the superseded design, where shadow was the default and only a
+passing calibration let any draft reach the agent; the developer's benchmark
+showed that gate never opened (0 of 12 agent-expected drafts routed to the
+agent). The evaluator is no longer something a draft can fall "outside": it
+always measures a Consequential draft, from one source or the other, and
+"capture" is no longer an automatic evaluator outcome, only something the
+agent may still choose to do with what the measurement told it.
 
 ### Capture and promotion
 

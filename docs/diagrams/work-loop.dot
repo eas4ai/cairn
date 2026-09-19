@@ -1,0 +1,68 @@
+// The work loop: wake names one action with its completion predicate; the agent does it; wake again.
+digraph work_loop {
+  rankdir=TB;
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="The work loop: every step leaves a trace", nodesep=0.5, ranksep=0.6];
+  node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+  edge  [fontname="Helvetica", fontsize=10];
+
+  wake [shape=oval, label="cairn wake\nprints verdict, action, reason, predicate"];
+  verdict [shape=diamond, label="Verdict?"];
+
+  // Escalate: the developer's turn
+  present [label="present SLUG:\nshow the escalation in its own words; stop"];
+  answer [shape=diamond, label="Developer answers"];
+  reply [label="reply SLUG: append the explanation\ndone := the escalation carries it"];
+
+  // Done: stop
+  stop [shape=box, peripheries=2, label="Done: report it; stop.\nThe developer opens /next-feature."];
+
+  // Resolvable: one action, until its predicate holds
+  act [label="Do the named action\nuntil its predicate holds\n(the table below)"];
+  trace [label="Leave the trace:\ncommit, receipt, or record"];
+  cannot [shape=diamond, label="Cannot act on it?"];
+  escalate [label="cairn escalate\nwith the evidence; stop"];
+
+  // The actions and their completion predicates
+  actions [shape=plaintext, fontsize=9, label=<
+    <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
+      <TR><TD BGCOLOR="#eeeeee"><B>Action</B></TD><TD BGCOLOR="#eeeeee"><B>done :=</B></TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Put the records right</I></TD></TR>
+      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">.cairn/in-progress names the action, or PATH is clean at HEAD</TD></TR>
+      <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean at HEAD</TD></TR>
+      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">the in-progress record is gone; the action finished or abandoned</TD></TR>
+      <TR><TD ALIGN="LEFT">repair PATH</TD><TD ALIGN="LEFT">the named record reads, and nothing else changed</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Prove the requirement</I></TD></TR>
+      <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a committed mechanism names REQ</TD></TR>
+      <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">receipt(REQ).commit = HEAD and current(m, REQ); the receipt is committed</TD></TR>
+      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">as run, and result = pass</TD></TR>
+      <TR><TD ALIGN="LEFT">review mechanism REQ</TD><TD ALIGN="LEFT">reviewed(m) carries REQ H(text(REQ)), committed; no code changed</TD></TR>
+      <TR><TD ALIGN="LEFT">escalate REQ</TD><TD ALIGN="LEFT">three attempts without a pass: an escalation names REQ</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Review before Done</I></TD></TR>
+      <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">review.commit = report.commit = HEAD, both committed, every report finding carried by number</TD></TR>
+      <TR><TD ALIGN="LEFT">resolve SLUG</TD><TD ALIGN="LEFT">no finding is open; each resolution its own commit</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Scope and capture</I></TD></TR>
+      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">the path is declared, or a retention or restoration is approved</TD></TR>
+      <TR><TD ALIGN="LEFT">capture PATH</TD><TD ALIGN="LEFT">the item carries its reason it is outside, or an escalation names it</TD></TR>
+      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">Fixed by names a commit that changes no Agreed text, and REQ passes at or after it</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Decisions and continuation</I></TD></TR>
+      <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">Realized by names a commit that resolves</TD></TR>
+      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">promotion decision; requirement Agreed by it; commitment; roadmap Current:; item stamped</TD></TR>
+      <TR><TD ALIGN="LEFT">reword SHA</TD><TD ALIGN="LEFT">no unpushed commit carries an attribution line</TD></TR>
+    </TABLE>>];
+
+  wake -> verdict;
+  verdict -> present [label="Escalate"];
+  present -> answer;
+  answer -> reply [label="ask"];
+  answer -> wake [label="ok | instead"];
+  reply -> wake;
+  verdict -> stop [label="Done"];
+  verdict -> act [label="Resolvable"];
+  act -> cannot;
+  cannot -> trace [label="no"];
+  cannot -> escalate [label="yes"];
+  trace -> wake;
+  escalate -> wake;
+  act -> actions [style=dashed, arrowhead=none];
+  { rank=same; act; actions; }
+}

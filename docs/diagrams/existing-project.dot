@@ -1,0 +1,63 @@
+// Existing project: from a codebase Cairn has not specified, or one whose spec drifted, to one prepared commitment.
+digraph existing_project {
+  rankdir=TB;
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Existing project: start to done"];
+  node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+  edge  [fontname="Helvetica", fontsize=10];
+
+  start [shape=oval, label="Start: /existing-project"];
+  isdone [shape=diamond, label="cairn wake says Done?"];
+  tonext [shape=oval, label="Switch to /next-feature:\nthe work is a later commitment"];
+  hasspec [shape=diamond, label="docs/spec/overview.md\nexists?"];
+  readspec [label="Path B: read the spec set first:\nglossary, keystone, domains, roadmap,\ncommitment, decisions, items;\nrun cairn wake"];
+  recon [label="Recon before questions, in order:\nmanifests; entry points; data;\ntests; CI and scripts; docs outside the spec;\nrecent history (B: every commit since\nthe newest Agreed date)"];
+  report [label="docs/recon.md, every row cited:\nExists / Documented / Contradicted / Unverified;\ncarry unresolved earlier findings forward"];
+  corrects [label="Present; developer\ncorrects the reading"];
+  ask [label="Ask the one question:\na feature to add, or a defect to fix?"];
+  radius [label="Trace the blast radius:\nmodules, tests, spec sections; cite each"];
+  pathA [label="Path A: glossary from the code's identifiers;\nObserved specs inside the radius,\none-line rows outside"];
+  pathB [label="Path B: verify each spec section in the radius"];
+  verdict [shape=diamond, label="Holds / Drifted /\nStill Observed / Missing"];
+  drift [label="Raise both sides, cited;\nthe developer rules"];
+  rule [shape=diamond, label="Which side is wrong?"];
+  supersede [label="Spec wrong: revise it,\ncause named"];
+  defect [label="Code wrong: the section stands;\nthe divergence is a defect item"];
+  missing [label="Write it as Observed,\nas Path A would"];
+  confirm [label="Confirm loop by exception:\nfalsifiers as one set, a mechanism each,\nself-review recorded,\nStatus: Agreed <date> per confirmed block"];
+  hasroad [shape=diamond, label="Roadmap exists?"];
+  roadmap [label="Roadmap with Current:\nand the commitment file;\na defect names the requirement it violates\nand a mechanism that reproduces it"];
+  inscope [shape=diamond, label="Work inside the current\ncommitment?"];
+  capture [label="cairn item: backlog if it fits the spec,\nnext-feature if it changes Agreed text;\ndo not implement it meanwhile"];
+  agreement [label="AGENTS.md verbatim from the template:\nwrite it, or replace the copy it holds"];
+  mechs [label="Write or verify each mechanism;\nsafe violating example;\na defect keeps its failing reproduction"];
+  commit [label="Commit spec, declarations, inputs;\ncairn lint docs/spec; cairn wake"];
+  done [shape=box, peripheries=2, label="Done:\nwake names the first action;\nObserved sections are not contract"];
+
+  start -> isdone;
+  isdone -> tonext [label="yes"];
+  isdone -> hasspec [label="no"];
+  hasspec -> readspec [label="yes (B)"];
+  hasspec -> recon [label="no (A)"];
+  readspec -> recon;
+  recon -> report -> corrects -> ask -> radius;
+  radius -> pathA [label="A"];
+  radius -> pathB [label="B"];
+  pathB -> verdict;
+  verdict -> confirm [label="holds: cite,\nwrite nothing"];
+  verdict -> drift [label="drifted"];
+  verdict -> confirm [label="still Observed"];
+  verdict -> missing [label="missing"];
+  drift -> rule;
+  rule -> supersede [label="spec"];
+  rule -> defect [label="code"];
+  supersede -> confirm; defect -> confirm; missing -> confirm;
+  pathA -> confirm;
+  confirm -> hasroad;
+  hasroad -> roadmap [label="no"];
+  hasroad -> inscope [label="yes"];
+  inscope -> agreement [label="yes"];
+  inscope -> capture [label="no"];
+  capture -> agreement;
+  roadmap -> agreement;
+  agreement -> mechs -> commit -> done;
+}

@@ -1,0 +1,45 @@
+// Install: from a harness with no Cairn to a working command, hooks and skills.
+digraph install {
+  rankdir=TB;
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="Install: start to done"];
+  node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
+  edge  [fontname="Helvetica", fontsize=10];
+
+  start [shape=oval, label="Start: a harness\nwith no Cairn"];
+  harness [shape=diamond, label="Which harness?"];
+  cc [label="Claude Code or Codex:\nplugin marketplace add eas4ai/cairn\nplugin install cairn@cairn"];
+  muse [label="Muse:\nmuse plugins install <checkout>"];
+  other [label="Any other agent:\nnpx skills add eas4ai/cairn\nthen ask the agent to run /install-cairn"];
+  prereq [shape=diamond, label="node and git\navailable?"];
+  missing [shape=oval, label="Stop: name the\nmissing prerequisite"];
+  hook [label="Session-start hook runs\n(registered by the plugin)"];
+  link [shape=diamond, label="~/.local/bin/cairn\nresolves?"];
+  mklink [label="Link it to the plugin's\nbin/cairn.mjs and say so"];
+  path [shape=diamond, label="~/.local/bin on PATH?"];
+  addpath [label="Add it to PATH\n(shell startup file)"];
+  help [label="cairn --help prints\ncommands and exit codes"];
+  project [shape=diamond, label="Inside a Git repo with\ndocs/spec/roadmap.md?"];
+  wake [label="Hook prints the verdict\nand its predicate"];
+  choose [label="Choose the entry skill:\n/new-project for software that does not exist\n/existing-project for a codebase"];
+  done [shape=box, peripheries=2, label="Done:\ncommand, hooks, skills"];
+
+  start -> harness;
+  harness -> cc [label="Claude Code, Codex"];
+  harness -> muse [label="Muse"];
+  harness -> other [label="other"];
+  cc -> prereq; muse -> prereq; other -> prereq;
+  prereq -> missing [label="no"];
+  prereq -> hook [label="yes"];
+  hook -> link;
+  link -> mklink [label="no, or dangling"];
+  link -> path [label="yes"];
+  mklink -> path;
+  path -> addpath [label="no"];
+  path -> help [label="yes"];
+  addpath -> help;
+  help -> project;
+  project -> wake [label="yes"];
+  project -> choose [label="no"];
+  wake -> done;
+  choose -> done;
+}

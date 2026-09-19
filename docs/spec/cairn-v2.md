@@ -310,8 +310,8 @@ answers to the fixed questions in section 9, and findings.
 
 **Brief.** The record `cairn brief` writes for a review: the review it names,
 the projection and payload digests, the exclusion manifest digest, and the
-launch instruction — the detected harness and the adversary model, transport
-and projection boundary fixed for that harness.
+launch instruction (the detected harness and the adversary model, transport
+and projection boundary fixed for that harness).
 
 **Report.** The adversary's attempts against those claims at the same workspace
 snapshot. One report is written per commitment.

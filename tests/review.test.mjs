@@ -97,3 +97,48 @@ test('a safe relative symlink is preserved as link text; absolute and out-of-tre
   await git(['update-index', '--add', '--cacheinfo', `160000,${'a'.repeat(40)},sub`], { cwd: r.cwd });
   await assert.rejects(project(r.cwd, settings, (await git(['write-tree'], { cwd: r.cwd })).stdout.trim(), await tmp()), /unresolved gitlink at sub/);
 });
+
+// tests/review.test.mjs (append)
+import { sha256 } from '../lib/canon.mjs';
+import { detectHarness, brief, interfaceObligations, CONFINES } from '../lib/review.mjs';
+
+test('the harness comes from --harness, then CAIRN_HARNESS, then the harness environment, and must name a settings entry; the model string passes through', () => {
+  assert.deepEqual(detectHarness(SETTINGS, { harness: 'claude_code', env: {} }), { name: 'claude_code', model: 'claude-fable-5-1', transport: 'remote', boundary: 'unenforced' });
+  assert.equal(detectHarness(SETTINGS, { env: { CAIRN_HARNESS: 'claude_code' } }).name, 'claude_code');
+  assert.equal(detectHarness(SETTINGS, { env: { CLAUDECODE: '1' } }).name, 'claude_code');
+  assert.deepEqual(detectHarness(SETTINGS, { harness: 'codex', env: {} }), { name: 'codex', model: null, transport: null, boundary: 'unenforced' });
+  assert.throws(() => detectHarness(SETTINGS, { env: {} }), /no harness detected; pass --harness/);
+  assert.throws(() => detectHarness(SETTINGS, { harness: 'muse', env: {} }), /harness muse has no settings entry/);
+  assert.deepEqual(CONFINES, { claude_code: false, codex: false, muse: false });
+});
+
+export async function reviewed(over = {}) {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  await r.commit('change an interface');
+  r.rev = await review(r.cwd, 'first', await claims(r, over), { env: { CAIRN_SESSION: 's-builder' } });
+  r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
+  return r;
+}
+
+test('brief writes the record, the projection and the rendered file, and prints the launch block', async () => {
+  const bare = await loopRepo({ settings: SETTINGS });
+  await assert.rejects(brief(bare.cwd, 'first', { harness: 'claude_code' }), /no review for first/);
+  const r = await reviewed({ findings: [{ n: 1, text: 'no test' }] });
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  const p = decodeRecord(await catCommit(r.cwd, b.sha)).payload;
+  assert.deepEqual([p.slug, p.review, p.payload_digest], ['first', r.rev, sha256(b.text)]);
+  assert.match(p.projection_digest, /^sha256:/);
+  assert.match(p.exclusions_digest, /^sha256:/);
+  assert.ok(b.briefPath.startsWith(path.join(r.cwd, '.cairn/output/brief-')));
+  assert.equal(await fs.readFile(b.briefPath, 'utf8'), b.text);
+  for (const s of ['## Interface obligations\nsrc/api/x.mjs\n', '## Builder findings\n1. no test\n', '[DEMO-001]', 'Falsifier:', 'mechanism demo-001 Q1 observed:',
+    'cannot detect a secret a person or primary coding agent copied into ordinary prose', 'You may read only the projection directory. Boundary: unenforced.']) assert.ok(b.text.includes(s), s);
+  const lines = b.launch.split('\n');
+  assert.equal(lines[0], `cairn: brief first ${b.sha}`);
+  assert.deepEqual(lines.slice(5, 9), ['harness: claude_code', 'model: claude-fable-5-1', 'transport: remote', 'boundary: unenforced']);
+  assert.equal(lines[9], `start: in claude_code, start a fresh adversary with model claude-fable-5-1 over remote, working directory ${b.projectionDir}, with the file ${b.briefPath} as its entire prompt; when it finishes, run: cairn report first --file <its report>`);
+  assert.equal(lines[10], '');
+  await assert.rejects(fs.stat(path.join(b.projectionDir, '.git')));
+  assert.deepEqual(await interfaceObligations(r.cwd, SETTINGS, r.startSnapshot, r.revPayload.snapshot), ['src/api/x.mjs']);
+});

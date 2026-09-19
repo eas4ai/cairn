@@ -70,3 +70,9 @@ test('writeTreeFromPaths stores dirty bytes, modes and link text without touchin
   assert.equal(await repo.git('ls-files', '--stage'), before);
   assert.equal(await repo.git('diff', '--cached', '--name-only'), '');
 });
+
+test('a large stdin write to a git process that exits without draining it rejects with GitError instead of crashing the process', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const big = Buffer.alloc(8 * 1024 * 1024, 65); // bigger than the OS pipe buffer, so the write outlives a git process that never reads stdin
+  await assert.rejects(git(['cat-file', '-p', 'nothing'], { cwd: repo.dir, input: big }), (e) => e instanceof GitError && /nothing/.test(e.stderr));
+});

@@ -1584,18 +1584,22 @@ specification.
     measurement itself; no gate cascade decides by elimination anymore.
     Supersedes 26. The developer's reason: "the goddamn evaluator was to
     reduce ritual assent."
-55. Live composite measurement, not shadow, is the default; `observe` is an
-    explicit, stated setting for collecting calibration data only, and
-    calibration tunes the composite offline without gating whether the
-    agent may decide. Supersedes 27. The developer's reason: "the goddamn
-    evaluator was to reduce ritual assent," and the recorded benchmark
-    showed a shadow default plus a calibration-gated route mode produced
-    zero agent routing at the shipped gates.
+55. Live composite measurement, not shadow, is the only mode; there is no
+    `typesafeai.mode` setting, since the composite never withholds or
+    grants authority for a setting to gate, and calibration data comes
+    from those same live records, not a separate observation mode.
+    Supersedes 27. The developer's reason: "the goddamn evaluator was to
+    reduce ritual assent," and the recorded benchmark showed a shadow
+    default plus a calibration-gated route mode produced zero agent
+    routing at the shipped gates.
 56. Composite option scores and weights are back, scored across five
     dimensions with a computed ceiling and confidence floors, because the
     raw-gate-answers-only design in 51 never let a draft reach the agent;
-    `code_tiers` stays absent. Supersedes 51. The developer's reason: "The
-    reason I wanted this design was to be able to use Cairn in an
+    `code_tiers` stays absent. The composite is advisory, not a router: it
+    yields a `suggested: agent | developer` shown beside the five raw
+    levels, only the floor and a veto force the developer, and the agent
+    decides in every other case. Supersedes 51. The developer's reason:
+    "The reason I wanted this design was to be able to use Cairn in an
     autonomous benchmark."
 
 ## 14. Next steps

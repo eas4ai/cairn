@@ -197,3 +197,35 @@ test('isCurrent accepts precomputed identities and refuses another requirement',
   assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001', now), true);
   assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-002', now), false);
 });
+
+import { attempts } from '../lib/check.mjs';
+
+test('attempts counts distinct failing product digests since the last pass', async () => {
+  const repo = await declared();
+  const count = async () => attempts(await readLog(repo.cwd), 'DEMO-001');
+  assert.equal(await count(), 0);
+  await repo.write('hello.txt', 'bye\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 1);
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 1, 'a rerun at a seen input snapshot is not an attempt');
+  await repo.write('notes.md', 'edited notes\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 1, 'a change only to documents is not an attempt');
+  await repo.write('hello.txt', 'nope\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 2);
+  await repo.write('hello.txt', 'bye\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 2, 'a return to a tried input is not an attempt');
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, cwd: 'missing' });
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 2, 'an error receipt is not an attempt');
+  await declare(repo.cwd, 'greeter', DEFINITION);
+  await repo.write('hello.txt', 'still wrong\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 3);
+  await repo.write('hello.txt', 'hello\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await count(), 0, 'a pass resets the count');
+});

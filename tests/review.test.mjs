@@ -467,3 +467,23 @@ test('checkAttempts refuses a repeated (question, target) pair, mirroring checkA
   assert.deepEqual(checkAttempts(base, t), base);
   assert.throws(() => checkAttempts([...base, base[0]], t), /attempted twice/);
 });
+
+// tests/review.test.mjs (fix round 1, item 7)
+import { roadmapSection } from '../lib/review.mjs';
+
+test('roadmapSection matches the slug exactly against lib/spec.mjs\'s roadmap parser, not a heading substring', () => {
+  const decoy = 'Current: first\n\n## first-pass (abandoned)\n\nDECOY TEXT THAT IS NOT THIS COMMITMENT\n\n## first\n\nRequirements: DEMO-001\n\nThe real section.\n';
+  assert.equal(roadmapSection(decoy, 'first'), '## first\n\nRequirements: DEMO-001\n\nThe real section.');
+  assert.equal(roadmapSection(decoy, 'first-pass (abandoned)'), '## first-pass (abandoned)\n\nDECOY TEXT THAT IS NOT THIS COMMITMENT');
+  assert.equal(roadmapSection(decoy, 'no-such-section'), '');
+});
+
+test('brief renders the real roadmap section, not a decoy heading whose title contains the slug as a substring', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('docs/spec/roadmap.md', 'Current: first\n\n## first-pass (abandoned)\n\nDECOY TEXT THAT IS NOT THIS COMMITMENT\n\n## first\n\nRequirements: DEMO-001\n\nThe real section.\n');
+  await r.commit('decoy roadmap heading above the real section');
+  r.rev = await review(r.cwd, 'first', await claims(r), { env: { CAIRN_SESSION: 's-builder' } });
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  assert.ok(b.text.includes('The real section.'));
+  assert.equal(b.text.includes('DECOY TEXT THAT IS NOT THIS COMMITMENT'), false);
+});

@@ -464,3 +464,83 @@ describe('the Score request', () => {
     assert.equal(sizeCheck(settings(), req(padC + 1, 0)), 'oversize');
   });
 });
+
+import { parseScoreAnswers } from '../lib/evaluate.mjs';
+
+// Deviation from the brief's Step 1 snippet: the snippet calls `buildScoreRequest(settings(),
+// state(), 0)` as if `state()` were an existing zero-arg factory. No such helper exists in this
+// file -- the Score-request describe block above builds its own inline state object literal per
+// test instead (see e.g. line 370, 389, 398) -- so this file's own `scoreState()` follows that
+// same local pattern rather than introducing a new shared fixture name.
+const scoreState = () => ({
+  five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' },
+  option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {},
+});
+
+const goodBody = (over = {}) => JSON.stringify({
+  model: 'jev-1.13.0',
+  answers: {
+    evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
+    reach: { type: 'score', score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
+    contract: { type: 'score', score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+    surface: { type: 'score', score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+    ambiguity: { type: 'score', score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+    ...over,
+  },
+  usage: { input_tokens: 10, output_tokens: 2 },
+});
+
+describe('Score answer parsing', () => {
+  test('parses all five dimensions', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const r = parseScoreAnswers(req, goodBody());
+    assert.deepEqual(Object.keys(r.levels).sort(), ['ambiguity', 'contract', 'evidence', 'reach', 'surface']);
+    assert.equal(r.levels.evidence, 3.4); assert.equal(r.confidences.evidence, 0.6);
+    assert.equal(r.model, 'jev-1.13.0');
+    assert.deepEqual(r.usage, { input_tokens: 10, output_tokens: 2 });
+  });
+  test('tolerates a probability sum within 0.02 of 1 (the round-3 data-loss bug, fixed)', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const body = goodBody({ evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.49, 4: 0.4 } } }); // sums to 0.99
+    const r = parseScoreAnswers(req, body);
+    assert.equal(r.invalid, undefined);
+  });
+  test('refuses a sum off by more than 0.02', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const body = goodBody({ evidence: { type: 'score', score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.3, 4: 0.4 } } }); // sums to 0.8
+    assert.ok(parseScoreAnswers(req, body).invalid);
+  });
+  test('refuses out-of-range score, confidence, missing dimension, wrong type, or malformed JSON', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    assert.ok(parseScoreAnswers(req, 'not json').invalid);
+    assert.ok(parseScoreAnswers(req, JSON.stringify({ model: 'jev-1.13.0', answers: {}, usage: {} })).invalid);
+    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'noul', noul: 0.5 } })).invalid);
+    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'score', score: 5, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
+    assert.ok(parseScoreAnswers(req, goodBody({ evidence: { type: 'score', score: 1, confidence: 1.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } })).invalid);
+  });
+  // Not in the brief's own test list: the task's Robustness paragraph separately names "an extra
+  // question" and "a probabilities object with a missing or extra key" as defects the parser
+  // must catch -- neither is exercised by the brief's Step 1 snippet, whose probabilities check
+  // (Object.values(...).length !== 5) would miss a shifted key set entirely. These three tests
+  // cover them directly.
+  test('refuses an answer key the request never asked for', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const body = goodBody({ sixth: { type: 'score', score: 1, confidence: 0.5, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } } });
+    assert.ok(parseScoreAnswers(req, body).invalid);
+  });
+  test('refuses a probabilities object with a missing or extra key even when the five values are individually valid', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    // Keys 0,1,2,3,5: five values, each in [0,1], summing to 1 -- would pass a value-count-only
+    // check but is missing "4" and carries an extra "5" instead.
+    const body = goodBody({ evidence: { type: 'score', score: 3, confidence: 0.6, legend: {}, probabilities: { 0: 0.2, 1: 0.2, 2: 0.2, 3: 0.2, 5: 0.2 } } });
+    assert.ok(parseScoreAnswers(req, body).invalid);
+  });
+  test('carries usage through when present and valid, and reports null when usage is malformed', () => {
+    const req = buildScoreRequest(settings(), scoreState(), 0);
+    const bad = JSON.parse(goodBody());
+    bad.usage = { input_tokens: -1, output_tokens: 2 };
+    const r = parseScoreAnswers(req, JSON.stringify(bad));
+    assert.equal(r.invalid, undefined);
+    assert.equal(r.usage, null);
+  });
+});

@@ -228,8 +228,59 @@ test('cairn decisions --read: the full two-step signed flow succeeds; a signatur
 // end` never actually wrote a changed --touch path into the mechanism definition in the shipped
 // binary. This drives `cairn begin --touch`, a real file change, and `cairn end` entirely through
 // main(), the same path bin/cairn.mjs uses, and checks the definition on disk afterward.
-import { declared as mechanismDeclared } from './helpers/mechanism-fixture.mjs';
+import { declared as mechanismDeclared, project as mechanismProject, DEFINITION as MECHANISM_DEFINITION } from './helpers/mechanism-fixture.mjs';
 import { readMechanisms } from '../lib/mechanisms.mjs';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+// Fix round 1 item 6 addendum: `cairn declare` and `cairn check` were never wired into main()'s
+// argv dispatch by any plan (confirmed: neither appeared in `cairn --help`), though both were
+// fully built and tested at the library level (lib/mechanisms.mjs's declare, lib/check.mjs's
+// check). Covers a successful declare, a refused declare (a glob metacharacter in inputs, which
+// normalizeDefinition already refuses), a check that records a receipt, and a check refusal.
+//
+// "a check that refuses a dirty declared input" does not correspond to any real refusal: check()
+// itself has no dirty-input logic, and lib/scope.mjs's preflight (which every STATE_CHANGING
+// command runs, including check) explicitly lets a declared, non-protected/reserved dirty path
+// through with no breach (`cls !== 'protected' && cls !== 'reserved' && isDeclared(path,
+// declared)` is a `continue`, not a stop) -- confirmed by reading both files; grepping lib/check.mjs
+// and lib/scope.mjs for "dirty" finds nothing. The lease-coverage concept that phrase may be
+// pointing at (lib/lease.mjs's covers/lib/scope.mjs's leaseCovers) is consulted only by wake's own
+// 'record'/'commit' predicates, never by check() or this command. Substituted with check's actual,
+// tested refusal path (a requirement that is not Agreed) rather than fabricating behavior that
+// does not exist.
+test('cairn declare writes a mechanism definition from a --file; a glob in inputs is refused', async (t) => {
+  const repo = await mechanismProject();
+  t.after(repo.cleanup);
+  const file = join(repo.cwd, 'greeter.json');
+  await writeFile(file, JSON.stringify(MECHANISM_DEFINITION));
+  const r = await run(['declare', 'greeter', '--file', file], repo.cwd);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /^declare greeter sha256:[0-9a-f]{64}\n$/);
+  const mechs = await readMechanisms(repo.cwd);
+  assert.deepEqual(mechs.greeter.definition.requirements, ['DEMO-001', 'DEMO-002']);
+
+  const badFile = join(repo.cwd, 'bad.json');
+  await writeFile(badFile, JSON.stringify({ ...MECHANISM_DEFINITION, inputs: ['src/*.mjs'] }));
+  const bad = await run(['declare', 'other', '--file', badFile], repo.cwd);
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /^cairn: glob metacharacter in path "src\/\*\.mjs"/);
+});
+test('cairn check writes a receipt; a non-Agreed requirement is refused', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const r = await run(['check', 'DEMO-001'], repo.cwd);
+  assert.equal(r.code, 0);
+  assert.match(r.out, /^check [0-9a-f]{40} DEMO-001\n$/);
+  const sha = r.out.split(' ')[1];
+  const rec = (await readLog(repo.cwd)).find((x) => x.sha === sha);
+  assert.equal(rec.kind, 'receipt');
+  assert.deepEqual(rec.payload.results.map((x) => x.requirement), ['DEMO-001']);
+
+  const bad = await run(['check', 'DEMO-002'], repo.cwd);
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /^cairn: DEMO-002 is not Agreed; only Agreed requirements are checked\n$/);
+});
 
 test('cairn end writes a changed --touch path into the mechanism definition (finding 2)', async (t) => {
   const repo = await mechanismDeclared();

@@ -108,3 +108,49 @@ test('an extra byte in a mechanism entry is not a valid mutation', async () => {
   await r.write('.cairn/mechanisms/demo-001.json', text + ' ');
   assert.equal(await kernelManagedValid(r.cwd, '.cairn/mechanisms/demo-001.json', tree), false);
 });
+
+import { preflight, openBreaches } from '../lib/scope.mjs';
+
+// Deviation from the plan text: the plan's own test assertions read a scope-breach record's
+// fields as `b.allowed_base`, `b.first_observed` and `b.declarations`, but lib/records.mjs's
+// already-settled 'scope-breach' schema (also exercised by tests/snapshots.test.mjs's own
+// allowedBase test) names them `base`, `snapshot` and `declarations_digest`. Every field access
+// below uses the schema's real names.
+test('an undeclared, non-outside change becomes one breach naming snapshot, base and declaration set', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'export const s = 1;\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.equal(shas.length, 1);
+  const [b] = openBreaches(await r.log());
+  assert.equal(b.sha, shas[0]);
+  assert.equal(b.path, 'src/stray.mjs');
+  assert.equal(b.base, r.startSnapshot);
+  assert.notEqual(b.snapshot, r.startSnapshot);
+  assert.equal((await readSnapshot(r.cwd, b.snapshot, 'workspace')).kind, 'workspace');
+  assert.match(b.declarations_digest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('declared inputs and outside paths are never breaches', async () => {
+  const r = await loopRepo();
+  await r.write('src/demo.mjs', 'console.log("hi");\n');
+  await r.write('README.md', '# changed\n');
+  await r.write('notes/todo.md', 'later\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});
+
+test('a second preflight does not record the same observation twice', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  await preflight(r.cwd, await r.log(), { command: 'check' });
+  await r.write('src/stray.mjs', 'y\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  assert.equal(openBreaches(await r.log()).length, 1);
+});
+
+test('a change removed before Cairn observes it leaves no breach', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  await r.remove('src/stray.mjs');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  assert.equal(openBreaches(await r.log()).length, 0);
+});

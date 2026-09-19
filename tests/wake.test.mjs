@@ -10,6 +10,7 @@ import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
 import { wake, FETCH_LINE, ORDER } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
+import { preflight, dispose } from '../lib/scope.mjs';
 
 test('outside a project wake exits 3 naming the skills', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
@@ -113,9 +114,28 @@ test('a stale lease is reconciled before scope', async () => {
   await r.write('src/stray.mjs', 'x\n');
   const other = await wake(r.cwd, { session: 'other-session' });
   assert.deepEqual([other.action, other.target], ['reconcile', 'implement DEMO-001']);
+  // Deviation from the plan text: wake's 'scope' predicate (Task 7) only reads scope-breach
+  // records already on the log; it never runs a live preflight scan itself (wake writes nothing,
+  // per Task 4's purity test). A dirty undeclared path with no preflight() call records no breach
+  // at all, so the plan's own test as written never produces the breach this test's next
+  // assertion (and its "live lease: not stale" comment) assumes exists. A preflight() call is
+  // added here, the same one Task 7's own test uses, to record it.
+  await preflight(r.cwd, await r.log(), { command: 'check' });
   const same = await wake(r.cwd, { session: null });
   assert.equal(same.action, 'scope');                            // live lease: not stale
   await end(r.cwd);
   await begin(r.cwd, { action: 'implement', target: 'DEMO-009', touch: [] });
   assert.equal((await wake(r.cwd, { session: null })).action, 'reconcile');   // target not in the set
+});
+
+test('an undisposed breach is named before an unanswered escalation', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await r.escalate('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'scope', 'src/stray.mjs']);
+  await r.remove('src/stray.mjs');
+  await dispose(r.cwd, b, 'restore');
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });

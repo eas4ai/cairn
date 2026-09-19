@@ -117,3 +117,28 @@ test('allowedBase is the newest start or scope snapshot, never merely the newest
   await appendRecord(repo.dir, 'start', 'bad', { slug: 'bad', snapshot: I, requirements: [], from_superseded: null });
   await assert.rejects(allowedBase(repo.dir, await readLog(repo.dir)), KindError);
 });
+
+import { SettingsError } from '../lib/settings.mjs';
+import { writeInputSnapshot as writeInput } from '../lib/snapshots.mjs';
+import { PathError } from '../lib/paths.mjs';
+
+test('snapshots refuse untracked paths matched by settings network_exclude', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const settings = { schema: 1, authority_remote: null, outside: [], source: [], interfaces: [], data: [], network_exclude: ['fixtures/private/**'], signing_key: null, attribution: 'forbidden', harness: {}, typesafeai: { enabled: false, mode: 'shadow', model: null, route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3, reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
+  await repo.write('.cairn/settings.json', JSON.stringify(settings)); await repo.write('a.txt', 'a'); await repo.commit('base');
+  await repo.write('fixtures/private/k.json', '{}');
+  await assert.rejects(writeWorkspaceSnapshot(repo.dir), /fixtures\/private\/k.json \(matches fixtures\/private\/\*\*\)/);
+  await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: ['fixtures'] }), /fixtures\/private\/k.json/);
+  assert.match(await writeWorkspaceSnapshot(repo.dir, { exclude: [] }), /^[0-9a-f]{40}$/);
+  await repo.write('.cairn/settings.json', '{"schema":2}');
+  await assert.rejects(writeWorkspaceSnapshot(repo.dir), SettingsError);
+});
+// Carried from plan 01's review: writeInputSnapshot passes inputs straight into `git ls-files` as
+// a pathspec, so pathspec magic such as `:(exclude)` or `:!` would change what a snapshot contains.
+// validatePath refuses a leading colon, so this must be refused before it reaches git.
+test('writeInputSnapshot refuses an input that begins with a colon before it reaches the pathspec', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a.txt', 'a'); await repo.commit('base');
+  await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: [':(exclude)a.txt'] }), PathError);
+  await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: ['a.txt', ':!b.txt'] }), PathError);
+});

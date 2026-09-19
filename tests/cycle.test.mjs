@@ -2,11 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { loopRepo } from './helpers/loop.mjs';
+import { writeFile } from 'node:fs/promises';
+import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { git, gitPath } from '../lib/gitx.mjs';
 import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle, guardKernelWrite, LivenessError, withLoop } from '../lib/cycle.mjs';
 import { readState, verdictOf, wake, progressMade, progressSummary } from '../lib/wake.mjs';
 import { begin } from '../lib/lease.mjs';
+import { declare } from '../lib/mechanisms.mjs';
 
 test('the counter lives below the Git directory, counts by class and target, and never travels', async () => {
   const r = await loopRepo();
@@ -98,7 +100,13 @@ test('semantic progress resets the count; a snapshot or record alone does not', 
 // readFile(join(cwd, '.cairn/mechanisms')) on that real directory throws EISDIR. Both the guarded
 // path and the good-bytes read below use the real per-mechanism file loopRepo's own declare()
 // wrote (demo-001.json, since loopRepo declares 'DEMO-001' under mechanism name 'demo-001').
-test('a kernel-managed write whose bytes would create a violation of equal or higher precedence is refused with the cycle escalation', async () => {
+//
+// This test covers only the cheap parse/append-only gate (bookkeepingViolation): is the write
+// even valid canonical bookkeeping? A real declare()/appendDecision() call can never produce
+// bytes that fail this gate (both always canonicalize what they write), so exercising it needs a
+// direct byte injection; the fix round 1 item 3/12 test below drives the deeper, scratch-state
+// precedence check through the real functions instead.
+test('a kernel-managed write with corrupted or noncanonical bytes is refused with the cycle escalation', async () => {
   const r = await loopRepo();
   const mechPath = '.cairn/mechanisms/demo-001.json';
   const good = await readFile(join(r.cwd, mechPath));
@@ -108,6 +116,42 @@ test('a kernel-managed write whose bytes would create a violation of equal or hi
   await assert.rejects(guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"kind": "read"}\n')]), { action: 'decide' }), /would create a scope violation/);   // the space makes the line noncanonical
   await guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"id":"01HZZZZZZZZZZZZZZZZZZZZZZZ","kind":"read","of":"x","record":"y","ts":"2026-09-19T00:00:00Z"}\n')]), { action: 'decide' });
   assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 1);
+});
+
+// Fix round 1, item 3 and 12: the liveness invariant now walks the real precedence predicates
+// against a scratch state with the write already applied, so it must be driven through the real
+// declare() (lib/mechanisms.mjs) and appendDecision() (lib/adr.mjs, via the loop fixture's own
+// decide() step) with bytes those functions actually produce, not a hand-built buffer. A dirty,
+// undeclared file with no recorded breach and no lease is invisible to every predicate until a
+// declare() widens some mechanism's inputs to cover it -- at that instant 'record' (index 6, at or
+// before declare's own index 7) goes from satisfied to unmet, so the write that would have
+// legalized it is refused instead of landing.
+test('declare is refused when its new input would legalize a pre-existing undeclared delta, and allowed otherwise', async () => {
+  const r = await loopRepo();
+  await r.write('src/util.mjs', 'export const x = 1;\n');   // dirty, undeclared, no lease, no preflight run
+  await assert.rejects(
+    declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] }),
+    LivenessError,
+  );
+  const esc = (await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle');
+  assert.equal(esc.length, 1);
+  // the refused declare wrote nothing: the mechanism definition still has its original inputs
+  const before = JSON.parse(await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8'));
+  assert.deepEqual(before.definition.inputs, ['flags/DEMO-001', 'src/demo.mjs']);
+  // a normal re-declare (same definition, nothing newly dirty-and-declared) is allowed
+  await declare(r.cwd, 'demo-001', mechanismFor('DEMO-001'));
+  // a legitimate ADR append (through the real appendDecision(), via the loop fixture's decide()
+  // step) is allowed too
+  const id = await r.decide();
+  assert.ok(id);
+});
+
+test('a corrupted cycle counter file is a refusal, not a silent reset to empty', async () => {
+  const r = await loopRepo();
+  await bump(r.cwd, 'record', 'src/a.mjs');
+  const file = await gitPath(r.cwd, 'cairn-cycle.json');
+  await writeFile(file, 'not json');
+  await assert.rejects(readCounter(r.cwd), /is corrupt/);
 });
 
 test('withLoop settles after a state-changing command and leaves wake pure', async () => {

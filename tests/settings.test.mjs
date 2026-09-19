@@ -32,6 +32,9 @@ test('refuses a reserved path under source, interfaces or data', () => {
   refuses((s) => { s.data.push('.cairn/**'); }, /data .cairn\/\*\* overlaps reserved/);
 });
 test('refuses a documents path below source', () => refuses(() => {}, /documents src\/README.md lies below source/, { mechanisms: [{ inputs: ['src/README.md'], documents: ['src/README.md'] }] }));
+test('S3: a source root nested under a documents directory is accepted, only the reverse is refused', () => {
+  assert.deepEqual(validateSettings({ ...GOOD, source: [...GOOD.source, 'docs/lib/**'] }, { mechanisms: [{ inputs: ['docs'], documents: ['docs'] }] }), []);
+});
 test('refuses a secret-shaped field or value other than the public signing_key', () => {
   refuses((s) => { s.harness.codex.api_token = 'x'; }, /secret-shaped field/);
   refuses((s) => { s.authority_remote = 'ghp_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789'; }, /secret-shaped value/);

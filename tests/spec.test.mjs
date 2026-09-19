@@ -55,6 +55,11 @@ test('broken order, repeated lines and bad status are reported as problems with 
   assert.match(bad('[A-001] x\nFalsifier: f\n').join(), /missing Status:/);
   assert.match(bad('[A-001]\nFalsifier: f\nStatus: Draft\n').join(), /empty obligation/);
 });
+test('S7: an unrelated problem that quotes the word status does not suppress a genuinely missing Status: line', () => {
+  const problems = parseDomainFile('[A-001] x\nFalsifier: f\nStatus quo preserved\n').problems.map((p) => p.reason);
+  assert.ok(problems.some((r) => /unexpected line after Falsifier:/.test(r)));
+  assert.ok(problems.some((r) => /missing Status:/.test(r)));
+});
 
 import { parseRoadmap } from '../lib/spec.mjs';
 

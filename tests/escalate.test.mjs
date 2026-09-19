@@ -430,3 +430,24 @@ test('cairn dispute refuses a missing, non-integer or non-positive --n with a me
   assert.equal(notANumber.code, 1);
   assert.match(notANumber.out, /^cairn: --n must be a positive integer naming the finding number/);
 });
+
+// Fix round 1 finding 12 (plan 09 review, new): a CAS refusal on refs/cairn/log (two writers
+// racing to extend the same log) used to reach the CLI as a bare
+// "cairn: refusing refs/cairn/log: expected <sha>" with no guidance and no automatic retry. Six
+// cliEscalate calls race concurrently from the same starting log state, sharing one --concern so
+// checkConcerns has nothing else to refuse on; git's ref CAS guarantees at least one of six
+// simultaneous writers to the same ref from the same expected old value loses. Every loser's
+// message now ends with "; run the command again" (one line, no automatic retry); every winner's
+// escalation record is still written normally.
+test('a CAS refusal on refs/cairn/log from escalate, answer, reply or dispute ends its message with "; run the command again" (finding 12)', async () => {
+  const r = await loopRepo();
+  const argvFor = (i) => ['--commitment', 'first', '--concern', 'DEMO-001', '--question', `Racer ${i}?`,
+    '--recommendation', 'R', '--because', 'B', '--if-wrong', 'W', '--instead', 'I'];
+  const results = await Promise.all([0, 1, 2, 3, 4, 5].map((i) => cliEscalate(r.cwd, argvFor(i))));
+  const winners = results.filter((x) => x.code === 0);
+  const losers = results.filter((x) => x.code === 1);
+  assert.ok(winners.length >= 1, 'at least one racer wrote its escalation');
+  assert.ok(losers.length >= 1, 'at least one racer lost the CAS race');
+  for (const loser of losers) assert.match(loser.out, /^cairn: refusing refs\/cairn\/log: expected [0-9a-f]{40}; run the command again\n$/);
+  for (const winner of winners) assert.match(winner.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+});

@@ -99,6 +99,15 @@ import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
 // stub `{ typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0' } }` fails loadSettings
 // when makeProject/loopRepo shallow-merge it over the defaults (the same issue tests/tx.test.mjs
 // already documents for its own settings fixture). Filled in with DEFAULT_SETTINGS' own defaults.
+// Fix round 1 finding 11: kept at mode: 'shadow' rather than switched to 'route' -- 'route' mode
+// needs a current passing calibration (lib/settings.mjs's validateSettings: "route mode needs a
+// current passing calibration"), which no fixture in this plan's footprint provides (confirmed:
+// loopRepo({ settings: { ...this object, mode: 'route' } }) throws SettingsError). The mode gate
+// itself is plan 11's: lib/escalate.mjs's escalateWithRoute dispatches on whatever route the
+// `evaluate` function it is given returns, and does not read typesafeai.mode at all -- these
+// tests inject a stub `evaluate` directly, so the route below is the stub's own choice, not a
+// live shadow-mode downgrade. Spec section 8: "In shadow mode the developer still decides"; that
+// rule belongs to the real evaluator plan 11 builds, not to this stub.
 const enabled = { typesafeai: { enabled: true, mode: 'shadow', model: 'jev-1.13.0',
   route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
   reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
@@ -120,6 +129,8 @@ test('with the evaluator disabled the route is developer and the evaluator is ne
 // test's stated behavior -- the evaluation SHA reaches the decision line -- true against the real
 // validator. The 'developer' route test below stores the evaluation on an escalation record, whose
 // schema (lib/records.mjs) checks only SHA format, not log membership, so EV is left as written there.
+// This test's `route: 'agent'` comes from the stub `evaluate` passed in below, not from
+// `enabled`'s mode: 'shadow' -- see the note on `enabled` above (finding 11).
 test('an evaluation that downgrades writes an ADR decision line naming the evaluation and no escalation record', async () => {
   const r = await loopRepo({ settings: enabled });
   const out = await escalateWithRoute(r.cwd, draft(), { evaluate: async () => ({ route: 'agent', evaluationSha: r.startSha }) });

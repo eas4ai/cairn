@@ -230,3 +230,16 @@ test('a current pass whose review metadata is unbound is review mechanism', asyn
   const v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['review mechanism', 'DEMO-001']);
 });
+
+test('an item captured from a set requirement needs an outside record or an escalation', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['capture', 'nicer-greeting']);
+  await r.add('outside', 'nicer-greeting', { item, reason: 'the greeting text is not in DEMO-001', evaluation: null });
+  assert.equal((await wake(r.cwd)).action, 'review');
+  const item2 = await r.item('next-feature', 'DEMO-001', 'colour');
+  await r.escalate(`item:${item2}`);
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+});

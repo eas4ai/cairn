@@ -47,3 +47,15 @@ test('matchGlob matches entry paths with segment-aware wildcards', () => {
   assert.ok(matchGlob('README.md', 'README.md') && !matchGlob('README.md', 'docs/README.md'));
   assert.ok(matchGlob('a/**/b', 'a/b') && matchGlob('a/**/b', 'a/x/y/b') && matchGlob('READ?E.md', 'README.md'));
 });
+
+import { classify } from '../lib/paths.mjs';
+
+test('classify applies the fixed precedence', () => {
+  const s = { outside: ['README.md', '.github/**'], source: ['bin/**', 'src/**'], interfaces: ['src/api/**'], data: ['src/store/**', 'migrations/**'] };
+  const cases = { '.cairn/settings.json': 'protected', 'docs/spec/loop.md': 'protected', 'AGENTS.md': 'protected', 'docs/spec/roadmap.md': 'reserved', '.cairn/mechanisms': 'kernel-managed',
+    '.cairn/mechanisms/unit': 'kernel-managed', 'docs/decisions.jsonl': 'kernel-managed', '.cairn/output/abc': 'output', '.cairn/stray': 'reserved',
+    'README.md': 'outside', '.github/w/ci.yml': 'outside', 'src/store/db.js': 'data', 'migrations/1.sql': 'data', 'src/api/v1.js': 'interface',
+    'src/lib/x.js': 'source', 'bin/cairn.mjs': 'source', 'docs/guide.md': 'plain' };
+  for (const [p, want] of Object.entries(cases)) assert.equal(classify(p, s), want, p);
+  assert.throws(() => classify('../x', s), PathError);
+});

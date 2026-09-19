@@ -50,3 +50,50 @@ test('shape: observed needs text; the status is closed; keys are closed', async 
   await assert.rejects(review(r.cwd, 'first', swap({ question: 'Q5', target: 'first', status: 'true', text: 'y' })), /status must be observed or not-checked/);
   await assert.rejects(review(r.cwd, 'first', swap({ question: 'Q5', target: 'first', status: 'not-checked', text: 'y', cite: 1 })), /answer keys are question, target, status, text/);
 });
+
+// tests/review.test.mjs (append)
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { git } from '../lib/gitx.mjs';
+import { loadSettings } from '../lib/settings.mjs';
+import { project } from '../lib/review.mjs';
+
+async function tree(r) { await git(['add', '-A'], { cwd: r.cwd }); return (await git(['write-tree'], { cwd: r.cwd })).stdout.trim(); }
+const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'cairn-proj-'));
+
+test('the projection omits network_exclude and credential paths, names them in the manifest without contents, and has no .git', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  for (const [p, c] of [['fixtures/private/k.json', '{"secret":1}'], ['.env', 'A=1\n'], ['server.pem', 'x'], ['src/b.mjs', 'export const b = 2;\n']]) await r.write(p, c);
+  await r.commit('add fixtures');
+  const { settings } = await loadSettings(r.cwd);
+  const dir = await tmp();
+  const out = await project(r.cwd, settings, await tree(r), dir);
+  assert.deepEqual(out.manifest.classes, ['credential', 'network_exclude']);
+  assert.deepEqual(out.manifest.paths.map((p) => `${p.class} ${p.path}`), ['credential .env', 'network_exclude fixtures/private/k.json', 'credential server.pem']);
+  assert.equal(JSON.stringify(out.manifest).includes('secret'), false);
+  for (const gone of ['fixtures/private/k.json', '.env', 'server.pem', '.git']) await assert.rejects(fs.stat(path.join(dir, gone)));
+  assert.equal(await fs.readFile(path.join(dir, 'src/b.mjs'), 'utf8'), 'export const b = 2;\n');
+  assert.ok((await fs.stat(path.join(dir, '.cairn/settings.json'))).isFile());
+  assert.match(out.projectionDigest, /^sha256:[0-9a-f]{64}$/);
+  assert.match(out.exclusionsDigest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('a safe relative symlink is preserved as link text; absolute and out-of-tree links and gitlinks are refused', async () => {
+  const r = await loopRepo();
+  const { settings } = await loadSettings(r.cwd);
+  await r.write('src/real.txt', 'r\n');
+  await r.link('src/abs', '/etc/passwd');
+  await assert.rejects(project(r.cwd, settings, await tree(r), await tmp()), /absolute symlink at src\/abs/);
+  await fs.unlink(path.join(r.cwd, 'src/abs'));
+  await r.link('src/up', '../../outside');
+  await assert.rejects(project(r.cwd, settings, await tree(r), await tmp()), /out-of-tree symlink at src\/up/);
+  await fs.unlink(path.join(r.cwd, 'src/up'));
+  await r.link('src/link', 'real.txt');
+  const dir = await tmp();
+  const out = await project(r.cwd, settings, await tree(r), dir);
+  assert.equal(await fs.readlink(path.join(dir, 'src/link')), 'real.txt');
+  assert.ok(out.included.some(([p, mode]) => p === 'src/link' && mode === '120000'));
+  await git(['update-index', '--add', '--cacheinfo', `160000,${'a'.repeat(40)},sub`], { cwd: r.cwd });
+  await assert.rejects(project(r.cwd, settings, (await git(['write-tree'], { cwd: r.cwd })).stdout.trim(), await tmp()), /unresolved gitlink at sub/);
+});

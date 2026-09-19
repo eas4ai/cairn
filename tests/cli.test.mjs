@@ -133,11 +133,14 @@ test('cairn decisions --read: success prints the evidence description; refusal i
 
 // Fix round 1, item 10: decisionsCommand's own Refusal used to start with the word "cairn" itself,
 // and main()'s catch block always prepends its own "cairn: ", printing a doubled-up line.
-test('cairn decisions without --read is one cairn: line, no doubled prefix', async (t) => {
+// Fix round 2 finding 2: bare `cairn decisions` used to always refuse ("decisions needs --read
+// <id>"); it now renders the file (section 4: "cairn decisions renders the file"), one canonical
+// JSON line per ADR line, empty when there is no ADR file yet.
+test('cairn decisions without --read renders the file, empty when there is none yet', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const r = await run(['decisions'], repo.dir);
-  assert.equal(r.code, 1);
-  assert.equal(r.err, 'cairn: decisions needs --read <id>\n');
+  assert.equal(r.code, 0);
+  assert.equal(r.out, '');
 });
 
 // Fix round 1, item 1 (Critical): reproduced as described: a fresh nonce was minted on every
@@ -284,4 +287,123 @@ test('cairn end reports an unclaimed touch, with no doubled cairn: prefix, for a
   assert.equal(endResult.code, 0, 'the lease removal and its report are never split by the write-back failure');
   assert.equal(endResult.out,
     'cairn: lease ended\ncairn: touch helper.mjs not written: .cairn/mechanisms/greeter.json is not a valid mechanism entry (kernel-managed path breach)\n');
+});
+
+// Fix round 2 finding 2 (Important): lib/cli.mjs never imported lib/commitment.mjs, so start,
+// done, supersede, promote, item, outside, fix and lib/adr.mjs's decide/realize were unreachable
+// from the binary -- every one of them existed only as a library function no command ever called.
+// Wired here: `cairn start <slug>`, `cairn done <slug>`, `cairn supersede <successor> --quote
+// <text>`, `cairn promote <item-sha>`, `cairn item --backlog|--next-feature|--defect --slug <s>
+// --from <REQ or contract> --body <text>`, `cairn outside <item-sha> --reason <text>`, `cairn fix
+// <item-sha>`, `cairn decide --consequential --title ... --rests-on ... --wrong-if ... --body
+// ...`, `cairn realize <decision-id> --subject <text>`, and bare `cairn decisions` (tested above).
+import { project } from './helpers/commitment-fixture.mjs';
+import { readLog } from '../lib/records.mjs';
+import { readAdr } from '../lib/adr.mjs';
+
+test('cairn start prints one line and writes a start record reachable only through main()', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const r = await run(['start', 'first'], repo.cwd);
+  assert.equal(r.code, 0);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'start').at(-1);
+  assert.equal(r.out, `start ${rec.sha} first\n`);
+  const bad = await run(['start', 'nowhere'], repo.cwd);
+  assert.equal(bad.code, 1);
+  assert.match(bad.err, /^cairn: commitment first is open/);
+});
+
+test('cairn done prints one line and closes the open commitment', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await run(['start', 'first'], repo.cwd);
+  const r = await run(['done', 'first'], repo.cwd);
+  assert.equal(r.code, 0);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'done').at(-1);
+  assert.equal(r.out, `done ${rec.sha} first\n`);
+  const missingSlug = await run(['done'], repo.cwd);
+  assert.equal(missingSlug.code, 1);
+  assert.equal(missingSlug.err, 'cairn: done needs a slug\n');
+});
+
+test('cairn item prints one line and records a backlog item; refuses with no kind flag', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const r = await run(['item', '--backlog', '--slug', 'greet-twice', '--from', 'DEMO-001', '--body', 'Greet twice.'], repo.cwd);
+  assert.equal(r.code, 0);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'item').at(-1);
+  assert.equal(r.out, `item ${rec.sha} greet-twice\n`);
+  assert.deepEqual(rec.payload, { kind: 'backlog', slug: 'greet-twice', source: 'DEMO-001', body: 'Greet twice.' });
+  const noKind = await run(['item', '--slug', 'x', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
+  assert.equal(noKind.code, 1);
+  assert.equal(noKind.err, 'cairn: item needs one of --backlog, --next-feature or --defect\n');
+});
+
+test('cairn promote prints one line and opens the successor commitment, after done', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await run(['start', 'first'], repo.cwd);
+  await run(['item', '--backlog', '--slug', 'second', '--from', 'DEMO-002', '--body', 'Greet by name.'], repo.cwd);
+  await run(['done', 'first'], repo.cwd);
+  const b = (await readLog(repo.cwd)).filter((x) => x.kind === 'item').at(-1).sha;
+  const r = await run(['promote', b], repo.cwd);
+  assert.equal(r.code, 0);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'start').at(-1);
+  assert.equal(r.out, `promote ${rec.sha} ${b}\n`);
+  assert.equal(rec.payload.slug, 'second');
+});
+
+test('cairn outside and cairn fix each print one line', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const backlog = await run(['item', '--backlog', '--slug', 'greet-twice', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
+  const b = /^item (\S+)/.exec(backlog.out)[1];
+  const outsideResult = await run(['outside', b, '--reason', 'Not part of this commitment.'], repo.cwd);
+  assert.equal(outsideResult.code, 0);
+  const outsideRec = (await readLog(repo.cwd)).filter((x) => x.kind === 'outside').at(-1);
+  assert.equal(outsideResult.out, `outside ${outsideRec.sha} ${b}\n`);
+
+  await run(['start', 'first'], repo.cwd);
+  const defect = await run(['item', '--defect', '--slug', 'typo', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
+  const d = /^item (\S+)/.exec(defect.out)[1];
+  const fixResult = await run(['fix', d], repo.cwd);
+  assert.equal(fixResult.code, 0);
+  const fixRec = (await readLog(repo.cwd)).filter((x) => x.kind === 'fix').at(-1);
+  assert.equal(fixResult.out, `fix ${fixRec.sha} ${d}\n`);
+});
+
+test('cairn decide and cairn realize each print one line', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await run(['start', 'first'], repo.cwd);
+  const decideResult = await run(['decide', '--consequential', '--title', 'Use a map', '--rests-on', 'DEMO-001', '--wrong-if', 'it is slower', '--body', 'A map replaces the list.'], repo.cwd);
+  assert.equal(decideResult.code, 0);
+  const id = decideResult.out.trim().split(' ')[1];
+  const line = (await readAdr(repo.cwd)).find((l) => l.id === id);
+  assert.deepEqual([line.kind, line.title, line.rests_on], ['decision', 'Use a map', ['DEMO-001']]);
+  const realizeResult = await run(['realize', id, '--subject', 'no code change'], repo.cwd);
+  assert.equal(realizeResult.code, 0);
+  const rid = realizeResult.out.trim().split(' ')[1];
+  assert.equal(realizeResult.out, `realize ${rid} ${id}\n`);
+  const missing = await run(['decide', '--consequential', '--title', 't'], repo.cwd);
+  assert.equal(missing.code, 1);
+  assert.equal(missing.err, 'cairn: decide needs --title, --rests-on, --wrong-if and --body\n');
+});
+
+test('cairn supersede prints one line and closes the open commitment without moving Current:', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await run(['start', 'first'], repo.cwd);
+  const r = await run(['supersede', 'second', '--quote', 'Switch to the name argument.'], repo.cwd, { confirm: yes });
+  assert.equal(r.code, 0);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'superseded').at(-1);
+  assert.equal(r.out, `supersede ${rec.sha} second\n`);
+});
+
+test('--help lists the newly wired commands', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const help = await run(['--help'], repo.dir);
+  for (const line of ['cairn start <slug>', 'cairn done <slug>', 'cairn promote <item-sha>', 'cairn item --backlog']) {
+    assert.match(help.out, new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
 });

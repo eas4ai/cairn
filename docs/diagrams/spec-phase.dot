@@ -17,7 +17,7 @@ digraph spec_phase {
   commitment [label="Roadmap section for the commitment:\nRequirements: (Agreed only), what it delivers, done-when;\nCurrent: moved to it"];
   declare [label="cairn declare for the commitment's requirements only;\na failing test is each mechanism's violating example"];
   agreement [label="AGENTS.md from the template\n(write it, or replace the copy it holds)"];
-  commit [label="Commit; cairn start writes the start record\n(pins the roadmap's tree; promotions reference their items);\ncairn wake"];
+  commit [label="Commit; cairn start writes the start record\n(the roadmap snapshot, the commitment's set with each\nrequirement's text digest) and sets the refspecs\non the authority remote; cairn wake"];
   done [shape=box, peripheries=2, label="Done: wake names the first action;\nthe work loop takes over;\nConsequential decisions wait in the queue"];
 
   start -> falsifiers -> review -> lint;

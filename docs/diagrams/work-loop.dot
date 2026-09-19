@@ -1,49 +1,50 @@
 // The work loop: wake names one action with its completion predicate; the agent does it; wake again.
 digraph work_loop {
   rankdir=TB;
-  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="The work loop: do the action until its predicate holds; leave the trace; wake", nodesep=0.5, ranksep=0.6];
+  graph [fontname="Helvetica", fontsize=11, labelloc=t, label="The work loop: do the action until its predicate holds; leave the record; wake", nodesep=0.5, ranksep=0.6];
   node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
   edge  [fontname="Helvetica", fontsize=10];
 
-  wake [shape=oval, label="cairn wake: one git log of the range since the start record\nprints verdict, action or party, reason, predicate\n(outside a project, or records ref absent: one line, exit 3)"];
+  wake [shape=oval, label="cairn wake: reads the range since the start record; writes nothing\nprints verdict, action, reason, predicate\n(outside a project, refs absent, or a command to recover: one line, exit 3)"];
   verdict [shape=diamond, label="Verdict?"];
 
   // Waiting: the developer's turn
   waiting [label="Waiting: wake prints the escalation's five fields verbatim;\nthe agent adds nothing and stops; the hooks print it and do not nag"];
-  answer [label="Developer runs cairn answer SLUG\nok | instead <text> | ask <text>\n(the agent never does)"];
+  answer [label="Developer runs cairn answer SLUG\nok | instead <text> | ask <text>\n(the agent never does; signed when settings name a key)"];
   reply [label="reply SLUG (after ask): append the explanation\ndone := a reply record names the escalation"];
 
   // Done
-  stop [shape=box, peripheries=2, label="Done: a done record exists and nothing waits;\nstop. The developer opens /next-feature.\n(With a backlog item waiting, wake names promote instead.)"];
+  stop [shape=box, peripheries=2, label="Done: a done record exists and nothing waits;\nthe unread queue is rendered; stop.\n(With a backlog item waiting, wake names promote instead.)"];
 
   // Resolvable
   act [label="Do the named action\nuntil its predicate holds\n(the table below, in precedence order)"];
   cannot [shape=diamond, label="Cannot act on it?"];
-  escalate [label="cairn escalate with the evidence;\nthe next wake says Waiting\n(or, with the evaluator, writes the decision instead)"];
-  trace [label="Leave the trace: a code commit on the branch,\nor a record on refs/cairn/log\n(receipts, reviews, items, escalations...)"];
+  escalate [label="cairn escalate with the evidence;\nthe next wake says Waiting\n(with the evaluator in route mode and inside its envelope,\nit may write the decision or name a capture instead)"];
+  trace [label="Leave the record: a code commit on the branch,\na snapshot on refs/cairn/snapshots,\nor a record on refs/cairn/log"];
 
   actions [shape=plaintext, fontsize=9, label=<
     <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4">
       <TR><TD BGCOLOR="#eeeeee"><B>Action, in precedence order</B></TD><TD BGCOLOR="#eeeeee"><B>done :=</B></TD></TR>
       <TR><TD ALIGN="LEFT">repair PATH</TD><TD ALIGN="LEFT">the named file reads under its grammar; nothing else changed</TD></TR>
-      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">refs/cairn/in-progress is gone; the action finished or was abandoned</TD></TR>
-      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">a mechanism declares the path, outside lists it, or a scope record with an ok answer names it</TD></TR>
-      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">a fix record names the item and a tree that changes no Agreed text; REQ has a current passing receipt at or after it</TD></TR>
-      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">in-progress (cairn begin) covers PATH through its target's declared inputs, or PATH is clean</TD></TR>
-      <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean, or in-progress covers it</TD></TR>
-      <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a mechanism entry names REQ (cairn declare)</TD></TR>
-      <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">a current receipt carries a result for REQ: input tree, entry digest and text digest equal now</TD></TR>
-      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">a current receipt carries pass for REQ; the reviewed list carries REQ with a fail receipt</TD></TR>
+      <TR><TD ALIGN="LEFT">recover COMMAND</TD><TD ALIGN="LEFT">an interrupted multi-store command's writes are complete, finished from the state on disk</TD></TR>
+      <TR><TD ALIGN="LEFT">reconcile ACTION</TD><TD ALIGN="LEFT">refs/cairn/in-progress (the agent's action record) is gone; the action finished or was abandoned</TD></TR>
+      <TR><TD ALIGN="LEFT">scope PATH</TD><TD ALIGN="LEFT">a path undeclared at the commit that changed it: a scope record with an ok answer names it, or it is restored to the start snapshot; a later declaration never legalizes it</TD></TR>
+      <TR><TD ALIGN="LEFT">fix ITEM</TD><TD ALIGN="LEFT">a fix record names the item and a snapshot that changes no Agreed text or reserved path; REQ has a current passing receipt at or after it</TD></TR>
+      <TR><TD ALIGN="LEFT">record PATH</TD><TD ALIGN="LEFT">the action record (cairn begin) covers PATH through its target's declared inputs, or PATH is clean</TD></TR>
+      <TR><TD ALIGN="LEFT">commit PATH</TD><TD ALIGN="LEFT">PATH is clean, or the action record covers it</TD></TR>
+      <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a mechanism definition names REQ (cairn declare)</TD></TR>
+      <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">a current receipt carries a result for REQ: input snapshot tree, definition digest, text digest and execution identity equal now</TD></TR>
+      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">a current receipt carries pass for REQ; the reviewed list carries REQ bound to the current definition digest with a fail receipt</TD></TR>
       <TR><TD ALIGN="LEFT">escalate REQ</TD><TD ALIGN="LEFT">three attempts without a pass: an escalation concerns REQ before a fourth</TD></TR>
-      <TR><TD ALIGN="LEFT">review mechanism REQ</TD><TD ALIGN="LEFT">the reviewed list carries REQ with the current text digest and a fail receipt; no code changed</TD></TR>
+      <TR><TD ALIGN="LEFT">review mechanism REQ</TD><TD ALIGN="LEFT">the reviewed list carries REQ with the current definition and text digests and a fail receipt; no code changed</TD></TR>
       <TR><TD ALIGN="LEFT">capture ITEM</TD><TD ALIGN="LEFT">an outside record names the item, or an escalation concerns it</TD></TR>
-      <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">a review names the current tree and answers every fixed question for every target</TD></TR>
-      <TR><TD ALIGN="LEFT">report SLUG</TD><TD ALIGN="LEFT">cairn brief writes the brief; the agent starts the adversary and waits; a report names the same tree and the brief, with an attempt against every question</TD></TR>
-      <TR><TD ALIGN="LEFT">resolve SLUG N</TD><TD ALIGN="LEFT">a resolution names finding N of the review or the report and the tree after the fix, or an escalation concerns it</TD></TR>
-      <TR><TD ALIGN="LEFT">accept SLUG</TD><TD ALIGN="LEFT">the adversary accepts every resolution at the current tree, or rejects one and a new resolution follows; no second report</TD></TR>
-      <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">a realized line in docs/decisions.jsonl names the decision and a tree</TD></TR>
-      <TR><TD ALIGN="LEFT">done SLUG</TD><TD ALIGN="LEFT">the Done rule holds: cairn done writes the done record and prints the queue</TD></TR>
-      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">no commitment is open and a backlog item waits: a promotion record names one item and a decision; the roadmap section names only Agreed requirements; Current: moved; a start record exists</TD></TR>
+      <TR><TD ALIGN="LEFT">review SLUG</TD><TD ALIGN="LEFT">a review names the current snapshot and answers every fixed question for every target</TD></TR>
+      <TR><TD ALIGN="LEFT">report SLUG</TD><TD ALIGN="LEFT">cairn brief writes the brief; the agent starts the adversary (on the harness's model, in a worktree from the snapshot) and waits; a report names the same snapshot and the brief, with an attempt against every question</TD></TR>
+      <TR><TD ALIGN="LEFT">resolve SLUG N</TD><TD ALIGN="LEFT">a resolution names finding N of the review, the report or an acceptance, and the snapshot after the fix, or an escalation concerns it</TD></TR>
+      <TR><TD ALIGN="LEFT">accept SLUG</TD><TD ALIGN="LEFT">an acceptance at the current snapshot covers the cumulative post-report delta: every resolution accepted, every new finding it raised resolved; a resolution rejected twice escalates; no second report</TD></TR>
+      <TR><TD ALIGN="LEFT">build DECISION</TD><TD ALIGN="LEFT">a realized line in docs/decisions.jsonl names the decision and a snapshot, and the realization check passed: the delta touches no data path, Agreed text, working agreement, reserved path or protected setting</TD></TR>
+      <TR><TD ALIGN="LEFT">done SLUG</TD><TD ALIGN="LEFT">the Done rule holds: cairn done writes the done record (the record is the fact; the queue is rendered by the next invocation)</TD></TR>
+      <TR><TD ALIGN="LEFT">promote</TD><TD ALIGN="LEFT">no commitment is open and a backlog item waits: a promotion record names one item and a decision; the roadmap section names only Agreed requirements; Current: moved; a start record pins the set and its digests</TD></TR>
     </TABLE>>];
 
   wake -> verdict;

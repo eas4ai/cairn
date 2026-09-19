@@ -10,7 +10,7 @@ digraph existing_project {
   tonext [shape=oval, label="Done: switch to /next-feature;\nthe work is a later commitment"];
   midway [shape=diamond, label="Resolvable or Waiting:\na commitment is under way.\nDeveloper chooses"];
   finish [shape=oval, label="Finish the current commitment;\ncapture the request as an item"];
-  supersede_c [label="Supersede the commitment by a\nConsequential decision quoting the developer;\nmove Current:"];
+  supersede_c [label="Supersede the commitment: a Consequential decision\nquoting the developer, and a superseded record on the log\nnaming it and the successor's start; open findings and\nunfixed defects carry to the successor; move Current:"];
   hasspec [shape=diamond, label="docs/spec/overview.md\nexists?"];
   readspec [label="Path B: read the spec set first:\nglossary, keystone, domains, roadmap,\ncommitment, decisions, items"];
   recon [label="Recon before questions:\nmanifests; entry points; data; tests;\nCI and scripts; docs outside the spec; recent history\n(B: every commit since the newest Agreed date)"];

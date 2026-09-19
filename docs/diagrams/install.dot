@@ -13,7 +13,7 @@ digraph install {
   muse [label="Muse:\nmuse plugins install <checkout>\n(hooks registered by the plugin)"];
   other [label="Any other agent:\nnpx skills add eas4ai/cairn\nthen /install-cairn: clone the checkout,\nregister the hooks where the harness has them"];
   nohooks [label="No hook system: Cairn is instruction-only;\nthe working agreement is the whole enforcement"];
-  link [label="/install-cairn or the plugin's install step\nlinks ~/.local/bin/cairn to bin/cairn.mjs, once"];
+  link [label="/install-cairn or the plugin's install step\nlinks ~/.local/bin/cairn to bin/cairn.mjs, once,\nand asks the developer to confirm the authority remote\n(origin proposed, never assumed); only it gets refs/cairn/*"];
   path [shape=diamond, label="~/.local/bin on PATH?"];
   addpath [label="Say so; the developer adds it\n(no hook edits the shell)"];
   help [shape=diamond, label="cairn --help prints\ncommands and exit codes?"];

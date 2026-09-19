@@ -9,6 +9,7 @@ import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
 import { wake, FETCH_LINE, ORDER } from '../lib/wake.mjs';
+import { begin, end } from '../lib/lease.mjs';
 
 test('outside a project wake exits 3 naming the skills', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
@@ -102,4 +103,19 @@ test('an unreadable hand-written input names repair first', async () => {
   assert.equal(v.action, 'repair');
   assert.match(v.target, /^docs\/spec/);
   assert.equal(v.predicate, 'the named hand-written file reads under its grammar and no unrelated byte changed');
+});
+
+test('a stale lease is reconciled before scope', async () => {
+  const r = await loopRepo();
+  process.env.CAIRN_SESSION = 'test-session';               // begin (plan 04) records this as the lease's session
+  await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] });
+  delete process.env.CAIRN_SESSION;
+  await r.write('src/stray.mjs', 'x\n');
+  const other = await wake(r.cwd, { session: 'other-session' });
+  assert.deepEqual([other.action, other.target], ['reconcile', 'implement DEMO-001']);
+  const same = await wake(r.cwd, { session: null });
+  assert.equal(same.action, 'scope');                            // live lease: not stale
+  await end(r.cwd);
+  await begin(r.cwd, { action: 'implement', target: 'DEMO-009', touch: [] });
+  assert.equal((await wake(r.cwd, { session: null })).action, 'reconcile');   // target not in the set
 });

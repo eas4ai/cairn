@@ -184,3 +184,15 @@ test('cairn begin and cairn end parse their arguments and refuse with one cairn:
   assert.equal(await runBegin(['implement'], io), 1);
   assert.equal(err.at(-1), 'cairn: usage: cairn begin <action> <target> [--touch <path>]...');
 });
+
+// --- Fix round 1 ---
+
+test('Fix round 1 finding 10: an unparseable cairn-check.lock is treated as held, never silently removed', async () => {
+  const cwd = await initialized();
+  const lock = await gitPath(cwd, 'cairn-check.lock');
+  writeFileSync(lock, 'not-a-pid');
+  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: cairn: cairn-check.lock is unreadable/);
+  assert.equal(readFileSync(lock, 'utf8'), 'not-a-pid', 'the unreadable lock file is left in place, not deleted');
+  writeFileSync(lock, '0');
+  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: cairn: cairn-check.lock is unreadable/);
+});

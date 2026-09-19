@@ -297,3 +297,13 @@ test('Fix round 1 finding 13: stage refuses a planned file write whose path esca
   await assert.rejects(stage(cwd, 'TXESCAPE', plan, pre), /PathError|component in/);
   assert.equal(existsSync(join(cwd, '..', 'escape.md')), false, 'nothing was written outside the worktree');
 });
+
+test('Fix round 1 finding 10: an unparseable cairn-tx.lock is treated as held, never silently removed', async () => {
+  const { cwd } = await repoWith({});
+  const lock = await gitPath(cwd, 'cairn-tx.lock');
+  writeFileSync(lock, 'not-a-pid');
+  await assert.rejects(acquireLock(cwd, 'TX7'), /^TxError: cairn: cairn-tx.lock is unreadable/);
+  assert.equal(readFileSync(lock, 'utf8'), 'not-a-pid', 'the unreadable lock file is left in place, not deleted');
+  writeFileSync(lock, '0 TXZERO');
+  await assert.rejects(acquireLock(cwd, 'TX8'), /^TxError: cairn: cairn-tx.lock is unreadable/);
+});

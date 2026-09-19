@@ -113,3 +113,29 @@ test('covers: a lease covers its target inputs and its touch list', async () => 
   assert.equal(covers(lease, 'src/a.mjs', ['src/a.mjs']), true);
   assert.equal(covers(lease, 'src/other.mjs', ['src/a.mjs']), false);
 });
+
+import { withCheckLock } from '../lib/lease.mjs';
+import { readFileSync } from 'node:fs';
+
+test('the check lock is held only for the run and nests inside an action lease', async () => {
+  const cwd = await initialized();
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
+  const lock = await gitPath(cwd, 'cairn-check.lock');
+  const out = await withCheckLock(cwd, async () => { assert.equal(readFileSync(lock, 'utf8'), String(process.pid)); return 'ran'; });
+  assert.equal(out, 'ran');
+  assert.equal(existsSync(lock), false);
+  assert.ok(await readRef(cwd, LEASE_REF), 'the action lease is untouched by a check');
+  await end(cwd);
+});
+
+test('a live check holder refuses a second run; a dead holder is cleared', async () => {
+  const cwd = await initialized();
+  const lock = await gitPath(cwd, 'cairn-check.lock');
+  await withCheckLock(cwd, async () => {
+    await assert.rejects(withCheckLock(cwd, async () => {}), new RegExp(`^LeaseError: cairn: cairn-check.lock held by pid ${process.pid}; wait for that check`));
+  });
+  writeFileSync(lock, '999999999');
+  assert.equal(await withCheckLock(cwd, async () => 1), 1);
+  await assert.rejects(withCheckLock(cwd, async () => { throw new Error('check crashed'); }), /check crashed/);
+  assert.equal(existsSync(lock), false, 'released after a throw');
+});

@@ -697,8 +697,8 @@ trailer is the alias rather than the resolved version.
   "attribution": "forbidden",
   "harness": {
     "claude_code": { "adversary_model": "claude-fable-5-1" },
-    "codex":       { "adversary_model": "gpt-5-codex" },
-    "muse":        { "adversary_model": null }
+    "codex":       { "adversary_model": "gpt-5.6-sol" },
+    "muse":        { "adversary_model": "muse-spark-1.3" }
   },
   "typesafeai": {
     "enabled": true,

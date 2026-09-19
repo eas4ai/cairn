@@ -300,6 +300,30 @@ test('the protected check re-verifies chain record evidence and refuses a forged
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /AuthError: cairn: the latest authorization record/);
 });
 
+// Fix round 2: the fix round 1 version of chainRecordVerifies trusted ANY record of kind 'init',
+// not just the log's actual first record, so a second, forged 'init' record (appended directly,
+// bypassing init() and its authentication entirely; the init schema carries no evidence field at
+// all) stood in for a real authorization. Reproduced by the re-reviewer: with a signed-key project,
+// appending a forged 'init' record binding an attacker-chosen settings digest made
+// isAuthorized('.cairn/settings.json', before, after) return true. The one legitimate init record
+// is refs/cairn/log's first record and nothing else; a later one is a breach.
+test("the protected check trusts only the log's first record as the init record; a later one is a breach", async () => {
+  const { generateKeyPairSync, sign: cryptoSign3 } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const s = JSON.parse(SETTINGS); s.signing_key = pem;
+  const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+  const { cwd } = await repoWith(files);
+  const sign = async (bytes) => new Uint8Array(cryptoSign3(null, bytes, privateKey));
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes, sign });
+  const before = await protectedDigests(cwd);
+  const forgedDigest = 'sha256:' + '1'.repeat(64);
+  await appendRecord(cwd, 'init', 'project', { settings_digest: forgedDigest, authority_remote: null, auth_mode: 'unsigned-local' });
+  assert.equal(await isAuthorized(cwd, '.cairn/settings.json', before.settings, forgedDigest), false);
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)),
+    /^AuthError: cairn: [0-9a-f]{40} is a second record of kind init on refs\/cairn\/log/);
+});
+
 import { readDecision, runDecisionsRead } from '../lib/auth.mjs';
 
 test('decisions --read writes a read record with developer evidence', async () => {

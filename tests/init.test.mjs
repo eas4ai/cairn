@@ -142,3 +142,19 @@ test('a log ref with no init record refuses cleanly instead of crashing', async 
       author: { name: 'x', email: 'y' }, confirmed: true } });
   await assert.rejects(init(cwd, answers()), /^InitError: cairn: refs\/cairn\/log exists but has no init record/);
 });
+
+// Fix round 2: the fix round 1 findInitRecord searched the whole log with .find(), which happened
+// to pick the earliest 'init' record when one legitimately existed first, but would wrongly accept
+// a LATER record of kind 'init' as the init record when the log's real first record was something
+// else. Here the log's first record is a plain 'read' record and a forged 'init' record (an
+// attacker-chosen settings digest, appended directly, bypassing init() and its authentication
+// entirely) comes second; init on this log whose first record is not an init record must refuse and
+// name the repair, exactly as it would with no init record anywhere, not adopt the later one.
+test("a forged init record later in the log does not stand in for the missing first init record", async () => {
+  const { cwd } = await repoWith({});
+  await appendRecord(cwd, 'read', '01J0000000000000000000ABCD', { decision: '01J0000000000000000000ABCD',
+    evidence: { mode: 'unsigned-local', purpose: 'read', subject: '01J0000000000000000000ABCD', nonce: 'n',
+      author: { name: 'x', email: 'y' }, confirmed: true } });
+  await appendRecord(cwd, 'init', 'project', { settings_digest: 'sha256:' + '2'.repeat(64), authority_remote: null, auth_mode: 'unsigned-local' });
+  await assert.rejects(init(cwd, answers()), /^InitError: cairn: refs\/cairn\/log exists but has no init record/);
+});

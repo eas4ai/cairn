@@ -1,0 +1,55 @@
+// tests/auth.test.mjs
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { makeRepo } from './helpers/repo.mjs';
+
+// Plan 01's makeRepo() returns {dir, git, write, commit, readRef, remove}; this wrapper
+// writes the fixture files, commits them and exposes the directory as cwd.
+async function repoWith(files) {
+  const repo = await makeRepo();
+  for (const [p, c] of Object.entries(files)) await repo.write(p, c);
+  await repo.commit('fixture');
+  return { cwd: repo.dir, repo };
+}
+import { sha256, canonicalize } from '../lib/canon.mjs';
+import { specDigest, agreementDigest, protectedDigests } from '../lib/auth.mjs';
+
+const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: [], source: [],
+  interfaces: [], data: [], network_exclude: [], signing_key: null, attribution: 'forbidden',
+  harness: {}, typesafeai: { enabled: false, mode: 'shadow', model: null,
+    route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3,
+    reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05,
+    min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } });
+
+test('specDigest is the digest of sorted [path, digest] pairs', async () => {
+  const { cwd } = await repoWith({ 'docs/spec/b.md': 'B\n', 'docs/spec/a/x.md': 'X\n' });
+  const expected = sha256(canonicalize([
+    ['docs/spec/a/x.md', sha256('X\n')], ['docs/spec/b.md', sha256('B\n')]]));
+  assert.equal(specDigest(cwd), expected);
+  writeFileSync(join(cwd, 'docs/spec/b.md'), 'changed\n');
+  assert.notEqual(specDigest(cwd), expected);
+});
+
+test('specDigest ignores docs/spec/roadmap.md, which the kernel edits at start and promote', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove); const cwd = repo.dir;
+  await repo.write('docs/spec/overview.md', '# keystone\n');
+  const before = specDigest(cwd);
+  await repo.write('docs/spec/roadmap.md', 'Current: hooks\n');
+  assert.equal(specDigest(cwd), before);
+});
+test('specDigest of a missing docs/spec is the empty array digest', async () => {
+  const { cwd } = await repoWith({});
+  assert.equal(specDigest(cwd), sha256(canonicalize([])));
+});
+
+test('protectedDigests carries agreement null when AGENTS.md is absent', async () => {
+  const { cwd } = await repoWith({ '.cairn/settings.json': SETTINGS });
+  const d = await protectedDigests(cwd);
+  assert.equal(d.agreement, null);
+  assert.match(d.settings, /^sha256:[0-9a-f]{64}$/);
+  mkdirSync(join(cwd, 'docs'), { recursive: true });
+  writeFileSync(join(cwd, 'AGENTS.md'), '# agreement\n');
+  assert.equal(agreementDigest(cwd), sha256('# agreement\n'));
+});

@@ -21,6 +21,7 @@ const EV = 'e'.repeat(40);
 import { answer, escalationState, unanswered, describeEvidence } from '../lib/escalate.mjs';
 
 const asDev = { confirm: async () => true };
+import { reply } from '../lib/escalate.mjs';
 
 export const draft = (over = {}) => ({
   commitment: 'first', concerns: ['DEMO-001'],
@@ -187,4 +188,20 @@ test('two open escalations: the oldest is answered first unless --escalation nam
 test('describeEvidence says unsigned-local is evidence, not authentication', () => {
   assert.equal(describeEvidence({ mode: 'unsigned-local', author: 'Dev <dev@example.test>', signature: null }), 'unsigned-local, author Dev <dev@example.test>: evidence, not authentication');
   assert.equal(describeEvidence({ mode: 'signed', author: 'Dev', signature: 'AQID' }), 'signed by Dev, verified against signing_key');
+});
+
+test('reply names the open ask; after it the escalation awaits the developer again', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  await assert.rejects(reply(r.cwd, 'first', 'Because the fixture says so.'), /no open ask/);
+  await answer(r.cwd, 'first', 'ask', 'Why 30?', asDev);
+  await assert.rejects(reply(r.cwd, 'first', ''), /reply needs text/);
+  const sha = await reply(r.cwd, 'first', 'Because the fixture says so.');
+  assert.deepEqual(decodeRecord(await catCommit(r.cwd, sha)).payload, { escalation: esc, text: 'Because the fixture says so.' });
+  const log = await r.log();
+  assert.equal(escalationState(log, esc).status, 'open');
+  assert.deepEqual(unanswered(log).map((u) => u.awaiting), ['answer']);
+  await assert.rejects(reply(r.cwd, 'first', 'Again.'), /no open ask/);
+  await answer(r.cwd, 'first', 'instead', 'Fourteen days.', asDev);
+  assert.equal(escalationState(await r.log(), esc).final.payload.text, 'Fourteen days.');
 });

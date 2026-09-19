@@ -407,3 +407,65 @@ test('--help lists the newly wired commands', async (t) => {
     assert.match(help.out, new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
+
+// Fix round 1 finding 1 (Critical, plan 09 review): answerCommand passed only
+// { confirm: ctx.confirm ?? ttyConfirm } to cliAnswer, never building cliSigner(argv, io) or
+// reading cliNonce(argv), so in a signed-key project `cairn answer` always refused with
+// "signing_key is set; pass --signature or CAIRN_SIGNATURE" and no escalation could ever be
+// answered. signedCommitmentRepo builds on signedProject's real-key init, adding the domain
+// spec/roadmap/authorize/start steps a signed cairn answer test needs (signedProject alone has
+// no open commitment to escalate against).
+import { OVERVIEW, DEMO, CORE, ROADMAP } from './helpers/commitment-fixture.mjs';
+import { authorize } from '../lib/auth.mjs';
+import { start } from '../lib/commitment.mjs';
+import { escalate } from '../lib/escalate.mjs';
+
+async function signedCommitmentRepo(t) {
+  const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('docs/spec/overview.md', OVERVIEW);
+  await repo.write('docs/spec/glossary.md', '# Glossary\n\ngreeter: the program.\n');
+  await repo.write('docs/spec/demo.md', DEMO);
+  await repo.write('docs/spec/core.md', CORE);
+  await repo.write('docs/spec/roadmap.md', ROADMAP);
+  await repo.write('src/main.mjs', 'console.log("hello");\n');
+  await repo.commit('Add the demo specification');
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirm: yes, confirmDigest: yes, sign });
+  await authorize(repo.dir, { sign, confirm: yes });
+  await start(repo.dir, 'first');
+  return { cwd: repo.dir, repo, privateKey };
+}
+
+const escalationDraft = (over = {}) => ({
+  commitment: 'first', concerns: ['DEMO-001'], question: 'Keep the current mechanism?',
+  recommendation: 'Yes.', because: 'It passes.', if_wrong: 'A rewrite is needed.', instead: 'Switch mechanisms.',
+  options: [], named_paths: [], cited_decisions: [], ...over,
+});
+
+test('cairn answer: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+  const { cwd, privateKey } = await signedCommitmentRepo(t);
+  const { sign: cryptoSign } = await import('node:crypto');
+  await escalate(cwd, escalationDraft());
+  const run1 = await run(['answer', 'first', 'ok'], cwd);
+  assert.equal(run1.code, 1);
+  const payload = extractPayload(run1.out);
+  const nonce = JSON.parse(payload).nonce;
+  const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
+  const run2 = await run(['answer', 'first', 'ok', '--nonce', nonce, '--signature', signature], cwd);
+  assert.equal(run2.code, 0);
+  assert.match(run2.out, /^cairn: answer first [0-9a-f]{40}\n$/);
+  const rec = (await readLog(cwd)).filter((x) => x.kind === 'answer').at(-1);
+  assert.equal(rec.payload.evidence.mode, 'signed');
+
+  await escalate(cwd, escalationDraft({ question: 'Second question?' }));
+  const bad1 = await run(['answer', 'first', 'ok'], cwd);
+  const badPayload = extractPayload(bad1.out);
+  const badSignature = b64url(cryptoSign(null, Buffer.from(badPayload), privateKey));
+  const bad2 = await run(['answer', 'first', 'ok', '--nonce', 'a-different-nonce', '--signature', badSignature], cwd);
+  assert.equal(bad2.code, 1);
+  assert.match(bad2.err, /does not verify against signing_key/);
+});

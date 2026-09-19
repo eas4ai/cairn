@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { rm } from 'node:fs/promises';
+import { rm, chmod } from 'node:fs/promises';
 import { canonicalize, sha256 } from '../lib/canon.mjs';
 import { declare, readMechanisms, definitionDigest, reviewDigest, MechanismError, requirementDigest } from '../lib/mechanisms.mjs';
 import { project, declared, DEFINITION } from './helpers/mechanism-fixture.mjs';
@@ -58,6 +58,11 @@ for (const [name, overrides, message] of [
   ['a * glob metacharacter in inputs', { inputs: [...DEFINITION.inputs, 'src/*.mjs'] }, /glob metacharacter/],
   ['a ? glob metacharacter in inputs', { inputs: [...DEFINITION.inputs, 'note?.md'] }, /glob metacharacter/],
   ['a [ glob metacharacter in documents', { inputs: [...DEFINITION.inputs, 'bad[1].md'], documents: ['bad[1].md'] }, /glob metacharacter/],
+  // Fix round 2 finding 3 (missing test the re-reviewer noted): documents is validated from its
+  // own raw.documents array (`.map(path).map(noGlob)`), independently of inputs -- a glob
+  // metacharacter in a documents entry is refused even when that entry is not also declared as an
+  // input (so the "must also be an input" check, which runs later, is never reached).
+  ['a glob metacharacter in a documents-only entry not declared as an input', { documents: ['bad[1].md'] }, /glob metacharacter/],
 ]) {
   test(`declare refuses ${name}`, async () => {
     const repo = await project();
@@ -74,11 +79,13 @@ test('declare refuses a bad mechanism name and readMechanisms refuses a noncanon
 });
 
 // Fix round 1 finding 9: readMechanisms shape-checks the definition, not just the top-level keys.
-test('readMechanisms refuses a malformed definition shape, naming the file', async () => {
+// Fix round 2 finding 2: the message itself carries no "cairn: " prefix (lib/cli.mjs's main()
+// prepends one when a command lets this reach it unwrapped; a prefix here would double it).
+test('readMechanisms refuses a malformed definition shape, naming the file, with no inner cairn: prefix', async () => {
   const repo = await project();
   const entry = { schema: 1, definition: {}, review: {} };
   await repo.write('.cairn/mechanisms/broken.json', canonicalize(entry));
-  await assert.rejects(readMechanisms(repo.cwd), (e) => e instanceof MechanismError && /^cairn: /.test(e.message) && /broken\.json/.test(e.message));
+  await assert.rejects(readMechanisms(repo.cwd), (e) => e instanceof MechanismError && !e.message.startsWith('cairn: ') && /broken\.json/.test(e.message));
 });
 
 import { reviewMechanism, reviewBinds } from '../lib/mechanisms.mjs';
@@ -186,6 +193,26 @@ test('a touched path that changed and was removed again is dropped, following to
   const outcome = await touchOutcome(repo.cwd, lease);
   assert.deepEqual(outcome, { changed: [], unchanged: ['scratch.txt'] });
   assert.deepEqual(await applyTouch(repo.cwd, lease, outcome), { added: [], dropped: ['scratch.txt'], unclaimed: [] });
+  await end(repo.cwd);
+});
+
+// Fix round 2 finding 3 (missing test the re-reviewer noted): a mode-only change (chmod +x, same
+// content) used to be invisible to touchOutcome, which compared only git blob hashes; lib/lease.mjs
+// now compares the tree entry's mode too. 'extra.txt' is committed before begin so there is a
+// recorded "before" mode to compare against (a brand-new touched file has no before state at all).
+test('a mode-only change (chmod +x) is reported changed by touchOutcome and written by applyTouch', async () => {
+  const repo = await declared();
+  await repo.write('extra.txt', 'unchanged content\n');
+  await repo.commit('add extra.txt');
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['extra.txt'] });
+  await chmod(join(repo.cwd, 'extra.txt'), 0o755);
+  const lease = await readLease(repo.cwd);
+  const outcome = await touchOutcome(repo.cwd, lease);
+  assert.deepEqual(outcome, { changed: ['extra.txt'], unchanged: [] }, 'mode-only change is changed, not unchanged');
+  const result = await applyTouch(repo.cwd, lease, outcome);
+  assert.deepEqual(result, { added: ['extra.txt'], dropped: [], unclaimed: [] });
+  const { greeter } = await readMechanisms(repo.cwd);
+  assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'extra.txt', 'hello.txt', 'notes.md']);
   await end(repo.cwd);
 });
 

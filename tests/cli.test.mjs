@@ -210,3 +210,37 @@ test('cairn decisions --read: the full two-step signed flow succeeds; a signatur
   assert.equal(bad2.code, 1);
   assert.match(bad2.err, /does not verify against signing_key/);
 });
+
+// Fix round 1 finding 2 (Critical): applyTouch's write-back used to be a module-level onEnd side
+// effect lib/cli.mjs never triggered, because it never imported lib/mechanisms.mjs -- so `cairn
+// end` never actually wrote a changed --touch path into the mechanism definition in the shipped
+// binary. This drives `cairn begin --touch`, a real file change, and `cairn end` entirely through
+// main(), the same path bin/cairn.mjs uses, and checks the definition on disk afterward.
+import { declared as mechanismDeclared } from './helpers/mechanism-fixture.mjs';
+import { readMechanisms } from '../lib/mechanisms.mjs';
+
+test('cairn end writes a changed --touch path into the mechanism definition (finding 2)', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
+  assert.equal(beginResult.code, 0);
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const before = (await readMechanisms(repo.cwd)).greeter.definition.inputs;
+  assert.equal(before.includes('helper.mjs'), false);
+  const endResult = await run(['end'], repo.cwd);
+  assert.equal(endResult.code, 0);
+  assert.match(endResult.out, /^cairn: lease ended\n$/);
+  const { greeter } = await readMechanisms(repo.cwd);
+  assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
+});
+
+test('cairn end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  await run(['begin', 'implement', 'DEMO-999', '--touch', 'helper.mjs'], repo.cwd);
+  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const endResult = await run(['end'], repo.cwd);
+  assert.equal(endResult.code, 0);
+  assert.match(endResult.out, /cairn: lease ended/);
+  assert.match(endResult.out, /cairn: touch helper\.mjs not written: no mechanism declares DEMO-999/);
+});

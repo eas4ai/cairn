@@ -168,3 +168,24 @@ test('an unfixed defect against a set requirement is named before dirty inputs',
   await r.passReq('DEMO-001');
   assert.notEqual((await wake(r.cwd)).action, 'fix');
 });
+
+// Deviation from the plan text: lib/lease.mjs's real ACTIONS set (plan 04) is
+// {implement, build, run, review, declare, repair, promote, resolve, fix, scope}; it has no
+// 'build-decision' member, so begin() with that action throws LeaseError. Any action whose
+// target names no mechanism's requirements works to keep the lease from covering src/demo.mjs;
+// 'build' with the same unrelated ULID target does the same job the plan's fixture intended.
+test('a dirty declared input is record without a lease, commit when the lease does not cover it, nothing when it does', async () => {
+  const r = await loopRepo();
+  await r.write('src/demo.mjs', 'console.log("hey");\n');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target, v.predicate], ['record', 'src/demo.mjs', "the action lease covers the path through its target's declared inputs, or the path is clean"]);
+  await begin(r.cwd, { action: 'build', target: '01HZZZZZZZZZZZZZZZZZZZZZZZ', touch: [] });
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['commit', 'src/demo.mjs']);
+  await end(r.cwd);
+  await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] });
+  assert.notEqual((await wake(r.cwd)).action, 'commit');
+  await end(r.cwd);
+  await r.commit('clean');
+  assert.notEqual((await wake(r.cwd)).action, 'record');
+});

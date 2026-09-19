@@ -23,8 +23,8 @@ entry.
   JSON object in an empty commit's body, with a schema and a digest
   trailer. Nothing under `.cairn/evidence`, `.cairn/reviews`,
   `.cairn/escalations`, `.cairn/backlog`, `.cairn/next-iteration`,
-  `.cairn/queue`, `docs/decisions/`, `docs/commitments/`, or
-  `docs/audit` exists any more. Decisions live in one file,
+  `.cairn/stops`, `.cairn/queue`, `docs/decisions/`, `docs/commitments/`,
+  or `docs/audit` exists any more. Decisions live in one file,
   `docs/decisions.jsonl`, appended one canonical JSON line at a time.
   `cairn show <sha>` prints any record with its references resolved.
 - **Hooks only read and print.** The session-start, per-turn, and stop

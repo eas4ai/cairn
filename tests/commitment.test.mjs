@@ -329,3 +329,49 @@ test('promote refuses while a commitment is open, a section naming Draft text, a
   await assert.rejects(promote(repo.cwd, b2), /already promoted/);
   await assert.rejects(promote(repo.cwd, s), /not an item record/);
 });
+
+import { realize, RealizationError } from '../lib/commitment.mjs';
+import { decide } from '../lib/adr.mjs';
+
+const buildDraft = { title: 'Split main', rests_on: ['DEMO-001'], wrong_if: 'the split hides the greeting', body: 'Move the greeting into a module.' };
+
+test('realize records base and realized snapshots for a plain delta and the interface hits it touched', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, buildDraft);
+  await repo.write('src/greet.mjs', 'export const greet = () => "hello";\n');
+  await repo.write('src/api/index.mjs', 'export { greet } from "../greet.mjs";\n');
+  const rid = await realize(repo.cwd, id, { subject: 'Greeting module and API export' });
+  const line = (await readAdr(repo.cwd)).find((l) => l.id === rid);
+  const decision = (await readAdr(repo.cwd)).find((l) => l.id === id);
+  assert.deepEqual([line.kind, line.of, line.base_snap, line.interfaces], ['realized', id, decision.base_snap, ['src/api/index.mjs']]);
+  assert.equal((await readSnapshot(repo.cwd, line.snap, 'workspace')).kind, 'workspace');
+});
+
+const appendNewline = (path) => async (repo) => repo.write(path, (await readFile(join(repo.cwd, path), 'utf8')) + '\n');
+for (const [name, path, change, cls] of [
+  ['a data path', 'migrations/001.sql', (repo) => repo.write('migrations/001.sql', 'create table t;\n'), 'data'],
+  ['frozen Agreed text', 'docs/spec/demo.md', appendNewline('docs/spec/demo.md'), 'protected'],
+  ['the working agreement', 'AGENTS.md', appendNewline('AGENTS.md'), 'protected'],
+  ['protected settings', '.cairn/settings.json', appendNewline('.cairn/settings.json'), 'protected'],
+  ['another reserved path', '.cairn/notes.txt', (repo) => repo.write('.cairn/notes.txt', 'x\n'), 'reserved'],
+]) {
+  test(`realize stops on ${name} in the actual delta`, async () => {
+    const repo = await project();
+    await start(repo.cwd, 'first');
+    const id = await decide(repo.cwd, { ...buildDraft, named_paths: ['src/greet.mjs'] });
+    await repo.write('src/greet.mjs', 'export const greet = () => "hello";\n');
+    await change(repo);
+    await assert.rejects(realize(repo.cwd, id, { subject: 's' }), (e) => e instanceof RealizationError && e.paths.some((p) => p.path === path && p.class === cls) && /the decision is the developer's/.test(e.message));
+    assert.equal((await readAdr(repo.cwd)).some((l) => l.kind === 'realized'), false);
+  });
+}
+
+test('the ADR line the decision itself appended is not a stop; a second realization and an unknown id are refused', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, buildDraft);
+  await realize(repo.cwd, id, { subject: 'no code change' });
+  await assert.rejects(realize(repo.cwd, id, { subject: 'again' }), /already realized/);
+  await assert.rejects(realize(repo.cwd, '01ARZ3NDEKTSV4RRFFQ69G5FAV', { subject: 'x' }), /no decision/);
+});

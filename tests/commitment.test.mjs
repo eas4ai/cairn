@@ -69,7 +69,7 @@ test('fix refuses a backlog item, no open commitment, and a snapshot that change
 import { frozenSet, currentAuthorization, setCurrent } from '../lib/commitment.mjs';
 // Fix round 1 finding 7: protectedDigests is lib/auth.mjs's own function; lib/commitment.mjs no
 // longer carries a second, dead-in-production reimplementation of it.
-import { protectedDigests } from '../lib/auth.mjs';
+import { protectedDigests, refuseUnauthorizedProtected, AuthError } from '../lib/auth.mjs';
 import { readSnapshot } from '../lib/snapshots.mjs';
 import { git, readRef } from '../lib/gitx.mjs';
 import { sha256 } from '../lib/canon.mjs';
@@ -493,6 +493,25 @@ test('Fix round 1 finding 9: a forged second init record surfaces as its own bre
   const log = await readLog(repo.cwd);
   await assert.rejects(currentAuthorization(repo.cwd, log), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
   await assert.rejects(start(repo.cwd, 'first'), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
+});
+
+test('Fix round 2 finding 6: currentAuthorization classifies AuthError by its code, not by matching message text', async () => {
+  const repo = await project();
+  // No authorization at all yet: refuseUnauthorizedProtected's own AuthError carries
+  // code: 'no-authorization' -- verified directly here, then through currentAuthorization's
+  // null-on-failure contract.
+  await repo.write('AGENTS.md', '# Working agreement\n\nEdited after authorize.\n');
+  const log1 = await readLog(repo.cwd);
+  await assert.rejects(refuseUnauthorizedProtected(repo.cwd, log1), (e) => e instanceof AuthError && e.code === 'no-authorization');
+  assert.equal(await currentAuthorization(repo.cwd, log1), null);
+  // A forged second init record: code: 'breach', rethrown rather than reported as no
+  // authorization.
+  await repo.authorize();
+  const settingsDigest = (await protectedDigests(repo.cwd)).settings;
+  await appendRecord(repo.cwd, 'init', 'project', { settings_digest: settingsDigest, authority_remote: 'origin', auth_mode: 'unsigned-local' });
+  const log2 = await readLog(repo.cwd);
+  await assert.rejects(refuseUnauthorizedProtected(repo.cwd, log2), (e) => e instanceof AuthError && e.code === 'breach');
+  await assert.rejects(currentAuthorization(repo.cwd, log2), (e) => e instanceof AuthError && e.code === 'breach');
 });
 
 test('Fix round 1 finding 10: a plain start crashed after each write recovers to exactly one start record', async () => {

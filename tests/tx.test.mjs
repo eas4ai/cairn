@@ -184,7 +184,7 @@ const terminalPlan = () => { const p = filePlan(); p.terminal.payload = { spec_d
 test('an intent with no writes and no effect is aborted with restored pre-identities', async () => {
   const cwd = await initialized();
   const intentSha = await crashAfterIntent(cwd, terminalPlan());
-  assert.equal(pendingTransaction(cwd, await readLog(cwd)).sha, intentSha);
+  assert.equal((await pendingTransaction(cwd, await readLog(cwd))).sha, intentSha);
   const r = await recover(cwd, 'TXCRASH');
   assert.equal(r.completed, 'abort');
   const log = await readLog(cwd);
@@ -192,10 +192,14 @@ test('an intent with no writes and no effect is aborted with restored pre-identi
   const abort = log.at(-1).payload;
   assert.equal(abort.intent, intentSha);
   assert.equal(abort.failure_class, 'interrupted');
-  assert.equal(abort.restored.head, log.at(-2).payload.pre.head);
-  assert.equal(abort.restored.files['docs/spec/overview.md'], sha256('# k\n'));
+  // Fix round 1 finding 2/3: `restored` is now list(storeIdentity), re-read fresh under the lock
+  // (not a copy of the pre-capture), and `results` is always [] on an abort (nothing landed).
+  const byStore = (store) => abort.restored.find((r2) => r2.store === store)?.identity;
+  assert.equal(byStore('HEAD'), log.at(-2).payload.pre.head);
+  assert.equal(byStore('file:docs/spec/overview.md'), sha256('# k\n'));
+  assert.deepEqual(abort.results, []);
   assert.equal(readFileSync(join(cwd, 'docs/spec/overview.md'), 'utf8'), '# k\n');
-  assert.equal(pendingTransaction(cwd, log), null);
+  assert.equal(await pendingTransaction(cwd, log), null);
   assert.equal(existsSync(await stagingDir(cwd, 'TXCRASH')), false);
 });
 
@@ -210,7 +214,7 @@ test('an intent followed by one file write completes forward: the exact chain is
   assert.deepEqual(log.slice(from).map((x) => x.kind), ['command-intent', 'read', 'authorization']);
   assert.equal(log.at(-1).payload.intent, intentSha);
   assert.equal((await catCommit(cwd, (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim())).subject, 'Authorize the specification');
-  assert.equal(pendingTransaction(cwd, log), null);
+  assert.equal(await pendingTransaction(cwd, log), null);
 });
 
 test('an intent followed by an append-only write completes forward and never rewrites the ref', async () => {
@@ -245,7 +249,7 @@ test('a conflicting writer blocks forward completion: the intent is preserved an
   assert.match(r.repair, /^cairn: transaction TXCRASH cannot complete: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40} or a commit "Authorize the specification" on [0-9a-f]{40}; restore it to [0-9a-f]{40} then run cairn recover TXCRASH$/);
   assert.equal(readFileSync(join(await stagingDir(cwd, 'TXCRASH'), 'repair'), 'utf8'), r.repair);
   const log = await readLog(cwd);
-  assert.equal(pendingTransaction(cwd, log).sha, intentSha);
+  assert.equal((await pendingTransaction(cwd, log)).sha, intentSha);
   assert.equal(log.at(-1).kind, 'command-intent');
 });
 
@@ -266,12 +270,12 @@ import { recoverPredicate, runRecover } from '../lib/tx.mjs';
 
 test('recoverPredicate names the pending transaction and is null once it has a terminal or abort record', async () => {
   const cwd = await initialized();
-  assert.equal(recoverPredicate(cwd, await readLog(cwd)), null);
+  assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null);
   const intentSha = await crashAfterIntent(cwd, terminalPlan(), 'TXP');
-  assert.deepEqual(recoverPredicate(cwd, await readLog(cwd)),
+  assert.deepEqual(await recoverPredicate(cwd, await readLog(cwd)),
     { action: 'recover', target: 'TXP', reason: `command-intent ${intentSha} for authorize has no terminal record` });
   await recover(cwd, 'TXP');
-  assert.equal(recoverPredicate(cwd, await readLog(cwd)), null);
+  assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null);
 });
 
 test('cairn recover prints the result and exits 3 with the repair line when blocked', async () => {
@@ -319,4 +323,123 @@ test('Fix round 1 finding 6: applyWrites\' branch commit never sweeps an unrelat
   const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
   assert.deepEqual(committed, ['docs/spec/overview.md']);
   assert.equal((await git(['status', '--porcelain', '--', 'unrelated.txt'], { cwd })).stdout.trim(), 'A  unrelated.txt');
+});
+
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+
+test('Fix round 1 finding 4: every planned write kind carries a digest in the intent record', async () => {
+  const cwd = await initialized();
+  const plan = filePlan();
+  const r = await withTransaction(cwd, { command: 'authorize', plan }, async () => ({
+    spec_digest: sha256('v2\n'), agreement_digest: sha256('# a\n'), settings_digest: 'sha256:' + '0'.repeat(64),
+    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+    decision: null,
+  }));
+  const log = await readLog(cwd);
+  const intent = log.find((x) => x.sha === r.intentSha);
+  assert.equal(intent.payload.writes.map((w) => w.store).join(','), 'file,branch,snapshot,log');
+  for (const w of intent.payload.writes) assert.match(w.digest, /^sha256:[0-9a-f]{64}$/, `${w.store} write carries a digest`);
+});
+
+test('Fix round 1 finding 1: a crash after the snapshot ref advances but before markDone adopts it, never duplicates it', async () => {
+  const cwd = await initialized();
+  const plan = terminalPlan();
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TXSNAP', plan, pre);
+  await writeWorkspaceSnapshot(cwd); // simulates the snapshot write landing, then the process dying before markDone
+  const before = await readRef(cwd, 'refs/cairn/snapshots');
+  const results = await applyWrites(cwd, await readStaging(cwd, 'TXSNAP'));
+  assert.equal(results[2], before, 'the already-landed snapshot commit is adopted, not duplicated');
+  assert.equal(await readRef(cwd, 'refs/cairn/snapshots'), before, 'no second snapshot commit was created');
+});
+
+test('Fix round 1 finding 2: an aborted transaction\'s restored names the log\'s real current identity, not the stale pre-capture', async () => {
+  const cwd = await initialized();
+  await crashAfterIntent(cwd, terminalPlan());
+  const r = await recover(cwd, 'TXCRASH');
+  assert.equal(r.completed, 'abort');
+  const log = await readLog(cwd);
+  const abort = log.at(-1).payload;
+  const logEntry = abort.restored.find((e) => e.store === 'refs/cairn/log');
+  // restored was read under the lock, one step before the abort record itself was appended (which
+  // advances refs/cairn/log again); at that moment the ref's real value was the intent's own sha.
+  assert.equal(logEntry.identity, log.at(-2).sha);
+  assert.notEqual(logEntry.identity, log.at(-2).payload.pre.refs['refs/cairn/log'],
+    'the log ref can never truthfully equal its stale pre-capture again: the intent record itself already advanced it');
+});
+
+test('Fix round 1 finding 3: tampering a store after a completed transaction makes recoverPredicate name it again', async () => {
+  const cwd = await initialized();
+  const r = await withTransaction(cwd, { command: 'authorize', plan: terminalPlan() }, null);
+  assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null, 'nothing has drifted yet');
+  writeFileSync(join(cwd, 'docs/spec/overview.md'), 'tampered after completion\n');
+  const p = await recoverPredicate(cwd, await readLog(cwd));
+  assert.deepEqual(p, { action: 'recover', target: r.tx,
+    reason: `command-intent ${r.intentSha} for authorize closed, but a store no longer matches the identity it recorded; recover it before continuing` });
+});
+
+import { encodeRecord } from '../lib/records.mjs';
+
+test('Fix round 1 finding 8: promotion and superseded round-trip intent and results', async () => {
+  const cwd = await initialized();
+  const sha = await appendRecord(cwd, 'promotion', 'item01',
+    { item: 'a'.repeat(40), decision: '01J0000000000000000000ABCD', intent: 'b'.repeat(40), results: [{ store: 'HEAD', identity: 'c'.repeat(40) }] });
+  const rec = (await readLog(cwd)).find((r) => r.sha === sha);
+  assert.equal(rec.kind, 'promotion');
+  assert.equal(rec.payload.intent, 'b'.repeat(40));
+  assert.deepEqual(rec.payload.results, [{ store: 'HEAD', identity: 'c'.repeat(40) }]);
+  const sha2 = await appendRecord(cwd, 'superseded', 'hooks',
+    { slug: 'hooks', start: 'a'.repeat(40), decision: '01J0000000000000000000ABCD', transition: '01J0000000000000000000ABCE', successor: 'next', carried: [], intent: null, results: [] });
+  const rec2 = (await readLog(cwd)).find((r) => r.sha === sha2);
+  assert.equal(rec2.payload.intent, null);
+  assert.deepEqual(rec2.payload.results, []);
+});
+
+test('Fix round 1 finding 9: a planned write missing its digest is refused by the closed writeEntry schema', async () => {
+  const badWrites = [{ store: 'branch', paths: ['a'], message: 'm' }]; // no digest
+  const pre = { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: null, files: {} };
+  assert.throws(() => encodeRecord('command-intent', 'TXBAD', { tx: 'TXBAD', command: 'authorize', identity: {}, pre, writes: badWrites }),
+    (e) => e.reasons.some((r) => /missing digest/.test(r)));
+});
+
+import { effectsHappened } from '../lib/tx.mjs';
+
+test('Fix round 1 finding 12: an unrelated later record is not counted as this transaction\'s own effect', async () => {
+  const cwd = await initialized();
+  const plan = terminalPlan();
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TXUNRELATED', plan, pre);
+  const intentSha = await appendRecord(cwd, 'command-intent', 'TXUNRELATED',
+    { tx: 'TXUNRELATED', command: 'authorize', identity: plan.identity, pre, writes: (await readStaging(cwd, 'TXUNRELATED')).plan.writes });
+  writeAtomic(join(await stagingDir(cwd, 'TXUNRELATED'), 'intent'), intentSha);
+  // An unrelated command appends its own record after our intent; it must not look like our effect.
+  await appendRecord(cwd, 'read', '01J0000000000000000000ABCE',
+    { decision: '01J0000000000000000000ABCE', evidence: { mode: 'unsigned-local', purpose: 'read', subject: 'y', nonce: 'n2', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true } });
+  const log = await readLog(cwd);
+  const intent = log.find((r) => r.sha === intentSha);
+  const s = await readStaging(cwd, 'TXUNRELATED'); s.intentSha = intentSha;
+  assert.equal(await effectsHappened(cwd, s, log, intent), false, 'an unrelated record after our intent is not our own effect');
+});
+
+test('Fix round 1 finding 12: pendingTransaction selects the newest command-intent when an id is reused', async () => {
+  const cwd = await initialized();
+  const plan = terminalPlan();
+  const first = await crashAfterIntent(cwd, plan, 'TXREUSE');
+  await recover(cwd, 'TXREUSE'); // aborts and closes the first one
+  const second = await crashAfterIntent(cwd, plan, 'TXREUSE'); // the same id, reused
+  assert.notEqual(first, second);
+  const p = await pendingTransaction(cwd, await readLog(cwd));
+  assert.equal(p.sha, second, 'the newest command-intent for the reused id is selected, not the first, already-closed one');
+});
+
+test('Fix round 1 finding 12: recover itself selects the newest command-intent for a reused id, not the first', async () => {
+  const cwd = await initialized();
+  const plan = terminalPlan();
+  const first = await crashAfterIntent(cwd, plan, 'TXDUP'); // never recovered; still open
+  const second = await crashAfterIntent(cwd, plan, 'TXDUP'); // the same id, reused, restages over it
+  assert.notEqual(first, second);
+  const r = await recover(cwd, 'TXDUP');
+  assert.equal(r.completed, 'abort');
+  const log = await readLog(cwd);
+  assert.equal(log.at(-1).payload.intent, second, 'recovery closed the newest (second) intent, not the stale first one');
 });

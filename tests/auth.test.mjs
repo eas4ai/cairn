@@ -294,7 +294,7 @@ test('the protected check re-verifies chain record evidence and refuses a forged
     evidence: { mode: 'signed', purpose: 'authorize',
       subject: canonicalize({ spec: d2.spec, agreement: d2.agreement, settings: d2.settings }),
       nonce: 'forged', signature: 'AAAA' },
-    decision: null, intent: null,
+    decision: null, intent: null, results: [],
   });
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /AuthError: cairn: the latest authorization record/);

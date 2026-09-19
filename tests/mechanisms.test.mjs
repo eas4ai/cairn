@@ -66,3 +66,61 @@ test('declare refuses a bad mechanism name and readMechanisms refuses a noncanon
   await repo.write('.cairn/mechanisms/bad.json', '{ "schema": 1 }\n');
   await assert.rejects(readMechanisms(repo.cwd), /bad\.json/);
 });
+
+import { reviewMechanism, reviewBinds } from '../lib/mechanisms.mjs';
+import { check } from '../lib/check.mjs';
+import { readLog } from '../lib/records.mjs';
+
+async function failReceipt(repo) {
+  await repo.write('hello.txt', 'bye\n');
+  const sha = await check(repo.cwd, 'DEMO-001');
+  await repo.write('hello.txt', 'hello\n');
+  return sha;
+}
+
+test('review mechanism binds the requirement to the definition and text digests with a fail receipt', async () => {
+  const repo = await declared();
+  const sha = await failReceipt(repo);
+  await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', sha);
+  const { greeter } = await readMechanisms(repo.cwd);
+  const { textDigest } = await requirementDigest(repo.cwd, 'DEMO-001');
+  assert.deepEqual(greeter.review, { 'DEMO-001': { definitionDigest: greeter.definitionDigest, textDigest, failReceipt: sha } });
+  assert.equal(reviewBinds(greeter, 'DEMO-001', textDigest), true);
+  assert.equal(reviewBinds(greeter, 'DEMO-001', 'sha256:' + '0'.repeat(64)), false);
+  assert.notEqual(greeter.reviewDigest, reviewDigest({}));
+});
+
+test('a fail receipt written before any start record is accepted: currency is by identity, not position', async () => {
+  const repo = await declared();
+  const sha = await failReceipt(repo);
+  assert.equal((await readLog(repo.cwd)).some((r) => r.kind === 'start'), false);
+  await assert.doesNotReject(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', sha));
+});
+
+test('a changed definition unbinds the review metadata; an identical redeclare keeps it', async () => {
+  const repo = await declared();
+  await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-002', 'DEMO-001'] });
+  assert.equal(Object.keys((await readMechanisms(repo.cwd)).greeter.review).length, 1);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, inputs: [...DEFINITION.inputs, 'extra.txt'] });
+  assert.deepEqual((await readMechanisms(repo.cwd)).greeter.review, {});
+});
+
+test('review mechanism refuses a pass receipt, an error receipt, another mechanism, a stale definition and stale text', async () => {
+  const repo = await declared();
+  const pass = await check(repo.cwd, 'DEMO-001');
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', pass), /does not record fail for DEMO-001/);
+  const good = await failReceipt(repo);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, cwd: 'missing' });
+  const err = await check(repo.cwd, 'DEMO-001');
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', err), /error receipt never counts/);
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /definition digest/);
+  await declare(repo.cwd, 'greeter', DEFINITION);
+  await declare(repo.cwd, 'other', { ...DEFINITION, requirements: ['DEMO-003'] });
+  await assert.rejects(reviewMechanism(repo.cwd, 'other', 'DEMO-003', good), /names mechanism greeter/);
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-002', good), /does not record fail for DEMO-002/);
+  const spec = await readFile(join(repo.cwd, 'docs/spec/demo.md'), 'utf8');
+  await repo.write('docs/spec/demo.md', spec.replace('anything other than hello', 'anything else'));
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /text digest/);
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', '0'.repeat(40)), /not a record on refs\/cairn\/log/);
+});

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { makeRepo } from './helpers/repo.mjs';
 import { sha256 } from '../lib/canon.mjs';
 import { git, emptyTree, catCommit } from '../lib/gitx.mjs';
-import { KINDS, SCHEMAS, encodeRecord, decodeRecord, RecordError } from '../lib/records.mjs';
+import { KINDS, SCHEMAS, encodeRecord, decodeRecord, RecordError, refFieldsOf } from '../lib/records.mjs';
 
 const WS = 'a'.repeat(40), D = 'sha256:' + 'b'.repeat(64);
 // Deviation from the plan text (plan 06 carried obligation): 'start' now closes with
@@ -23,6 +23,35 @@ test('the table has the 27 kinds of section 4 and no admin-transition', () => {
   assert.equal(KINDS.size, 27);
   assert.ok(KINDS.has('read') && !KINDS.has('admin-transition'));
   for (const k of KINDS) assert.ok(Object.keys(SCHEMAS[k]).length > 0, k);
+});
+// Fix round 1 item 2 (review-1.md finding 2): refFieldsOf must find every ref-typed field, not
+// only the ones a hand-written list happened to name -- report.brief, escalation.evaluation,
+// outside.evaluation, evaluation-intent.log_head and calibration.log_head, and superseded.start
+// were all real fields lib/travel.mjs's old hand-written RECORD_REFS list omitted.
+test('refFieldsOf finds every ref-typed field straight from SCHEMAS, including list(ref)', () => {
+  const has = (fields, name, list = false) => fields.some((f) => f.name === name && f.list === list);
+  assert.ok(has(refFieldsOf('report').recordFields, 'brief'), 'report.brief');
+  assert.ok(has(refFieldsOf('escalation').recordFields, 'evaluation'), 'escalation.evaluation');
+  assert.ok(has(refFieldsOf('outside').recordFields, 'evaluation'), 'outside.evaluation');
+  assert.ok(has(refFieldsOf('outside').recordFields, 'item'), 'outside.item');
+  assert.ok(has(refFieldsOf('evaluation-intent').recordFields, 'log_head'), 'evaluation-intent.log_head');
+  assert.ok(has(refFieldsOf('calibration').recordFields, 'log_head'), 'calibration.log_head');
+  assert.ok(has(refFieldsOf('superseded').recordFields, 'start'), 'superseded.start');
+  assert.ok(has(refFieldsOf('superseded').recordFields, 'carried', true), 'superseded.carried (list)');
+  assert.ok(has(refFieldsOf('superseded').recordFields, 'intent'), 'superseded.intent');
+  assert.ok(has(refFieldsOf('start').snapshotFields, 'snapshot'), 'start.snapshot');
+  assert.ok(has(refFieldsOf('start').recordFields, 'from_superseded'), 'start.from_superseded');
+  assert.deepEqual(refFieldsOf('no-such-kind'), { snapshotFields: [], recordFields: [] });
+  // A positive cross-check against SCHEMAS itself, kind by kind, so the derivation can never
+  // silently drift even for a field this test did not name explicitly.
+  for (const kind of KINDS) {
+    for (const [name, desc] of Object.entries(SCHEMAS[kind])) {
+      let d = desc, list = false;
+      while (d.t === 'nullable' || d.t === 'list') { if (d.t === 'list') list = true; d = d.of; }
+      if (d.t === 'ref') assert.ok(has(refFieldsOf(kind).recordFields, name, list), `${kind}.${name}`);
+      if (d.t === 'ws' || d.t === 'input') assert.ok(has(refFieldsOf(kind).snapshotFields, name, list), `${kind}.${name}`);
+    }
+  }
 });
 test('encodeRecord emits the subject, canonical body and exactly two trailers', () => {
   const r = encodeRecord('start', 'hooks', START);

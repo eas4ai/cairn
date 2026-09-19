@@ -9,7 +9,8 @@ import { git, readRef } from '../lib/gitx.mjs';
 import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
-import { appendRecord } from '../lib/records.mjs';
+import { appendRecord, readLog } from '../lib/records.mjs';
+import { ulid } from '../lib/canon.mjs';
 import { wake } from '../lib/wake.mjs';
 import {
   installRefspecs, refspecsFor, DURABLE_REFS, TravelError,
@@ -260,6 +261,66 @@ describe('validateAfterFetch', () => {
     await writeWorkspaceSnapshot(cwd);
     await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'later' });
     assert.deepEqual(await validateAfterFetch(cwd), []);
+  });
+  // Fix round 1 item 2 (review-1.md finding 2): RECORD_REFS was a hand-written list that omitted
+  // report.brief, escalation.evaluation, outside.evaluation, evaluation-intent/calibration's
+  // log_head, and superseded.start, and could never see a list(ref) field (superseded.carried)
+  // regardless of the list, since the old scan only tested string values. validateAfterFetch now
+  // walks lib/records.mjs's refFieldsOf, derived from SCHEMAS; these six cases are exactly the
+  // fields the review confirmed missing, each on a fresh project so its repair is the only one.
+  const zero = '0'.repeat(40);
+  const digest64 = 'sha256:' + '1'.repeat(64);
+  test('a dangling report.brief names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    const snap = await writeWorkspaceSnapshot(cwd);
+    await appendRecord(cwd, 'report', 'first-slug', {
+      slug: 'first-slug', session: null, snapshot: snap, brief: zero, model: 'm', transport: 'local',
+      boundary: 'enforced', builder_model: null, projection_digest: digest64, attempts: [], findings: [], interface_attempts: [],
+    });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
+  });
+  test('a dangling escalation.evaluation names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    await appendRecord(cwd, 'escalation', 'first-slug', {
+      slug: 'first-slug', question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i', concerns: 'c', evaluation: zero,
+    });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
+  });
+  test('a dangling outside.evaluation names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    const item = await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'x' });
+    await appendRecord(cwd, 'outside', 'first-slug', { item, reason: 'r', evaluation: zero });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
+  });
+  test('a dangling evaluation-intent.log_head names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    const snap = await writeWorkspaceSnapshot(cwd);
+    await appendRecord(cwd, 'evaluation-intent', 'first-slug', {
+      draft_digest: digest64, snapshot: snap, log_head: zero, adr_digest: digest64, settings_digest: digest64,
+      policy_digest: digest64, owner_request: null, option_request: null,
+    });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
+  });
+  test('a dangling superseded.start names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    await appendRecord(cwd, 'superseded', 'first-slug', {
+      slug: 'first-slug', start: zero, decision: ulid(), transition: ulid(), successor: 'second-slug', carried: [], intent: null, results: [],
+    });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
+  });
+  test('a dangling entry in superseded.carried names refs/cairn/log', async () => {
+    const { cwd } = await started();
+    const startSha = (await readLog(cwd)).find((r) => r.kind === 'start').sha;
+    await appendRecord(cwd, 'superseded', 'first-slug', {
+      slug: 'first-slug', start: startSha, decision: ulid(), transition: ulid(), successor: 'second-slug', carried: [zero], intent: null, results: [],
+    });
+    const repairs = await validateAfterFetch(cwd);
+    assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
   });
   test('wake prints the first repair and exits 3', async () => {
     const { cwd, remote } = await started();

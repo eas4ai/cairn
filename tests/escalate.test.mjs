@@ -58,7 +58,7 @@ test('unknown keys, missing keys, an empty concern list and malformed tokens are
 });
 
 import { loopRepo } from './helpers/loop.mjs';
-import { readLog, decodeRecord, KINDS } from '../lib/records.mjs';
+import { readLog, decodeRecord, KINDS, appendRecord } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { escalate, escalationsFor } from '../lib/escalate.mjs';
 
@@ -197,6 +197,39 @@ import { join } from 'node:path';
 
 const asDev = { confirm: async () => true };
 
+// Fix round 2 finding 14: a signed-project fixture with an open commitment, built the same way
+// as tests/cli.test.mjs's own signedCommitmentRepo (round 1, finding 1) -- signedProject-style
+// real-key init has no open commitment to escalate against, so the domain spec/roadmap/authorize/
+// start steps are added here too. Self-contained (no cleanup registered), matching this file's
+// own convention (loopRepo's fixtures are not cleaned up either).
+import { makeRepo } from './helpers/repo.mjs';
+import { OVERVIEW, DEMO, CORE, ROADMAP } from './helpers/commitment-fixture.mjs';
+import { init } from '../lib/init.mjs';
+import { authorize } from '../lib/auth.mjs';
+import { start } from '../lib/commitment.mjs';
+
+const yes = async () => true;
+
+async function signedCommitmentRepo() {
+  const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+  const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
+  const repo = await makeRepo();
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('docs/spec/overview.md', OVERVIEW);
+  await repo.write('docs/spec/glossary.md', '# Glossary\n\ngreeter: the program.\n');
+  await repo.write('docs/spec/demo.md', DEMO);
+  await repo.write('docs/spec/core.md', CORE);
+  await repo.write('docs/spec/roadmap.md', ROADMAP);
+  await repo.write('src/main.mjs', 'console.log("hello");\n');
+  await repo.commit('Add the demo specification');
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirm: yes, confirmDigest: yes, sign });
+  await authorize(repo.dir, { sign, confirm: yes });
+  await start(repo.dir, 'first');
+  return { cwd: repo.dir, sign };
+}
+
 // Fix round 1 finding 2 (Important, plan 09 review): answer() used to append the answer log
 // record, then the answered ADR line, with no pre-check -- a malformed docs/decisions.jsonl (an
 // unreadable ADR, a held lock, or a liveness refusal) failed the SECOND write after the FIRST
@@ -220,19 +253,69 @@ test('answer refuses before writing anything when the ADR file is unreadable (fi
 // the same slug completes the missing line instead of refusing "no unanswered escalation"; it
 // returns the existing answer's sha rather than writing a duplicate one. A third call, once the
 // line exists, refuses normally: there is nothing left to answer or repair.
-test('a crash between the log record and the ADR line is completed by the next cairn answer for the same slug (finding 2)', async () => {
+// Fix round 2 finding 13 (plan 09 re-review, ruling): the completion path used to return the
+// completed answer's sha as if it were a success for THIS call, silently dropping the
+// developer's own kind/text. Now it completes the dangling line, then refuses the new answer
+// with a message naming the completed sha, so nothing is lost silently.
+test('a crash between the log record and the ADR line is completed by the next cairn answer for the same slug, which then refuses so nothing is lost (finding 2, finding 13)', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
   const evidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
   const danglingSha = await r.add('answer', 'first', { escalation: esc, kind: 'ok', text: '', owner: null, evidence });
   assert.equal((await readAdr(r.cwd)).some((l) => l.kind === 'answered'), false);
   assert.equal(escalationState(await r.log(), esc).status, 'answered');
-  const completed = await answer(r.cwd, 'first', 'ok', '', asDev);
-  assert.equal(completed, danglingSha);
+  await assert.rejects(
+    answer(r.cwd, 'first', 'instead', 'Fourteen days instead.', asDev),
+    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+  );
+  // No new answer record: the developer's own "instead" text for this call was never recorded.
   assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer').map((x) => x.sha), [danglingSha]);
   const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
+  // Now that the line exists, a normal retry (nothing left dangling) refuses normally.
   await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), /no unanswered escalation for first/);
+});
+
+// Fix round 2 finding 13, the reviewer's exact reproduction: a dangling answer for escalation A
+// exists alongside a genuinely open escalation B. Completing A must not consume the developer's
+// answer for B, and B must still be answerable normally afterward.
+test('a dangling answer is completed even while another escalation is open; the developer\'s own answer is not applied to the wrong one (finding 13)', async () => {
+  const r = await loopRepo();
+  const a = await escalate(r.cwd, draft());
+  const b = await escalate(r.cwd, draft({ question: 'Second?' }));
+  const evidence = { mode: 'unsigned-local', purpose: 'answer', subject: a, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
+  const danglingSha = await r.add('answer', 'first', { escalation: a, kind: 'ok', text: '', owner: null, evidence });
+  assert.deepEqual(unanswered(await r.log()).map((u) => u.sha), [b]);
+  await assert.rejects(
+    answer(r.cwd, 'first', 'instead', 'Do X instead.', asDev),
+    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+  );
+  // B is still open: the "instead" text was not silently applied to it.
+  assert.deepEqual(unanswered(await r.log()).map((u) => u.sha), [b]);
+  assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer').map((x) => x.sha), [danglingSha]);
+  const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
+  assert.deepEqual([line.escalation, line.answer], [a, danglingSha]);
+  // B can now be answered normally, on the next call.
+  const bSha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  assert.equal(decodeRecord(await catCommit(r.cwd, bSha)).payload.escalation, b);
+});
+
+// Fix round 2 finding 14: the completion path wrote the ADR line with no developer evidence at
+// all. It must authenticate (and verify) before writing, exactly as the normal path does, so in
+// a signed project an unsigned completion attempt is refused, not silently allowed through.
+test('the dangling-answer completion path authenticates before writing the ADR line; an unsigned completion in a signed project refuses (finding 14)', async () => {
+  const { cwd, sign } = await signedCommitmentRepo();
+  const esc = await escalate(cwd, draft());
+  const danglingEvidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
+  const danglingSha = await appendRecord(cwd, 'answer', 'first', { escalation: esc, kind: 'ok', text: '', owner: null, evidence: danglingEvidence });
+  await assert.rejects(answer(cwd, 'first', 'ok', '', {}), /cairn: /);
+  assert.equal((await readAdr(cwd)).some((l) => l.kind === 'answered'), false);
+  await assert.rejects(
+    answer(cwd, 'first', 'ok', '', { sign }),
+    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+  );
+  const line = (await readAdr(cwd)).find((l) => l.kind === 'answered');
+  assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
 });
 
 test('answer refuses without developer evidence: no terminal, or a declined confirmation', async () => {

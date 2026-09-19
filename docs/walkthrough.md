@@ -258,7 +258,9 @@ Claim the action lease before touching a declared input, fix the code,
 commit, and release the lease:
 
 ```sh
-LEASE=$(cairn begin implement APP-001 | awk '{print $NF}')
+BEGIN_OUT=$(cairn begin implement APP-001)
+echo "$BEGIN_OUT"
+LEASE=$(echo "$BEGIN_OUT" | awk '{print $NF}')
 printf 'export const validName = (name) => name.length > 0;\n' > src/names.mjs
 node tests/names.mjs
 git add src/names.mjs

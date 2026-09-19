@@ -70,7 +70,10 @@ as an input. `network_exclude` may match them only to add an egress restriction.
 Reserved does not mean immutable. It separates two kinds of authority:
 
 - **Developer-owned protected paths** are `.cairn/settings.json`,
-  `docs/spec/**` and `AGENTS.md`. After project initialization, an accepted
+  `docs/spec/**` except `docs/spec/roadmap.md`, and `AGENTS.md`. The roadmap
+  is edited by the kernel at start and promote, so it is bound structurally
+  rather than by digest: lint passes, a section names only Agreed
+  requirements, and the start record freezes the set. After project initialization, an accepted
   version of one needs a developer authorization that names its before and
   after digests. Between commitments an agent may prepare uncommitted Draft or
   Observed spec proposals, but one `cairn authorize` at start must bind their

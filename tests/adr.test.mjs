@@ -117,3 +117,8 @@ test('Fix round 1 finding 2: decisionFileBytes validates and computes the new fi
   // decisionFileBytes still refuses a wrongly-assigned command, before touching the file.
   await assert.rejects(decisionFileBytes(repo.cwd, line, { command: 'realize' }), AdrError);
 });
+
+test('Fix round 1 finding 12: decide wraps a malformed named_paths entry as an AdrError, not a raw PathError', async () => {
+  const repo = await project();
+  await assert.rejects(decide(repo.cwd, { ...draft, named_paths: ['/etc/passwd'] }), (e) => e instanceof AdrError && /absolute path/.test(e.message));
+});

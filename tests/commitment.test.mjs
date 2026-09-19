@@ -76,6 +76,12 @@ import { sha256 } from '../lib/canon.mjs';
 
 test('start freezes the roadmap section plus every Scope: every commitment Agreed block, at one workspace snapshot', async () => {
   const repo = await project();
+  // Fix round 1 finding 12: strengthens the "start committed the contract bytes" check below.
+  // authorize()'s own dirty-path detection (lib/auth.mjs) covers only .cairn/settings.json under
+  // .cairn/**, not .cairn/mechanisms/**; a mechanism file left dirty by an agent's own cairn
+  // declare (outside this plan's scope to build, but its output already lands here) must still be
+  // picked up by start's own broad '.cairn' commit path, not left uncommitted.
+  await repo.write('.cairn/mechanisms/greeter.json', '{"left":"dirty by the test, not by authorize"}');
   const calls = [];
   const sha = await start(repo.cwd, 'first', { installRefspecs: async (cwd, remote) => calls.push(remote) });
   const rec = await last(repo.cwd, 'start');
@@ -92,8 +98,8 @@ test('start freezes the roadmap section plus every Scope: every commitment Agree
   assert.equal((await readSnapshot(repo.cwd, rec.payload.snapshot, 'workspace')).kind, 'workspace');
   assert.equal(decodeRecord(await catCommit(repo.cwd, sha)).kind, 'start');
   assert.deepEqual(calls, ['origin']);
-  const status = (await git(['status', '--porcelain', '--', 'docs/spec', 'AGENTS.md', '.cairn/settings.json'], { cwd: repo.cwd })).stdout;
-  assert.equal(status, '', 'start committed the contract bytes');
+  const status = (await git(['status', '--porcelain', '--', 'docs/spec', 'AGENTS.md', '.cairn'], { cwd: repo.cwd })).stdout;
+  assert.equal(status, '', 'start committed the contract bytes, including a mechanism file authorize never touches');
   assert.deepEqual(openCommitment(await readLog(repo.cwd)).open.sha, sha);
 });
 

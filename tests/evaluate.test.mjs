@@ -38,3 +38,58 @@ describe('settings block', () => {
     assert.match(validateSettings(s).join(' '), /weights/);
   });
 });
+
+// Shared test fixture: every later describe block in this file builds on tests/helpers/loop.mjs's
+// loopRepo(), an initialized project with commitment 'first', requirement DEMO-001 (Agreed,
+// mechanism declared), src/** classified 'source' and README.md/notes/** classified 'outside'
+// (see tests/helpers/loop.mjs). draft() below matches that fixture instead of the plan's own
+// illustrative auth-tokens/AUTH-003 example, so every fixture in this file authorizes and starts
+// cleanly through the real lib/commitment.mjs and lib/spec.mjs machinery.
+export function draft(over = {}) {
+  return {
+    commitment: 'first', concerns: ['DEMO-001'],
+    question: 'Should the demo mechanism run hourly?',
+    recommendation: 'hourly',
+    because: 'observed: node --test tests/typesafeai.test.mjs passes against src/demo.mjs',
+    if_wrong: 'the demo drifts from the mechanism',
+    instead: 'daily',
+    options: ['hourly', 'daily'],
+    named_paths: ['src/demo.mjs'],
+    cited_decisions: [],
+    ...over,
+  };
+}
+
+import { POLICY, normalizeDraft, draftDigest, policyDigest, DraftError } from '../lib/evaluate.mjs';
+
+function settingsFixture(over = {}) {
+  return { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0' },
+    network_exclude: ['fixtures/private/**'], ...over };
+}
+
+describe('policy and draft digests', () => {
+  test('normalizeDraft keeps exactly the ten fields and refuses extras and missing/invalid ones', () => {
+    assert.deepEqual(Object.keys(normalizeDraft(draft())).sort(), [...POLICY.DRAFT_KEYS].sort());
+    assert.throws(() => normalizeDraft({ ...draft(), score: 1 }), DraftError);
+    assert.throws(() => normalizeDraft({ ...draft(), question: undefined }), DraftError);
+  });
+  test('draft digest is stable under key order and matches lib/escalate.mjs (the same canonical draft)', () => {
+    const a = draftDigest(normalizeDraft(draft()));
+    const d = draft(); const reordered = Object.fromEntries(Object.entries(d).reverse());
+    assert.equal(a, draftDigest(normalizeDraft(reordered)));
+    assert.match(a, /^sha256:[0-9a-f]{64}$/);
+  });
+  test('policy digest changes with any covered input and nothing else', () => {
+    const base = policyDigest(settingsFixture());
+    const s1 = settingsFixture(); s1.typesafeai = { ...s1.typesafeai, route_confidence: 0.9 };
+    const s2 = settingsFixture(); s2.network_exclude = [];
+    const s3 = settingsFixture(); s3.typesafeai = { ...s3.typesafeai, model: 'jev-1.14.0' };
+    const s4 = settingsFixture(); s4.typesafeai = { ...s4.typesafeai, enabled: false, mode: 'route' };
+    assert.notEqual(base, policyDigest(s1)); assert.notEqual(base, policyDigest(s2)); assert.notEqual(base, policyDigest(s3));
+    assert.equal(base, policyDigest(s4), 'enabled and mode are not policy');
+  });
+  test('the six question ids and types are fixed', () => {
+    assert.deepEqual(POLICY.QUESTIONS.map((q) => [q.id, q.type]), [
+      ['sufficient', 'noul'], ['reversible_n', 'noul'], ['contradicts_n', 'noul'], ['outside_n', 'noul'], ['observed', 'noul'], ['owner', 'choice']]);
+  });
+});

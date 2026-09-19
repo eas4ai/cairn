@@ -63,3 +63,37 @@ test('the snapshots ref refuses a stale old OID', async (t) => {
   await assert.rejects(updateRefCAS(repo.dir, SNAPSHOTS_REF, s1, s1), CasError);
   assert.equal(await repo.git('rev-parse', SNAPSHOTS_REF), s2);
 });
+
+import { appendRecord, readLog } from '../lib/records.mjs';
+import { writeInputSnapshot, allowedBase } from '../lib/snapshots.mjs';
+const D = 'sha256:' + 'b'.repeat(64);
+
+test('an input snapshot holds exactly the declared inputs, tracked or untracked', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('src/a.js', '1'); await repo.write('src/b.js', '2'); await repo.write('README.md', 'r'); await repo.commit('base');
+  await repo.write('src/c.js', '3'); await repo.write('tests/t.js', 't');
+  const sha = await writeInputSnapshot(repo.dir, { mechanism: 'unit', inputs: ['src', 'tests/t.js'] });
+  assert.deepEqual(await paths(repo, sha, 'input'), ['src/a.js', 'src/b.js', 'src/c.js', 'tests/t.js']);
+  assert.deepEqual((await readSnapshot(repo.dir, sha, 'input')).payload, { kind: 'input', mechanism: 'unit', inputs: ['src', 'tests/t.js'] });
+  await assert.rejects(readSnapshot(repo.dir, sha, 'workspace'), KindError);
+  await repo.write('src/.env', 'x');
+  await assert.rejects(writeInputSnapshot(repo.dir, { mechanism: 'unit', inputs: ['src'] }), SnapshotError);
+  await assert.rejects(writeInputSnapshot(repo.dir, { mechanism: 'unit', inputs: [] }), SnapshotError);
+});
+test('allowedBase is the newest start or scope snapshot, never merely the newest snapshot', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a.txt', 'a'); await repo.commit('base');
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), null);
+  const A = await writeWorkspaceSnapshot(repo.dir);
+  await appendRecord(repo.dir, 'start', 's', { slug: 's', snapshot: A, requirements: [], from_superseded: null });
+  await repo.write('a.txt', 'b'); const B = await writeWorkspaceSnapshot(repo.dir);
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), A);
+  await appendRecord(repo.dir, 'scope-breach', 'a.txt', { path: 'a.txt', snapshot: B, base: A, declarations_digest: D });
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), A);
+  const log = await readLog(repo.dir);
+  await appendRecord(repo.dir, 'scope', 'a.txt', { breach: log.at(-1).sha, disposition: 'keep', snapshot: B, escalation: null, answer: null });
+  assert.equal(await allowedBase(repo.dir, await readLog(repo.dir)), B);
+  const I = await writeInputSnapshot(repo.dir, { mechanism: 'm', inputs: ['a.txt'] });
+  await appendRecord(repo.dir, 'start', 'bad', { slug: 'bad', snapshot: I, requirements: [], from_superseded: null });
+  await assert.rejects(allowedBase(repo.dir, await readLog(repo.dir)), KindError);
+});

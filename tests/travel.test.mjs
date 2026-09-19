@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { makeRepo, makeProject } from './helpers/repo.mjs';
 import { git, readRef } from '../lib/gitx.mjs';
-import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
+import { init } from '../lib/init.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
 import { appendRecord, readLog } from '../lib/records.mjs';
@@ -38,23 +38,40 @@ function makeRemote() {
 // ("authority remote <x> is not a configured remote"), so that ordering throws inside makeProject
 // itself as soon as `authority` is anything other than the 'origin' remote makeProject always
 // configures first. This project() instead builds the repository by hand, in the order settings
-// validation actually needs: add the authority and public remotes first, then write settings
-// naming the now-real authority remote, then run cairn init and cairn authorize (both imported
-// directly from lib/init.mjs and lib/auth.mjs, the same functions makeProject itself calls) so
-// `start()` (which every later task's fixture needs) has a current authorization to check against.
+// validation actually needs: add the authority and public remotes first, then run cairn init and
+// cairn authorize (both imported directly from lib/init.mjs and lib/auth.mjs, the same functions
+// makeProject itself calls) so `start()` (which every later task's fixture needs) has a current
+// authorization to check against.
+//
+// Fix round 1 item 4 (Minor, review-1.md finding 4): the earlier version of this fixture wrote
+// .cairn/settings.json to disk itself, before calling init() -- init()'s own `hadSettings` branch
+// then skipped confirmRemote entirely (it only runs when no settings file exists yet), so no
+// travel test ever exercised cairn init's actual developer-confirmation-of-remote step, only the
+// "adopt an already-written digest" path. Settings are no longer pre-written: init() itself
+// builds them from confirmRemote's return value (the same DEFAULT_SETTINGS(remote, key) it always
+// uses), and this project() asserts confirmRemote is actually called, with the real configured
+// remote names, on every call -- so a future regression back to the old bypassing order fails
+// every travel test immediately rather than silently losing this coverage again.
 async function project({ remote = makeRemote(), authority = 'authority' } = {}) {
   const repo = await makeRepo();
   sh(repo.dir, 'remote', 'add', authority, remote);
   sh(repo.dir, 'remote', 'add', 'public', makeRemote());
-  const settings = DEFAULT_SETTINGS(authority, null);
-  await repo.write('.cairn/settings.json', JSON.stringify(settings, null, 2) + '\n');
   await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
   await repo.write('docs/spec/overview.md', '# Keystone\n');
   await repo.write('docs/spec/roadmap.md', 'Current: first-slug\n\n## first-slug\n\nRequirements: \n\n## second-slug\n\nRequirements: \n');
   await repo.write('README.md', 'hello\n');
   await repo.commit('fixture');
   const yes = async () => true;
-  await init(repo.dir, { confirmRemote: async () => authority, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  let confirmRemoteCalls = 0;
+  await init(repo.dir, {
+    confirmRemote: async (names) => {
+      confirmRemoteCalls++;
+      assert.ok(names.includes(authority), `confirmRemote sees ${authority} among the configured remotes`);
+      return authority;
+    },
+    chooseKey: async () => null, confirm: yes, confirmDigest: yes,
+  });
+  assert.equal(confirmRemoteCalls, 1, 'cairn init asked the developer to confirm the authority remote');
   await authorize(repo.dir, { confirm: yes });
   return { cwd: repo.dir, remote, authority };
 }

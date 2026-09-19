@@ -236,7 +236,7 @@ test('the first-observed snapshot and snapshots written under an open breach are
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'review' });
   assert.equal(await allowedBase(r.cwd, await r.log()), r.startSnapshot);
-  await r.add('review', r.slug, { slug: r.slug, snapshot: await r.snap(), examined: ['src'], answers: [], findings: [] });
+  await r.add('review', r.slug, { slug: r.slug, session: null, snapshot: await r.snap(), examined: ['src'], answers: [], findings: [] });
   assert.equal(await allowedBase(r.cwd, await r.log()), r.startSnapshot);
   await r.remove('src/stray.mjs');
   const scopeSha = await dispose(r.cwd, b, 'restore');
@@ -445,7 +445,7 @@ test('an unreadable mechanism file refuses the preflight even once it is part of
   // Accept the corrupted bytes into the allowed base directly (appendRecord), since preflight()
   // and dispose() would themselves now refuse on this corrupted directory.
   const snap = await r.snap();
-  await r.add('review', r.slug, { slug: r.slug, snapshot: snap, examined: ['src'], answers: [], findings: [] });
+  await r.add('review', r.slug, { slug: r.slug, session: null, snapshot: snap, examined: ['src'], answers: [], findings: [] });
   assert.equal(await allowedBase(r.cwd, await r.log()), snap);
   await r.write('src/stray.mjs', 'x\n');
   await r.write('AGENTS.md', '# Agreement\n\nchanged\n');

@@ -235,3 +235,61 @@ test('the same number on two records is ambiguous until --source names one; a se
   await answer(r.cwd, 'first', 'ok', '', { confirm: async () => true });
   assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.source, f.status]), [[r.rev, 'submitted'], [r.rep, 'disputed']]);
 });
+
+// tests/review.test.mjs (append)
+import { accept, reviewState } from '../lib/review.mjs';
+import { unanswered } from '../lib/escalate.mjs';
+import { openCycleEscalation } from '../lib/cycle.mjs';
+
+const verdict = (sha, v, reason = '') => ({ sha, verdict: v, reason });
+
+test('accept examines the cumulative delta and gives a verdict on every submitted resolution', async () => {
+  const r = await reported();
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [], findings: [] }), /nothing submitted since the report/);
+  const r1 = await fixed(r, 1, 'first fix');
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [], findings: [] }), new RegExp(`resolution ${r1} has no verdict`));
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected')], findings: [] }), /rejected .* needs a reason/);
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [verdict('a'.repeat(40), 'accepted')], findings: [] }), /is not a submitted resolution/);
+  await assert.rejects(accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted')], findings: [], session: 's-builder' }), /session s-builder wrote the review/);
+  const sha = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted')], findings: [{ n: 1, text: 'the new trim drops tabs' }] });
+  const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
+  assert.deepEqual([p.report, p.accepted, p.rejected], [r.rep, [{ resolution: r1, reason: '' }], []]);
+  const { canonicalize } = await import('../lib/canon.mjs');
+  assert.equal(p.delta_digest, sha256(canonicalize([{ path: 'src/demo.mjs', status: 'M' }])));
+  const st = await reviewState(r.cwd, 'first');
+  assert.equal(st.ready, false);
+  assert.deepEqual(st.ledger.map((f) => [f.kind, f.status]), [['report', 'resolved'], ['acceptance', 'open']]);
+  const r2 = await fixed(r, 1, 'second fix');
+  assert.equal(decodeRecord(await catCommit(r.cwd, r2)).payload.source, sha);
+  await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'accepted')], findings: [] });
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, []);
+  await r.write('src/demo.mjs', 'export const demo = "late";\n');
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, ['the latest acceptance is not at the final workspace snapshot']);
+});
+
+test('a resolution rejected twice for the same finding escalates as a dispute the developer settles', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [] });
+  assert.deepEqual(unanswered(await r.log()), []);
+  const r2 = await fixed(r, 1, 'two');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'still accepts form feeds')], findings: [] });
+  const open = unanswered(await r.log());
+  assert.equal(open.length, 1);
+  assert.equal(open[0].payload.concerns, `finding:${r.rep}#1`);
+  assert.equal(open[0].payload.question, 'Finding 1 on the report was rejected twice; does the developer rule on it?');
+  await assert.rejects(fixed(r, 1, 'three'), /is under escalation/);
+});
+
+test('three acceptance rounds without Done create the cycle escalation through plan 08, even with newly numbered findings', async () => {
+  const r = await reported();
+  let source = null;
+  for (let round = 1; round <= 3; round++) {
+    const res = await fixed(r, 1, `round ${round}`, source ? { source } : {});
+    source = await accept(r.cwd, 'first', { resolutions: [verdict(res, 'accepted')], findings: [{ n: 1, text: `new finding ${round}` }] });
+    assert.equal(openCycleEscalation(await r.log()) !== null, round === 3, `round ${round}`);
+  }
+  const cycle = openCycleEscalation(await r.log());
+  assert.equal(cycle.payload.concerns, 'cycle');
+  assert.match(cycle.payload.question, /3 acceptance rounds after the report have not reached Done/);
+});

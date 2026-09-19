@@ -307,3 +307,16 @@ test('Fix round 1 finding 10: an unparseable cairn-tx.lock is treated as held, n
   writeFileSync(lock, '0 TXZERO');
   await assert.rejects(acquireLock(cwd, 'TX8'), /^TxError: cairn: cairn-tx.lock is unreadable/);
 });
+
+test('Fix round 1 finding 6: applyWrites\' branch commit never sweeps an unrelated staged file into the write', async () => {
+  const cwd = await initialized();
+  const plan = filePlan();
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TX9', plan, pre);
+  writeFileSync(join(cwd, 'unrelated.txt'), 'developer work in progress\n');
+  await git(['add', 'unrelated.txt'], { cwd });
+  await applyWrites(cwd, await readStaging(cwd, 'TX9'));
+  const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
+  assert.deepEqual(committed, ['docs/spec/overview.md']);
+  assert.equal((await git(['status', '--porcelain', '--', 'unrelated.txt'], { cwd })).stdout.trim(), 'A  unrelated.txt');
+});

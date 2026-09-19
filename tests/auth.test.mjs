@@ -395,3 +395,43 @@ test('authorize commits the dirty protected paths and its record names the inten
   assert.equal((await git(['log', '-1', '--format=%s'], { cwd })).stdout.trim(), 'Authorize the specification, working agreement and settings');
   assert.equal(log.at(-1).payload.agreement_digest, sha256('# changed\n'));
 });
+
+test('Fix round 1 finding 6: authorize commits only the protected paths, leaving an unrelated staged file untouched', async () => {
+  const cwd = await initialized();
+  writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
+  writeFileSync(join(cwd, 'unrelated.txt'), 'developer work in progress\n');
+  await git(['add', 'unrelated.txt'], { cwd });
+  await authorize(cwd, { confirm: yes });
+  const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
+  assert.deepEqual(committed, ['AGENTS.md'], 'only the dirty protected path is in the commit');
+  assert.equal((await git(['status', '--porcelain', '--', 'unrelated.txt'], { cwd })).stdout.trim(), 'A  unrelated.txt',
+    "the developer's own staged file is untouched: still staged, not committed");
+});
+
+test('Fix round 1 finding 6: a rename inside a protected path is fully committed by both its new and old name', async () => {
+  const cwd = await initialized();
+  await git(['mv', 'docs/spec/overview.md', 'docs/spec/keystone.md'], { cwd });
+  await authorize(cwd, { confirm: yes });
+  // git show --name-only reports only the resulting path for a rename; --name-status shows the
+  // R<score> <old> <new> triple, which is what proves the fix reads and commits the old name too
+  // (the previous l.slice(3) parser, and --only with just the new path, orphan the old blob).
+  const status = (await git(['show', '--name-status', '--format=', 'HEAD'], { cwd })).stdout.trim();
+  assert.match(status, /^R\d+\tdocs\/spec\/overview\.md\tdocs\/spec\/keystone\.md$/);
+  assert.equal((await git(['status', '--porcelain'], { cwd })).stdout, '', 'the rename is fully committed, nothing left dirty');
+});
+
+// Regression caught by tests/cli.test.mjs's existing 'cairn authorize: success ...' test after the
+// first draft of the finding 6 fix: `git commit --only -- <path>` refuses a path git has never
+// tracked at all, and .cairn/settings.json is exactly that on a project's very first authorize --
+// init() writes it to disk but never commits it (repoWith's own fixture commit ran before init).
+test('Fix round 1 finding 6: the first authorize commits a never-before-tracked protected path', async () => {
+  const { cwd } = await repoWith({ 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  assert.equal((await git(['status', '--porcelain', '--', '.cairn/settings.json'], { cwd })).stdout.trim().slice(0, 2), '??',
+    '.cairn/settings.json is on disk but never git-added, the case that broke --only');
+  const sha = await authorize(cwd, { confirm: yes });
+  assert.ok(sha);
+  assert.equal((await git(['status', '--porcelain'], { cwd })).stdout, '');
+  const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
+  assert.deepEqual(committed, ['.cairn/settings.json']);
+});

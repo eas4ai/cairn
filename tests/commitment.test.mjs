@@ -420,6 +420,15 @@ test('Fix round 1 finding 3: an item still open from an earlier supersession is 
   assert.deepEqual(rec2.payload.carried, [d], 'the same defect, still unfixed, carries on the second supersession too');
 });
 
+test('Fix round 1 finding 9: a forged second init record surfaces as its own breach message, not a generic no-authorization one', async () => {
+  const repo = await project();
+  const settingsDigest = (await protectedDigests(repo.cwd)).settings;
+  await appendRecord(repo.cwd, 'init', 'project', { settings_digest: settingsDigest, authority_remote: 'origin', auth_mode: 'unsigned-local' });
+  const log = await readLog(repo.cwd);
+  await assert.rejects(currentAuthorization(repo.cwd, log), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
+  await assert.rejects(start(repo.cwd, 'first'), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
+});
+
 test('Fix round 1 finding 4: start refuses to move Current: outside a supersession, and still moves it for a pending successor', async () => {
   const repo = await project();
   await assert.rejects(start(repo.cwd, 'second'), /roadmap names first as Current:, not second/);

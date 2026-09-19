@@ -4,7 +4,7 @@ import { canonicalize, parseStrict, CanonError } from '../lib/canon.mjs';
 
 test('canonicalize sorts keys, drops whitespace, escapes minimally', () => {
   assert.equal(canonicalize({ b: 1, a: [true, null, 'x'] }), '{"a":[true,null,"x"],"b":1}');
-  assert.equal(canonicalize({ s: 'tab\t\u001bé' }), '{"s":"tab\\t\\u001bé"}');
+  assert.equal(canonicalize({ s: 'tab\t\u001b\u00e9' }), '{"s":"tab\\t\\u001b\u00e9"}');
   assert.equal(canonicalize(-0), '0');
   assert.equal(canonicalize(1e21), '1e+21');
 });
@@ -16,7 +16,7 @@ test('canonicalize rejects non-finite numbers and lone surrogates', () => {
 });
 test('parseStrict accepts exactly the canonical form', () => {
   assert.deepEqual(parseStrict('{"a":1,"b":[2]}'), { a: 1, b: [2] });
-  assert.deepEqual(parseStrict(Buffer.from('{"k":"é"}', 'utf8')), { k: 'é' });
+  assert.deepEqual(parseStrict(Buffer.from('{"k":"\u00e9"}', 'utf8')), { k: '\u00e9' });
 });
 test('parseStrict rejects noncanonical JSON: whitespace, order, number form, escapes', () => {
   for (const bad of ['{"a": 1}', '{"b":1,"a":2}', '{"a":1.0}', '{"a":"\\u00e9"}', '{"a":"\\u001B"}', '{"a":1}\n'])

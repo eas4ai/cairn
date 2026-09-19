@@ -48,3 +48,25 @@ test('commitTree and catCommit round-trip subject, body and trailers without int
   const d = await catCommit(repo.dir, child);
   assert.deepEqual([d.parents, d.body, d.trailers], [[sha], 'no trailers here', []]);
 });
+
+import { writeTreeFromPaths, listTree } from '../lib/gitx.mjs';
+
+test('writeTreeFromPaths stores dirty bytes, modes and link text without touching the index', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('a.txt', 'committed\n'); await repo.commit('base');
+  await repo.write('a.txt', 'dirty\n');
+  await repo.write('b/c.txt', 'new\n');
+  await repo.write('run.sh', '#!/bin/sh\n', { mode: 0o755 });
+  await repo.link('lnk', '../outside.pem');
+  await repo.write('.cairn/output/x', 'ignored\n');
+  const before = await repo.git('ls-files', '--stage');
+  const tree = await writeTreeFromPaths(repo.dir, { paths: ['a.txt', 'b/c.txt', 'run.sh', 'lnk', '.cairn/output/x', 'gone.txt'], exclude: ['.git', '.cairn/output'] });
+  const entries = await listTree(repo.dir, tree);
+  assert.deepEqual(entries.map((e) => [e.path, e.mode]), [['a.txt', '100644'], ['b/c.txt', '100644'], ['lnk', '120000'], ['run.sh', '100755']]);
+  const blob = entries.find((e) => e.path === 'a.txt').sha;
+  assert.equal((await git(['cat-file', 'blob', blob], { cwd: repo.dir })).stdout, 'dirty\n');
+  const link = entries.find((e) => e.path === 'lnk').sha;
+  assert.equal((await git(['cat-file', 'blob', link], { cwd: repo.dir })).stdout, '../outside.pem');
+  assert.equal(await repo.git('ls-files', '--stage'), before);
+  assert.equal(await repo.git('diff', '--cached', '--name-only'), '');
+});

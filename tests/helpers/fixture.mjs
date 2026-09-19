@@ -16,11 +16,13 @@ export const KERNEL = join(ROOT, "bin/cairn.mjs");
 
 // Section 5's own table is normative and does carry backticks around `resolve`, `Current:` and
 // `ask` in the accept/promote/reply rows (docs/spec/cairn-v2.md, confirmed by direct reading).
-// lib/wake.mjs's real PREDICATES strings for exactly those three actions print the same words
-// without the backticks (a kernel defect found by this fixture and recorded in the plan 14
-// report, with the spec-vs-implementation comparison as its own isolated test below). This table
-// matches the real printed text, backtick-free, so the main fixture flow can assert against it;
-// SPEC_PREDICATE (below) carries the section 5 table's own exact wording for that comparison.
+// lib/wake.mjs's real PREDICATES strings for exactly those three actions used to print the same
+// words without the backticks (a kernel defect found by this fixture and recorded in the plan 14
+// report, with the spec-vs-implementation comparison as its own isolated test below; fixed in the
+// kernel fix round named in that report's own follow-up). This table matches the real printed
+// text, backticks included, so the main fixture flow can assert against it; SPEC_PREDICATE
+// (below) carries the section 5 table's own exact wording for the isolated defect-comparison
+// test, and the two are now identical for these three rows.
 export const PREDICATE = {
   repair: "the named hand-written file reads under its grammar and no unrelated byte changed",
   recover: "the intent has one terminal domain or abort record and every store matches its resulting identity",
@@ -38,11 +40,11 @@ export const PREDICATE = {
   review: "a review names the current workspace snapshot and answers every fixed question for every target",
   report: "a current brief and report name the reviewed snapshot and projection; every question and interface obligation has an attempt",
   resolve: "a resolution names finding N of its exact source record, or an escalation disputes it",
-  accept: "an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next resolve action",
+  accept: "an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action",
   build: "a realized ADR line names the decision's base and resulting snapshots and the realization check passed",
   done: "a done record names the commitment and final workspace snapshot",
-  promote: "no commitment is open; one promotion names a backlog item and decision; Current: and a one-item successor start were written transactionally",
-  reply: "a reply record names the open ask escalation",
+  promote: "no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally",
+  reply: "a reply record names the open `ask` escalation",
 };
 
 // docs/spec/cairn-v2.md section 5's exact table text for the three rows where it differs from

@@ -60,13 +60,12 @@ test("kernel defect: wake demands a nonsensical push before the roadmap's Curren
   assert.match(w.line, /\/new-project or \/existing-project/);
 });
 
-// Kernel defect found by this fixture (minor; recorded in the plan 14 report): section 5's own
-// predicate table (docs/spec/cairn-v2.md) carries backticks around `resolve`, `Current:` and
-// `ask` in the accept/promote/reply rows; lib/wake.mjs's real PREDICATES strings for exactly
-// those three actions print the same words with the backticks stripped. The rest of this fixture
-// asserts against the real (backtick-free) printed text (tests/helpers/fixture.mjs's PREDICATE),
-// since that is what an agent actually reads; this test demonstrates the drift against the
-// spec's own normative wording directly.
+// Kernel defect found by this fixture (minor; recorded in the plan 14 report), fixed in the
+// kernel fix round named in that report's own follow-up: section 5's own predicate table
+// (docs/spec/cairn-v2.md) carries backticks around `resolve`, `Current:` and `ask` in the
+// accept/promote/reply rows; lib/wake.mjs's real PREDICATES strings for exactly those three
+// actions used to print the same words with the backticks stripped. Restored verbatim; this test
+// now confirms the two agree instead of demonstrating their drift.
 test("kernel defect: three predicate strings drop the spec's own backticks", () => {
   for (const [action, specText] of Object.entries(SPEC_PREDICATE)) {
     assert.equal(PREDICATES[action], specText, `${action} predicate text`);

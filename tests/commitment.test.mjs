@@ -407,6 +407,19 @@ test('Fix round 1 finding 6: supersede refuses the open commitment naming itself
   await assert.rejects(supersede(repo.cwd, 'first', { quote: 'x', confirm: confirmYes }), /successor first is the same as the open commitment first/);
 });
 
+test('Fix round 1 finding 3: an item still open from an earlier supersession is carried again by the next one', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
+  const sup1 = await supersede(repo.cwd, 'second', { quote: 'Switch once.', confirm: confirmYes });
+  const rec1 = (await readLog(repo.cwd)).find((r) => r.sha === sup1);
+  assert.deepEqual(rec1.payload.carried, [d], 'the defect, still unfixed, carries on the first supersession');
+  await start(repo.cwd, 'second');
+  const sup2 = await supersede(repo.cwd, 'third', { quote: 'Switch again.', confirm: confirmYes });
+  const rec2 = (await readLog(repo.cwd)).find((r) => r.sha === sup2);
+  assert.deepEqual(rec2.payload.carried, [d], 'the same defect, still unfixed, carries on the second supersession too');
+});
+
 test('Fix round 1 finding 4: start refuses to move Current: outside a supersession, and still moves it for a pending successor', async () => {
   const repo = await project();
   await assert.rejects(start(repo.cwd, 'second'), /roadmap names first as Current:, not second/);

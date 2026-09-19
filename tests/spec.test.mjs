@@ -55,3 +55,14 @@ test('broken order, repeated lines and bad status are reported as problems with 
   assert.match(bad('[A-001] x\nFalsifier: f\n').join(), /missing Status:/);
   assert.match(bad('[A-001]\nFalsifier: f\nStatus: Draft\n').join(), /empty obligation/);
 });
+
+import { parseRoadmap } from '../lib/spec.mjs';
+
+test('parseRoadmap reads only Current: and Requirements: under the matching heading', () => {
+  const r = parseRoadmap('# Roadmap\n\nCurrent: hooks\n\n## records\n\nRequirements: LOOP-001, LOOP-002\nDone when the log reads.\n\n## hooks\n\nProse first.\nRequirements: LOOP-003 LOOP-001\nRequirements: LOOP-999\n\n### notes\n');
+  assert.equal(r.current, 'hooks');
+  assert.deepEqual(r.sections.records, { requirements: ['LOOP-001', 'LOOP-002'], line: 5 });
+  assert.deepEqual(r.sections.hooks.requirements, ['LOOP-003', 'LOOP-001']);
+  assert.deepEqual(r.sections.notes.requirements, []);
+  assert.equal(parseRoadmap('no current line').current, null);
+});

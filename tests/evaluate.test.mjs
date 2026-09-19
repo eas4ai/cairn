@@ -58,6 +58,8 @@ describe('policy constants and digests', () => {
 
 import { kernelFacts, floorReasons, authorityProjection } from '../lib/evaluate.mjs';
 import { makeProject } from './helpers/repo.mjs';
+import { loopRepo } from './helpers/loop.mjs';
+import { appendDecision } from '../lib/adr.mjs';
 
 // A hand-built kernelFacts() result, for floorReasons/authorityProjection unit tests that do not
 // need a real repository. kernelFacts() itself is exercised separately below, against a real
@@ -74,19 +76,33 @@ describe('the narrow floor', () => {
     assert.equal(A.option_index, 0);
     assert.equal(A.option_count, 2);
   });
+  // Fix round 1 (Controller Ruling 7): section 10's narrow floor names exactly three conditions
+  // (contract, agreement, data) plus the technical no-request cases. Reserved/protected-path
+  // writes ('settings', a .cairn/settings.json write; 'reserved', a reserved or kernel-managed
+  // path), the fourth-attempt rule and scope rulings are "already enforced by section 2 and
+  // section 5 independent of this floor" (docs/spec/cairn-v2.md section 10) -- floorReasons no
+  // longer fires on them, so those four assertions (present in the brief's own Step 1 test) are
+  // removed along with the reasons themselves. The reasons that remain: data, contract, agreement,
+  // missing-recommendation, incomplete-projection.
   test('each floor reason routes with no call', () => {
     assert.deepEqual(floorReasons(facts({ pathClasses: { 'migrations/1.sql': 'data' } })), ['data']);
     assert.deepEqual(floorReasons(facts({ pathClasses: { 'docs/spec/auth.md': 'protected' } })), ['contract']);
     assert.deepEqual(floorReasons(facts({ pathClasses: { 'AGENTS.md': 'protected' } })), ['agreement']);
-    assert.deepEqual(floorReasons(facts({ pathClasses: { '.cairn/settings.json': 'protected' } })), ['settings']);
-    assert.deepEqual(floorReasons(facts({ pathClasses: { '.cairn/mechanisms': 'kernel-managed' } })), ['reserved']);
-    assert.deepEqual(floorReasons(facts({ attempts: { 'AUTH-003': 3 } })), ['fourth-attempt']);
-    assert.deepEqual(floorReasons(facts({ concerns: [{ id: 'breach:' + 'b'.repeat(40), valid: true }] })), ['scope-ruling']);
     assert.deepEqual(floorReasons(facts({ D: { ...normalizeDraft(draft()), recommendation: '  ' } })), ['missing-recommendation']);
     assert.deepEqual(floorReasons(facts({ concerns: [{ id: 'AUTH-999', valid: false }] })), ['incomplete-projection']);
   });
   test('a recommendation not present in options is also incomplete-projection', () => {
     assert.deepEqual(floorReasons(facts({ D: { ...normalizeDraft(draft()), recommendation: 'weekly' } })), ['incomplete-projection']);
+  });
+  // Fix round 1, Important 1: authorityProjection's protected.contract used to disagree with
+  // floorReasons's own 'contract' check for docs/spec/roadmap.md. PROTECTED_EXCEPT (lib/paths.mjs)
+  // carves that one path out of classify()'s 'protected' class into 'reserved' (the kernel writes
+  // it directly at start and promote), so floorReasons correctly never fires 'contract' for it --
+  // both functions must agree that this path is not a contract write.
+  test('the roadmap kernel-write exception does not fire contract in either function', () => {
+    const f = facts({ pathClasses: { 'docs/spec/roadmap.md': 'reserved' } });
+    assert.deepEqual(floorReasons(f), []);
+    assert.equal(authorityProjection(f).protected.contract, false);
   });
   // Ruling 5 (plan 15's progress ledger) carries this subject forward by name from the superseded
   // evaluator's test 'an agent-written cited decision reaches A(D) only as id and read flag'
@@ -112,5 +128,22 @@ describe('the narrow floor', () => {
     const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), commitment: 'none', concerns: ['cycle'], named_paths: [] }));
     assert.equal(f.lease, null);
     assert.deepEqual(f.openObligations, { escalations: 0, findings: 0, defects: 0, breaches: 0 });
+  });
+  // Fix round 1, Important 2: the only test that touched kernelFacts's own `read: !unread.has(id)`
+  // line called authorityProjection directly against a hand-built facts() fixture with `read`
+  // supplied literally -- it never exercised kernelFacts's real readAdr/queue computation, so an
+  // inverted or otherwise broken unread check would not have failed anything. Built on
+  // loopRepo (tests/helpers/loop.mjs), which already wires a started commitment and a decide()
+  // step, rather than hand-built facts.
+  test('kernelFacts reports a cited decision as unread, then read once the read line lands', async () => {
+    const r = await loopRepo();
+    const id = await r.decide();
+    const D = normalizeDraft({ ...draft(), commitment: r.slug, concerns: [r.reqs[0]], named_paths: [], cited_decisions: [id] });
+    const before = await kernelFacts(r.cwd, D);
+    assert.deepEqual(before.decisions, [{ id, by: 'agent', read: false, body: 'A map keeps lookups constant.', title: 'Use a map' }]);
+    const anyLogSha = (await r.log()).at(-1).sha;
+    await appendDecision(r.cwd, { kind: 'read', of: id, record: anyLogSha }, { command: 'decisions --read' });
+    const after = await kernelFacts(r.cwd, D);
+    assert.equal(after.decisions[0].read, true);
   });
 });

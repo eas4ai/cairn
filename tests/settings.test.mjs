@@ -1,13 +1,15 @@
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateSettings, SETTINGS_SCHEMA, overlaps } from '../lib/settings.mjs';
+
+const DIMS = { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 };
 
 export const GOOD = {
   schema: 1, authority_remote: 'origin',
   outside: ['README.md', 'CHANGELOG.md', '.github/**'], source: ['bin/**', 'src/**'], interfaces: ['src/api/**'], data: ['src/store/**', 'migrations/**'],
-  network_exclude: ['fixtures/private/**', 'config/*.secret.*'], signing_key: null, attribution: 'forbidden',
+  network_exclude: ['fixtures/private/**', 'config/*.secret.*'], signing_key: null, attribution: 'forbidden', developer: 'present',
   harness: { claude_code: { adversary_model: 'claude-fable-5-1', adversary_transport: 'remote' }, codex: { adversary_model: 'gpt-5.6-sol', adversary_transport: 'remote' }, muse: { adversary_model: 'muse-spark-1.3', adversary_transport: 'remote' } },
-  typesafeai: { enabled: false, mode: 'shadow', model: 'jev-1.13.0', route_confidence: 0.8, sufficient_threshold: 0.7, outside_threshold: 0.8, contradicts_ceiling: 0.3, reversible_floor: 0.7, observed_floor: 0.6, max_false_downgrade: 0.05, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 },
+  typesafeai: { enabled: false, model: 'jev-1.13.0', weights: DIMS, agent_ceiling: 0.35, confidence_floors: DIMS, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 },
 };
 const refuses = (mutate, needle, opts) => { const s = structuredClone(GOOD); mutate(s); const r = validateSettings(s, opts); assert.ok(r.some((x) => needle.test(x)), `expected ${needle} in ${JSON.stringify(r)}`); };
 
@@ -49,17 +51,10 @@ test('refuses an invalid authority remote', () => {
   refuses((s) => { s.authority_remote = 'upstream'; }, /not a configured remote/, { remotes: ['origin'] });
   assert.deepEqual(validateSettings({ ...GOOD, authority_remote: null }, { remotes: [] }), []);
 });
-test('refuses an evaluator threshold outside [0,1]', () => { refuses((s) => { s.typesafeai.route_confidence = 1.2; }, /route_confidence/); refuses((s) => { s.typesafeai.observed_floor = -0.1; }, /observed_floor/); });
 test('refuses enabled: true without a model', () => refuses((s) => { s.typesafeai.enabled = true; s.typesafeai.model = null; }, /enabled without a model/));
 test('refuses request_cap_bytes above 64,000', () => refuses((s) => { s.typesafeai.request_cap_bytes = 64001; }, /request_cap_bytes/));
-test('refuses mode: route without a current passing calibration, and an alias model in route mode', () => {
-  refuses((s) => { s.typesafeai.mode = 'route'; }, /route mode needs a current passing calibration/);
-  refuses((s) => { s.typesafeai.mode = 'route'; }, /calibration/, { calibration: { pass: false } });
-  refuses((s) => { s.typesafeai.mode = 'route'; s.typesafeai.model = 'jev-latest'; }, /versioned model/, { calibration: { pass: true } });
-  assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, mode: 'route' } }, { calibration: { pass: true } }), []);
-});
 test('unknown values fail closed', () => {
-  refuses((s) => { s.attribution = 'maybe'; }, /attribution/); refuses((s) => { s.typesafeai.mode = 'auto'; }, /mode/);
+  refuses((s) => { s.attribution = 'maybe'; }, /attribution/);
   refuses((s) => { s.harness.muse.adversary_transport = 'cloud'; }, /adversary_transport/); refuses((s) => { s.typesafeai.min_calibration_agent_predictions = 0; }, /min_calibration/);
   refuses((s) => { s.outside = 'README.md'; }, /outside must be an array/);
 });
@@ -70,9 +65,6 @@ test('S5: AKIA is the real AWS key-id shape with no separator, and long hyphenat
   // 32 characters, mixes letters and digits, and would have matched the old unrestricted
   // [A-Za-z0-9_-]{32,} alternative: a false positive the old regex would have flagged.
   assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model: 'claude-opus-5-1-20260301-preview' } }), []);
-});
-test('the removed weights and code_tiers fields are refused by name', () => {
-  refuses((s) => { s.typesafeai.weights = {}; }, /removed field weights/); refuses((s) => { s.typesafeai.code_tiers = []; }, /removed field code_tiers/);
 });
 test('overlaps follows glob-vs-glob language intersection, not literal-stem containment', () => {
   assert.ok(overlaps('src/**', 'src/api/**') && overlaps('docs/spec/**', 'docs/spec/a.md') && overlaps('a/b', 'a/b') && overlaps('config/*.json', 'config/x.json'));
@@ -87,6 +79,62 @@ test('S1: a wildcard-leading glob overlapping a reserved path is caught, not jus
   assert.ok(overlaps('**/spec/**', 'docs/spec/**'));
   refuses((s) => { s.outside.push('**/*.json'); }, /outside \*\*\/\*\.json overlaps reserved \.cairn\/\*\*/);
   refuses((s) => { s.outside.push('**/spec/**'); }, /outside \*\*\/spec\/\*\* overlaps reserved docs\/spec\/\*\*/);
+});
+
+const dims = () => ({ evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 });
+const goodTypesafeai = () => ({
+  enabled: false, model: null, weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(),
+  min_calibration_agent_predictions: 60, request_cap_bytes: 48000,
+});
+const base = () => ({
+  schema: 1, authority_remote: null, outside: [], source: [], interfaces: [], data: [], network_exclude: [],
+  signing_key: null, attribution: 'forbidden', developer: 'present', harness: {}, typesafeai: goodTypesafeai(),
+});
+
+describe('developer field', () => {
+  test('present and absent both validate', () => {
+    assert.deepEqual(validateSettings({ ...base(), developer: 'present' }), []);
+    assert.deepEqual(validateSettings({ ...base(), developer: 'absent' }), []);
+  });
+  test('anything else is refused', () => {
+    for (const v of ['maybe', '', null, 1, undefined]) {
+      assert.match(validateSettings({ ...base(), developer: v }).join(' '), /developer/);
+    }
+  });
+  test('the field is required, not defaulted by validateSettings', () => {
+    const { developer, ...rest } = base();
+    assert.match(validateSettings(rest).join(' '), /developer/);
+  });
+});
+
+describe('typesafeai weights/agent_ceiling/confidence_floors', () => {
+  test('defaults validate', () => assert.deepEqual(validateSettings(base()), []));
+  test('a typesafeai.mode field at all is refused', () =>
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), mode: 'shadow' } }).join(' '), /mode/));
+  test('a weight, agent_ceiling or confidence floor outside [0,1] is refused', () => {
+    for (const bad of [{ weights: { ...dims(), evidence: 1.5 } }, { weights: { ...dims(), reach: -0.1 } },
+      { agent_ceiling: 1.1 }, { agent_ceiling: -0.01 }, { confidence_floors: { ...dims(), surface: 2 } }]) {
+      assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), ...bad } }).join(' '), /weight|agent_ceiling|confidence/);
+    }
+  });
+  test('weights and confidence_floors are closed objects over exactly the five dimensions', () => {
+    const { evidence, ...four } = dims();
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), weights: four } }).join(' '), /weights/);
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), weights: { ...dims(), extra: 0.1 } } }).join(' '), /weights/);
+  });
+  test('code_tiers is still refused; weights is no longer refused', () =>
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), code_tiers: [] } }).join(' '), /code_tiers/));
+  test('enabled without a model, or an alias, is refused', () => {
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), enabled: true, model: null } }).join(' '), /model/);
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), enabled: true, model: 'jev-latest' } }).join(' '), /alias|versioned/);
+    assert.deepEqual(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), enabled: true, model: 'jev-1.13.0' } }), []);
+  });
+  test('request_cap_bytes above 64000 is refused', () =>
+    assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), request_cap_bytes: 64001 } }).join(' '), /request_cap_bytes/));
+  test('no route-mode gate remains: validateSettings takes no calibration option any more', () => {
+    // Passing one is simply ignored; the old route-mode refusal path is gone.
+    assert.deepEqual(validateSettings(base(), { calibration: null }), []);
+  });
 });
 
 import { makeRepo } from './helpers/repo.mjs';

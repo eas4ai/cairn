@@ -201,6 +201,20 @@ describe('C(c) and M(D)', () => {
     const C = await contractState(cwd, f);
     await assert.rejects(measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['fixtures/private/key.txt'] }), 0, C, f), EgressError);
   });
+  // Not in the brief's own test list: the Global Constraints call egress of a credential path's
+  // content binding, and the brief's given test exercises only the network_exclude branch of
+  // egressClass. A CREDENTIAL_PATTERNS entry (lib/paths.mjs) is a project-independent rule, so no
+  // settings override is needed to trigger it, unlike the network_exclude case above.
+  test('a credential-pattern touched path throws EgressError classed credential, with no settings override needed', async () => {
+    const { cwd } = await makeProject();
+    await mkdirAndWrite(cwd, 'secret/.env', 'TOKEN=shh');
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['secret/.env'] }));
+    const C = await contractState(cwd, f);
+    await assert.rejects(
+      measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['secret/.env'] }), 0, C, f),
+      (e) => e instanceof EgressError && e.klass === 'credential' && e.path === 'secret/.env',
+    );
+  });
   // Not in the brief's own test list: measureState's Interfaces line and the task's own
   // instructions name `{state, requestBytesEstimate}` as its return shape (the brief's Step 3
   // snippet returns `{ state }` alone); this covers the field the snippet omitted.

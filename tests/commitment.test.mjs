@@ -66,7 +66,10 @@ test('fix refuses a backlog item, no open commitment, and a snapshot that change
   await assert.rejects(fix(repo.cwd, d), (e) => e instanceof CommitmentError && /fix changes protected contract AGENTS.md/.test(e.message));
 });
 
-import { frozenSet, protectedDigests, currentAuthorization, setCurrent } from '../lib/commitment.mjs';
+import { frozenSet, currentAuthorization, setCurrent } from '../lib/commitment.mjs';
+// Fix round 1 finding 7: protectedDigests is lib/auth.mjs's own function; lib/commitment.mjs no
+// longer carries a second, dead-in-production reimplementation of it.
+import { protectedDigests } from '../lib/auth.mjs';
 import { readSnapshot } from '../lib/snapshots.mjs';
 import { git } from '../lib/gitx.mjs';
 import { sha256 } from '../lib/canon.mjs';

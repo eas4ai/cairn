@@ -11,7 +11,7 @@ import { appendDecision } from '../lib/adr.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
-import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule } from '../lib/wake.mjs';
+import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule, predicates } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
 
@@ -460,4 +460,21 @@ test('cairn wake prints verdict, action or party, one reason line and the predic
   const none = spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, 'wake'], { cwd: dir, encoding: 'utf8' });
   assert.equal(none.status, 3);
   assert.equal(none.stdout, 'cairn: outside a project; run /new-project or /existing-project\n');
+});
+
+// Fix round 1, item 11(b), pulled forward as a dependency of item 3: under wake's own cascading
+// precedence, 'report' and 'accept' are only ever reached once 'review' (respectively 'report')
+// has already been satisfied, so their unmet(...) messages could safely dereference rev.payload /
+// rep.payload unconditionally. lib/cycle.mjs's guardKernelWrite (item 3) now asks every predicate
+// about a scratch state independently of that cascade, so it can reach 'report' with no review yet
+// or 'accept' with no report yet; both used to throw a raw TypeError there instead of returning a
+// clean unmet/null.
+test('the report and accept predicates do not crash when asked about a state with no review or report yet', async () => {
+  const r = await loopRepo();
+  const st = await readState(r.cwd);
+  const reportP = predicates.find((p) => p.name === 'report');
+  const acceptP = predicates.find((p) => p.name === 'accept');
+  const rv = await reportP.test(st);
+  assert.equal(rv.action, 'report');
+  assert.equal(await acceptP.test(st), null);
 });

@@ -71,7 +71,7 @@ import { frozenSet, currentAuthorization, setCurrent } from '../lib/commitment.m
 // longer carries a second, dead-in-production reimplementation of it.
 import { protectedDigests } from '../lib/auth.mjs';
 import { readSnapshot } from '../lib/snapshots.mjs';
-import { git } from '../lib/gitx.mjs';
+import { git, readRef } from '../lib/gitx.mjs';
 import { sha256 } from '../lib/canon.mjs';
 
 test('start freezes the roadmap section plus every Scope: every commitment Agreed block, at one workspace snapshot', async () => {
@@ -385,6 +385,30 @@ test('the ADR line the decision itself appended is not a stop; a second realizat
   await realize(repo.cwd, id, { subject: 'no code change' });
   await assert.rejects(realize(repo.cwd, id, { subject: 'again' }), /already realized/);
   await assert.rejects(realize(repo.cwd, '01ARZ3NDEKTSV4RRFFQ69G5FAV', { subject: 'x' }), /no decision/);
+});
+
+test('Fix round 1 finding 5: realize stops on a hand-edited mechanism file that no longer validates under readMechanisms', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, buildDraft);
+  // A direct edit under .cairn/mechanisms/ that readMechanisms itself refuses (schema 1 missing):
+  // section 2 calls this a breach ("A direct edit ... is a breach"), so realize must never let it
+  // through as if it were a normal, valid kernel-managed mutation.
+  await repo.write('.cairn/mechanisms/bad.json', '{}');
+  await assert.rejects(realize(repo.cwd, id, { subject: 'hand-edited mechanism' }),
+    (e) => e instanceof RealizationError && e.paths.some((p) => p.path === '.cairn/mechanisms/bad.json' && p.class === 'reserved'));
+  assert.equal((await readAdr(repo.cwd)).some((l) => l.kind === 'realized'), false);
+});
+
+test('Fix round 1 finding 12: realize takes no durable snapshot when the stop check does not pass', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, { ...buildDraft, named_paths: ['src/greet.mjs'] });
+  await repo.write('src/greet.mjs', 'export const greet = () => "hello";\n');
+  const before = await readRef(repo.cwd, 'refs/cairn/snapshots');
+  await repo.write('AGENTS.md', (await readFile(join(repo.cwd, 'AGENTS.md'), 'utf8')) + '\n');
+  await assert.rejects(realize(repo.cwd, id, { subject: 'stopped' }), RealizationError);
+  assert.equal(await readRef(repo.cwd, 'refs/cairn/snapshots'), before, 'no new snapshot commit was left behind by the stopped attempt');
 });
 
 // Fix round 1

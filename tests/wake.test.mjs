@@ -394,3 +394,20 @@ test('Done rule bullet 4: no escalation, breach, defect, transaction, lease, dec
   const v = await wake(r.cwd);
   assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'done', 'first']);
 });
+
+// Deviation from the plan text: the real 'promotion' schema (lib/records.mjs) carries required
+// intent/results fields (fix round 1 finding 8, the same MULTI_STORE-terminal-record treatment
+// 'start' and 'superseded' already got), which the plan's payload omitted.
+test('a closed range with a backlog item names promote; without one the verdict is Done', async () => {
+  const r = await finished();
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Done', null, 'first']);
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  await r.add('outside', 'nicer-greeting', { item, reason: 'later', evaluation: null });
+  v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'nicer-greeting']);
+  await r.item('next-feature', 'DEMO-001', 'colour');
+  await r.add('promotion', 'nicer-greeting', { item, decision: ulid(), intent: null, results: [] });
+  assert.equal((await wake(r.cwd)).verdict, 'Done');   // a next-feature item waits for the developer
+});

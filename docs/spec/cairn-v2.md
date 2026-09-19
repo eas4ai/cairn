@@ -152,11 +152,12 @@ after the developer confirms it. Its fields are:
 - `attribution`: `forbidden` or `allowed`, for the release script.
 - `harness`: one entry per supported harness, including the adversary model and
   whether the adversary is local or remote.
-- `developer`: `present` or `absent`, default `present`. `absent` declares that
-  no human will ever answer an escalation; only the narrow evaluator floor in
-  section 10 can still name the developer, and section 5 says what wake does
-  there with no one to answer. This is the setting an autonomous benchmark
-  runs with.
+- `developer`: `present` or `absent`, default `present`. `absent` declares
+  that no human will ever answer an escalation; only the narrow evaluator
+  floor in section 10 can still name the developer. When it does, the run
+  records that floor decision, wake prints it and exits 4 instead of
+  waiting (the exit-code table above; section 5 restates this for Waiting
+  generally). This is the setting an autonomous benchmark runs with.
 - `typesafeai`: the evaluator policy in section 10. `enabled` chooses the
   measurement's source; it does not turn the measurement off (section 10).
 
@@ -200,7 +201,6 @@ The settings shape is shown once here:
   },
   "typesafeai": {
     "enabled": false,
-    "mode": null,
     "model": "jev-1.13.0",
     "weights": {
       "evidence": 0.2, "reach": 0.2, "contract": 0.2,
@@ -220,17 +220,17 @@ The settings shape is shown once here:
 Revised 2026-09-19: the `typesafeai` block previously carried seven fixed
 thresholds (`route_confidence`, `sufficient_threshold`, `outside_threshold`,
 `contradicts_ceiling`, `reversible_floor`, `observed_floor` and
-`max_false_downgrade`) that fed a gate cascade, and defaulted `mode` to
-`"shadow"`. `.superpowers/bench/results.md` ran that cascade live: 0 of 12
-agent-expected drafts reached the agent (the `sufficient` gate alone rejected
-every one), which the developer called ritual assent. This block now carries
-the composite's `weights`, `agent_ceiling` and `confidence_floors`
-(`.superpowers/bench/composite-design.md`, 0.895 route accuracy at
-`agent_ceiling: 0.35`), and `mode: null` is the live default; `"observe"` is
-now the only other value, and section 10 states plainly that it is for
-collecting calibration data, not for routing. `max_false_downgrade` moves to
-a kernel constant (section 10); `min_calibration_agent_predictions` and
-`request_cap_bytes` are unchanged.
+`max_false_downgrade`) that fed a gate cascade, and a `mode` field defaulted
+to `"shadow"`. `.superpowers/bench/results.md` ran that cascade live: 0 of
+12 agent-expected drafts reached the agent (the `sufficient` gate alone
+rejected every one), which the developer called ritual assent. This block
+now carries the composite's `weights`, `agent_ceiling` and
+`confidence_floors` (`.superpowers/bench/composite-design.md`, 0.895 route
+accuracy at `agent_ceiling: 0.35`). There is no `mode` field: the composite
+only ever produces an advisory suggestion (section 10), never a live/shadow
+authority switch, so there is nothing left for a mode to withhold.
+`max_false_downgrade` moves to a kernel constant (section 10);
+`min_calibration_agent_predictions` and `request_cap_bytes` are unchanged.
 
 The kernel refuses an unknown settings schema or field; an invalid glob; an
 `outside` path overlapping `source`, `interfaces`, `data`, a reserved path or a
@@ -239,19 +239,22 @@ mechanism input; a reserved path under `source`, `interfaces` or `data`; a
 secret-shaped field or value other than the public `signing_key`; an invalid
 authority remote; an evaluator `weight`, `agent_ceiling` or confidence floor
 outside `[0,1]`; `enabled: true` without a model; `request_cap_bytes` above
-64,000; `mode` set to anything but `null` or `"observe"`; or `developer` set
-to anything but `"present"` or `"absent"`. `enabled: true` also requires a
-versioned model ID, not an alias, since a calibration record is bound to one
-resolved model. Unknown values fail closed. The evaluator's `code_tiers`
-field stays refused; `weights`, `agent_ceiling` and `confidence_floors` are
-now required fields, not refused ones.
+64,000; a `typesafeai.mode` field at all; or `developer` set to anything but
+`"present"` or `"absent"`. `enabled: true` also requires a versioned model
+ID, not an alias, since a calibration record is bound to one resolved
+model. Unknown values fail closed. The evaluator's `code_tiers` field stays
+refused; `weights`, `agent_ceiling` and `confidence_floors` are now required
+fields, not refused ones.
 
 Revised 2026-09-19: previously refused "an evaluator threshold outside
 `[0,1]`" and "`mode: route` without a current passing calibration," and said
 the evaluator's "removed `weights` and `code_tiers` fields are refused rather
 than ignored." Those thresholds and the `route` mode are gone (section 10);
 `weights` came back with the composite (decision 56) while `code_tiers`
-stayed out, so only `code_tiers` is still refused.
+stayed out, so only `code_tiers` is still refused. A later pass over the
+same revision removed `mode` outright, including its interim `"observe"`
+value: the composite is advisory only (section 10), so `mode` is now itself
+an unknown field and refused like any other.
 
 **Working agreement.** `AGENTS.md` at the repository root, copied from the
 template the plugin ships. It states the move for each verdict and action. The
@@ -381,13 +384,18 @@ policy and every constructible request digest before network I/O. Each
 attempted model call has its own call record. The measurement holds the draft
 digest, the source (`jev` or `review`), the resolved model, each of the five
 Score dimensions with its level and confidence, the computed composite, which
-veto if any fired, the route and the reason. Section 10 defines them.
+veto if any fired, the suggestion and the reason. Section 10 defines them.
+The suggestion is advisory (section 10): what actually happened is the
+agent's own decision, which the ADR schema's `by` field records separately
+on the decision itself.
 
 Revised 2026-09-19: this was "Evaluation intent, call and result"; the result
 record "applie[d] deterministic gates and name[d] the actual route" over raw
 Noul and Choice answers. Section 10 no longer runs that gate cascade; it
 scores five dimensions and computes one composite in code, so the third
-record now holds a measurement, not a gate result. "The optional evaluator"
+record now holds a measurement, not a gate result, and what it names is a
+suggestion, not a route: a later pass over this same revision corrected an
+early draft that still had the composite deciding. "The optional evaluator"
 became "the evaluator" because section 10 measures every Consequential draft
 from one source or the other; only the source is optional.
 
@@ -474,6 +482,16 @@ missing durable refs, during a pending supersession, with an interrupted
 transaction, or with no commitment started (`cairn: no commitment started; run
 /new-project or /existing-project`), it prints one line naming the command or
 skill that continues and exits 3; none is a verdict.
+
+| Exit code | When | Is it a verdict? |
+|---|---|---|
+| 3 | No project, missing durable refs, a pending supersession, an interrupted transaction, or no commitment started | No; wake names the command or skill that continues instead |
+| 4 | `developer: absent` and the narrow evaluator floor (section 10) names the developer for a Consequential decision | Yes; a real Waiting verdict this run cannot answer, so it stops there (section 5) |
+
+Revised 2026-09-19: new table. Wake had only ever needed one non-zero exit
+code (3, for a state that is not a verdict at all); `developer: absent`
+(section 5) adds a second, for a real Waiting verdict nobody in this run can
+answer.
 
 **Predicate.** The exact record state that completes an action. It is printed
 with the action.

@@ -9,6 +9,7 @@ import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle, guardKernelW
 import { readState, verdictOf, wake, progressMade, progressSummary } from '../lib/wake.mjs';
 import { begin } from '../lib/lease.mjs';
 import { declare } from '../lib/mechanisms.mjs';
+import { preflight, dispose } from '../lib/scope.mjs';
 
 test('the counter lives below the Git directory, counts by class and target, and never travels', async () => {
   const r = await loopRepo();
@@ -93,6 +94,20 @@ test('semantic progress resets the count; a snapshot or record alone does not', 
   const esc = await r.escalate('DEMO-001'); await r.answer(esc, 'ok');      // developer authorizes continuation
   await settle(r.cwd, V('record', 'c'), await readState(r.cwd));
   assert.equal((await (await import('../lib/cycle.mjs')).readCounter(r.cwd)).total, 1);   // reset, then the completion of record b starts the new window
+});
+
+// Fix round 1, item 6: progressSummary's obligations count used to include openBreaches(log), so
+// disposing a scope breach lowered it and progressMade read that as progress -- but the spec's
+// four semantic-progress clauses name a finding, defect or escalation closing, never a scope
+// breach.
+test('disposing a scope breach alone is not semantic progress', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  const before = progressSummary(await readState(r.cwd));
+  await r.remove('src/stray.mjs');
+  await dispose(r.cwd, b, 'restore');
+  assert.equal(progressMade(before, progressSummary(await readState(r.cwd))), false);
 });
 
 // Deviation from the plan text: lib/mechanisms.mjs (plan 05, already committed) stores one JSON

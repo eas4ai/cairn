@@ -643,7 +643,16 @@ D        := decide(c, R*, o1..on, rec, wrong_if, d*)   -- five fields + options 
 state(D) := < process,                                  -- the level rule, the by-construction list,
                                                         --   the safety net, the predicate, ~300 tokens
              D,
-             block(r) for r in R*,                      -- text, falsifier, status, mechanism name
+             section(c) @ c.start,                      -- the commitment's roadmap section, whole:
+                                                        --   what it delivers, its done-when, its
+                                                        --   Requirements: line
+             block(r) for r in reqs(c) + R*,            -- every requirement of the commitment and
+                                                        --   every one the draft cites: text,
+                                                        --   falsifier, status, mechanism name
+             context(r) for r in R*,                    -- the domain file's prose around each cited
+                                                        --   block: its section heading and the
+                                                        --   paragraphs between it and the block
+             glossary(terms(D)),                        -- the glossary entries for terms the draft uses
              decision(d) for d in d*,                   -- the ADR lines it cites
              declaration(m(r)) for r in R*,
              facts,                                     -- touched paths; interface and data hits by
@@ -652,6 +661,13 @@ state(D) := < process,                                  -- the level rule, the b
              open(range(c)),                            -- findings, escalations, in-progress
              code >                                     -- tiered, capped, last
 ```
+
+The commitment's section and its requirement set are always present:
+whose decision this is depends on what the work is for and what done
+means for it, not only on the blocks the draft happens to cite. The
+domain context and glossary entries are bounded by the cited blocks
+and the draft's own words; the keystone is not sent, because the
+commitment section is the part of it that applies.
 
 The code row fills in order until `state_cap_bytes` is spent: the diff
 of the touched paths since the tree in-progress pinned; the whole files

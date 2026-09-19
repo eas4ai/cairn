@@ -374,8 +374,9 @@ supersession has no open range.
 
 **ADR.** `docs/decisions.jsonl`, append-only and kernel-managed. Each line is
 one canonical JSON object written by `cairn decide`, `cairn escalate` when an
-evaluation downgrades, `cairn answer`, `cairn decisions --read`, or `cairn
-realize`. Kinds are `decision`, `realized`, `superseded`, `answered` and `read`.
+evaluation downgrades, `cairn answer`, `cairn decisions --read`, `cairn
+realize`, `cairn supersede`, or `cairn promote`. Kinds are `decision`,
+`realized`, `superseded`, `answered` and `read`.
 A decision carries `by`, `rests_on`, `wrong_if`, `body`, and the workspace
 snapshot from which realization will be measured. A realized line names that
 base and the realized workspace snapshot. A read line names the read record on
@@ -601,7 +602,7 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `calibration` | policy digest, labelled-through log head, predicted-agent count, false-downgrade count, one-sided confidence bound, criterion, `pass|fail` | route-mode validation |
 | `item` | `backlog|next-feature|defect`, slug, source requirement or changed contract, body | capture, Done and next-feature |
 | `outside` | item SHA, reason, optional evaluation SHA | capture gate |
-| `promotion` | item SHA, decision ID | after Done |
+| `promotion` | item SHA, decision ID, intent SHA or null, results | after Done |
 | `fix` | item SHA, `<ws>` | Done |
 | `scope-breach` | path as JSON string, first-observed `<ws>`, allowed-base `<ws>`, declaration-set digest | every wake until disposition |
 | `scope` | breach SHA, `keep|restore`, resulting `<ws>`, escalation and answer SHAs when kept | scope predicate |
@@ -617,8 +618,8 @@ raw response, is represented inside canonical JSON as unpadded base64url.
 
 One canonical JSON object per line in `docs/decisions.jsonl`:
 
-- `{"kind":"decision","id":<ulid>,"ts":...,"level":"Consequential","by":"agent|developer|joint","title":...,"rests_on":[...],"wrong_if":...,"body":...,"base_snap":<ws>,"evaluation":<sha|null>}`
-- `{"kind":"realized","id":<ulid>,"ts":...,"of":<id>,"base_snap":<ws>,"snap":<ws>,"subject":...}`
+- `{"kind":"decision","id":<ulid>,"ts":...,"level":"Consequential","by":"agent|developer|joint","title":...,"rests_on":[...],"wrong_if":...,"body":...,"base_snap":<ws>,"evaluation":<sha|null>,"interfaces":[...]}`
+- `{"kind":"realized","id":<ulid>,"ts":...,"of":<id>,"base_snap":<ws>,"snap":<ws>,"subject":...,"interfaces":[...]}`
 - `{"kind":"superseded","id":<ulid>,"ts":...,"of":<id>,"by":<id>,"cause":"the stated condition occurred|an unforeseen condition occurred|it was wrong when it was made|the premise was false"}`
 - `{"kind":"answered","id":<ulid>,"ts":...,"escalation":<sha>,"answer":<sha>}`
 - `{"kind":"read","id":<ulid>,"ts":...,"of":<id>,"record":<sha>}`
@@ -666,7 +667,10 @@ pre-identities below the Git directory, appends a command-intent, performs the
 ordered writes, and appends a terminal domain record naming that intent. Each
 step is idempotent on the transaction ID and expected old identity; atomic rename
 prevents partial files. Wake names `recover <transaction>` for a nonterminal
-intent before any ordinary action.
+intent before any ordinary action. `cairn promote`'s promotion record is one
+of these ordered writes, a `plan.writes` log descriptor inside the same
+transaction that writes its `start` record, not that transaction's terminal
+record.
 
 Recovery completes forward after any planned append-only write beyond the
 intent or any external effect has occurred. It may instead restore staged

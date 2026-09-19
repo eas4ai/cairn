@@ -284,3 +284,24 @@ test('report is named until a brief and report name the reviewed snapshot with e
   await r.add('report', 'first', { ...log.find((x) => x.sha === rep).payload, interface_attempts: [{ path: 'src/api/index.mjs', text: 'attempted' }] });
   assert.notEqual((await wake(r.cwd)).action, 'report');
 });
+
+test('every finding on the review, report or an acceptance needs a resolution or a dispute; a rejection reopens it', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review([{ n: 1, text: 'builder finding' }]);
+  const rep = await r.report([{ n: 1, text: 'adversary finding' }]);
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  const rev = (await r.log()).find((x) => x.kind === 'review').sha;
+  await r.resolveFinding(rev, 1);
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  assert.match(v.reason, /report/);
+  const res = await r.resolveFinding(rep, 1);
+  assert.equal((await wake(r.cwd)).action, 'accept');
+  await r.accept({ rejected: [res] });
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  await r.escalate(`finding:${rep}#1`);
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+});

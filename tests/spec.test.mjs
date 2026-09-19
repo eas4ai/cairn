@@ -122,6 +122,15 @@ test('S8: lint refuses two blocks with no blank line between them', async (t) =>
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nFalsifier: f\nMechanism: m\nStatus: Draft\n[UI-002] y\nFalsifier: f\nMechanism: m\nStatus: Draft\n' });
   assert.match((await reasons(repo)).join(), /missing blank line before the next requirement block/);
 });
+test('S6: lint checks a reference on the opening line of a block and flags a mistyped prefix', async (t) => {
+  const repo = await specRepo(t, {
+    'ui.md': 'Prefix: UI\n\n[UI-001] See also UI-999 for details.\nFalsifier: --help prints nothing.\nMechanism: cli\nStatus: Observed\n',
+    'glossary.md': 'See LOP-001 for background.\n',
+  });
+  const r = (await reasons(repo)).join();
+  assert.match(r, /docs\/spec\/ui.md:3: reference to absent identifier UI-999/);
+  assert.match(r, /docs\/spec\/glossary.md:1: reference to absent identifier LOP-001/);
+});
 test('lint refuses a missing falsifier', async (t) => {
   const repo = await specRepo(t, { 'ui.md': 'Prefix: UI\n\n[UI-001] x\nMechanism: m\nStatus: Draft\n' });
   assert.match((await reasons(repo)).join(), /UI-001: missing Falsifier:/);

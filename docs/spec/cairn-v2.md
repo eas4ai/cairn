@@ -721,7 +721,7 @@ predicate. The table is normative.
 | `run REQ` | a current receipt carries a result for the requirement |
 | `implement REQ` | a current receipt says pass and review metadata binds the requirement to the current definition and text digests with a fail receipt |
 | `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth |
-| `review mechanism REQ` | review metadata has that binding and fail receipt; no declared product input changed |
+| `review mechanism REQ` | review metadata binds the requirement to the current definition and text digests with a fail receipt |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `review SLUG` | a review names the current workspace snapshot and answers every fixed question for every target |
 | `report SLUG` | a current brief and report name the reviewed snapshot and projection; every question and interface obligation has an attempt |

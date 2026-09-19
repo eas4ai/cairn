@@ -487,3 +487,18 @@ test('brief renders the real roadmap section, not a decoy heading whose title co
   assert.ok(b.text.includes('The real section.'));
   assert.equal(b.text.includes('DECOY TEXT THAT IS NOT THIS COMMITMENT'), false);
 });
+
+// tests/review.test.mjs (fix round 1, item 8)
+test('cliResolve refuses a missing, non-integer or less-than-1 finding number, naming it', async () => {
+  const r = await reported();
+  const abc = await cliResolve(r.cwd, ['first', 'abc', 'why']);
+  assert.deepEqual([abc.code, abc.out], [1, 'cairn: resolve: finding number "abc" must be a positive integer\n']);
+  const zero = await cliResolve(r.cwd, ['first', '0', 'why']);
+  assert.deepEqual([zero.code, zero.out], [1, 'cairn: resolve: finding number "0" must be a positive integer\n']);
+  const frac = await cliResolve(r.cwd, ['first', '1.5', 'why']);
+  assert.deepEqual([frac.code, frac.out], [1, 'cairn: resolve: finding number "1.5" must be a positive integer\n']);
+  const missing = await cliResolve(r.cwd, ['first']);
+  assert.deepEqual([missing.code, missing.out], [1, 'cairn: resolve: finding number (none given) must be a positive integer\n']);
+  const good = await cliResolve(r.cwd, ['first', '1', 'why']);
+  assert.match(good.out, /^cairn: resolution first [0-9a-f]{40}\n$/);
+});

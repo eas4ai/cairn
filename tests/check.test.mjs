@@ -125,3 +125,75 @@ test('product_digest ignores documents', async () => {
   await check(repo.cwd, 'DEMO-001');
   assert.notEqual((await lastReceipt(repo.cwd)).payload.product_digest, a.product_digest);
 });
+
+import { isCurrent, identitiesNow, evidence } from '../lib/check.mjs';
+import { commitTree, readRef, updateRefCAS } from '../lib/gitx.mjs';
+
+test('a fresh receipt is current, and stays current when its output file is absent', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+  await rm(join(repo.cwd, OUTPUT_DIR, rec.payload.output.slice(7)));
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+  const ev = await evidence(repo.cwd, await readLog(repo.cwd), 'DEMO-001');
+  assert.deepEqual([ev.current, ev.result, ev.outputPresent], [true, 'pass', false]);
+});
+
+test('identity 1: the input snapshot tree', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  await repo.write('hello.txt', 'hello there\n');
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false);
+  await repo.write('hello.txt', 'hello\n');
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+});
+
+test('identity 2: the definition digest', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, command: 'node check.mjs --strict' });
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false);
+});
+
+test('identity 3: the requirement text digest', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  const spec = await readFile(join(repo.cwd, 'docs/spec/demo.md'), 'utf8');
+  await repo.write('docs/spec/demo.md', spec.replace('prints anything other than hello', 'prints anything but hello'));
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false);
+});
+
+test('identity 4: the observed declared execution identity', async () => {
+  const repo = await declared();
+  delete process.env.CAIRN_FIXTURE_ENV;
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  process.env.CAIRN_FIXTURE_ENV = 'changed';
+  try { assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false); } finally { delete process.env.CAIRN_FIXTURE_ENV; }
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+});
+
+test('identity 5: a readable schema', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  const c = await catCommit(repo.cwd, rec.sha);
+  const trailers = c.trailers.map(([k, v]) => [k, k === 'Cairn-Schema' ? '2' : v]);
+  const head = await readRef(repo.cwd, 'refs/cairn/log');
+  const sha = await commitTree(repo.cwd, { tree: c.tree, parents: [head], subject: c.subject, body: c.body, trailers });
+  await updateRefCAS(repo.cwd, 'refs/cairn/log', sha, head);
+  assert.equal(await isCurrent(repo.cwd, { sha, payload: rec.payload }, 'DEMO-001'), false);
+});
+
+test('isCurrent accepts precomputed identities and refuses another requirement', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  const now = await identitiesNow(repo.cwd, 'DEMO-001');
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001', now), true);
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-002', now), false);
+});

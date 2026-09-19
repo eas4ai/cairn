@@ -8,7 +8,7 @@ import { loopRepo } from './helpers/loop.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
-import { wake, FETCH_LINE, ORDER } from '../lib/wake.mjs';
+import { wake, FETCH_LINE, ORDER, readState, verdictOf } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
 
@@ -188,4 +188,14 @@ test('a dirty declared input is record without a lease, commit when the lease do
   await end(r.cwd);
   await r.commit('clean');
   assert.notEqual((await wake(r.cwd)).action, 'record');
+});
+
+test('declare is named for the first set requirement no definition names', async () => {
+  const r = await loopRepo({ reqs: ['DEMO-001', 'DEMO-002'] });
+  assert.notEqual((await wake(r.cwd)).action, 'declare');                   // the fixture declares every requirement it starts
+  const st = await readState(r.cwd);
+  st.set = [...st.set, { requirement: 'DEMO-003', text_digest: 'sha256:' + '0'.repeat(64) }];
+  const v = await verdictOf(st);
+  assert.deepEqual([v.action, v.target], ['declare', 'DEMO-003']);
+  assert.equal(v.predicate, 'a mechanism definition names the requirement and no pre-existing undeclared delta was legalized');
 });

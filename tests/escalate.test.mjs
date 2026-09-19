@@ -28,6 +28,21 @@ test('each of the five fields must be one non-empty line', () => {
   }
 });
 
+// Fix round 1 finding 8 (plan 09 review): BAD_CHARS blocked C0 controls and DEL but not U+0085
+// (NEL), U+2028 (LINE SEPARATOR), U+2029 (PARAGRAPH SEPARATOR) or the other C1 controls
+// (U+0080-U+009F), so a "one non-empty line" field could carry a Unicode line terminator the
+// terminal renders as a line break. A tab still survives (Task 8's own byte-for-byte test), and
+// an ordinary Unicode character that is not a line terminator, such as U+00A0 (non-breaking
+// space), still validates -- only line-breaking code points are refused.
+test('a Unicode line terminator (NEL, LINE SEPARATOR, PARAGRAPH SEPARATOR) or another C1 control is refused; a tab and an ordinary Unicode character still validate', () => {
+  for (const f of ['question', 'recommendation', 'because', 'if_wrong', 'instead']) {
+    for (const ch of ['\u0085', '\u2028', '\u2029', '\u0090']) {
+      assert.throws(() => validateDraft(draft({ [f]: `one${ch}line` })), DraftError, `${f} with U+${ch.codePointAt(0).toString(16)}`);
+    }
+    assert.equal(validateDraft(draft({ [f]: 'a\ttab and a\u00a0non-breaking space' }))[f], 'a\ttab and a\u00a0non-breaking space');
+  }
+});
+
 test('unknown keys, missing keys, an empty concern list and malformed tokens are refused', () => {
   assert.throws(() => validateDraft({ ...draft(), score: 1 }), /unknown field score/);
   const d = draft(); delete d.options;

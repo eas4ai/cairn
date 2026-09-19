@@ -1212,134 +1212,202 @@ The cost is one adversary per commitment plus bounded acceptance rounds. A
 mechanism that passes without the behavior may survive until Done; the
 fail-receipt rule and Q1 output reduce, but do not remove, that gap.
 
-## 10. The evaluator: up to two optional calls at Consequential
+## 10. The evaluator: a composite measurement at Consequential
 
-The optional evaluator asks whether a Consequential draft can remain the
-agent's decision. It is off by default and shadowed until calibrated. Code owns
-every authority boundary. Only `bin/typesafeai.mjs` sends requests; it reads
-`TYPESAFEAI_API_KEY` from the environment and never stores it.
+At a Consequential decision the agent drafts its choice. The evaluator is a
+measurement the agent takes of that draft to check its own judgment before it
+decides. It is not a second decision-maker, an advisor the agent must obey, or
+a review queue: the agent still decides, informed by the measurement, except
+at the narrow floor below, when a veto fires, or when the agent itself chooses
+to escalate after reading the measurement (section 5). Code owns every
+authority boundary in both measurement paths this section defines below.
 
-### The code envelope
+Revised 2026-09-19: this section previously ran up to two model calls per
+draft, an option-gate Noul cascade and then a separate owner Choice call, and
+defaulted to shadow mode, where authority never left the developer even when
+every gate passed. `.superpowers/bench/results.md` ran that design live: 0 of
+12 agent-expected drafts reached the agent, because the `sufficient` gate
+alone rejected every one; the developer called this ritual assent and said
+the evaluator's point was "to give the coding model a gut check or additional
+evaluation capability to be able to measure the decision." This revision
+replaces the gate cascade with the composite scoring in
+`.superpowers/bench/composite-design.md` (0.895 route accuracy in the same
+benchmark), makes the agent's own judgment, checked by the measurement, the
+decision by default, and adds a second measurement source so the design still
+works with `typesafeai.enabled: false`, which is what the developer wants
+"to be able to use Cairn in an autonomous benchmark."
 
-The first matching rule wins. Missing or invalid facts fail closed. Nouls are
-gates, not weights.
+### The narrow floor
 
-```
-protected(D)      -- data, contract, agreement, reserved/settings write,
-                  -- fourth attempt, scope ruling, missing recommendation,
-                  -- or incomplete authority projection
-                  -> developer, no call
-request too large -> developer, no call (unavailable oversize)
-call fails        -> developer (unavailable <class>)
-invalid answer    -- bad schema/type/range or invalid Choice distribution
-                  -> developer (unavailable invalid)
-sufficient        < sufficient_threshold -> developer
-outside_rec       >= outside_threshold    -> capture recommended option
-contradicts_rec   >= contradicts_ceiling  -> developer
-reversible_rec    < reversible_floor      -> developer
-observed          < observed_floor        -> developer
-owner = agent and confidence(owner) >= route_confidence
-                  -> agent: write and queue the Consequential decision
-otherwise         -> developer: write and hold the escalation
-```
+Before any call, code checks a floor that needs no model judgment: a draft
+whose recommended option would change an Agreed requirement's text or its
+falsifier, would change the working agreement, or touches data that cannot be
+regenerated routes to the developer without a call. Reserved and
+protected-path writes, the fourth-attempt rule and scope rulings are
+unaffected: they are already enforced by section 2 and section 5 independent
+of this floor, so narrowing the floor to these three does not relax them.
 
-Option gates may veto but never grant agent authority. Interface changes go to
-adversarial review; section 8 still checks the realized delta.
+A draft code cannot build a request for also gets no call: a missing
+recommendation, an incomplete authority projection, a request over
+`request_cap_bytes`, a failed call, or an invalid answer route to the
+developer as `unavailable <class>`.
 
-### Inputs and questions
+### Score dimensions and the composite
 
-The canonical draft and two request states are:
+One request per draft answers all five Score questions below, each naming a
+concrete state field. `evidence` and `ambiguity` read the whole draft;
+`reach`, `contract` and `surface` read only the recommended option,
+`draft.options[draft.recommendation]`.
 
-```
-D := < commitment, concerns, question, recommendation, because, if_wrong,
-       instead, options, named_paths, cited_decisions >
-C(c) := < rule; start keystone, commitment and glossary; frozen requirements;
-          cited decisions written by the developer (by: developer) >
-A(D) := < validated concern/requirement ids; option index/count; path-category
-          counts/known flags; protected facts; attempts; open obligations;
-          for each cited agent-written decision: its id and whether it is read >
-owner_state(D) := < D's five fields and options, C(c), A(D) >
-option_state(D) := < rule, D, C(c), bounded domain/decision/mechanism context,
-                     kernel facts, open obligations, code >
-```
+| Dimension | State field | Levels 0-4 |
+|---|---|---|
+| evidence | `draft.because` | 0 none; 1 a claim; 2 names a command or file; 3 quotes output or a diff; 4 quotes output and names the test that fails and the falsifier it maps to |
+| reach | recommended `draft.options[n]` | 0 wording or message text; 1 internal structure, nothing visible; 2 behavior inside an agreed requirement; 3 output or flags existing callers depend on; 4 data that cannot be regenerated, a migration, or a rewrite of user files |
+| contract | recommended `draft.options[n]` | 0 implements the cited requirement as written; 1 chooses between readings the text allows; 2 adds behavior no requirement names; 3 conflicts with a cited decision; 4 changes a requirement's text or falsifier |
+| surface | recommended `draft.options[n]` | 0 no new surface; 1 a new file or module; 2 a new flag or output; 3 a new dependency; 4 a network call, credential, or external service |
+| ambiguity | `draft.question` | 0 one reading, the draft names it; 1 two readings, the draft picks one with a reason; 2 two readings, no reason; 3 the question asks the developer to choose a policy; 4 the question cannot be answered without facts the draft lacks |
 
-The kernel resolves every reference. `A(D)` is a closed JSON authority
-projection of validated IDs, enums, booleans and counts. Owner state carries
-the draft's five fields and options, the agent's own words and the thing
-judged, and beyond them no agent prose, code, paths, outputs, findings or
-agent-authored ADR bodies: a cited decision the agent wrote reaches the owner
-call only as an id and a read flag in `A(D)`, whether or not the developer has
-read it. The five fields are untrusted; the option gates run first and veto,
-and calibration measures what the owner answer does with them. If
-`A(D)` is incomplete, no owner call occurs. The developer-authorized contract
-is its trust boundary. Option state may contain untrusted content because it can
-only veto or capture.
+Code, not the model, computes what happens next from the five levels and
+confidences:
 
-Option code is the snapshot's action-lease diff and complete touched files in
-path order. Reads do not follow symlinks. The budget adds whole files, lists
-omissions and has no tier. The option fan-out runs first; the owner call runs
-only after every option gate passes.
+- Veto: `reach >= 4`, `contract >= 3` or `surface >= 3` on the recommended
+  option routes to the developer regardless of weights; the three are
+  checked in that order and the measurement records which one decided it.
+  The floor above is code-certain and needs no call; the veto is what the
+  model itself flags after scoring, so the two catch different risks and
+  neither substitutes for the other.
+- Otherwise, composite is the weighted mean of the five levels over 4, with
+  evidence counted as `(4 - level)` so more evidence lowers the composite:
+  `composite = sum(weight_d * level_d / 4)` over evidence, reach, contract,
+  surface and ambiguity.
+- The agent may decide when `composite <= agent_ceiling` and every
+  dimension's confidence meets its `confidence_floors` entry; the draft
+  routes to the developer in every other case.
+- `weights`, `agent_ceiling` and `confidence_floors` live in
+  `typesafeai` settings and in the policy digest (section 2); a change to
+  any of them resets calibration.
+- The five raw levels and their confidences are the evaluator assistance the
+  agent sees; the composite is printed beside them, never in place of them,
+  which is decision 51's original transparency intent carried into the
+  composite it once excluded.
 
-| Call | ID | Type | Question |
-|---|---|---|---|
-| option | `sufficient` | Noul | Does the state suffice for every option gate? |
-| option | `reversible_n` | Noul | Can option n be reverted without migration, data repair or caller change? |
-| option | `contradicts_n` | Noul | Does option n contradict the frozen contract or a cited decision? |
-| option | `outside_n` | Noul | Is option n outside the frozen requirement set? |
-| option | `observed` | Noul | Does `because` cite an observed command, path or output? |
-| owner | `owner` | Choice | Do closed facts assign this to `agent` or `developer`? |
+### Two sources
 
-No named path means unknown. Records keep every raw answer and the owner
-distribution; there is no score. The input identity is `(workspace tree, log
-head, ADR digest, draft digest, settings digest)`, anchored by a workspace
-snapshot. Equal identity and policy digest must yield byte-identical requests;
-answers may differ.
+The measurement comes from one of two sources, chosen by settings, both
+answering the same five dimensions in the same shape:
+
+- `jev`: when `typesafeai.enabled`, `bin/typesafeai.mjs` is the one file that
+  sends the request. It reads `TYPESAFEAI_API_KEY` from the environment and
+  never stores it. It retries a `408`, `429` or `5xx` response up to two
+  extra attempts, with exponential backoff from a 500ms base capped at 5s
+  and 25% jitter, honoring a `Retry-After` response header capped at 60s;
+  every request carries a default timeout, classified as its own failure
+  class distinct from a network failure. A request that exhausts its
+  retries or times out is one failed call, `unavailable <class>`, never a
+  silent retry past that bound.
+- `review`: otherwise, the agent starts the harness's configured review
+  model, the adversary model named in `settings.harness` for the running
+  harness, exactly as `cairn brief` starts the adversary: through the
+  harness, with none of the agent's own conversation context, answering the
+  same five dimensions in the same shape as `jev` would. The launch
+  instruction and the resolved model are recorded the way a report already
+  records them. When no harness can be detected, the draft is
+  `unavailable <class>` and routes to the developer like any other
+  technical no-call.
+
+State sent to either source carries no policy prose: every question in the
+table above names one concrete field, never a paraphrase of a setting or an
+explanation of what a route means.
+
+### State sent to the model
+
+The draft is unchanged: `D := <commitment, concerns, question,
+recommendation, because, if_wrong, instead, options, named_paths,
+cited_decisions>`. The measurement state is `M(D) := <D's five narrative
+fields, the recommended option, C(c), A(D)>`, where `C(c)` is the rule text,
+start keystone, commitment and glossary, frozen requirements, and developer-
+written cited decisions (`by: developer`), and `A(D)` is the closed JSON
+authority projection of validated IDs, enums, booleans and counts the old
+owner call used. Beyond `D`, `C(c)` and `A(D)`, no agent prose, code, paths,
+outputs, findings or agent-authored ADR bodies reach either source: a cited
+decision the agent wrote reaches the call only as an id and a read flag in
+`A(D)`, whether or not the developer has read it. The five narrative fields
+are untrusted; the floor and veto run on code-known facts and on the model's
+own dimension answers, never on prose the model was asked to trust. If
+`A(D)` is incomplete, no call occurs (the narrow floor's technical case
+above).
+
+The recommended option's code is the snapshot's action-lease diff and
+complete touched files in path order; reads do not follow symlinks. The
+input identity is `(workspace tree, log head, ADR digest, draft digest,
+settings digest)`, anchored by a workspace snapshot. Equal identity and
+policy digest must yield byte-identical requests to either source; answers
+may differ.
 
 ### Limits and failure
 
-Jev 1.13 permits 64k request tokens and 32k for state plus longest question.
-The kernel enforces `request_cap_bytes`, estimates three bytes per token and
-refuses above 75% of either limit. An API context error also routes to the
-developer.
+`jev-1.13.0` permits 64k request tokens and 32k for state plus the longest
+question; the kernel enforces `request_cap_bytes`, estimates three bytes per
+token, and refuses above 75% of either limit before sending. The review
+source's request is the harness's own message; the no-policy-prose and
+named-field rules above still bind it, and Cairn does not separately cap its
+size beyond the state it sends.
 
 Requests omit `network_exclude`, credential and host bytes, keys and command
-output. A would-be inclusion is not sent; only `unavailable excluded` and its
-path class are recorded.
+output regardless of source. A would-be inclusion is not sent; only
+`unavailable excluded` and its path class are recorded.
 
-Every enabled draft gets an intent and final evaluation. The intent precedes
-I/O and fixes request digests; a no-call digest is null. Each attempted call
-records its digest, resolved model, raw outcome, parsed answer and usage before
-routing. An unknown crash outcome becomes `indeterminate`, is not retried and
-routes to the developer. Separate records preserve every possible call order.
+Every measured draft gets an intent before any call; the intent precedes
+network I/O and fixes request digests, so a crash can be recovered (section
+4). Each attempted call records its digest, resolved model, raw outcome,
+parsed answer and usage before routing. An unknown crash outcome becomes
+`indeterminate`, is not retried, and routes to the developer.
 
-### Record, shadow mode and calibration
+### Record, observe mode and calibration
 
-The final evaluation names its intent and calls, gate values in order, route and
-deciding rule. The resulting record points back. Shadow is the default: actual
-authority stays with the developer and `would_route` stores the hypothetical
-route. The developer labels ownership `agent`, `developer` or `unknown`; only
-the first two calibrate.
+The final measurement names its intent and call, the five dimension levels
+and confidences, the computed composite, which veto if any fired, the route
+and the reason. The resulting record points back to both.
 
-The policy digest covers model, schemas, questions, request construction, code
-rule, envelope, router, thresholds, caps and egress; a change resets calibration.
-`cairn calibrate` uses matching valid shadow results. Its denominator is labelled
-cases predicted `agent`; a false downgrade is one labelled `developer`. The
-one-sided 95% exact binomial upper bound must meet both configured limits. The
-default permits zero errors among 60 predicted-agent cases at 5%; thirty total
-drafts cannot pass.
+Live measurement is the default: when no floor and no veto apply, the agent
+decides per the composite and confidence floors above, and the measurement
+record is what makes an autonomous run scoreable afterward.
+`typesafeai.mode: "observe"` is the only other value: an explicit, stated
+setting that runs the same measurement and records the same fields but never
+lets the composite route to the agent, so it is fit only for collecting
+calibration data, never for live operation. The developer labels a recorded
+measurement's outcome `agent`, `developer` or `unknown`; only the first two
+calibrate. `developer: absent` does not change any of this; it only removes
+the developer as a destination once the floor or a veto names one (section
+5).
 
-Route mode requires matching passing calibration. Unread Consequential decisions
-at Done disable calls next commitment until read. Either case routes to the
-developer without editing settings. Supersessions are not labels.
+The policy digest covers model, schemas, questions, request construction,
+the narrow floor, the veto rule, `weights`, `agent_ceiling`,
+`confidence_floors`, caps and egress; a change to any of them resets
+calibration. `cairn calibrate` uses matching valid `observe`-mode and live
+measurements labelled by the developer. Its denominator is labelled cases
+predicted `agent`; a false downgrade is one labelled `developer`. The
+one-sided 95% exact binomial upper bound on the false-downgrade rate is a
+kernel constant, not a setting, fixed at 5%; the sample floor is
+`min_calibration_agent_predictions` (default 60) predicted-agent cases.
+Calibration tunes `weights`, `agent_ceiling` and `confidence_floors`; it does
+not gate whether the agent may decide, because gating live routing behind a
+calibration pass is what produced zero agent routing under the superseded
+design. Unread Consequential decisions at Done disable the evaluator next
+commitment until read, routing every draft to the developer without editing
+settings. Supersessions are not labels.
 
 ### Falsifiers
 
-The contract is falsified by: a missing final evaluation, prior intent or call
-record; untrusted owner state; nondeterministic requests; a bad answer that
-permits capture or agent routing; an agent route past a failed gate; route mode
-without matching calibration or with the wrong denominator; a retried or
-invented ambiguous result; Cairn egress of excluded bytes; an accepted protected
-realization; or weights, scores or code tiers affecting routing or settings.
+The contract is falsified by: a missing measurement, prior intent or call
+record for a measured draft; untrusted state reaching either source; policy
+prose, rather than a named state field, reaching a question; nondeterministic
+requests at equal identity and policy digest; an agent route on a draft the
+narrow floor should have caught; an agent route on a draft carrying a veto; a
+composite computed anywhere but code, from anything but the recorded
+dimension levels; a retried or invented ambiguous result; Cairn egress of
+excluded bytes to either source; an accepted protected realization; or a
+calibration record whose denominator is not labelled predicted-agent cases.
 
 ## 11. Distribution
 

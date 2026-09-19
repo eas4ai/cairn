@@ -104,3 +104,14 @@ test('loadSettings reads .cairn/settings.json, checks remotes, and digests the c
   await repo.write('.cairn/settings.json', '{ not json');
   await assert.rejects(loadSettings(repo.dir), /not valid JSON/);
 });
+
+import { mkdir } from 'node:fs/promises';
+import { join as pathJoin } from 'node:path';
+
+test('Q6: loadSettings reports a non-ENOENT read error with its code and the relative path', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await mkdir(pathJoin(repo.dir, '.cairn/settings.json'), { recursive: true });
+  await assert.rejects(loadSettings(repo.dir), (e) => e instanceof SettingsError
+    && e.reasons.some((r) => r.includes('EISDIR') && r.includes('.cairn/settings.json'))
+    && !e.reasons.some((r) => /run cairn init/.test(r)));
+});

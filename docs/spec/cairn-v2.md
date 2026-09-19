@@ -110,6 +110,7 @@ one.
 | Mechanism (`.cairn/mechanisms/<name>`) | agent | kernel | every check and wake |
 | Receipt (`.cairn/evidence/`) | kernel | kernel; developer when asking what was proven | every wake |
 | Review and report (`.cairn/reviews/`) | kernel, from `cairn review` and `cairn report` | kernel (open findings, carry); developer at Done | before Done |
+| Adversary's record (`.cairn/reviews/<slug>.<stage>.md`) | kernel, from `cairn report --stage` | kernel (exists at HEAD; every attempt answered); developer at Done | at each of the three points in section 9 |
 | Decision (`docs/decisions/`) | kernel, from `cairn decide` | developer (the queue); kernel (realized, superseded) | Consequential and Blocking only |
 | Escalation (`.cairn/escalations/`) | kernel, from `cairn escalate` and `cairn answer` | developer, once; kernel (open or answered) | when raised |
 | Item (`.cairn/backlog/`, `.cairn/next-feature/`) | kernel, from `cairn item` | kernel (promotion, deferral, defects); developer in next-feature | at Done and in next-feature |
@@ -139,7 +140,9 @@ notation from the 1.x README, made per-action:
 | Action | Complete when |
 |---|---|
 | `run REQ` | a receipt for REQ exists at HEAD and is current; the receipt is committed |
-| `implement REQ` | as run, and the result is pass |
+| `implement REQ` | as run, the result is pass, and the receipt carries a tried line |
+| `attack mechanism REQ` | an adversary's record for the mechanism exists at HEAD and the review answers each attempt |
+| `attack implement REQ` | an adversary's record for the change exists at HEAD and the review answers each attempt |
 | `declare REQ` | a committed mechanism names REQ |
 | `record PATH` | `.cairn/in-progress` names the action, or PATH is clean at HEAD |
 | `commit PATH` | PATH is clean at HEAD |
@@ -248,7 +251,46 @@ beside it but ignored by Git, and the receipt names its digest, so a
 missing or altered output is detectable and a repository does not grow
 by the size of its test logs.
 
-## 9. Distribution
+## 9. Self-evaluation and adversarial review
+
+The loop takes the agent's word at three points before Done: that a
+falsifier is observable, that a mechanism fails for the right reason,
+and that a change makes its falsifier unreachable. At each, Cairn 2
+asks for two records: the builder's claims, and an adversary's attempts
+to break them. The agent starts the adversary itself, a subagent with
+none of its context, the way it starts the independent reviewer; Cairn
+checks that the records exist at HEAD and answer each other.
+
+The claims are answers to fixed questions. Every answer names an
+observation (a command, a path, an output) or says "not checked".
+"Confident" is not an answer. The adversary's record is a list of
+attempts, each with what was tried and what happened, never an opinion.
+The builder answers each attempt by name, as it carries a report's
+findings.
+
+| Point | The builder's claims | The adversary's brief | Record |
+|---|---|---|---|
+| Falsifiers proposed (spec phases) | each falsifier names the mechanism that observes it | write a command that satisfies this falsifier without the behavior; name two falsifiers that contradict | the commitment file's review-before-agreement section, and the adversary's record beside it |
+| A mechanism is new or changed | what violating example was tried, what the check printed, why the failure was the stated reason and not a setup error | make it pass without the behavior; make it fail for a setup reason; find an input it reads that it does not declare | `cairn check --tried "<example>: <result>"` on the receipt; `cairn report --stage mechanism REQ` |
+| `implement` completes | why the falsifier is now unreachable; what else the change touched that no check covers | reach the falsifier with an input; find a touched path the claim omits | `cairn review --claim ...` on the review; `cairn report --stage implement REQ` |
+| Done | the builder's review: what could be wrong that every check would pass; what was not tested | the independent report, as in 1.x, now answering each claim by name | `cairn review`, `cairn report` |
+
+The wake names the missing half: `attack mechanism REQ` when a
+mechanism's receipt carries a tried line and no adversary's record
+answers it at HEAD; `attack implement REQ` likewise for a change. A pass
+with no tried line does not count for `implement`. An attempt the
+builder has not answered is an open finding.
+
+One adversary per point per commitment, not per round. The 1.x cost
+came from a full review on every commit; this asks three narrow
+questions once each, and the adversary's input is the claim, not the
+diff.
+
+What the kernel cannot check remains what it could not check in 1.x:
+that the adversary was a different agent. The record's shape is the
+evidence: attempts a builder would not have made against itself.
+
+## 10. Distribution
 
 One plugin: the command, two hooks, four skills (`install-cairn`,
 `new-project`, `existing-project`, `next-feature`). Manifests for Claude
@@ -260,7 +302,7 @@ The kernel keeps a line ceiling. Its value is set when the kernel
 exists, from what the seven ideas need, and it is not raised inside a
 commitment.
 
-## 10. Removed from 1.x
+## 11. Removed from 1.x
 
 - The autonomy and Jev modes (AUTO-001 to AUTO-018): Agreed, never
   built, never checked. Not carried.
@@ -280,7 +322,7 @@ commitment.
   are written, identifier by identifier, so the developer rules on
   specifics.
 
-## 11. Decisions in this draft the developer may reverse
+## 12. Decisions in this draft the developer may reverse
 
 1. A defect from the commitment's own requirement is worked, not
    captured (section 8, Deferral).
@@ -293,8 +335,12 @@ commitment.
 6. Command output lives outside Git (section 8, Evidence).
 7. The version is 2.0.0 and the branch is `v2` in this repository; the
    1.x line is archived at cutover.
+8. Adversarial review happens at three points per commitment, once
+   each, and the agent starts the adversary (section 9).
+9. A mechanism's pass counts for `implement` only with a tried line on
+   its receipt (section 9).
 
-## 12. Next steps
+## 13. Next steps
 
 1. The developer corrects this document and the five digraphs.
 2. The requirements are written from it, each with a falsifier and the

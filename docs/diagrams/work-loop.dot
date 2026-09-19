@@ -18,6 +18,8 @@ digraph work_loop {
 
   // Resolvable: one action, until its predicate holds
   act [label="Do the named action\nuntil its predicate holds\n(the table below)"];
+  claim [label="Self-evaluate: record the claims,\neach naming an observation or 'not checked'\n(tried line, review claims)"];
+  adversary [label="At the three points: start an adversary\nwith none of the context; give it the claims;\ncairn report --stage; answer each attempt"];
   trace [label="Leave the trace:\ncommit, receipt, or record"];
   cannot [shape=diamond, label="Cannot act on it?"];
   escalate [label="cairn escalate\nwith the evidence; stop"];
@@ -34,7 +36,9 @@ digraph work_loop {
       <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Prove the requirement</I></TD></TR>
       <TR><TD ALIGN="LEFT">declare REQ</TD><TD ALIGN="LEFT">a committed mechanism names REQ</TD></TR>
       <TR><TD ALIGN="LEFT">run REQ</TD><TD ALIGN="LEFT">receipt(REQ).commit = HEAD and current(m, REQ); the receipt is committed</TD></TR>
-      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">as run, and result = pass</TD></TR>
+      <TR><TD ALIGN="LEFT">implement REQ</TD><TD ALIGN="LEFT">as run, result = pass, and the receipt carries a tried line (the violating example and what the check printed)</TD></TR>
+      <TR><TD ALIGN="LEFT">attack mechanism REQ</TD><TD ALIGN="LEFT">an adversary's record for the mechanism exists at HEAD; the review answers each attempt</TD></TR>
+      <TR><TD ALIGN="LEFT">attack implement REQ</TD><TD ALIGN="LEFT">an adversary's record for the change exists at HEAD; the review answers each attempt</TD></TR>
       <TR><TD ALIGN="LEFT">review mechanism REQ</TD><TD ALIGN="LEFT">reviewed(m) carries REQ H(text(REQ)), committed; no code changed</TD></TR>
       <TR><TD ALIGN="LEFT">escalate REQ</TD><TD ALIGN="LEFT">three attempts without a pass: an escalation names REQ</TD></TR>
       <TR><TD ALIGN="LEFT" COLSPAN="2" BGCOLOR="#f7f7f7"><I>Review before Done</I></TD></TR>
@@ -59,8 +63,11 @@ digraph work_loop {
   verdict -> stop [label="Done"];
   verdict -> act [label="Resolvable"];
   act -> cannot;
-  cannot -> trace [label="no"];
+  cannot -> claim [label="no"];
   cannot -> escalate [label="yes"];
+  claim -> adversary [label="mechanism, implement, Done"];
+  claim -> trace [label="other actions"];
+  adversary -> trace;
   trace -> wake;
   escalate -> wake;
   act -> actions [style=dashed, arrowhead=none];

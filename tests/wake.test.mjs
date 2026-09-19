@@ -8,7 +8,7 @@ import { loopRepo } from './helpers/loop.mjs';
 import { git } from '../lib/gitx.mjs';
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
-import { wake, FETCH_LINE, ORDER, readState, verdictOf } from '../lib/wake.mjs';
+import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES } from '../lib/wake.mjs';
 import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
 
@@ -198,4 +198,20 @@ test('declare is named for the first set requirement no definition names', async
   const v = await verdictOf(st);
   assert.deepEqual([v.action, v.target], ['declare', 'DEMO-003']);
   assert.equal(v.predicate, 'a mechanism definition names the requirement and no pre-existing undeclared delta was legalized');
+});
+
+test('no current receipt is run; a current fail is implement; three attempts make escalate', async () => {
+  const r = await loopRepo();
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['run', 'DEMO-001']);
+  await r.failReq('DEMO-001');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target, v.predicate], ['implement', 'DEMO-001', PREDICATES.implement]);
+  for (const body of ['a', 'b']) { await r.write('src/demo.mjs', `// ${body}\n`); await r.failReq('DEMO-001'); }
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['escalate', 'DEMO-001']);
+  const esc = await r.escalate('DEMO-001');
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+  await r.answer(esc, 'ok');
+  assert.equal((await wake(r.cwd)).action, 'implement');
 });

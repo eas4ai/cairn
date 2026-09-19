@@ -368,6 +368,22 @@ test('every finding on the review, report or an acceptance needs a resolution or
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
 
+// Fix round 1, item 9(a): a second rejection of resolutions for the same finding names 'escalate'
+// itself, not just a longer 'resolve' reason.
+test('a second rejection of a resolution for the same finding escalates', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  const rep = await r.report([{ n: 1, text: 'finding' }]);
+  const res1 = await r.resolveFinding(rep, 1);
+  await r.accept({ rejected: [res1] });
+  const res2 = await r.resolveFinding(rep, 1);
+  await r.accept({ rejected: [res2] });
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['escalate', 'first 1']);
+  assert.equal(v.predicate, 'an escalation concerns the finding');
+});
+
 test('post-report resolutions or a changed workspace need an acceptance at the current snapshot', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');

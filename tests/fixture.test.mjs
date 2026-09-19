@@ -45,6 +45,13 @@ test("the CLI registers every flag the fixture uses", () => {
 // not just this fixture's. Not fixed here (lib/travel.mjs is off limits to this plan); left
 // failing here as its own isolated test so it does not block the rest of the fixture, which never
 // calls wake() again until after `cairn start` has actually run.
+//
+// Fixed by the kernel fix round named in the plan 14 report's own follow-up: wake() no longer
+// calls validateAfterFetch on its ordinary path (lib/wake.mjs), and validateAfterFetch itself no
+// longer reads a Current: line with no start record anywhere in the log -- the ordinary
+// spec-phase state this test builds -- as a dangling reference (lib/travel.mjs). This test's own
+// assertions already named the correct behavior, not the defect, so no expected value changed;
+// it now passes.
 test("kernel defect: wake demands a nonsensical push before the roadmap's Current: commitment ever starts", async () => {
   const p = buildProject();
   await p.developer.init();

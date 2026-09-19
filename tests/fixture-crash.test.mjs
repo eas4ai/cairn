@@ -57,15 +57,17 @@ for (const [name, cfg, expectForward] of [
     assert.ok(intent, "an intent record exists");
     const w = await wake(p.dir);
     assert.equal(w.exit, 3);
-    // Kernel defect found by this fixture (same root cause as tests/fixture.test.mjs's isolated
-    // "wake demands a nonsensical push" test, recorded in the plan 14 report): the crash always
-    // happens during `cairn start`, before its terminal 'start' record lands, so the roadmap's
-    // Current: line still names a commitment with no matching start record. lib/wake.mjs's
-    // 'recover' predicate is checked first in ORDER, but lib/travel.mjs's validateAfterFetch runs
-    // even earlier, inside wake() itself, and its own Current:-vs-start check wins every time,
-    // masking the real "cairn recover <tx>" guidance behind the same wrong "cairn push" line.
-    // recover() itself does not depend on wake() and is exercised directly below regardless.
-    assert.match(w.line, /^cairn push {2}\(in the clone that wrote the start record for fixture\)$/);
+    // Kernel fix round (plan 14 fixture, defect 1): this used to assert the defect directly (same
+    // root cause as tests/fixture.test.mjs's isolated "wake demands a nonsensical push" test,
+    // recorded in the plan 14 report) -- the crash always happens during `cairn start`, before its
+    // terminal 'start' record lands, so the roadmap's Current: line still names a commitment with
+    // no matching start record, and lib/travel.mjs's validateAfterFetch (called unconditionally
+    // inside wake() on every ordinary call) read that as a dangling reference and masked the real
+    // "cairn recover <tx>" guidance behind a nonsensical "cairn push" line. Fixed two ways: wake()
+    // no longer calls validateAfterFetch on its ordinary path, and validateAfterFetch itself no
+    // longer reads a Current: line with no start record anywhere in the log (the ordinary
+    // spec-phase state) as dangling. wake() now correctly names the pending recovery.
+    assert.equal(w.line, `cairn recover ${intent.target}`);
     const out = await recover(p.dir, intent.target);
     const kinds = (await p.kinds());
     if (expectForward) {

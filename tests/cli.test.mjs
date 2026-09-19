@@ -588,3 +588,20 @@ test('cairn push exits 0 with one line; a refusal exits 1 with a cairn: line', a
   assert.equal(bad.code, 1);
   assert.equal(bad.err, 'cairn: no authority remote; the durable refs stay local\n');
 });
+
+// Kernel fix round (plan 14 fixture, defect 1, ruling A): section 4's after-fetch
+// cross-reference validation is no longer run on wake's ordinary path (see lib/wake.mjs's wake()
+// and its own comment); this is the other of its two real call sites -- cairn show
+// (requireRefs), which is exactly the command an operator reaches for to inspect a record's own
+// cross-references. A dangling reference is now named with a clean repair line instead of a raw
+// failure from resolving the missing object.
+test('cairn show refuses naming the repair when a cross-reference is dangling', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await appendRecord(repo.dir, 'escalation', 'first', {
+    slug: 'first', question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i', concerns: 'c', evaluation: '0'.repeat(40),
+  });
+  const r = await run(['show', 'a'.repeat(40)], repo.cwd);
+  assert.equal(r.code, 3);
+  assert.match(r.out, /^cairn: a cross-reference is unresolved; run: cairn push/);
+});

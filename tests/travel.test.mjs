@@ -247,6 +247,13 @@ describe('validateAfterFetch', () => {
     const { cwd } = await started();
     assert.deepEqual(await validateAfterFetch(cwd), []);
   });
+  // Kernel fix round (plan 14 fixture, defect 1, ruling B): the ordinary spec-phase state --
+  // Current: already names the roadmap section about to start, but no start record exists yet
+  // anywhere in the log -- is not a dangling reference and must report no repair.
+  test('a roadmap Current: line with no start record anywhere yet is the spec-phase state, not a repair', async () => {
+    const { cwd } = await project();
+    assert.deepEqual(await validateAfterFetch(cwd), []);
+  });
   test('log fetched without snapshots: names the snapshot fetch', async () => {
     const { cwd, remote } = await started();
     await push(cwd);
@@ -339,15 +346,18 @@ describe('validateAfterFetch', () => {
     const repairs = await validateAfterFetch(cwd);
     assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);
   });
-  test('wake prints the first repair and exits 3', async () => {
-    const { cwd, remote } = await started();
+  // Kernel fix round (plan 14 fixture, defect 1, ruling A): section 4's after-fetch
+  // cross-reference validation is no longer run on wake's ordinary path (see lib/wake.mjs's
+  // wake() and its own comment); this is one of its two real call sites -- cairn push's own
+  // post-push check (lib/travel.mjs's push, via afterPush). A push that itself succeeds still
+  // throws if a cross-reference this push did not and could not supply is left dangling.
+  test("push's own post-push check catches a dangling reference this push did not supply", async () => {
+    const { cwd } = await started();
     await push(cwd);
-    const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
-    sh(clone, 'clone', '-q', '-o', 'authority', remote, '.');
-    sh(clone, 'fetch', '-q', 'authority', 'refs/cairn/log:refs/cairn/log');
-    sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
-    const v = await wake(clone);
-    assert.equal(v.exit, 3); assert.equal(v.line, 'git fetch authority refs/cairn/snapshots:refs/cairn/snapshots');
+    await appendRecord(cwd, 'escalation', 'first-slug', {
+      slug: 'first-slug', question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i', concerns: 'c', evaluation: '0'.repeat(40),
+    });
+    await assert.rejects(push(cwd), (e) => e instanceof TravelError && /cross-reference is still unresolved/.test(e.message));
   });
 });
 

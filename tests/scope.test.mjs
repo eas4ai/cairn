@@ -156,6 +156,8 @@ test('a change removed before Cairn observes it leaves no breach', async () => {
 });
 
 import { begin, end } from '../lib/lease.mjs';
+import { declare } from '../lib/mechanisms.mjs';
+import { mechanismFor } from './helpers/loop.mjs';
 
 test('a path touched under a lease is declared from begin and is not a breach', async () => {
   const r = await loopRepo();
@@ -199,4 +201,30 @@ test('cairn authorize itself and the gap between commitments exempt protected pa
   await r.add('done', r.slug, { slug: r.slug, snapshot: await r.snap() });
   await r.write('docs/spec/glossary.md', '# Glossary\n\n- demo: the sample program.\n- flag: a file that says pass or fail.\n');
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});
+
+test('the assigned command\'s exact mutation of a kernel-managed path is exempt', async () => {
+  const r = await loopRepo();
+  await appendDecision(r.cwd, decisionLine(r), { command: 'decide' });
+  await declare(r.cwd, 'demo-002', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] });
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+});
+
+// Deviation from the plan text: targets .cairn/mechanisms/demo-001.json, the actual file
+// loopRepo's default DEMO-001 mechanism writes (see Task 4's directory-layout note), not the bare
+// directory path '.cairn/mechanisms'.
+test('any other write to a kernel-managed path is a breach that outside cannot exempt', async () => {
+  const r = await loopRepo({ settings: { outside: ['README.md'] } });
+  await r.write('.cairn/mechanisms/demo-001.json', (await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8')) + '\n');
+  await r.write('docs/decisions.jsonl', '{"kind":"decision","id":"01HZZZZZZZZZZZZZZZZZZZZZZZ","ts":"2026-09-19T00:00:00Z"}\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path).sort(), ['.cairn/mechanisms/demo-001.json', 'docs/decisions.jsonl']);
+  assert.equal(shas.length, 2);
+});
+
+test('an unnamed path under .cairn is a breach', async () => {
+  const r = await loopRepo();
+  await r.write('.cairn/notes.txt', 'scratch\n');
+  await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['.cairn/notes.txt']);
 });

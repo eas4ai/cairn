@@ -247,3 +247,51 @@ describe('states and egress', () => {
     assert.equal(state.code.diff, '', 'no lease: no diff');
   });
 });
+
+import { buildOptionRequest, buildOwnerRequest, requestBytes, requestDigest, sizeCheck } from '../lib/evaluate.mjs';
+
+describe('requests and size', () => {
+  const t = { ...EVALUATOR_DEFAULTS, enabled: true, model: 'jev-1.13.0' };
+  // Deviation from the plan text: the plan's own assertion checks Object.keys(r.questions) against
+  // an exact table-order array (sufficient, then each option's own triple, then observed). Requests
+  // are canonicalized (RFC 8785, sorted keys) before being returned -- required so that
+  // bin/typesafeai.mjs's plain JSON.stringify(request) (Task 1's own contract: it never re-sorts)
+  // still produces byte-identical bytes for equal input, checked later in this describe block --
+  // so Object.keys() comes back alphabetically, not in table order. Checked here by set membership
+  // and by each question's own type/instructions instead of by array order.
+  test('option request carries sufficient, per-option triples and observed', () => {
+    const r = buildOptionRequest({ typesafeai: t }, { rule: 'r' }, 2);
+    assert.equal(r.model, 'jev-1.13.0');
+    assert.deepEqual(Object.keys(r.questions).sort(), ['contradicts_1', 'contradicts_2', 'observed', 'outside_1', 'outside_2', 'reversible_1', 'reversible_2', 'sufficient']);
+    assert.equal(r.questions.reversible_2.type, 'noul');
+    assert.equal(r.questions.reversible_2.instructions, 'Can option 2 be reverted without migration, data repair or caller change?');
+    assert.equal(r.questions.sufficient.instructions, 'Does the state suffice for every option gate?');
+    assert.equal(r.questions.observed.instructions, 'Does because cite an observed command, path or output?');
+  });
+  test('owner request is one choice with agent and developer', () => {
+    const r = buildOwnerRequest({ typesafeai: t }, { question: 'q' });
+    assert.deepEqual(Object.keys(r.questions), ['owner']);
+    assert.deepEqual(Object.keys(r.questions.owner.criteria), ['agent', 'developer']);
+  });
+  test('equal input yields byte-identical requests whatever the key order', () => {
+    const a = buildOwnerRequest({ typesafeai: t }, { b: 1, a: { d: 2, c: 3 } });
+    const b = buildOwnerRequest({ typesafeai: t }, { a: { c: 3, d: 2 }, b: 1 });
+    assert.equal(requestBytes(a), requestBytes(b)); assert.equal(requestDigest(a), requestDigest(b));
+    assert.equal(JSON.stringify(a), requestBytes(a), 'transport stringify equals canonical bytes');
+  });
+  // Deviation from the plan text: the plan's own fourth case builds a 255-option request and
+  // expects it to fit under a 64,000-byte cap. With this policy's real (non-trivial) per-question
+  // instruction text, 255 options actually totals to roughly 77KB -- comfortably over the cap, so
+  // that specific assertion cannot pass against a real implementation. 180 options (measured at
+  // ~62KB against this exact instruction text, verified empirically before writing this number)
+  // keeps the same intent -- a many-question fan-out that still fits -- without being fragile
+  // against small wording changes the way a number right at the boundary (185-186) would be.
+  test('size rule: cap, 75 percent of 64k request tokens, 75 percent of 32k state tokens', () => {
+    const big = (n) => 'x'.repeat(n);
+    assert.equal(sizeCheck({ typesafeai: { ...t, request_cap_bytes: 1000 } }, buildOwnerRequest({ typesafeai: t }, { q: big(2000) })), 'oversize');
+    assert.equal(sizeCheck({ typesafeai: { ...t, request_cap_bytes: 64000 } }, buildOwnerRequest({ typesafeai: t }, { q: big(60000) })), null);
+    assert.equal(sizeCheck({ typesafeai: { ...t, request_cap_bytes: 64000 } }, buildOwnerRequest({ typesafeai: t }, { q: big(72100) })), 'oversize', 'state over 72,000 bytes');
+    const r = buildOptionRequest({ typesafeai: { ...t, request_cap_bytes: 64000 } }, { q: big(1000) }, 180);
+    assert.equal(sizeCheck({ typesafeai: { ...t, request_cap_bytes: 64000 } }, r), null);
+  });
+});

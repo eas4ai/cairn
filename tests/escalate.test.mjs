@@ -24,6 +24,8 @@ const asDev = { confirm: async () => true };
 import { reply } from '../lib/escalate.mjs';
 import { dispute, disputes } from '../lib/escalate.mjs';
 
+import { concerns, escalatedRequirement } from '../lib/escalate.mjs';
+
 const disputeFields = (record, n) => ({
   commitment: 'first', record, n,
   question: `Is finding ${n} a defect?`, recommendation: 'No: the check reads the declared fixture.',
@@ -227,4 +229,18 @@ test('a dispute names finding N on its exact source record and is settled by the
   const log = await r.log();
   assert.equal(disputes(log, rev, 1), sha);
   assert.equal(disputes(log, rev, 2), null);
+});
+
+test('an escalation concerning a requirement is found by identifier, answered or not', async () => {
+  const r = await loopRepo({ reqs: ['DEMO-001', 'DEMO-002'] });
+  assert.equal(escalatedRequirement(await r.log(), 'DEMO-001'), false);
+  const sha = await escalate(r.cwd, draft({ question: 'Three attempts failed; change the falsifier?' }));
+  let log = await r.log();
+  assert.equal(escalatedRequirement(log, 'DEMO-001'), true);
+  assert.equal(escalatedRequirement(log, 'DEMO-002'), false);
+  assert.deepEqual(concerns(log, 'DEMO-001').map((e) => e.sha), [sha]);
+  assert.deepEqual(concerns(log, 'DEMO-00'), []);
+  await answer(r.cwd, 'first', 'ok', '', asDev);
+  log = await r.log();
+  assert.equal(escalatedRequirement(log, 'DEMO-001'), true);
 });

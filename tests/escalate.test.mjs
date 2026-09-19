@@ -25,6 +25,12 @@ import { reply } from '../lib/escalate.mjs';
 import { dispute, disputes } from '../lib/escalate.mjs';
 
 import { concerns, escalatedRequirement } from '../lib/escalate.mjs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+import { wake, render } from '../lib/wake.mjs';
+const run = promisify(execFile);
+const BIN = fileURLToPath(new URL('../bin/cairn.mjs', import.meta.url));
 
 const disputeFields = (record, n) => ({
   commitment: 'first', record, n,
@@ -243,4 +249,21 @@ test('an escalation concerning a requirement is found by identifier, answered or
   await answer(r.cwd, 'first', 'ok', '', asDev);
   log = await r.log();
   assert.equal(escalatedRequirement(log, 'DEMO-001'), true);
+});
+
+test('the five fields reach the terminal byte for byte: double spaces, trailing space, quotes and a tab survive', async () => {
+  const r = await loopRepo();
+  const fields = {
+    question: 'Keep  "sessions" for 30 days?', recommendation: 'Yes, 30 days, refreshed on use. ',
+    because: 'tests/session.test.mjs\tassumes 30.', if_wrong: 'Shared machines stay logged in.', instead: 'Seven days.',
+  };
+  await escalate(r.cwd, draft(fields));
+  const expected = Buffer.from(
+    `question: ${fields.question}\nrecommendation: ${fields.recommendation}\nbecause: ${fields.because}\nif wrong: ${fields.if_wrong}\ninstead: ${fields.instead}\n`, 'utf8');
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.ok(Buffer.from(render(v), 'utf8').indexOf(expected) >= 0, 'render carries the exact bytes');
+  const { stdout } = await run(process.execPath, [BIN, 'wake'], { cwd: r.cwd, encoding: 'buffer' });
+  assert.ok(stdout.indexOf(expected) >= 0, 'stdout carries the exact bytes');
+  assert.ok(stdout.indexOf(Buffer.from('answer: cairn answer first ok | instead <text> | ask <text>\n')) >= 0);
 });

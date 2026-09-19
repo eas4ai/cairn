@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loopRepo } from './helpers/loop.mjs';
@@ -59,4 +60,28 @@ test('a pending supersession and an interrupted transaction are not verdicts', a
 
 test('the precedence order is the one section 5 states', () => {
   assert.deepEqual(ORDER, ['repair', 'recover', 'reconcile', 'scope', 'waiting', 'fix', 'record', 'declare', 'run', 'review mechanism', 'capture', 'review', 'report', 'resolve', 'accept', 'build', 'done', 'promote']);
+});
+
+async function treeHash(dir) {
+  const h = createHash('sha256');
+  for (const e of (await readdir(dir, { recursive: true, withFileTypes: true })).sort((a, b) => (a.parentPath + a.name < b.parentPath + b.name ? -1 : 1))) {
+    if (!e.isFile()) continue;
+    const p = join(e.parentPath, e.name);
+    h.update(p).update(await readFile(p));
+  }
+  return h.digest('hex');
+}
+
+// Task 22 registers `cairn wake` in lib/cli.mjs; until then r.runWake() exits 1 with "unknown
+// command wake" and this test's second assertion fails as the plan's own text anticipates
+// ("Expected: PASS once task 22 registers cairn wake; until then the runWake line fails with exit
+// 1. Keep the test; it passes from task 22 on."). Committed here regardless, per that instruction.
+test('wake writes nothing: the Git directory and worktree hash the same before and after', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd: r.cwd })).stdout.trim();
+  const before = [await treeHash(gitDir), await treeHash(r.cwd)];
+  await wake(r.cwd);
+  assert.equal(r.runWake().status, 0);
+  assert.deepEqual([await treeHash(gitDir), await treeHash(r.cwd)], before);
 });

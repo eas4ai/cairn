@@ -731,3 +731,47 @@ describe('route mode conversion (lib/escalate.mjs consumes this module\'s evalua
     assert.match(res.err, /calibration/);
   });
 });
+
+// Fix round 1 finding 2: docs/spec/cairn-v2.md section 10 ("Requests omit network_exclude,
+// credential and host bytes, keys and command output. A would-be inclusion is not sent; only
+// `unavailable excluded` and its path class are recorded") requires the SPECIFIC path class
+// (network_exclude|credential|host|key|output) to survive to a persisted record, not just the
+// generic `reason: 'unavailable excluded'`. optionState/egressClass already compute the right
+// class (EgressError.klass); evaluate() used to discard it. It now reaches the 'evaluation'
+// record's own 'call' gate value (the schema field an 'unavailable ...' outcome already used for
+// a transport failure_class; gates[].value is `json`, so no schema change was needed).
+describe('fix round 1 finding 2: the excluded path class reaches the persisted record', () => {
+  const hostDomain = 'Prefix: DEMO\nHost paths: hosted/secret.txt\n\n' +
+    '[DEMO-001] The demo command prints hello for DEMO-001.\n' +
+    'Falsifier: the flag file for DEMO-001 says fail.\nMechanism: demo-001\nStatus: Agreed 2026-09-19\n';
+  const cases = [
+    { klass: 'network_exclude', path: 'fixtures/private/x.json', settingsOver: { network_exclude: ['fixtures/private/**'] } },
+    { klass: 'credential', path: '.env', settingsOver: {} },
+    { klass: 'output', path: '.cairn/output/abc', settingsOver: {} },
+    { klass: 'key', path: 'notes-with-key.txt', settingsOver: {}, needsKey: true },
+    { klass: 'host', path: 'hosted/secret.txt', settingsOver: {}, needsHost: true },
+  ];
+  for (const c of cases) {
+    test(`excluded class ${c.klass} reaches the persisted evaluation record`, async () => {
+      const r = await loopRepo({ settings: { typesafeai: { ...EVALUATOR_DEFAULTS, enabled: true, mode: 'shadow', model: 'jev-1.13.0' }, ...c.settingsOver } });
+      const cwd = r.cwd;
+      if (c.needsHost) { await r.write('docs/spec/demo.md', hostDomain); await r.commit('add host paths header'); }
+      if (c.needsKey) process.env.TYPESAFEAI_API_KEY = 'tsk-live-42';
+      // Committed, not left untracked: an untracked file matching a credential pattern or
+      // network_exclude trips lib/snapshots.mjs's own, separate refuseSensitive safety net inside
+      // captureIdentity's writeWorkspaceSnapshot call before evaluate() ever reaches optionState's
+      // egress check -- a real, correct, pre-existing kernel behavior, just not what this test is
+      // about. Committing the fixture file keeps that check out of the way.
+      await r.write(c.path, c.needsKey ? 'token tsk-live-42 here' : 'SECRET');
+      await r.commit(`add ${c.klass} fixture`);
+      const d = draft({ named_paths: [c.path] });
+      const res = await evaluate(cwd, d, { transport: async () => { throw new Error('must not be called'); } });
+      assert.equal(res.reason, 'unavailable excluded');
+      const log = await readLog(cwd);
+      const ev = log.findLast((x) => x.kind === 'evaluation');
+      const callGate = ev.payload.gates.find((g) => g.gate === 'call');
+      assert.equal(callGate.value.class, c.klass);
+      if (c.needsKey) delete process.env.TYPESAFEAI_API_KEY;
+    });
+  }
+});

@@ -61,7 +61,9 @@ test('check writes an input snapshot, an output file named by digest, and a rece
   assert.equal(p.definition_digest, (await readMechanisms(repo.cwd)).greeter.definitionDigest);
   const snap = await readSnapshot(repo.cwd, p.input, 'input');
   assert.equal(snap.kind, 'input');
-  assert.deepEqual(p.results.map((r) => [r.requirement, r.result]), [['DEMO-001', 'pass'], ['DEMO-002', 'unverified']]);
+  // Fix round 1 finding 8: only Agreed blocks are digested and checked, so the mechanism's
+  // Draft requirement (DEMO-002) never appears in results at all.
+  assert.deepEqual(p.results.map((r) => [r.requirement, r.result]), [['DEMO-001', 'pass']]);
   assert.match(p.results[0].text_digest, /^sha256:/);
   const bytes = await readFile(join(repo.cwd, OUTPUT_DIR, p.output.slice(7)));
   assert.equal(bytes.toString(), 'cairn: DEMO-001: pass\n');
@@ -85,7 +87,8 @@ test('a command that cannot start is an error receipt with every result unverifi
   await check(repo.cwd, 'DEMO-001');
   const p = (await lastReceipt(repo.cwd)).payload;
   assert.equal(p.status, 'error');
-  assert.deepEqual(p.results.map((r) => r.result), ['unverified', 'unverified']);
+  // Fix round 1 finding 8: DEMO-002 (Draft) is omitted, not recorded 'unverified'.
+  assert.deepEqual(p.results.map((r) => r.result), ['unverified']);
   assert.deepEqual(p.exit, { code: null, signal: null });
 });
 
@@ -104,7 +107,8 @@ test('per-requirement lines: any fail wins, undeclared identifiers are ignored',
   const repo = await declared({ command: 'echo "cairn: DEMO-001: pass"; echo "cairn: DEMO-001: fail"; echo "cairn: DEMO-777: pass"' });
   await check(repo.cwd, 'DEMO-001');
   const p = (await lastReceipt(repo.cwd)).payload;
-  assert.deepEqual(p.results.map((r) => [r.requirement, r.result]), [['DEMO-001', 'fail'], ['DEMO-002', 'unverified']]);
+  // Fix round 1 finding 8: DEMO-002 (Draft) is omitted, not recorded 'unverified'.
+  assert.deepEqual(p.results.map((r) => [r.requirement, r.result]), [['DEMO-001', 'fail']]);
 });
 
 test('check refuses a requirement that is not Agreed', async () => {
@@ -228,4 +232,76 @@ test('attempts counts distinct failing product digests since the last pass', asy
   await repo.write('hello.txt', 'hello\n');
   await check(repo.cwd, 'DEMO-001');
   assert.equal(await count(), 0, 'a pass resets the count');
+});
+
+// Fix round 1 covering tests.
+import { OUTPUT_CAP } from '../lib/check.mjs';
+
+test('finding 1: a directory input stays current after check; an ignored untracked file under it does not affect currency', async () => {
+  const repo = await declared({ inputs: [...DEFINITION.inputs, 'src'] });
+  await repo.write('.gitignore', 'ignored.txt\n');
+  await repo.write('src/a.js', 'export const a = 1;\n');
+  await check(repo.cwd, 'DEMO-001');
+  const rec = await lastReceipt(repo.cwd);
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+  await repo.write('src/ignored.txt', 'untracked and gitignored\n');
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
+  await repo.write('src/b.js', 'export const b = 2;\n');
+  assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false, 'a real, non-ignored addition under the directory does stale it');
+});
+
+test('finding 5: a command that prints more than the output cap is truncated, with a marker line recorded', async () => {
+  const repo = await project();
+  assert.equal(OUTPUT_CAP, 8 * 1024 * 1024);
+  const small = await runCommand(repo.cwd, "head -c 500 /dev/zero | tr '\\000' 'a'", { cap: 100 });
+  assert.equal(small.spawned, true);
+  assert.equal(small.truncated, true);
+  const text = small.out.toString('utf8');
+  assert.equal(text, 'a'.repeat(100) + 'cairn: output truncated at 100 bytes\n');
+  const untruncated = await runCommand(repo.cwd, 'printf abc', { cap: 100 });
+  assert.deepEqual([untruncated.truncated, untruncated.out.toString()], [false, 'abc']);
+});
+
+test('finding 5: check truncates a command that exceeds the real 8 MiB cap and records the marker in the output file', async () => {
+  const command = "printf 'cairn: DEMO-001: pass\\n'; head -c 9000000 /dev/zero | tr '\\000' 'x'";
+  const repo = await declared({ command });
+  await check(repo.cwd, 'DEMO-001');
+  const p = (await lastReceipt(repo.cwd)).payload;
+  const bytes = await readFile(join(repo.cwd, OUTPUT_DIR, p.output.slice(7)));
+  const marker = `cairn: output truncated at ${OUTPUT_CAP} bytes\n`;
+  assert.equal(bytes.length, OUTPUT_CAP + marker.length);
+  assert.equal(bytes.toString('utf8').slice(-marker.length), marker);
+  // the line printed before the cap was hit is still matched correctly
+  assert.equal(p.results[0].result, 'pass');
+});
+
+test('finding 6: isCurrent propagates an unexpected error instead of reporting it as staleness', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  // A null receipt makes `receipt.sha` throw a plain TypeError while evaluating catCommit's
+  // arguments, inside the second try block. Before this fix, the blanket `catch { return false }`
+  // there reported this as ordinary staleness instead of surfacing the caller's own bug.
+  await assert.rejects(isCurrent(repo.cwd, null, 'DEMO-001'), TypeError);
+});
+
+test('finding 8: a Draft requirement is never digested into the receipt', async () => {
+  const repo = await declared();
+  await check(repo.cwd, 'DEMO-001');
+  const p = (await lastReceipt(repo.cwd)).payload;
+  assert.equal(p.results.some((r) => r.requirement === 'DEMO-002'), false);
+  assert.deepEqual(p.results.map((r) => r.requirement), ['DEMO-001']);
+});
+
+test('finding 10: a CRLF result line still matches after stripping the trailing CR', async () => {
+  const repo = await declared({ command: 'printf "cairn: DEMO-001: pass\\r\\n"' });
+  await check(repo.cwd, 'DEMO-001');
+  const p = (await lastReceipt(repo.cwd)).payload;
+  assert.equal(p.results[0].result, 'pass');
+});
+
+test('finding 11: an existing .cairn/output/.gitignore is not rewritten by check', async () => {
+  const repo = await declared();
+  await repo.write(`${OUTPUT_DIR}/.gitignore`, 'custom\n');
+  await check(repo.cwd, 'DEMO-001');
+  assert.equal(await readFile(join(repo.cwd, OUTPUT_DIR, '.gitignore'), 'utf8'), 'custom\n');
 });

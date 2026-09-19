@@ -34,3 +34,23 @@ test('parseStrict rejects control characters outside JSON escapes', () => {
 test('parseStrict rejects invalid UTF-8', () => {
   assert.throws(() => parseStrict(Buffer.from([0x7b, 0x22, 0x61, 0x22, 0x3a, 0x22, 0xff, 0x22, 0x7d])), /invalid UTF-8/);
 });
+
+import { sha256, b64url, unb64url, ulid } from '../lib/canon.mjs';
+
+test('sha256 hashes strings as UTF-8 and bytes as given', () => {
+  assert.equal(sha256('abc'), 'sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+  assert.equal(sha256(Buffer.from('abc')), sha256('abc'));
+});
+test('base64url is unpadded and round-trips; padding and stray chars are refused', () => {
+  const bytes = new Uint8Array([0, 255, 16, 3]);
+  assert.equal(b64url(bytes), 'AP8QAw');
+  assert.deepEqual(unb64url('AP8QAw'), bytes);
+  assert.throws(() => unb64url('AP8QAw=='), CanonError);
+  assert.throws(() => unb64url('AP8Q+w'), CanonError);
+});
+test('ulid is 26 Crockford chars and monotonic within a millisecond', () => {
+  const a = ulid(1700000000000), b = ulid(1700000000000), c = ulid(1700000000001);
+  for (const u of [a, b, c]) assert.match(u, /^[0-9A-HJKMNP-TV-Z]{26}$/);
+  assert.ok(a < b && b < c);
+  assert.equal(a.slice(0, 10), b.slice(0, 10));
+});

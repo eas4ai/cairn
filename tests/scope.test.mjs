@@ -280,3 +280,42 @@ test('restore is refused while the path differs from its allowed base', async ()
   assert.deepEqual([rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['restore', null, null]);
   await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `cairn: scope-breach ${b} already has a disposition`);
 });
+
+import { runWithPreflight, STATE_CHANGING } from '../lib/scope.mjs';
+import { readMechanisms } from '../lib/mechanisms.mjs';
+import { git } from '../lib/gitx.mjs';
+
+test('declare runs the preflight first, so a declaration legalizes only future changes', async () => {
+  const r = await loopRepo();
+  await r.write('src/util.mjs', 'export const u = 1;\n');
+  await runWithPreflight(r.cwd, 'declare', () => declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] }));
+  assert.ok((await readMechanisms(r.cwd))['demo-001'].definition.inputs.includes('src/util.mjs'));
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['src/util.mjs']);
+  await r.write('src/util.mjs', 'export const u = 2;\n');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);   // later edits are declared
+  assert.equal(openBreaches(await r.log()).length, 1);                                // the first observation stands
+});
+
+test('a breach is a log fact: squashing the branch does not clear it', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  await r.commit('stray work');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await r.write('src/demo.mjs', 'console.log("hello!");\n');
+  await r.commit('touch demo');
+  const root = (await git(['rev-list', '--max-parents=0', 'HEAD'], { cwd: r.cwd })).stdout.trim();
+  await git(['reset', '--soft', root], { cwd: r.cwd });
+  await git(['commit', '-q', '-m', 'squashed'], { cwd: r.cwd });
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  assert.deepEqual(openBreaches(await r.log()).map((x) => x.sha), [b]);
+  await r.remove('src/stray.mjs');
+  await r.commit('remove stray');
+  assert.equal(openBreaches(await r.log()).length, 1);       // bytes gone, record not: only a disposition closes it
+  await dispose(r.cwd, b, 'restore');
+  assert.equal(openBreaches(await r.log()).length, 0);
+});
+
+test('the state-changing set names every writing command and no reader', () => {
+  for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
+  for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
+});

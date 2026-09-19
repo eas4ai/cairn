@@ -130,7 +130,8 @@ test('cairn decide --consequential accepts the same canonical draft and writes t
 });
 
 import { answer, escalationState, unanswered } from '../lib/escalate.mjs';
-import { describeEvidence } from '../lib/auth.mjs';
+import { describeEvidence, verifyEvidence } from '../lib/auth.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 
 const asDev = { confirm: async () => true };
 
@@ -200,6 +201,22 @@ test('describeEvidence (lib/auth.mjs) reads a real stored answer record: unsigne
   const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
   const rec = decodeRecord(await catCommit(r.cwd, sha));
   assert.equal(describeEvidence(rec.payload.evidence), 'unsigned-local: terminal confirmation by Cairn Test <test@example.invalid>; evidence, not authentication');
+});
+
+// Fix round 1 finding 7 (plan 09 review): answer() now re-checks its evidence with
+// verifyEvidence right after authenticateDeveloper, the same defence-in-depth authorize() and
+// readDecision() already apply. The review notes no live hole exists today (authenticateDeveloper
+// itself already verifies a signature and always returns confirmed: true for unsigned-local, so
+// no public-API path can make it return evidence verifyEvidence rejects); this is a positive
+// regression check that the added call does not itself break the happy path, and that the
+// evidence answer() stores is exactly what lib/auth.mjs's own verifyEvidence accepts.
+test('the evidence answer() stores verifies with lib/auth.mjs verifyEvidence, the same check answer() now runs before writing', async () => {
+  const r = await loopRepo();
+  const esc = await escalate(r.cwd, draft());
+  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const rec = decodeRecord(await catCommit(r.cwd, sha));
+  const { settings } = await loadSettings(r.cwd);
+  assert.equal(verifyEvidence(settings, rec.payload.evidence, { purpose: 'answer', subject: esc }), true);
 });
 
 import { reply } from '../lib/escalate.mjs';

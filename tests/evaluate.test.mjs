@@ -1143,12 +1143,13 @@ describe('calibration', () => {
 // `scoreBody()`; this file's actual five-dimension answer body (Task 7, above) is `goodBody()` --
 // reused here, not redefined, the same as every other measure()-based describe block in this file.
 import { currentMeasurement, MeasurementError, finalizeMeasurement } from '../lib/evaluate.mjs';
+import { decide } from '../lib/adr.mjs';
 
 describe('currentMeasurement', () => {
   test('missing: no measurement for this draft at all', async () => {
     const cwd = await repoWithCommitment();
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
-      (e) => e instanceof MeasurementError && /no measurement/.test(e.message) && !/stale|digest/.test(e.message));
+      (e) => e instanceof MeasurementError && /no measurement/.test(e.message) && !/stale|digest|finished/.test(e.message));
   });
   test('a fresh measurement for the exact draft is current', async () => {
     const cwd = await repoWithCommitment();
@@ -1156,25 +1157,61 @@ describe('currentMeasurement', () => {
     const m = await currentMeasurement(cwd, normalizeDraft(draft()));
     assert.equal(m.sha, r.measurementSha);
   });
-  // Deviation from the brief's Step 3 snippet: the snippet's own reference implementation throws
-  // the exact same message text for "no measurement at all" and "a measurement exists but for a
-  // different draft digest" -- collapsing two of this task's own named three conditions (missing,
-  // stale, digest; the task's own Global Constraints: "MeasurementError messages name which of the
-  // three conditions failed ... in words the agent can act on") into one. Implemented instead as
-  // three distinct branches, each with its own message naming its condition (see lib/evaluate.mjs);
-  // this test (and the two below) assert on the actual message content, not only the error class,
-  // to prove the distinction is real.
-  test('a different draft digest (even a one-word change) is not found, and reads distinctly from missing or stale', async () => {
+  // Fix round 1 (Critical C1, review of commit bd51dcbf): the reviewer's own reproduction. Draft A
+  // is measured; draft B (a different draft in the same open commitment, never measured) must
+  // read "missing," not "digest" -- the first version keyed "digest" off "some measurement exists
+  // in this commitment," which fired here even though draft B itself was never touched. This test
+  // replaces the old (buggy) "a different draft digest ... is not found" test, which asserted the
+  // pre-fix "digest" behavior for exactly this scenario; the genuine digest condition (this
+  // draft's own measurement shadowed by a later one for a different draft) is covered by its own
+  // test below.
+  test('missing: a different, never-measured draft in the same open commitment reads missing, not digest (reviewer\'s reproduction)', async () => {
     const cwd = await repoWithCommitment();
     await measure(cwd, draft(), { transport: transport([goodBody()]) });
-    await assert.rejects(currentMeasurement(cwd, normalizeDraft({ ...draft(), because: 'a different reason' })),
-      (e) => e instanceof MeasurementError && /digest/.test(e.message) && !/stale/.test(e.message));
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft({ ...draft(), because: 'a different reason, never measured' })),
+      (e) => e instanceof MeasurementError && /no measurement/.test(e.message) && !/stale|digest|finished/.test(e.message));
+  });
+  // Fix round 1 (Critical C1): the genuine digest condition -- this draft really was measured
+  // (its own intent and measurement both exist), but a *different* draft was measured more
+  // recently in the same commitment, so the latest measurement in scope now belongs to someone
+  // else. Distinct from "missing" (this draft never had an intent at all, tested above) and from
+  // "stale" (the chain broke on a non-measurement record, tested below).
+  test('digest: a different draft was measured more recently, shadowing this one', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    await measure(cwd, { ...draft(), because: 'a wholly different draft, also measured' }, { transport: transport([goodBody()]) });
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
+      (e) => e instanceof MeasurementError && e.message === 'cairn: the latest measurement is for a different draft; run cairn measure for this draft');
+  });
+  // Fix round 1 (C1, the "not finished" half): this draft's own intent exists, but no measurement
+  // names it yet -- a review source still pending (measure() returns before writing a
+  // measurement). Distinct wording from "no intent at all" so the agent can tell "never measured"
+  // from "measurement started but has not finished" (the review's own C1 finding: for a pending
+  // review draft, "run cairn measure again" is actively wrong guidance -- measure() already ran).
+  test('missing: this draft was measured but the measurement has not finished yet (review still pending)', async () => {
+    const cwd = await repoWithCommitment(false);
+    const pending = await measure(cwd, draft());
+    assert.equal(pending.pending, 'review');
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
+      (e) => e instanceof MeasurementError && e.message === 'cairn: the measurement for this draft has not finished yet; run cairn measure again once it has');
   });
   test('stale: anything else appended to the log after the intent invalidates it', async () => {
     const cwd = await repoWithCommitment();
     await measure(cwd, draft(), { transport: transport([goodBody()]) });
     await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())), /stale/);
+  });
+  // Controller Ruling 17 (binding): a decision is an ADR line (docs/decisions.jsonl), not a log
+  // record -- appendDecision (lib/adr.mjs) writes straight to that file, never through
+  // appendRecord/refs/cairn/log, so no scan of readLog(cwd)'s output can ever see it. Proves
+  // currentMeasurement catches this via the intent's own recorded adr_digest instead: measure,
+  // then decide (no log record at all is appended), then currentMeasurement must still say stale.
+  test('stale: a decision recorded since the draft was measured invalidates it, even with the log itself unchanged', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    await decide(cwd, { title: 'Use a map', rests_on: [], wrong_if: 'the map is slow', body: 'A map keeps lookups constant.' });
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
+      (e) => e instanceof MeasurementError && e.message === 'cairn: a decision has been recorded since this draft was measured; run cairn measure again');
   });
   test('re-measuring after a stale hit produces a new current one', async () => {
     const cwd = await repoWithCommitment();
@@ -1213,5 +1250,19 @@ describe('currentMeasurement', () => {
     });
     const m = await currentMeasurement(cwd, D);
     assert.equal(m.sha, measurementSha);
+  });
+  // Fix round 1 (Important I1, review of commit bd51dcbf): scope must honor `range().closed` the
+  // way `rangeOpen`/`openRange` do elsewhere in this codebase, not just `r.start` truthiness --
+  // `range()` finds the *last* `start` record regardless of whether that commitment later closed,
+  // so a closed commitment's own trailing records (including a real, otherwise-current
+  // measurement) must not be selected as scope. A closed commitment has no current measurement:
+  // missing.
+  test('a closed commitment has no current measurement (missing), even though a current-looking measurement trails inside it', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    assert.equal(r.outcome, 'composite');
+    await appendRecord(cwd, 'done', 'auth-tokens', { slug: 'auth-tokens', snapshot: await writeWorkspaceSnapshot(cwd) });
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
+      (e) => e instanceof MeasurementError && /no measurement/.test(e.message) && !/stale|digest|finished/.test(e.message));
   });
 });

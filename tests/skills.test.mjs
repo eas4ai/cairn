@@ -138,6 +138,9 @@ test("the AGENTS.md template covers the measure step for a Consequential decisio
   assert.ok(t.includes("`cairn decide --consequential"), "still names the decide command");
   assert.ok(t.includes("`cairn escalate --consequential"), "names the new escalate flag");
   assert.ok(/advi[cs]/.test(t) || /information, not consent/.test(t), "says the suggestion is advice, not a route");
+  assert.ok(/floor/.test(t) && /veto/.test(t), "names the floor and the veto");
+  assert.ok(/bypass your judgment/.test(t), "says the floor and veto bypass the agent's judgment");
+  assert.ok(/`cairn decide --consequential` rejects either one/.test(t), "says decide rejects a floor or veto measurement");
   for (const gone of ["shadow", "route mode", "capture the recommended option"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });

@@ -559,7 +559,8 @@ cairn calibrate
 ```
 
 reports how many developer-labelled, `suggested: agent` measurements exist
-and how many you later called wrong, against a fixed 95% one-sided bound.
+and how many you later called wrong. It passes when the one-sided 95% upper
+bound on that false-downgrade rate stays under the fixed 5% cap.
 It tunes `weights`, `agent_ceiling` and `confidence_floors` in
 `.cairn/settings.json`; it does not gate whether the agent may decide --
 that gate was tried too, and it produced the same zero-routing result. A

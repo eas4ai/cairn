@@ -59,7 +59,7 @@ describe('policy constants and digests', () => {
 import { kernelFacts, floorReasons, authorityProjection } from '../lib/evaluate.mjs';
 import { makeProject } from './helpers/repo.mjs';
 import { loopRepo } from './helpers/loop.mjs';
-import { appendDecision } from '../lib/adr.mjs';
+import { appendDecision, adrDigest } from '../lib/adr.mjs';
 
 // A hand-built kernelFacts() result, for floorReasons/authorityProjection unit tests that do not
 // need a real repository. kernelFacts() itself is exercised separately below, against a real
@@ -153,7 +153,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
-import { canonicalize } from '../lib/canon.mjs';
+import { canonicalize, b64url } from '../lib/canon.mjs';
 import { begin } from '../lib/lease.mjs';
 
 // A local write helper (mirrors tests/helpers/repo.mjs's own `write` and tests/helpers/loop.mjs's
@@ -720,5 +720,274 @@ describe('veto and composite', () => {
     const s = suggestSettings();
     // s.typesafeai.confidence_floors is 0.5 for every dimension (suggestSettings, above).
     assert.equal(computeSuggested(0.2, conf({ ambiguity: 0.5 }), s), 'agent', 'confidence exactly at its floor still clears it');
+  });
+});
+
+// --- Task 9: measure() -- identity, the intent, the jev call, finalize, crash recovery ---------
+import { measure, recoverMeasurement } from '../lib/evaluate.mjs';
+import { readLog, decodeRecord } from '../lib/records.mjs';
+import { unb64url } from '../lib/canon.mjs';
+import { start } from '../lib/commitment.mjs';
+import { loadSettings } from '../lib/settings.mjs';
+import { catCommit } from '../lib/gitx.mjs';
+
+const scoreBody = (over = {}) => JSON.stringify({ model: 'jev-1.13.0', answers: {
+  evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
+  reach: { score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
+  contract: { score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+  surface: { score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+  ambiguity: { score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+  ...over }, usage: { input_tokens: 10, output_tokens: 2 } });
+const transport = (bodies) => async () => { const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
+// Deviation from the brief text, in two parts -- both reproduced by running the brief's literal
+// fixture before this fix (task-9-report.md's RED section):
+//
+// 1. `settings.data` is not set, and defaults to `[]` (lib/init.mjs's DEFAULT_SETTINGS). Against
+//    the real classify() (lib/paths.mjs), 'migrations/1.sql' only classifies 'data' when a `data`
+//    glob actually matches it (`if (any(settings.data ?? [])) return 'data';`), the same way every
+//    other real-repo fixture in this codebase that needs a 'data' path sets one
+//    (tests/helpers/commitment-fixture.mjs: `data: ['migrations/**']`; tests/commitment.test.mjs's
+//    own 'a data path' case relies on the same fixture). Without it, "the floor writes an intent
+//    and a measurement with no call at all" below would see 'migrations/1.sql' classify 'plain',
+//    floorReasons would return [], and the whole test would exercise the jev call path instead of
+//    the floor.
+// 2. The brief's roadmap-only `files` override cites AUTH-003 as a requirement but never defines
+//    it anywhere docs/spec can see: real `start()` (lib/commitment.mjs's prepareStart) runs
+//    lib/spec.mjs's lint() first and refuses with "reference to absent identifier AUTH-003", and
+//    even past that, prepareStart also refuses without a current authorization
+//    (`currentAuthorization`) -- `cairn authorize` was never run. This codebase's own working
+//    pattern for a real (non-hand-appended) start() is tests/helpers/commitment-fixture.mjs's
+//    project(): a domain file (Prefix + an Agreed block with a mechanism, since an Agreed block
+//    with no mechanism is its own lint finding), an overview.md spec-map row naming it, and
+//    `repo.authorize()` after the files are committed. Followed here for the one AUTH-003
+//    requirement this task's fixtures actually need, rather than switching to a hand-appended
+//    'start' record (tests/helpers/loop.mjs's own, different way of avoiding this same machinery)
+//    -- measure() reads the commitment through kernelFacts either way, but the real start() is
+//    what the brief's own import of `start` from lib/commitment.mjs calls for.
+const AUTH_DOMAIN = `Prefix: AUTH
+
+[AUTH-003] Tokens rotate on a fixed schedule.
+Falsifier: tokens are not rotated on schedule.
+Mechanism: rotate
+Status: Agreed 2026-09-19
+`;
+const OVERVIEW_WITH_AUTH = `# Keystone
+
+## Spec map
+
+| File | Prefix |
+|---|---|
+| auth.md | AUTH |
+`;
+async function repoWithCommitment(enabled = true) {
+  const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } },
+    files: {
+      'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
+      'docs/spec/auth.md': AUTH_DOMAIN,
+      'docs/spec/roadmap.md': 'Current: auth-tokens\n\n## auth-tokens\n\nRequirements: AUTH-003\n',
+    } });
+  await p.authorize();
+  await start(p.cwd, 'auth-tokens');
+  return p.cwd;
+}
+
+describe('measure()', () => {
+  test('jev: intent precedes the one call; the measurement carries the composite and suggestion', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    assert.equal(r.outcome, 'composite'); assert.equal(r.suggested, 'agent'); assert.equal(r.veto, null);
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-3).map((x) => x.kind), ['evaluation-intent', 'evaluation-call', 'measurement']);
+    const [intent, call, m] = log.slice(-3);
+    assert.equal(intent.payload.source, 'jev'); assert.equal(call.payload.source, 'jev'); assert.equal(call.payload.outcome, 'response');
+    assert.equal(Buffer.from(unb64url(call.payload.raw)).toString(), scoreBody());
+    assert.equal(m.payload.intent, intent.sha); assert.equal(m.payload.call, call.sha);
+    assert.equal(m.payload.levels.length, 5);
+    // Deviation from the brief text: the brief's own snippet calls `decodeRecord(rec)` on `rec`
+    // straight out of `readLog(cwd)`'s own output -- but readLog's entries are already-decoded
+    // `{sha, kind, target, payload, parent}` objects (lib/records.mjs's readLog), not the raw
+    // `{subject, body/bodyBytes, trailers}` commit shape decodeRecord actually takes (lib/
+    // records.mjs's decodeRecord, unchanged by this task); readLog already runs decodeRecord
+    // internally while building that array, so calling it a second time on the wrong shape would
+    // either throw for the wrong reason (proving nothing about this task's own writes) or, if
+    // patched to accept it, be circular. Re-fetching each record's real commit via catCommit and
+    // decoding that is the faithful version of the same check: a genuine round trip through the
+    // envelope and schema validation against exactly what appendRecord wrote to the log ref.
+    for (const rec of log.slice(-3)) {
+      const commit = await catCommit(cwd, rec.sha);
+      assert.doesNotThrow(() => decodeRecord(commit));
+    }
+  });
+  test('a veto forces developer even with a low composite', async () => {
+    const cwd = await repoWithCommitment();
+    const body = scoreBody({ contract: { score: 3.5, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5 } } });
+    const r = await measure(cwd, draft(), { transport: transport([body]) });
+    assert.equal(r.outcome, 'veto'); assert.equal(r.veto, 'contract'); assert.equal(r.suggested, null);
+  });
+  test('the floor writes an intent and a measurement with no call at all', async () => {
+    const cwd = await repoWithCommitment();
+    let called = false;
+    const r = await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] }, { transport: async () => { called = true; } });
+    assert.equal(called, false); assert.equal(r.outcome, 'floor'); assert.equal(r.reason, 'floor:data');
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    assert.equal(log.at(-2).payload.source, 'jev', 'source is settled from settings before the floor is checked, never null');
+    assert.equal(log.at(-2).payload.request_digest, null);
+    assert.equal(log.at(-1).payload.call, null); assert.equal(log.at(-1).payload.source, 'jev'); assert.deepEqual(log.at(-1).payload.levels, []);
+  });
+  test('a failed transport call is unavailable <class>, recorded and routed', async () => {
+    const cwd = await repoWithCommitment();
+    const e = new Error('overloaded'); e.klass = 'overloaded';
+    const r = await measure(cwd, draft(), { transport: transport([e]) });
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable overloaded');
+    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
+    assert.equal(call.payload.outcome, 'failure'); assert.equal(call.payload.failure_class, 'overloaded');
+  });
+  test('an invalid answer is unavailable invalid, never agent or developer by suggestion', async () => {
+    const cwd = await repoWithCommitment();
+    const bad = JSON.stringify({ model: 'jev-1.13.0', answers: {}, usage: {} });
+    const r = await measure(cwd, draft(), { transport: transport([bad]) });
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.suggested, null);
+  });
+  test('review source: writes the intent and returns pending, no call, no measurement yet', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft());
+    assert.equal(r.pending, 'review');
+    const log = await readLog(cwd);
+    assert.deepEqual(log.map((x) => x.kind).slice(-1), ['evaluation-intent']);
+    assert.equal(log.at(-1).payload.source, 'review'); assert.ok(log.at(-1).payload.request_digest);
+  });
+  test('identity is captured before any write; equal identity and policy yield byte-identical requests', async () => {
+    const cwd = await repoWithCommitment();
+    const a = []; const t = (bodies) => async (req) => { a.push(req); return { status: 200, body: scoreBody(), model: 'jev-1.13.0' }; };
+    await measure(cwd, draft(), { transport: t([]) });
+    const b = []; const t2 = (bodies) => async (req) => { b.push(req); return { status: 200, body: scoreBody(), model: 'jev-1.13.0' }; };
+    await measure(cwd, draft(), { transport: t2([]) });
+    assert.equal(JSON.stringify(a[0]), JSON.stringify(b[0]));
+  });
+  test('an unknown crash outcome leaves the intent open; recovery marks indeterminate, never retries', async () => {
+    const cwd = await repoWithCommitment();
+    const crash = new Error('crash'); // no .klass: an unknown outcome
+    await assert.rejects(measure(cwd, draft(), { transport: transport([crash]) }));
+    let log = await readLog(cwd);
+    assert.equal(log.at(-1).kind, 'evaluation-intent');
+    let calls = 0;
+    const sha = await recoverMeasurement(cwd, { transport: async () => { calls++; } });
+    log = await readLog(cwd);
+    assert.equal(calls, 0); assert.equal(log.at(-1).sha, sha);
+    assert.equal(log.at(-1).payload.outcome, 'indeterminate'); assert.equal(log.at(-1).payload.suggested, null);
+    assert.equal(log.at(-2).payload.outcome, 'indeterminate'); assert.equal(log.at(-2).payload.raw, null);
+    assert.equal(await recoverMeasurement(cwd), null, 'idempotent');
+  });
+  // Ruling 5(c)'s other named crash-recovery subject: an intent with a call record already written
+  // but no measurement -- the window between the call landing and finalizeMeasurement's own write.
+  // Not in the brief's own Step 1 snippet (which only covers the no-call-record half above); built
+  // directly on appendRecord/the lower-level primitives measure() itself uses, reproducing exactly
+  // the state a crash in that second window would leave, since a real process crash cannot be
+  // staged from inside a single measure() call.
+  test('a crash after the call record lands but before the measurement still finalizes indeterminate, from the existing call, not a new one', async () => {
+    const cwd = await repoWithCommitment();
+    const D = normalizeDraft(draft());
+    const { settings, digest: settingsDigest } = await loadSettings(cwd);
+    const f = await kernelFacts(cwd, D);
+    const n = D.options.indexOf(D.recommendation);
+    const C = await contractState(cwd, f);
+    const { state } = await measureState(cwd, D, n, C, f);
+    const request = buildScoreRequest(settings, state, n);
+    const logHead = (await readLog(cwd)).at(-1).sha;
+    const intentSha = await appendRecord(cwd, 'evaluation-intent', f.slug, {
+      draft_digest: draftDigest(D), snapshot: await writeWorkspaceSnapshot(cwd), log_head: logHead,
+      adr_digest: await adrDigest(cwd), settings_digest: settingsDigest, policy_digest: policyDigest(settings),
+      source: 'jev', request_digest: requestDigest(request),
+    });
+    const callSha = await appendRecord(cwd, 'evaluation-call', f.slug, {
+      intent: intentSha, source: 'jev', request_digest: requestDigest(request), outcome: 'response', model: 'jev-1.13.0',
+      transport: null, session: null, raw: b64url(Buffer.from(scoreBody(), 'utf8')), failure_class: null,
+      answers: null, usage: { input_tokens: 10, output_tokens: 2 },
+    });
+    const sha = await recoverMeasurement(cwd);
+    const log = await readLog(cwd);
+    assert.equal(sha, log.at(-1).sha);
+    assert.equal(log.at(-1).kind, 'measurement');
+    assert.equal(log.at(-1).payload.call, callSha, 'reuses the existing call record instead of writing a new one');
+    assert.equal(log.at(-1).payload.outcome, 'indeterminate');
+    assert.equal(log.filter((x) => x.kind === 'evaluation-call').length, 1, 'no duplicate call record from recovery');
+    assert.equal(await recoverMeasurement(cwd), null, 'idempotent');
+  });
+  test('a pending review intent is left alone by recovery, not marked indeterminate', async () => {
+    const cwd = await repoWithCommitment(false);
+    await measure(cwd, draft());
+    assert.equal(await recoverMeasurement(cwd), null);
+    const log = await readLog(cwd);
+    assert.equal(log.at(-1).kind, 'evaluation-intent');
+  });
+  // Not in the brief's own test list: self-review completeness (every outcome branch, both
+  // sources). measureState's own EgressError is exercised directly by the C(c)/M(D) describe block
+  // above; this covers measure()'s own handling of it -- no call record, and the class/path kept in
+  // the reason (section 10: "only `unavailable excluded` and its path class are recorded").
+  test('an excluded touched path is unavailable excluded, naming the class and path, and writes no call', async () => {
+    const cwd = await repoWithCommitment();
+    let called = false;
+    const r = await measure(cwd, { ...draft(), named_paths: ['secret/.env'] }, { transport: async () => { called = true; } });
+    assert.equal(called, false);
+    assert.equal(r.outcome, 'unavailable');
+    assert.equal(r.reason, 'unavailable excluded: credential secret/.env');
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    assert.equal(log.at(-2).payload.request_digest, null);
+    assert.equal(log.at(-1).payload.call, null);
+  });
+  // sizeCheck's own boundaries are unit-tested directly in "the Score request" describe block
+  // above; this is measure()'s own wiring of an oversize request into 'unavailable oversize' with
+  // no call and no request digest recorded.
+  test('an oversize request is unavailable oversize and writes no call', async () => {
+    const cwd = await repoWithCommitment();
+    let called = false;
+    const r = await measure(cwd, { ...draft(), because: 'x'.repeat(200000) }, { transport: async () => { called = true; } });
+    assert.equal(called, false);
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable oversize');
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    assert.equal(log.at(-2).payload.request_digest, null, 'an oversize request is never recorded as sent');
+    assert.equal(log.at(-1).payload.call, null);
+  });
+  // measure()'s own model-mismatch cross-check (res.model !== request.model): a defensive failure
+  // class distinct from a transport-level failure or an invalid-answer parse, recorded as a real
+  // evaluation-call (outcome: failure) the same way a transport failure is.
+  test('a response naming a different model than requested is unavailable model_mismatch, recorded as a call failure', async () => {
+    const cwd = await repoWithCommitment();
+    const t = () => async () => ({ status: 200, body: scoreBody(), model: 'jev-9.9.9' });
+    const r = await measure(cwd, draft(), { transport: t() });
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable model_mismatch');
+    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
+    assert.equal(call.payload.outcome, 'failure'); assert.equal(call.payload.failure_class, 'model_mismatch');
+  });
+  // Both sources hit the floor the same way (section 10: the floor runs "before any call", for
+  // either source) -- the given test list only exercises it under jev; this confirms the review
+  // source never reaches its own 'pending' return once the floor has already decided the draft.
+  test('the floor fires for the review source too, before any pending review return', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] });
+    assert.equal(r.outcome, 'floor'); assert.equal(r.reason, 'floor:data');
+    assert.equal(r.pending, undefined);
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    assert.equal(log.at(-2).payload.source, 'review');
+  });
+  // Egress exclusion runs before the jev/review fork (measureState is called once, ahead of the
+  // `source === 'review'` pending return), so it is the one 'unavailable' outcome both sources can
+  // reach -- 'oversize' cannot (sizeCheck only runs `if (source === 'jev')`, per section 10's own
+  // "Cairn does not separately cap [the review request's] size beyond the state it sends"), and a
+  // transport failure/invalid answer/model mismatch cannot (review never calls a transport at all
+  // from inside this function). Completes both-source coverage of the 'unavailable' branch.
+  test('an excluded touched path is unavailable excluded for the review source too, with no call and no pending review return', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, { ...draft(), named_paths: ['secret/.env'] });
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable excluded: credential secret/.env');
+    assert.equal(r.pending, undefined);
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    assert.equal(log.at(-2).payload.source, 'review');
+    assert.equal(log.at(-1).payload.call, null);
   });
 });

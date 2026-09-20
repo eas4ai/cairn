@@ -833,10 +833,42 @@ describe('the measure brief and the CLI', () => {
     assert.match(written, /## Score five dimensions, 0 to 4 each/);
     assert.match(written, /cairn measure <slug> --file <path>/);
   });
+  // Fix (Important I3, final-review.md): cairn measure never exposed a --harness <name> override,
+  // unlike cairn brief, which section 10 says the review source mirrors exactly. `splitFlag`
+  // already listed '--harness' in its takesValue set (lib/cli.mjs), but measureCommand never read
+  // one off argv -- dead code. env carries none of CAIRN_HARNESS/CLAUDECODE/CODEX_HOME/
+  // MUSE_SESSION, so only the flag itself could have selected the harness below (auto-detection
+  // would otherwise throw the C1 no-harness refusal exercised above).
+  test('cairn measure --brief --harness <name> selects the named harness in the recorded launch', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await run(['measure', '--brief', '--harness', 'codex', ...draftFlags(draft())], cwd, { env: {} });
+    assert.equal(r.code, 0, r.err);
+    const log = await readLog(cwd);
+    const intent = log.findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.source, 'review');
+    assert.deepEqual(intent.payload.launch, { harness: 'codex', model: null, transport: null, boundary: 'unenforced' });
+    assert.match(r.out, /harness: codex/);
+  });
   test('cairn measure without --brief on a review-source project refuses', async () => {
     const cwd = await repoWithCommitment(false);
     const r = await run(['measure', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
     assert.equal(r.code, 1); assert.match(r.err, /--brief/);
+  });
+  // Fix (Critical C1, final-review.md): the same no-harness-detected scenario, driven through the
+  // real CLI (main()) rather than measure() directly -- a controlled, empty env (no --harness, no
+  // CAIRN_HARNESS, none of CLAUDECODE/CODEX_HOME/MUSE_SESSION) so this never depends on the real
+  // process environment. A clean non-zero exit naming the recorded outcome, not a crash.
+  test('cairn measure --brief with no harness detectable in env exits non-zero with the recorded unavailable measurement, not a crash', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: {} });
+    assert.equal(r.code, 1);
+    assert.match(r.err, /^cairn: /); assert.match(r.err, /--brief/); assert.match(r.err, /unavailable no-harness/);
+    const log = await readLog(cwd);
+    const m = log.findLast((x) => x.kind === 'measurement');
+    assert.equal(m.payload.outcome, 'unavailable'); assert.equal(m.payload.reason, 'unavailable no-harness');
+    assert.equal(m.payload.call, null); assert.equal(m.payload.suggested, null);
+    const intent = log.findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.launch, null);
   });
   test('cairn measure --brief on a jev-source project refuses: there is nothing to brief', async () => {
     const cwd = await repoWithCommitment();

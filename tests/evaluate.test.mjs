@@ -873,6 +873,25 @@ describe('measure()', () => {
     assert.deepEqual(log.map((x) => x.kind).slice(-1), ['evaluation-intent']);
     assert.equal(log.at(-1).payload.source, 'review'); assert.ok(log.at(-1).payload.request_digest);
   });
+  // Fix (Critical C1, final-review.md): detectHarness (lib/review.mjs) throws a bare ReviewError
+  // when no harness can be detected -- an `env` object that carries none of --harness,
+  // CAIRN_HARNESS, or a recognized harness env var (CLAUDECODE/CODEX_HOME/MUSE_SESSION). Section
+  // 10 requires this to be a recorded `unavailable <class>` measurement, the same as any other
+  // technical no-call, never an uncaught exception past measure(). A controlled, empty `env: {}`
+  // is passed explicitly so this test does not depend on -- and cannot be fooled by -- whatever
+  // harness variables the real process happens to export (this review's own reproduction found
+  // exactly two pre-existing tests that only passed because CLAUDECODE was set in the dev shell).
+  test('review source: no harness detectable is a recorded unavailable measurement, not a crash', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { env: {} });
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable no-harness'); assert.equal(r.suggested, null);
+    const log = await readLog(cwd);
+    assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
+    const [intent, m] = log.slice(-2);
+    assert.equal(intent.payload.source, 'review'); assert.equal(intent.payload.launch, null); assert.equal(intent.payload.request_digest, null);
+    assert.equal(m.payload.call, null, 'no call record'); assert.equal(m.payload.source, 'review');
+    assert.equal(m.payload.outcome, 'unavailable'); assert.equal(m.payload.reason, 'unavailable no-harness'); assert.equal(m.payload.suggested, null);
+  });
   test('identity is captured before any write; equal identity and policy yield byte-identical requests', async () => {
     const cwd = await repoWithCommitment();
     const a = []; const t = () => async (req) => { a.push(req); return { status: 200, body: goodBody(), model: 'jev-1.13.0' }; };
@@ -1150,6 +1169,33 @@ describe('completeReviewMeasurement', () => {
     const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
     assert.equal(call.payload.model, null); assert.equal(call.payload.transport, null); assert.equal(call.payload.session, null);
   });
+  // 4. Fix (Important I1, final-review.md): a non-object body (JSON `null`, a number, an array)
+  // used to raw-crash with an uncaught TypeError, not a MeasurementError -- the three refusal
+  // checks (session/model/transport) read body.model/body.transport/body.session directly, before
+  // reviewField's coercion ever runs. Guarded with the same isPlainObject check parseScoreAnswers
+  // already uses, before any property of `body` is read.
+  test('a null --file body refuses with a MeasurementError naming the defect, not a raw TypeError', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, null), (e) => {
+      assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
+      assert.match(e.message, /not a JSON object/);
+      return true;
+    });
+    const log = await readLog(cwd);
+    assert.equal(log.some((x) => x.kind === 'evaluation-call' || x.kind === 'measurement'), false, 'nothing written for a malformed body');
+  });
+  test('an array --file body refuses with a MeasurementError naming the defect, not a raw TypeError', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, []), (e) => {
+      assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
+      assert.match(e.message, /not a JSON object/);
+      return true;
+    });
+    const log = await readLog(cwd);
+    assert.equal(log.some((x) => x.kind === 'evaluation-call' || x.kind === 'measurement'), false, 'nothing written for a malformed body');
+  });
   // 3. A record appended between the brief (measure()'s pending intent) and the file completion
   //    (an unrelated backlog item, standing in for anything else the loop might do meanwhile)
   //    does not block completeReviewMeasurement from finding its own intent -- the "stale intent"
@@ -1162,6 +1208,25 @@ describe('completeReviewMeasurement', () => {
     await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
     const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
     assert.equal(c.outcome, 'composite');
+  });
+  // Fix (Important I2, final-review.md): mirrors currentMeasurement's own fix round 1 (I1) --
+  // `range()` returns the trailing records of the last-started commitment whether or not it later
+  // closed, so without the `!r.closed` guard a closed commitment's own records still looked like
+  // "current" scope. A `done` appended after the review brief (the draft left pending, never
+  // followed through -- a realistic abandoned-review scenario) must refuse completion, the same
+  // way currentMeasurement already reports "missing" for the same commitment, and must write
+  // nothing (no orphaned evaluation-call/measurement trailing `done` in the log).
+  test('completing a review measurement after done is refused, and writes nothing', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await appendRecord(cwd, 'done', 'auth-tokens', { slug: 'auth-tokens', snapshot: await writeWorkspaceSnapshot(cwd) });
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody()), (e) => {
+      assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
+      assert.match(e.message, /no pending/);
+      return true;
+    });
+    const log = await readLog(cwd);
+    assert.equal(log.some((x) => x.kind === 'evaluation-call' || x.kind === 'measurement'), false, 'no measurement was written after done');
   });
 });
 

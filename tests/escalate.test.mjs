@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateDraft, draftDigest, parseConcern, DraftError } from '../lib/escalate.mjs';
 
@@ -129,13 +129,23 @@ test('escalateWithRoute ignores typesafeai.enabled -- there is no route left to 
   assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).kind, 'escalation');
 });
 
-test('cairn decide --consequential accepts the same canonical draft and writes the same line without an evaluation', async () => {
+// Deviation from this test's original text (superseded by plan 16 task 3): before this task,
+// decideConsequential wrote a decision line straight from the draft's own optional `evaluation`
+// field, needing no measurement at all -- "accepts the same canonical draft and writes the same
+// line without an evaluation". Task 3 makes currentMeasurement (lib/evaluate.mjs) the sole source
+// of the decision line's `evaluation` field (Global Constraints: nothing routes a floor-caught or
+// vetoed draft to the agent, and only a composite-outcome measurement permits deciding at all), so
+// a draft with no measurement at all -- loopRepo()'s own fixture never calls measure() -- is now
+// refused, not decided. The pre-measurement refusals (a malformed field, a concern outside the
+// frozen set) still run first, unchanged, since checkConcerns runs before currentMeasurement is
+// ever consulted; only the final assertion (a bare decide with no evaluation succeeding) no longer
+// holds and is replaced by the new required refusal. Coverage for the successful,
+// measurement-backed path is the 'decideConsequential requires a measurement' describe block below.
+test('cairn decide --consequential still refuses a malformed draft or an out-of-set concern before ever consulting a measurement; a draft with no measurement at all is refused too', async () => {
   const r = await loopRepo();
   await assert.rejects(decideConsequential(r.cwd, draft({ because: '' })), DraftError);
   await assert.rejects(decideConsequential(r.cwd, draft({ concerns: ['ZZZ-999'] })), /not in the frozen set/);
-  const id = await decideConsequential(r.cwd, draft());
-  const line = (await readAdr(r.cwd)).find((l) => l.id === id);
-  assert.deepEqual([line.kind, line.evaluation, line.body, line.wrong_if], ['decision', null, `${draft().recommendation} Instead: ${draft().instead}`, draft().if_wrong]);
+  await assert.rejects(decideConsequential(r.cwd, draft()), /no measurement/);
 });
 
 import { answer, escalationState, unanswered } from '../lib/escalate.mjs';
@@ -524,4 +534,173 @@ test('a CAS refusal on refs/cairn/log from escalate, answer, reply or dispute en
   assert.ok(losers.length >= 1, 'at least one racer lost the CAS race');
   for (const loser of losers) assert.match(loser.out, /^cairn: refusing refs\/cairn\/log: expected [0-9a-f]{40}; run the command again\n$/);
   for (const winner of winners) assert.match(winner.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+});
+
+// --- Task 3 (plan 16): decideConsequential requires a current, composite-outcome measurement ---
+// Section 5's floor-and-veto carve-out ("nothing routes a floor-caught or vetoed draft to the
+// agent") means only a composite-outcome measurement permits `decideConsequential`; floor, veto,
+// unavailable and indeterminate all mean code, not the agent, already decided the draft is the
+// developer's. `suggested` is advisory only and is never checked here.
+import { measure, recoverMeasurement } from '../lib/evaluate.mjs';
+import { makeProject } from './helpers/repo.mjs';
+
+const AUTH_DOMAIN = `Prefix: AUTH
+
+[AUTH-003] Tokens rotate on a fixed schedule.
+Falsifier: tokens are not rotated on schedule.
+Mechanism: rotate
+Status: Agreed 2026-09-19
+`;
+const OVERVIEW_WITH_AUTH = `# Keystone
+
+## Spec map
+
+| File | Prefix |
+|---|---|
+| auth.md | AUTH |
+`;
+const dims = () => ({ evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 });
+
+// Built the same way tests/evaluate.test.mjs's own repoWithCommitment is (that helper is local
+// and unexported there, so it is not reused directly): a real domain/roadmap/overview fixture for
+// AUTH-003, authorized and started on commitment 'auth-tokens', with typesafeai enabled so
+// measure() takes the jev call path this describe block's tests need.
+async function repoWithCommitment() {
+  const p = await makeProject({
+    settings: { data: ['migrations/**'], typesafeai: { enabled: true, model: 'jev-1.13.0', weights: dims(),
+      agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } },
+    files: {
+      'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
+      'docs/spec/auth.md': AUTH_DOMAIN,
+      'docs/spec/roadmap.md': 'Current: auth-tokens\n\n## auth-tokens\n\nRequirements: AUTH-003\n',
+    },
+  });
+  await p.authorize();
+  await start(p.cwd, 'auth-tokens');
+  return p.cwd;
+}
+
+// Distinct from this file's own top-level `draft()` (commitment 'first', concern 'DEMO-001',
+// which repoWithCommitment's fixture above knows nothing about) -- named `mdraft` (measurement
+// draft) to avoid redeclaring `draft`, and shaped to match repoWithCommitment's own commitment and
+// requirement, the same as tests/evaluate.test.mjs's local draft().
+const mdraft = (over = {}) => ({ commitment: 'auth-tokens', concerns: ['AUTH-003'], question: 'Rotate tokens hourly?',
+  recommendation: 'hourly', because: 'observed: node scripts/rotate.mjs prints ok', if_wrong: 'sessions drop',
+  instead: 'daily', options: ['hourly', 'daily'], named_paths: ['src/auth/rotate.mjs'], cited_decisions: [], ...over });
+
+const transport = (bodies) => async () => { const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
+
+// The same five-dimension jev answer shape tests/evaluate.test.mjs's own goodBody() uses (Fix
+// round 1 there: a real jev-1.13.0 answer carries no `type` field) -- its defaults keep the
+// composite well under the 0.35 ceiling (composite 0.115, suggested 'agent'), matching the
+// baseline every override below starts from.
+const scoreBody = (over = {}) => JSON.stringify({
+  model: 'jev-1.13.0',
+  answers: {
+    evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
+    reach: { score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
+    contract: { score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+    surface: { score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+    ambiguity: { score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+    ...over,
+  },
+  usage: { input_tokens: 10, output_tokens: 2 },
+});
+
+describe('decideConsequential requires a measurement', () => {
+  test('refuses with no measurement at all', async () => {
+    const cwd = await repoWithCommitment();
+    await assert.rejects(decideConsequential(cwd, mdraft()), /no measurement/);
+  });
+  // Deviation from the brief's own Step 1 snippet: the snippet's override
+  // (`evidence: { score: 4, confidence: 0.9, ... } // pushes composite high -> suggested
+  // developer`) does not do what its comment claims against the real computeComposite
+  // (lib/evaluate.mjs): evidence is the one inverted dimension (`(4 - level) / 4`, "more evidence
+  // should lower the composite"), so evidence level 4 ("quotes output and names the test that
+  // fails", POLICY.LEVELS.evidence[4]) is the SAFEST case and contributes a term of 0, not a high
+  // one -- it lowers the composite (0.085 with every other dimension left at scoreBody()'s
+  // defaults), the opposite direction from the snippet's own comment. Nor is a single dimension's
+  // override enough on its own regardless of direction: with the other four terms fixed at
+  // scoreBody()'s defaults (weighted sum 0.085), even the most extreme legal value of any one
+  // dimension (0 or 4, keeping reach/contract/surface under their veto thresholds) cannot add
+  // enough to clear the 0.35 ceiling (max one-dimension contribution is 0.2). Two dimensions are
+  // overridden instead: evidence to its worst case (score 0, "none", term (4-0)/4 = 1) and
+  // ambiguity to its worst case (score 4, term 4/4 = 1) -- neither is a veto dimension (only
+  // reach>=4, contract>=3, surface>=3 veto), so composite = 0.2*(1+0.15+0.025+0+1) = 0.435,
+  // cleanly over the 0.35 ceiling -> suggested 'developer', outcome 'composite', no veto.
+  test('names the measurement on the ADR line; suggested is not checked', async () => {
+    const cwd = await repoWithCommitment();
+    const body = scoreBody({
+      evidence: { score: 0, confidence: 0.9, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+      ambiguity: { score: 4, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 1 } },
+    });
+    const r = await measure(cwd, mdraft(), { transport: transport([body]) });
+    assert.equal(r.outcome, 'composite');
+    assert.equal(r.suggested, 'developer');
+    const id = await decideConsequential(cwd, mdraft());
+    const line = (await readAdr(cwd)).findLast((l) => l.kind === 'decision');
+    assert.equal(line.id, id); assert.equal(line.evaluation, r.measurementSha); assert.equal(line.by, 'agent');
+  });
+  test('refuses a floor-outcome or vetoed measurement: decide is not the floor-caught path', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, { ...mdraft(), named_paths: ['migrations/1.sql'] });
+    await assert.rejects(decideConsequential(cwd, { ...mdraft(), named_paths: ['migrations/1.sql'] }), /routes to the developer|floor/);
+    const cwd2 = await repoWithCommitment();
+    const vetoBody = scoreBody({ contract: { score: 3.5, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5 } } });
+    await measure(cwd2, mdraft(), { transport: transport([vetoBody]) });
+    await assert.rejects(decideConsequential(cwd2, mdraft()), /routes to the developer|veto/);
+  });
+  test('refuses a stale measurement, exactly as currentMeasurement does', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, mdraft(), { transport: transport([scoreBody()]) });
+    await escalate(cwd, { commitment: 'auth-tokens', concerns: ['AUTH-003'], question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i', options: [], named_paths: [], cited_decisions: [] });
+    await assert.rejects(decideConsequential(cwd, mdraft()), /stale/);
+  });
+  // Self-review completeness (not in the brief's own Step 1 snippet): the mirror image of "names
+  // the measurement" above -- scoreBody()'s own defaults already suggest 'agent' (composite
+  // 0.115, well under the 0.35 ceiling), proving a composite measurement is accepted with either
+  // suggestion, not only the counter-intuitive 'developer' one the brief's own test covers.
+  test('a composite measurement suggesting agent is accepted too, and named the same way', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, mdraft(), { transport: transport([scoreBody()]) });
+    assert.equal(r.outcome, 'composite'); assert.equal(r.suggested, 'agent');
+    const id = await decideConsequential(cwd, mdraft());
+    const line = (await readAdr(cwd)).findLast((l) => l.kind === 'decision');
+    assert.equal(line.id, id); assert.equal(line.evaluation, r.measurementSha); assert.equal(line.by, 'agent');
+  });
+  // Self-review completeness: 'unavailable' (a failed transport call) is one of the four
+  // non-composite outcomes the Global Constraints name explicitly ("floor, veto, unavailable and
+  // indeterminate all mean code ... decided the draft is the developer's"), not covered by the
+  // brief's own floor/veto test above. Built the same way tests/evaluate.test.mjs's own
+  // 'a failed transport call is unavailable <class>' test is.
+  test('refuses an unavailable measurement (a failed transport call)', async () => {
+    const cwd = await repoWithCommitment();
+    const e = new Error('overloaded'); e.klass = 'overloaded';
+    const r = await measure(cwd, mdraft(), { transport: transport([e]) });
+    assert.equal(r.outcome, 'unavailable');
+    await assert.rejects(decideConsequential(cwd, mdraft()), /routes to the developer|unavailable/);
+  });
+  // Self-review completeness: 'indeterminate' (an unknown crash outcome, never retried, per
+  // section 10's "Limits and failure") is the fourth named non-composite outcome. measure() itself
+  // rejects on an unknown-klass transport error, leaving the intent dangling; recoverMeasurement
+  // (lib/evaluate.mjs, unchanged by this task) finalizes it indeterminate on the next call, the
+  // same crash-recovery path tests/evaluate.test.mjs's own measure() describe block covers.
+  test('refuses an indeterminate measurement (an unrecovered crash, now finalized)', async () => {
+    const cwd = await repoWithCommitment();
+    const crash = new Error('crash'); // no .klass: an unknown outcome
+    await assert.rejects(measure(cwd, mdraft(), { transport: transport([crash]) }));
+    await recoverMeasurement(cwd);
+    await assert.rejects(decideConsequential(cwd, mdraft()), /routes to the developer|indeterminate/);
+  });
+  // Self-review completeness: 'digest' -- this draft really was measured, but a different draft
+  // was measured more recently in the same open commitment, shadowing it -- is the third named
+  // MeasurementError condition alongside 'missing' and 'stale', both already covered above. The
+  // exact currentMeasurement message passes through decideConsequential unchanged.
+  test('refuses a digest mismatch (a different draft measured more recently), the MeasurementError message passed through unchanged', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, mdraft(), { transport: transport([scoreBody()]) });
+    await measure(cwd, mdraft({ because: 'a wholly different draft, also measured' }), { transport: transport([scoreBody()]) });
+    await assert.rejects(decideConsequential(cwd, mdraft()),
+      (e) => e.message === 'cairn: the latest measurement is for a different draft; run cairn measure for this draft');
+  });
 });

@@ -1395,7 +1395,7 @@ describe('currentMeasurement', () => {
   // review draft, "run cairn measure again" is actively wrong guidance -- measure() already ran).
   test('missing: this draft was measured but the measurement has not finished yet (review still pending)', async () => {
     const cwd = await repoWithCommitment(false);
-    const pending = await measure(cwd, draft());
+    const pending = await measure(cwd, draft(), { env: { CLAUDECODE: '1' } });
     assert.equal(pending.pending, 'review');
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
       (e) => e instanceof MeasurementError && e.message === 'cairn: the measurement for this draft has not finished yet; run cairn measure again once it has');
@@ -1447,7 +1447,7 @@ describe('currentMeasurement', () => {
   test('a review-source measurement (no call, no transport) is current when nothing follows it', async () => {
     const cwd = await repoWithCommitment(false);
     const D = normalizeDraft(draft());
-    const pending = await measure(cwd, draft());
+    const pending = await measure(cwd, draft(), { env: { CLAUDECODE: '1' } });
     assert.equal(pending.pending, 'review');
     const { settings } = await loadSettings(cwd);
     const { measurementSha } = await finalizeMeasurement(cwd, pending.slug, pending.intentSha, {

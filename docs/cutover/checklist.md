@@ -22,6 +22,14 @@ push. Nothing in this checklist pushes to `public`.
 - [ ] `cairn wake` on the v2 worktree prints `Done:`.
 - [ ] `node --test tests/*.test.mjs` passes on v2, fixtures included.
 - [ ] docs/cutover/cut-list.md is committed and every row read.
+- [ ] `.cairn/settings.json`'s `typesafeai` block has `weights`, `agent_ceiling`
+      and `confidence_floors`, not the seven old thresholds or a `mode` field;
+      settings gains `developer: present` or `absent`. `cairn wake` above
+      already proves settings load cleanly, but this is the one thing this
+      checklist's own "Before" pass calls out by name, since the shape changed
+      twice within v2's own development and a stale `.cairn/settings.json`
+      carried over from an earlier v2 checkout would otherwise only surface as
+      an opaque `settings refused` message deep in some other step.
 - [ ] `git -C /home/shawn/workspace2/cairn-dev status --porcelain` is empty
       and `git -C /home/shawn/workspace2/cairn-dev branch --show-current` is `main`.
 - [ ] `git -C /home/shawn/workspace2/cairn-v2 status --porcelain` is empty.

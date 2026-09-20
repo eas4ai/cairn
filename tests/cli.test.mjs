@@ -633,9 +633,13 @@ const OVERVIEW_WITH_AUTH = `# Keystone
 `;
 const dims = () => ({ evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 });
 
-async function repoWithCommitment() {
+// Deviation from the brief text: extended with an `enabled` parameter (default true, so every
+// existing no-args call site is unaffected) to build a review-source project too -- mirrors
+// tests/evaluate.test.mjs's own repoWithCommitment(enabled, ...), the established convention this
+// file's own comment (above) already names for this exact fixture.
+async function repoWithCommitment(enabled = true) {
   const p = await makeProject({
-    settings: { data: ['migrations/**'], typesafeai: { enabled: true, model: 'jev-1.13.0', weights: dims(),
+    settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(),
       agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } },
     files: {
       'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
@@ -679,6 +683,13 @@ function draftArgs(d) {
   for (const c of d.cited_decisions) argv.push('--decision', c);
   return argv;
 }
+// Plan 16, Task 5's own Step 1 test snippet names this helper `draftFlags`; it is `draftArgs`
+// under this file's own established name (immediately above, already in use by every test in the
+// describe block below it). Aliased rather than duplicated.
+const draftFlags = draftArgs;
+// Task 5's Step 1 snippet also calls a `runCli(cwd, argv, opts)` helper; this file's own run(argv,
+// cwd, extra) (top of file) already does exactly that, argument order swapped. Reused directly in
+// the describe block below instead of adding a second helper with the same job.
 
 describe('escalate --consequential and decide --consequential (CLI dispatch)', () => {
   // Fix round 1, Minor #2: reads the written record back through the real readers (readLog for
@@ -752,5 +763,76 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     const r = await run(['decide', '--consequential', ...draftArgs(floorDraft)], cwd);
     assert.equal(r.code, 1);
     assert.equal(r.err, `cairn: measurement ${m.measurementSha} routes to the developer (floor); cairn escalate --consequential instead of deciding\n`);
+  });
+});
+
+// --- Plan 16, Task 5: cairn measure (CLI dispatch) ---------------------------------------------
+import { renderMeasureBrief } from '../lib/evaluate.mjs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+
+// fakeTransportPath: writes a small ESM module whose default export replaces `post`
+// (bin/typesafeai.mjs) -- the test-only `--transport-module <path>` flag (this task) loads it the
+// same way. Called with no `await` at each call site (the task brief's own Step 1 snippet:
+// `fakeTransportPath(scoreBody())` spliced straight into an argv array), so this is deliberately
+// synchronous (Node's *Sync fs functions), not the async node:fs/promises API the rest of this
+// file otherwise prefers -- an async version would hand argv a Promise instead of a path string.
+// Echoes `request.model` back rather than a hard-coded one, so it matches whatever settings.
+// typesafeai.model the calling fixture configured (measure()'s own model-mismatch check compares
+// the transport's returned model against the request's).
+function fakeTransportPath(body) {
+  const dir = mkdtempSync(join(tmpdir(), 'cairn-transport-'));
+  const file = join(dir, 'transport.mjs');
+  writeFileSync(file, `export default async function (request) {\n  return { status: 200, body: ${JSON.stringify(body)}, model: request.model };\n}\n`);
+  return file;
+}
+
+describe('the measure brief and the CLI', () => {
+  test('renderMeasureBrief shows the five questions and M(D), never raw code paths outside option.files', () => {
+    const state = { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
+    const text = renderMeasureBrief({ state, n: 0, launch: { name: 'claude_code', model: null, transport: null, boundary: 'unenforced' } });
+    for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.match(text, new RegExp(d));
+    assert.match(text, /write its five Score answers/);
+    assert.match(text, /cairn measure .* --file/);
+  });
+  test('cairn measure (jev source) completes synchronously and prints the outcome', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['measure', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: measure auth-tokens .* composite/);
+    // Written records, not only the printed line: a real measurement record, over the jev source,
+    // naming the same outcome the stdout line reports.
+    assert.match(r.out, /levels:.*evidence=/); assert.match(r.out, /composite: 0\./); assert.match(r.out, /veto: none/);
+    const log = await readLog(cwd);
+    const m = log.findLast((x) => x.kind === 'measurement');
+    assert.equal(m.payload.source, 'jev'); assert.equal(m.payload.outcome, 'composite'); assert.equal(m.payload.levels.length, 5);
+  });
+  test('cairn measure --brief (review source) writes the intent and prints a launch block', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /start:.*fresh reviewer/); assert.match(r.out, /cairn measure auth-tokens .* --file/);
+    // Written records: an evaluation-intent naming the review source and the detected harness --
+    // no measurement yet (the review source finishes only through Task 6's --file completion).
+    const log = await readLog(cwd);
+    const intent = log.findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.source, 'review');
+    assert.deepEqual(intent.payload.launch, { harness: 'claude_code', model: null, transport: null, boundary: 'unenforced' });
+    assert.equal(log.some((x) => x.kind === 'measurement'), false);
+    // The brief file itself is written to disk, not only echoed to stdout.
+    const briefPath = /brief: (\S+)/.exec(r.out)[1];
+    const written = await readFile(briefPath, 'utf8');
+    assert.match(written, /# Measurement brief/);
+    assert.match(written, /## Score five dimensions, 0 to 4 each/);
+    assert.match(written, /cairn measure <slug> --file <path>/);
+  });
+  test('cairn measure without --brief on a review-source project refuses', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await run(['measure', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+    assert.equal(r.code, 1); assert.match(r.err, /--brief/);
+  });
+  test('cairn measure --brief on a jev-source project refuses: there is nothing to brief', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['measure', '--brief', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
+    assert.equal(r.code, 1); assert.match(r.err, /--brief/);
   });
 });

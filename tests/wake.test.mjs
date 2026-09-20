@@ -196,6 +196,116 @@ test('an escalation without a final answer is Waiting with the five fields verba
   assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
 });
 
+// Task 7 (plan 16): developer: absent exits 4 when the open escalation names a floor- or
+// veto-outcome measurement (spec section 5's floor-and-veto carve-out: with no developer, the
+// floor or a veto is the only path left to the developer, so wake's own Waiting for it is a real
+// verdict this run cannot answer, not sitting-and-waiting; section 2's exit-code table gives it
+// exit 4, distinct from exit 3's non-verdict states). A raw 'measurement' record is appended
+// directly here rather than through lib/evaluate.mjs's real measure() (which needs a full
+// typesafeai/harness fixture -- see tests/escalate.test.mjs's repoWithCommitment -- for a real
+// floor/veto outcome): wake's own 'waiting' predicate only ever reads the record's `outcome` field
+// off the log, so a fixture-shaped draft digest satisfies it without a real evaluation-intent
+// record behind it.
+//
+// `intent` (a ref-typed field, lib/records.mjs) cannot be an arbitrary well-formed sha the way
+// `draft_digest` (a digest-typed field, never cross-checked) can: wake()'s own read path runs
+// lib/travel.mjs's validateAfterFetch before verdictOf, which walks every ref-typed field of every
+// record and names a `cairn push` repair for one that names no record actually in the log (section
+// 4, "After fetch, wake validates all cross-references"). It does not check the referenced
+// record's *kind*, only that some record with that sha exists, so `r.startSha` (always present,
+// any loopRepo() fixture) stands in for it without needing a real evaluation-intent record.
+//
+// Deviation from the brief's own Step 1 snippet: its measurement literal sets `source: null`, but
+// the real 'measurement' schema (lib/records.mjs) types `source` as `oneOf('jev', 'review')`, not
+// nullable -- unlike `model`/`composite`/`veto`/`suggested`, which are genuinely nullable. `source:
+// null` throws RecordError, not merely fails the eventual assertion, so the fixture below uses
+// `source: 'jev'` instead, matching this file's existing schema-fidelity convention (every other
+// deviation comment in this file over the real record schemas the plan text approximated).
+const measurement = (r, outcome, extra = {}) => ({
+  intent: r.startSha, call: null, draft_digest: 'sha256:' + 'b'.repeat(64), source: 'jev', model: null,
+  levels: [], composite: null, veto: null, suggested: null, outcome, reason: `${outcome}:fixture`, ...extra,
+});
+
+test('developer: absent exits 4 when the open escalation names a floor-outcome measurement', async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  const mSha = await r.add('measurement', r.slug, measurement(r, 'floor', { reason: 'floor:data' }));
+  const esc = await r.escalate('DEMO-001', r.slug, mSha);
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.exit, 4);
+  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I' });
+});
+
+test('the same floor escalation with developer: present is ordinary Waiting, no exit code', async () => {
+  const r = await loopRepo({ settings: { developer: 'present' } });
+  const mSha = await r.add('measurement', r.slug, measurement(r, 'floor', { reason: 'floor:data' }));
+  await r.escalate('DEMO-001', r.slug, mSha);
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.exit, undefined);
+});
+
+// Controller Ruling 18 (binding, spec commit c3956291, postdates the brief's own floor-only text):
+// "exit 4 applies when the escalation's measurement outcome is floor OR veto" -- section 5's own
+// text agrees ("nothing routes a floor-caught or vetoed draft to the agent... A veto counts
+// because section 5 says nothing routes a vetoed draft to the agent, so its Waiting is as
+// unanswerable as the floor's"). Extended past the brief's own text and code accordingly.
+test('developer: absent exits 4 when the open escalation names a veto-outcome measurement too (Controller Ruling 18)', async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  const mSha = await r.add('measurement', r.slug, measurement(r, 'veto', { veto: 'reach', reason: 'veto:reach' }));
+  await r.escalate('DEMO-001', r.slug, mSha);
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.exit, 4);
+});
+
+test('developer: absent leaves a plain dispute escalation (no measurement named) at ordinary Waiting', async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  await r.escalate('cycle');
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.exit, undefined);
+});
+
+// Global constraint for this task: an escalation the agent chose to raise on a composite
+// measurement is not exit 4 even with developer: absent -- section 5's own text says the agent's
+// own choice to escalate past a suggestion "would have no one to answer it either," but the brief
+// decides wake does not treat that as exit 4 (only the floor or a veto does); this is not a gap,
+// it is what the brief specifies.
+test("developer: absent leaves the agent's own escalation past a composite measurement at ordinary Waiting, not exit 4", async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  const mSha = await r.add('measurement', r.slug, measurement(r, 'composite', { composite: 0.1, suggested: 'agent', reason: 'composite 0.100' }));
+  await r.escalate('DEMO-001', r.slug, mSha);
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.equal(v.exit, undefined);
+});
+
+test('developer: absent leaves an unavailable or an indeterminate measurement at ordinary Waiting, not exit 4', async () => {
+  const r1 = await loopRepo({ settings: { developer: 'absent' } });
+  const m1 = await r1.add('measurement', r1.slug, measurement(r1, 'unavailable', { reason: 'unavailable excluded' }));
+  await r1.escalate('DEMO-001', r1.slug, m1);
+  assert.equal((await wake(r1.cwd)).exit, undefined);
+
+  const r2 = await loopRepo({ settings: { developer: 'absent' } });
+  const m2 = await r2.add('measurement', r2.slug, measurement(r2, 'indeterminate', { reason: 'indeterminate: an intent was left open by a crash' }));
+  await r2.escalate('DEMO-001', r2.slug, m2);
+  assert.equal((await wake(r2.cwd)).exit, undefined);
+});
+
+test('cmdWake exits 4 through main() and prints the five fields exactly as ordinary Waiting does, not a bare line', async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  const mSha = await r.add('measurement', r.slug, measurement(r, 'floor', { reason: 'floor:data' }));
+  const esc = await r.escalate('DEMO-001', r.slug, mSha);
+  const out = r.runWake();
+  assert.equal(out.status, 4);
+  assert.equal(out.stdout, [
+    'verdict: Waiting', 'party: developer', `reason: escalation ${esc.slice(0, 7)} awaits an answer`,
+    'question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I',
+    `predicate: ${PREDICATES.waiting}`, '',
+  ].join('\n'));
+});
+
 test('an unfixed defect against a set requirement is named before dirty inputs', async () => {
   const r = await loopRepo();
   const item = await r.item('defect', 'DEMO-001', 'wrong-greeting');

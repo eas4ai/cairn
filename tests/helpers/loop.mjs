@@ -104,7 +104,7 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
       const rep = (await readLog(cwd)).filter((x) => x.kind === 'report').at(-1);
       return add('acceptance', slug, { slug, session: null, report: rep.sha, snapshot: await snap(), delta_digest: 'sha256:' + '4'.repeat(64), accepted: accepted.map((s) => ({ resolution: s, reason: 'ok' })), rejected: rejected.map((s) => ({ resolution: s, reason: 'not fixed' })), findings });
     },
-    escalate: (concerns, s = slug) => add('escalation', s, { slug: s, question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', concerns, evaluation: null }),
+    escalate: (concerns, s = slug, evaluation = null) => add('escalation', s, { slug: s, question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', concerns, evaluation }),
     answer: (esc, kind, text = '') => add('answer', slug, { escalation: esc, kind, text, owner: null, evidence }),
     reply: (esc) => add('reply', slug, { escalation: esc, text: 'explained' }),
     item: (kind, source, s = 'idea') => add('item', s, { kind, slug: s, source, body: 'an idea' }),

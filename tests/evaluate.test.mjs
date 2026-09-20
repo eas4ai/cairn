@@ -184,13 +184,13 @@ describe('C(c) and M(D)', () => {
     const C = await contractState(cwd, f);
     assert.deepEqual(Object.keys(C).sort(), ['commitment', 'decisions', 'glossary', 'keystone', 'requirements']);
   });
-  test('M(D) is exactly the four closed parts, no rule and no free context', async () => {
+  test('M(D) is exactly the five closed parts, no rule and no free context', async () => {
     const { cwd } = await makeProject();
     await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
     const f = await kernelFacts(cwd, normalizeDraft(draft()));
     const C = await contractState(cwd, f);
     const { state } = await measureState(cwd, normalizeDraft(draft()), 0, C, f);
-    assert.deepEqual(Object.keys(state).sort(), ['contract', 'facts', 'five', 'option']);
+    assert.deepEqual(Object.keys(state).sort(), ['contract', 'facts', 'five', 'option', 'options']);
     assert.deepEqual(Object.keys(state.five).sort(), ['because', 'if_wrong', 'instead', 'question', 'recommendation']);
     // Fix round 1 (review Important finding 2): the brief's own snippet, and this test until now,
     // only spot-checked state.option's content (text, files) and asserted nothing at all about
@@ -203,6 +203,9 @@ describe('C(c) and M(D)', () => {
     assert.deepEqual(state.facts, authorityProjection(f));
     assert.equal(state.option.text, 'hourly');
     assert.ok(state.option.files.some((x) => x.path === 'src/auth/rotate.mjs'));
+    // Controller Ruling 3 (plan 18): state.options is D.options' full text list, in draft order --
+    // both the recommended option and every losing option, strings only.
+    assert.deepEqual(state.options, draft().options);
   });
   test('an excluded touched path throws EgressError and never reaches state', async () => {
     const { cwd } = await makeProject({ settings: { network_exclude: ['fixtures/private/**'] } });
@@ -381,6 +384,10 @@ describe('the Score request', () => {
       const t = req.questions[d].instructions;
       assert.ok(t.includes('`state.option`'), `${d} instructions missing the backticked state.option path`);
       assert.ok(t.includes('draft.options[0]'), `${d} instructions missing the zero-based option index`);
+      // Controller Ruling 3 (plan 18): reach, contract and surface each also point at the full
+      // options list added to the state, so the model can compare the recommended option against
+      // the alternatives it names.
+      assert.ok(t.includes('`state.options`'), `${d} instructions missing the backticked state.options path`);
     }
     for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.deepEqual(req.questions[d].criteria.length, 5);
     assert.equal(req.model, settings().typesafeai.model);

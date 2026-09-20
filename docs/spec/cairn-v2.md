@@ -1353,18 +1353,23 @@ explanation of what a route means.
 The draft is unchanged: `D := <commitment, concerns, question,
 recommendation, because, if_wrong, instead, options, named_paths,
 cited_decisions>`. The measurement state is `M(D) := <D's five narrative
-fields, the recommended option, C(c), A(D)>`, where `C(c)` is the
-start keystone, commitment and glossary, frozen requirements, and developer-
-written cited decisions (`by: developer`), and `A(D)` is the closed JSON
-authority projection of validated IDs, enums, booleans and counts the old
-owner call used. Beyond `D`, `C(c)` and `A(D)`, no agent prose, code, paths,
-outputs, findings or agent-authored ADR bodies reach either source: a cited
-decision the agent wrote reaches the call only as an id and a read flag in
-`A(D)`, whether or not the developer has read it. The five narrative fields
-are untrusted; the floor and veto run on code-known facts and on the model's
-own dimension answers, never on prose the model was asked to trust. If
-`A(D)` is incomplete, no call occurs (the narrow floor's technical case
-above).
+fields, every option's text with the recommended option and its code, C(c),
+A(D)>`, where `C(c)` is the start keystone, commitment and glossary, frozen
+requirements, and developer-written cited decisions (`by: developer`), and
+`A(D)` is the closed JSON authority projection of validated IDs, enums,
+booleans and counts the old owner call used. Beyond `D`, `C(c)` and `A(D)`,
+no agent prose, code, paths, outputs, findings or agent-authored ADR bodies
+reach either source: a cited decision the agent wrote reaches the call only
+as an id and a read flag in `A(D)`, whether or not the developer has read
+it. The five narrative fields are untrusted; the floor and veto run on code-
+known facts and on the model's own dimension answers, never on prose the
+model was asked to trust. If `A(D)` is incomplete, no call occurs (the
+narrow floor's technical case above).
+
+Revised 2026-09-20: previously the recommended option only. The in-tree
+benchmark showed the losing options' text is what lets the model separate
+reach, contract and surface (21/24 against 16/24), and the options are part
+of `D`, so no new class of input reaches the model.
 
 The recommended option's code is the snapshot's action-lease diff and
 complete touched files in path order; reads do not follow symlinks. The

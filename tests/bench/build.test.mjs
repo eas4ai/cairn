@@ -18,8 +18,12 @@ describe('the ledger project builder', () => {
     assert.ok(log.some((r) => r.kind === 'start' && r.payload.slug === 'ledger'));
     const w = await wake(p.dir);
     // Resolvable, not Waiting or Done: the project is mid-implementation, exactly where the
-    // benchmark's own scenarios assume a Consequential draft would be raised from.
+    // benchmark's own scenarios assume a Consequential draft would be raised from. action must be
+    // 'run' (a missing requirement receipt), not 'repair' -- a 'repair' verdict would mean a
+    // hand-written input (settings, spec, mechanisms, ADR) failed to parse, which this fixture
+    // build must never produce; asserting only verdict lets that kind of lint problem pass silently.
     assert.equal(w.verdict, 'Resolvable');
+    assert.equal(w.action, 'run');
   });
   test('typesafeai is enabled, jev, with the composite-design fields (no mode, no old thresholds)', async () => {
     const p = await buildLedgerProject();

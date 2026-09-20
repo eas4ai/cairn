@@ -991,3 +991,78 @@ describe('measure()', () => {
     assert.equal(log.at(-1).payload.call, null);
   });
 });
+
+// --- Task 10: calibration over recorded measurements ------------------------------------------
+// Section 10, "Record and calibration" / "The policy digest ... a change to any of them resets
+// calibration": upperBound (the unchanged one-sided exact binomial bound) and calibrate(cwd),
+// which scores the labelled sample against it and writes a 'calibration' record.
+import { upperBound, calibrate } from '../lib/evaluate.mjs';
+import { escalate, answer } from '../lib/escalate.mjs';
+import { writeFileSync } from 'node:fs';
+
+describe('calibration', () => {
+  test('exact one-sided bound, unchanged from the superseded design', () => {
+    assert.ok(Math.abs(upperBound(0, 60) - (1 - Math.pow(0.05, 1 / 60))) < 1e-9);
+    assert.ok(upperBound(0, 60) < 0.05); assert.ok(upperBound(0, 30) > 0.05);
+    assert.ok(upperBound(1, 60) > upperBound(0, 60));
+  });
+  // Controller Ruling 3: the labelled sample is the subset that can exist under the current
+  // record set -- measurements whose `suggested` was 'agent' that were nonetheless escalated and
+  // later answered with --owner. This helper drives exactly that path: measure() an agent-
+  // suggested draft, escalate it anyway (naming the measurement), then answer with an owner label.
+  // Deviation from the brief text: the brief's own snippet calls `answer(cwd, sha, 'ok', '',
+  // { owner: ownerLabel })`, passing escalate()'s return value (the escalation's own record sha)
+  // as answer()'s `slug` argument. Real answer() (lib/escalate.mjs) takes the commitment slug
+  // there and resolves the open escalation for it internally via pickOpen(log, slug,
+  // opts.escalation) -- passing a 40-hex escalation sha as `slug` matches no escalation's
+  // payload.slug ('auth-tokens', the commitment), reproduced verbatim as "cairn: no unanswered
+  // escalation for <sha>" before this fix. Fixed to the commitment slug plus `escalation: sha` in
+  // opts, the same targeted-answer shape tests/escalate.test.mjs's own passing calls use
+  // (`answer(r.cwd, 'first', 'ok', '', { ...asDev, escalation: b })`). Also adds `confirm: async
+  // () => true`, this fixture's project being unsigned-local (no signing_key): without it,
+  // answer()'s authenticateDeveloper falls back to lib/auth.mjs's ttyConfirm, which opens
+  // /dev/tty and throws "no controlling terminal" in this non-interactive test run -- the same
+  // `asDev` fixture tests/escalate.test.mjs already uses for every passing answer() call.
+  async function labelled(cwd, n, ownerLabel) {
+    for (let i = 0; i < n; i++) {
+      const r = await measure(cwd, { ...draft(), question: `q${i}` }, { transport: transport([scoreBody()]) });
+      assert.equal(r.suggested, 'agent');
+      const sha = await escalate(cwd, { ...draft(), question: `q${i}`, evaluation: r.measurementSha });
+      await answer(cwd, draft().commitment, 'ok', '', { owner: ownerLabel, escalation: sha, confirm: async () => true });
+    }
+  }
+  test('60 zero-error labelled agent-suggested cases pass at 0.05; 30 cannot', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 30, 'agent');
+    let c = await calibrate(cwd);
+    assert.deepEqual([c.pass, c.sample, c.errors], [false, 30, 0]);
+    await labelled(cwd, 30, 'agent');
+    c = await calibrate(cwd);
+    assert.deepEqual([c.pass, c.sample, c.errors], [true, 60, 0]);
+    const rec = (await readLog(cwd)).at(-1);
+    assert.equal(rec.kind, 'calibration'); assert.equal(rec.payload.result, 'pass'); assert.equal(rec.payload.predicted_agent, 60);
+  });
+  test('denominator is suggested-agent labelled cases only; unknown labels are excluded', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 3, 'agent'); await labelled(cwd, 2, 'unknown'); await labelled(cwd, 1, 'developer');
+    const c = await calibrate(cwd);
+    assert.deepEqual([c.sample, c.errors], [4, 1]);
+  });
+  test('a policy change resets calibration', async () => {
+    const cwd = await repoWithCommitment();
+    await labelled(cwd, 60, 'agent');
+    assert.equal((await calibrate(cwd)).pass, true);
+    const { settings } = await loadSettings(cwd);
+    settings.typesafeai.agent_ceiling = 0.4;
+    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    assert.equal((await calibrate(cwd)).sample, 0);
+  });
+  test('floor and vetoed measurements never enter the denominator (suggested is null)', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] });
+    assert.equal(r.suggested, null);
+    const sha = await escalate(cwd, { ...draft(), evaluation: r.measurementSha });
+    await answer(cwd, draft().commitment, 'ok', '', { owner: 'developer', escalation: sha, confirm: async () => true });
+    assert.deepEqual((await calibrate(cwd)).sample, 0);
+  });
+});

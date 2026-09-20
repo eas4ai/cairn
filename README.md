@@ -31,12 +31,15 @@ Cairn has two parts:
 - **A command-line tool** reads and writes those records, runs the declared
   checks when asked, and reports the next action.
 
-Cairn does not call an AI model or run the agent for you. Turning on the
-optional evaluator lets a model help decide whether one narrow kind of
-choice can stay the agent's to make; it never grants the agent authority
-by itself, and it is off by default. You use your usual coding agent, and
-the agent follows the project's working agreement. The tool runs on Node
-and Git, with no build step, runtime packages, database, or service.
+Cairn does not call an AI model or run the agent for you on its own. At one
+narrow kind of decision -- a Consequential choice -- the agent takes one
+measurement of its own draft before deciding: five scored dimensions and a
+composite, computed in code from the model's answers, never a verdict by
+itself. Only a fixed code floor and the measurement's own veto ever force
+that decision to you instead of the agent; every other case is the agent's
+judgment, informed by the reading. You use your usual coding agent, and the
+agent follows the project's working agreement. The tool runs on Node and
+Git, with no build step, runtime packages, database, or service.
 
 For example, you might agree that a form must reject an empty name. The
 agent writes a check that actually submits an empty name. Cairn records

@@ -1133,3 +1133,85 @@ describe('calibration', () => {
     assert.deepEqual((await calibrate(cwd)).sample, 0);
   });
 });
+
+// --- Plan 16 Task 2: currentMeasurement -- missing, stale, or a different draft digest ---------
+// Section 5 (docs/spec/cairn-v2.md): "`cairn decide --consequential` refuses a draft whose
+// measurement is missing, stale, or built from a different draft digest." currentMeasurement is
+// that check, consumed by plan 16 tasks 3 (decide --consequential), 4 (escalate) and 6.
+//
+// Deviation from the brief text: the brief's own Step 1 snippet calls the jev answer fixture
+// `scoreBody()`; this file's actual five-dimension answer body (Task 7, above) is `goodBody()` --
+// reused here, not redefined, the same as every other measure()-based describe block in this file.
+import { currentMeasurement, MeasurementError, finalizeMeasurement } from '../lib/evaluate.mjs';
+
+describe('currentMeasurement', () => {
+  test('missing: no measurement for this draft at all', async () => {
+    const cwd = await repoWithCommitment();
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
+      (e) => e instanceof MeasurementError && /no measurement/.test(e.message) && !/stale|digest/.test(e.message));
+  });
+  test('a fresh measurement for the exact draft is current', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    const m = await currentMeasurement(cwd, normalizeDraft(draft()));
+    assert.equal(m.sha, r.measurementSha);
+  });
+  // Deviation from the brief's Step 3 snippet: the snippet's own reference implementation throws
+  // the exact same message text for "no measurement at all" and "a measurement exists but for a
+  // different draft digest" -- collapsing two of this task's own named three conditions (missing,
+  // stale, digest; the task's own Global Constraints: "MeasurementError messages name which of the
+  // three conditions failed ... in words the agent can act on") into one. Implemented instead as
+  // three distinct branches, each with its own message naming its condition (see lib/evaluate.mjs);
+  // this test (and the two below) assert on the actual message content, not only the error class,
+  // to prove the distinction is real.
+  test('a different draft digest (even a one-word change) is not found, and reads distinctly from missing or stale', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft({ ...draft(), because: 'a different reason' })),
+      (e) => e instanceof MeasurementError && /digest/.test(e.message) && !/stale/.test(e.message));
+  });
+  test('stale: anything else appended to the log after the intent invalidates it', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
+    await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())), /stale/);
+  });
+  test('re-measuring after a stale hit produces a new current one', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
+    const r2 = await measure(cwd, draft(), { transport: transport([goodBody()]) });
+    const m = await currentMeasurement(cwd, normalizeDraft(draft()));
+    assert.equal(m.sha, r2.measurementSha);
+  });
+  // Not in the brief's own test list: a floor outcome writes a measurement with no call record at
+  // all (measure()'s own floor branch, Task 9 above) -- familyIsOnlyThingAfter's `family` array
+  // must still treat that measurement as current (nothing but itself follows its intent) rather
+  // than always expecting exactly a call then a measurement.
+  test('a floor measurement (no call record at all) is still current when nothing follows it', async () => {
+    const cwd = await repoWithCommitment();
+    const d = { ...draft(), named_paths: ['migrations/1.sql'] };
+    const r = await measure(cwd, d);
+    assert.equal(r.outcome, 'floor');
+    const m = await currentMeasurement(cwd, normalizeDraft(d));
+    assert.equal(m.sha, r.measurementSha);
+  });
+  // Self-review completeness: the current case for the review source too, not only jev. measure()
+  // itself only writes the intent for review (it returns `{pending: 'review', ...}` before any
+  // measurement exists -- plan 16 tasks 3/4 finish that path), so a review-source measurement is
+  // built the same way finalizeMeasurement's own docstring says it will be reused: a real intent
+  // from measure(), then finalizeMeasurement directly, with call: null (review never calls a
+  // transport).
+  test('a review-source measurement (no call, no transport) is current when nothing follows it', async () => {
+    const cwd = await repoWithCommitment(false);
+    const D = normalizeDraft(draft());
+    const pending = await measure(cwd, draft());
+    assert.equal(pending.pending, 'review');
+    const { settings } = await loadSettings(cwd);
+    const { measurementSha } = await finalizeMeasurement(cwd, pending.slug, pending.intentSha, {
+      call: null, draftDigestValue: draftDigest(D), source: 'review', levels: dims(), confidences: dims(), settings, outcome: 'composite',
+    });
+    const m = await currentMeasurement(cwd, D);
+    assert.equal(m.sha, measurementSha);
+  });
+});

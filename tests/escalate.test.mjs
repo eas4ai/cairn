@@ -92,7 +92,7 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
 });
 
 import { readAdr } from '../lib/adr.mjs';
-import { escalateWithRoute, decideConsequential } from '../lib/escalate.mjs';
+import { escalateWithRoute, decideConsequential, escalateConsequential } from '../lib/escalate.mjs';
 
 // Ruling 1 (plan 15, task 3, controller ruling): escalateWithRoute used to dynamic-import
 // lib/evaluate.mjs's old evaluate() and branch on whatever route it returned (developer, agent or
@@ -702,5 +702,53 @@ describe('decideConsequential requires a measurement', () => {
     await measure(cwd, mdraft({ because: 'a wholly different draft, also measured' }), { transport: transport([scoreBody()]) });
     await assert.rejects(decideConsequential(cwd, mdraft()),
       (e) => e.message === 'cairn: the latest measurement is for a different draft; run cairn measure for this draft');
+  });
+});
+
+// --- Task 4 (plan 16): escalateConsequential requires a current measurement, any outcome -------
+// Unlike decideConsequential (above), escalateConsequential does not require outcome ===
+// 'composite': a floor-caught or vetoed draft has nowhere else to go but the developer (section
+// 5's floor-and-veto carve-out), and the agent may also choose to escalate past a `suggested:
+// agent` composite on its own judgment (section 10: "The suggestion is advisory, not a route").
+// It still requires a *current* measurement -- the same MeasurementError conditions
+// (missing/unfinished, stale, digest mismatch) decideConsequential already surfaces above.
+//
+// Deviation from the brief's own Step 1 snippet: the snippet's two success tests use this file's
+// top-level `draft()` (commitment 'first', concern 'DEMO-001', loopRepo's own fixture), but pass
+// it to `repoWithCommitment()` (commitment 'auth-tokens', requirement 'AUTH-003') -- those two
+// fixtures never match each other (checkConcerns would refuse 'DEMO-001 is not in the frozen set'
+// and openRange would refuse 'no open commitment first'). `mdraft()`, this file's own draft
+// shaped for repoWithCommitment (the same local convention decideConsequential's own tests, just
+// above, already use for the identical reason), is used instead. The "regardless of outcome" test
+// uses a floor outcome (named_paths: ['migrations/1.sql'], the same fixture decideConsequential's
+// own floor test above uses) as its concrete non-composite case.
+describe('escalateConsequential', () => {
+  test('names the current measurement on the escalation, regardless of outcome (here: a floor outcome)', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, { ...mdraft(), named_paths: ['migrations/1.sql'] });
+    assert.equal(r.outcome, 'floor');
+    const sha = await escalateConsequential(cwd, { ...mdraft(), named_paths: ['migrations/1.sql'] });
+    const esc = (await readLog(cwd)).find((x) => x.sha === sha);
+    assert.equal(esc.kind, 'escalation');
+    assert.equal(esc.payload.evaluation, r.measurementSha);
+  });
+  test('the agent may escalate past a suggested: agent composite measurement (its own choice)', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, mdraft(), { transport: transport([scoreBody()]) });
+    assert.equal(r.outcome, 'composite');
+    assert.equal(r.suggested, 'agent');
+    const sha = await escalateConsequential(cwd, mdraft());
+    const esc = (await readLog(cwd)).find((x) => x.sha === sha);
+    assert.equal(esc.payload.evaluation, r.measurementSha);
+  });
+  test('refuses with no current measurement, exactly like decideConsequential', async () => {
+    const cwd = await repoWithCommitment();
+    await assert.rejects(escalateConsequential(cwd, mdraft()), /no measurement/);
+  });
+  test('the plain escalate() (used by dispute, cycle escalations, scope rulings) is unaffected: no measurement required', async () => {
+    const cwd = await repoWithCommitment();
+    const sha = await escalate(cwd, { commitment: 'auth-tokens', concerns: ['AUTH-003'], question: 'q', recommendation: 'r',
+      because: 'b', if_wrong: 'w', instead: 'i', options: [], named_paths: [], cited_decisions: [] });
+    assert.match(sha, /^[0-9a-f]{40}$/);
   });
 });

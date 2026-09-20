@@ -1,4 +1,4 @@
-import { test } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -487,7 +487,9 @@ test('cairn decide and cairn realize each print one line', async (t) => {
   assert.equal(realizeResult.out, `realize ${rid} ${id}\n`);
   const missing = await run(['decide', '--consequential', '--title', 't'], repo.cwd);
   assert.equal(missing.code, 1);
-  assert.equal(missing.err, 'cairn: decide needs --title, --rests-on, --wrong-if and --body\n');
+  // Plan 16, Task 4: decideCommand's refusal now also names the work-loop draft shape's flags,
+  // since --commitment is the other route a missing --title can mean.
+  assert.equal(missing.err, 'cairn: decide needs --title, --rests-on, --wrong-if and --body (or the work-loop draft shape: --commitment, --concern, --question, --recommendation, --because, --if-wrong, --instead)\n');
 });
 
 test('cairn supersede prints one line and closes the open commitment without moving Current:', async (t) => {
@@ -604,4 +606,122 @@ test('cairn show refuses naming the repair when a cross-reference is dangling', 
   const r = await run(['show', 'a'.repeat(40)], repo.cwd);
   assert.equal(r.code, 3);
   assert.match(r.out, /^cairn: a cross-reference is unresolved; run: cairn push/);
+});
+
+// --- Plan 16, Task 4: cairn escalate --consequential and cairn decide --consequential ---------
+// (CLI dispatch). Both flows need a current measurement (escalate: any outcome; decide: composite
+// only), so these fixtures mirror tests/escalate.test.mjs's own repoWithCommitment/mdraft (here
+// named draft(), since this file has no earlier top-level `draft` to collide with)/transport/
+// scoreBody helpers (each test file keeps its own local copy, the established convention here --
+// tests/evaluate.test.mjs's repoWithCommitment is local and unexported too).
+import { measure } from '../lib/evaluate.mjs';
+
+const AUTH_DOMAIN = `Prefix: AUTH
+
+[AUTH-003] Tokens rotate on a fixed schedule.
+Falsifier: tokens are not rotated on schedule.
+Mechanism: rotate
+Status: Agreed 2026-09-19
+`;
+const OVERVIEW_WITH_AUTH = `# Keystone
+
+## Spec map
+
+| File | Prefix |
+|---|---|
+| auth.md | AUTH |
+`;
+const dims = () => ({ evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 });
+
+async function repoWithCommitment() {
+  const p = await makeProject({
+    settings: { data: ['migrations/**'], typesafeai: { enabled: true, model: 'jev-1.13.0', weights: dims(),
+      agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } },
+    files: {
+      'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
+      'docs/spec/auth.md': AUTH_DOMAIN,
+      'docs/spec/roadmap.md': 'Current: auth-tokens\n\n## auth-tokens\n\nRequirements: AUTH-003\n',
+    },
+  });
+  await p.authorize();
+  await start(p.cwd, 'auth-tokens');
+  return p.cwd;
+}
+
+const draft = (over = {}) => ({ commitment: 'auth-tokens', concerns: ['AUTH-003'], question: 'Rotate tokens hourly?',
+  recommendation: 'hourly', because: 'observed: node scripts/rotate.mjs prints ok', if_wrong: 'sessions drop',
+  instead: 'daily', options: ['hourly', 'daily'], named_paths: ['src/auth/rotate.mjs'], cited_decisions: [], ...over });
+
+const transport = (bodies) => async () => { const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
+
+const scoreBody = (over = {}) => JSON.stringify({
+  model: 'jev-1.13.0',
+  answers: {
+    evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
+    reach: { score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
+    contract: { score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+    surface: { score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+    ambiguity: { score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+    ...over,
+  },
+  usage: { input_tokens: 10, output_tokens: 2 },
+});
+
+// The file's own run(argv, cwd, extra) helper (above) takes argv, not a draft object; parseEscalateArgs
+// (lib/escalate.mjs) goes the other way (argv -> draft). No existing helper turns a draft back into
+// argv, so this is added here.
+function draftArgs(d) {
+  const argv = ['--commitment', d.commitment];
+  for (const c of d.concerns) argv.push('--concern', c);
+  argv.push('--question', d.question, '--recommendation', d.recommendation, '--because', d.because, '--if-wrong', d.if_wrong, '--instead', d.instead);
+  for (const o of d.options) argv.push('--option', o);
+  for (const p of d.named_paths) argv.push('--path', p);
+  for (const c of d.cited_decisions) argv.push('--decision', c);
+  return argv;
+}
+
+describe('escalate --consequential and decide --consequential (CLI dispatch)', () => {
+  test('escalate --consequential routes through escalateConsequential', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const r = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: escalate/);
+  });
+  test('plain escalate (no --consequential) needs no measurement', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['escalate', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err);
+  });
+  test('decide --consequential --commitment ... routes through decideConsequential', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const r = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: decide/);
+  });
+  test('decide --consequential --title ... (the spec-phase deference shape) is unaffected', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['decide', '--consequential', '--title', 't', '--rests-on', 'AUTH-003', '--wrong-if', 'w', '--body', 'b'], cwd);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /^decide /);
+  });
+  test('decide --consequential with neither --title nor --commitment refuses', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await run(['decide', '--consequential'], cwd);
+    assert.equal(r.code, 1);
+  });
+  // Self-review completeness (not in the brief's own Step 1 snippet): `escalateConsequential` and
+  // `decideConsequential` were previously reachable only by calling them directly (as
+  // tests/escalate.test.mjs does), never through main()'s real argv/exit-code path. Both are wired
+  // into the CLI for the first time by this task, so their MeasurementError refusal -- "Refusals
+  // print the MeasurementError text and exit non-zero through the CLI's existing error path" (task
+  // brief, Global Constraints) -- is exercised here through main() itself, not only at the library
+  // level.
+  test('escalate --consequential and decide --consequential --commitment refuse with the MeasurementError text and exit 1 when there is no current measurement', async () => {
+    const cwd = await repoWithCommitment();
+    const escRefused = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(escRefused.code, 1);
+    assert.equal(escRefused.err, 'cairn: no measurement for this exact draft; run cairn measure first\n');
+    const decRefused = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
+    assert.equal(decRefused.code, 1);
+    assert.equal(decRefused.err, 'cairn: no measurement for this exact draft; run cairn measure first\n');
+  });
 });

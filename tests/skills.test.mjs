@@ -31,9 +31,22 @@ const help = spawnSync(process.execPath, [join(ROOT, "bin/cairn.mjs"), "--help"]
 // not a hand-copied list) into { command name -> Set of every --flag token that command's usage
 // line names }, so a skill or template invocation can be checked against the flags the CLI itself
 // actually documents, not a snapshot that drifts from lib/cli.mjs. "review <slug> --file <path> |
-// review mechanism <REQ> <fail-receipt>" is the one usage line with two forms; each side is parsed
-// under its own name ("review" and "review mechanism") so a "review mechanism ..." invocation is
-// never checked against --file, which only the plain form takes.
+// review mechanism <REQ> <fail-receipt>" is the one usage line with two forms with two different
+// first words; each side is parsed under its own name ("review" and "review mechanism") so a
+// "review mechanism ..." invocation is never checked against --file, which only the plain form
+// takes.
+//
+// Plan 16, Task 4 fix (own finding, not in the brief's named files): `decide`'s usage line gained
+// a second " | "-separated form with plan 16 (`decide --consequential --title ...` for the
+// spec-phase deference decision, `decide --consequential --commitment ...` for the measured
+// work-loop draft) -- but unlike review/review mechanism, both forms start with the same word
+// "decide", so they map to the same `name` here. The old code did `map.set(name, new Set(...))`
+// per part, so the second part's flag set silently replaced the first's instead of adding to it,
+// and any skill invocation using --title/--rests-on/--wrong-if/--body (the first form's own
+// flags) then read as using flags "not real" of decide. Accumulated into the existing set instead
+// of overwriting it -- a flag is valid for a command if any of its usage variants lists it, which
+// is exactly what "two legitimate flag sets for the same command word" means. review/review
+// mechanism are unaffected: they already used, and still use, two distinct map keys.
 function parseCommandFlags(helpText) {
   const map = new Map();
   for (const raw of helpText.split("\n")) {
@@ -45,7 +58,9 @@ function parseCommandFlags(helpText) {
       const mech = words[0] === "review" && words[1] === "mechanism";
       const name = mech ? "review mechanism" : words[0];
       const rest = (mech ? words.slice(2) : words.slice(1)).join(" ");
-      map.set(name, new Set([...rest.matchAll(/--[a-z][a-z-]*/g)].map((x) => x[0])));
+      const flags = map.get(name) ?? new Set();
+      for (const f of rest.matchAll(/--[a-z][a-z-]*/g)) flags.add(f[0]);
+      map.set(name, flags);
     }
   }
   return map;

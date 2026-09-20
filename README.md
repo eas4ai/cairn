@@ -49,6 +49,118 @@ code changes. Before the work is called complete, an independent reviewer,
 started with none of the builder's context, also attacks what the check
 might have missed.
 
+## The evaluator: the agent's gut check
+
+At one kind of decision, a Consequential one with real options, the agent
+measures its own draft before it decides. It runs `cairn measure` with the
+draft, gets five scored dimensions back, and reads a composite and a
+suggestion computed in code. The suggestion is advice: the agent decides.
+Only two things ever take the decision away from it, a fixed code floor
+(a draft that would change an Agreed requirement, the working agreement,
+or data that cannot be regenerated) and the measurement's own veto (an
+option that reaches too far, changes the contract, or opens too much new
+surface). Both go to you.
+
+| Dimension | What it scores, 0 to 4 |
+|---|---|
+| evidence | how much observed evidence backs the draft |
+| reach | how far the recommended option reaches beyond the question |
+| contract | how much it strains the cited requirement's contract |
+| surface | how much new surface it adds |
+| ambiguity | how ambiguous the question itself is |
+
+### Two sources, one measurement
+
+| Source | When | What you need |
+|---|---|---|
+| Your harness's review model (default) | `typesafeai.enabled` is `false` | Nothing. `cairn measure --brief` prints a brief; a fresh session of your review model answers it into a JSON file; `cairn measure <slug> --file <path>` completes the measurement. |
+| TypeSafe's jev model | `typesafeai.enabled` is `true` | An API key from https://typesafe.ai in the environment variable `TYPESAFEAI_API_KEY`. |
+
+Both sources answer the same five questions over the same state, and the
+same code computes the composite, the veto and the suggestion from their
+answers. On the in-tree benchmark they agreed on every draft compared.
+
+### Set up jev in three steps
+
+1. Export the key in the shell that runs your agent. Cairn reads it from
+   the environment only; it never writes it to a file, a record, a log or
+   an error message.
+
+   ```sh
+   export TYPESAFEAI_API_KEY=your-key
+   ```
+
+2. In `.cairn/settings.json`, turn the source on with a versioned model
+   id. The other keys keep their defaults; they are the values the
+   benchmark was scored with.
+
+   ```json
+   "typesafeai": {
+     "enabled": true,
+     "model": "jev-1.13.0",
+     "weights": { "evidence": 0.2, "reach": 0.2, "contract": 0.2, "surface": 0.2, "ambiguity": 0.2 },
+     "agent_ceiling": 0.35,
+     "confidence_floors": { "evidence": 0, "reach": 0, "contract": 0, "surface": 0, "ambiguity": 0 },
+     "min_calibration_agent_predictions": 60,
+     "request_cap_bytes": 48000
+   }
+   ```
+
+3. Bind the changed settings, since the file is protected:
+
+   ```sh
+   cairn authorize
+   ```
+
+That is all. From the next Consequential decision on, `cairn measure`
+sends the draft's closed state to `https://api.typesafe.ai/v1/systemone`
+and records the answer. Set `"enabled": false` to go back to the review
+model; nothing else changes.
+
+### What the agent sees
+
+```
+$ cairn measure --commitment ledger --concern EXP-001 \
+    --question "..." --recommendation "Keep the current message with no prefix." \
+    --because "..." --if-wrong "..." --instead "..." \
+    --option "Keep the current message with no prefix." \
+    --option "Add a ledger: prefix to match other CLI error conventions." \
+    --path src/ledger.mjs
+cairn: measure ledger 6484a385... composite suggested:agent
+levels: ambiguity=0.5 (confidence 0.8), contract=0.5 (confidence 0.8), evidence=0.5 (confidence 0.8), reach=0.5 (confidence 0.8), surface=0.5 (confidence 0.8)
+composite: 0.275
+veto: none
+reason: composite 0.275 <= 0.35, confidences ok
+```
+
+Then one of two commands, with the same draft flags:
+
+| The agent runs | When | What it records |
+|---|---|---|
+| `cairn decide --consequential ...` | the outcome is `composite`, whatever the suggestion says | a decision line that names the measurement; the work continues |
+| `cairn escalate --consequential ...` | the floor or the veto caught the draft, or the agent chooses to ask you anyway | an escalation that names the measurement; the work waits for `cairn answer` |
+
+Both refuse a draft that was not measured, or was changed after it was
+measured: `cairn: no measurement for this exact draft; run cairn measure
+first`.
+
+### What can go wrong, and what happens
+
+| Case | Recorded as | Who decides |
+|---|---|---|
+| No key, network down, or a rate limit after the built-in retries | `unavailable <class>` | you |
+| The model's answer does not parse | `unavailable invalid` | you |
+| The request is over `request_cap_bytes` | `unavailable oversize` | you |
+| `developer: absent` (an autonomous run) and the floor or veto fires | the escalation prints as Waiting and `cairn wake` exits 4 | the run stops |
+
+Nothing is retried silently, and nothing routes a floor-caught or vetoed
+draft to the agent. `cairn calibrate` reports, from decisions you later
+labelled, how often an `agent` suggestion was wrong; it tunes the numbers
+above and never gates the agent. To check the evaluator on your own key
+against the 24-draft benchmark, run `CAIRN_BENCH=1 npm run bench` from the
+checkout, one draft at a time. Every settings key is explained in the
+manual's [Settings](docs/manual.md#settings) section.
+
 ## How the work moves forward
 
 A **commitment** is one agreed piece of work, such as "reject empty names."

@@ -769,7 +769,7 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
 // --- Plan 16, Task 5: cairn measure (CLI dispatch) ---------------------------------------------
 import { renderMeasureBrief } from '../lib/evaluate.mjs';
 import { mkdtempSync, writeFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 
 // fakeTransportPath: writes a small ESM module whose default export replaces `post`
@@ -799,13 +799,21 @@ describe('the measure brief and the CLI', () => {
   test('cairn measure (jev source) completes synchronously and prints the outcome', async () => {
     const cwd = await repoWithCommitment();
     const r = await run(['measure', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
-    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: measure auth-tokens .* composite/);
+    assert.equal(r.code, 0, r.err);
     // Written records, not only the printed line: a real measurement record, over the jev source,
     // naming the same outcome the stdout line reports.
-    assert.match(r.out, /levels:.*evidence=/); assert.match(r.out, /composite: 0\./); assert.match(r.out, /veto: none/);
     const log = await readLog(cwd);
     const m = log.findLast((x) => x.kind === 'measurement');
     assert.equal(m.payload.source, 'jev'); assert.equal(m.payload.outcome, 'composite'); assert.equal(m.payload.levels.length, 5);
+    assert.equal(m.payload.suggested, 'agent');
+    // Fix round 1 (Important I3, review of commit c9a69370): every field the spec's "Record and
+    // calibration" names is printed, not just outcome/levels/composite/veto -- suggested and the
+    // reason line, and the measurement's own SHA verbatim (not only implied by a wildcard).
+    assert.ok(r.out.includes(`cairn: measure auth-tokens ${m.sha} composite suggested:agent`), r.out);
+    assert.match(r.out, /levels:.*evidence=/);
+    assert.ok(r.out.includes(`composite: ${m.payload.composite}`), r.out);
+    assert.match(r.out, /veto: none/);
+    assert.ok(r.out.includes(`reason: ${m.payload.reason}`), r.out);
   });
   test('cairn measure --brief (review source) writes the intent and prints a launch block', async () => {
     const cwd = await repoWithCommitment(false);
@@ -834,5 +842,59 @@ describe('the measure brief and the CLI', () => {
     const cwd = await repoWithCommitment();
     const r = await run(['measure', '--brief', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
     assert.equal(r.code, 1); assert.match(r.err, /--brief/);
+  });
+  // Fix round 1 (Critical C1, review of commit c9a69370): 'measure' is now in lib/scope.mjs's
+  // STATE_CHANGING set beside calibrate/escalate/decide, so cairn measure runs the same scope
+  // preflight its peers do -- before this fix it silently skipped it. Mirrors
+  // tests/scope.test.mjs's "an untracked credential-shaped file refuses cleanly instead of
+  // crashing the preflight" (an ordinary undeclared file enters preflight's delta loop; a
+  // credential-shaped untracked file anywhere in the workspace then refuses the snapshot), but
+  // driven through the real cairn measure via main(), not a direct preflight() call.
+  test('cairn measure is refused the same way its peers are when the preflight refuses', async () => {
+    const cwd = await repoWithCommitment();
+    await writeFile(join(cwd, 'stray.mjs'), 'x\n');
+    await writeFile(join(cwd, 'leaked.pem'), '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n');
+    const r = await run(['measure', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /^cairn: /); assert.match(r.err, /looks like a credential/); assert.match(r.err, /leaked\.pem/);
+    // The preflight refusal happens before measureCommand ever runs: no evaluation-intent and no
+    // measurement were written.
+    const log = await readLog(cwd);
+    assert.equal(log.some((x) => x.kind === 'evaluation-intent' || x.kind === 'measurement'), false);
+  });
+  // Fix round 1 (Important I2, review of commit c9a69370): the two scenarios Part 1's open items
+  // 2-3 asked for and no test in the original diff exercised.
+  test('a --transport-module path that does not exist is refused with a non-zero exit naming the path', async () => {
+    const cwd = await repoWithCommitment();
+    const badPath = join(cwd, 'does-not-exist.mjs');
+    const r = await run(['measure', '--transport-module', badPath, ...draftFlags(draft())], cwd);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /^cairn: /);
+    assert.ok(r.err.includes(badPath), r.err);
+  });
+  test('a malformed draft (missing --recommendation) is refused with a non-zero exit', async () => {
+    const cwd = await repoWithCommitment();
+    const argv = draftFlags(draft());
+    const i = argv.indexOf('--recommendation');
+    argv.splice(i, 2); // drop the flag and its value
+    const r = await run(['measure', ...argv], cwd);
+    assert.equal(r.code, 1);
+    assert.match(r.err, /--recommendation/);
+  });
+  // A draft naming a credential-pattern path is refused before any brief is rendered: measure()
+  // itself already excludes it (EgressError, an earlier task), so --brief has a finished
+  // 'unavailable excluded' measurement, not a pending one, and now names the excluded path in its
+  // own refusal (see lib/cli.mjs's --brief-has-nothing-to-show message, fix round 1).
+  test('cairn measure --brief refuses before any brief is rendered for a credential-pattern path, naming the excluded path', async () => {
+    const cwd = await repoWithCommitment(false);
+    const credDraft = draft({ named_paths: ['secret/.env'] });
+    const r = await run(['measure', '--brief', ...draftFlags(credDraft)], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+    assert.equal(r.code, 1);
+    assert.match(r.err, /--brief/); assert.match(r.err, /credential secret\/\.env/);
+    const log = await readLog(cwd);
+    const m = log.findLast((x) => x.kind === 'measurement');
+    assert.equal(m.payload.outcome, 'unavailable');
+    const entries = await readdir(join(cwd, '.cairn/output')).catch(() => []);
+    assert.equal(entries.some((f) => f.startsWith('measure-')), false);
   });
 });

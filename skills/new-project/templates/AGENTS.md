@@ -35,7 +35,11 @@ The move for each action wake can name:
 - `promote`: choose one backlog item by judgment; `cairn promote <item>`. Promotion never Agrees text.
 - `reply SLUG`: `cairn reply SLUG "<explanation>"`; an `ask` answer authorizes an explanation only.
 
-Out of scope is captured, never built: `cairn item --backlog`, `--next-feature`, or `--defect --from <REQ>`. A defect against this commitment's requirement is worked here, not captured. Decide by level: Routine and Judged leave no record; Consequential is `cairn decide --consequential` and continues; Blocking is `cairn escalate` and stops.
+Out of scope is captured, never built: `cairn item --backlog`, `--next-feature`, or `--defect --from <REQ>`. A defect against this commitment's requirement is worked here, not captured.
+
+Decide by level: Routine and Judged leave no record; Blocking is `cairn escalate` and stops.
+
+A Consequential decision -- one with real options and a recommendation, tied to this commitment's requirements -- takes one more step first: `cairn measure` with the same fields `cairn decide`/`cairn escalate` would take (`--commitment`, `--concern`, `--question`, `--recommendation`, `--because`, `--if-wrong`, `--instead`, `--option`, `--path`, `--decision`). It prints five scored dimensions (evidence, reach, contract fit, new surface, ambiguity), a composite, and `suggested: agent` or `suggested: developer`. The suggestion is information, not consent: read it and the five numbers, then either `cairn decide --consequential --commitment ...` (the same flags, continuing) or `cairn escalate --consequential --commitment ...` (the same flags, stopping) -- your own judgment, whatever the suggestion says. Two things bypass your judgment entirely and are always `cairn escalate --consequential`: the measurement's own floor (a draft that would change an Agreed requirement's text or falsifier, the working agreement, or data that cannot be regenerated) and its veto (an option that reaches too far, changes the contract, or opens too much new surface) -- `cairn decide --consequential` rejects either one and names the measurement that caught it. Put your real evidence in `--because`: a command, a file, quoted output, or the failing test and the falsifier it maps to raise the evidence score and lower the composite.
 
 ## The developer
 

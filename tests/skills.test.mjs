@@ -131,6 +131,16 @@ test("the AGENTS.md template states a move for every verdict and action", () => 
   for (const gone of ["explain", "present", "reword", "next-iteration", "refus"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });
+test("the AGENTS.md template covers the measure step for a Consequential decision", () => {
+  const t = AGENTS_TEMPLATE();
+  assert.ok(t.includes("`cairn measure`"), "names the command");
+  assert.ok(/suggested/.test(t), "mentions reading the suggestion");
+  assert.ok(t.includes("`cairn decide --consequential"), "still names the decide command");
+  assert.ok(t.includes("`cairn escalate --consequential"), "names the new escalate flag");
+  assert.ok(/advi[cs]/.test(t) || /information, not consent/.test(t), "says the suggestion is advice, not a route");
+  for (const gone of ["shadow", "route mode", "capture the recommended option"]) assert.ok(!t.includes(gone), gone);
+  assert.ok(!/[^\x00-\x7f]/.test(t));
+});
 test("every cairn invocation in the AGENTS.md template is a real command with real flags", () => checkInvocations(AGENTS_TEMPLATE(), "templates/AGENTS.md"));
 
 test("existing-project follows existing-project.dot and spec-phase.dot", () => checkSkill("existing-project", ["existing-project.dot", "spec-phase.dot"]));

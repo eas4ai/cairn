@@ -1,0 +1,10 @@
+{
+  "name": "cairn",
+  "interface": { "displayName": "Cairn" },
+  "plugins": [
+    {
+      "name": "cairn",
+      "source": { "source": "local", "path": "./" }
+    }
+  ]
+}

@@ -486,7 +486,7 @@ skill that continues and exits 3; none is a verdict.
 | Exit code | When | Is it a verdict? |
 |---|---|---|
 | 3 | No project, missing durable refs, a pending supersession, an interrupted transaction, or no commitment started | No; wake names the command or skill that continues instead |
-| 4 | `developer: absent` and the narrow evaluator floor (section 10) names the developer for a Consequential decision | Yes; a real Waiting verdict this run cannot answer, so it stops there (section 5) |
+| 4 | `developer: absent` and the narrow evaluator floor or a veto (section 10) names the developer for a Consequential decision | Yes; a real Waiting verdict this run cannot answer, so it stops there (section 5) |
 
 Revised 2026-09-19: new table. Wake had only ever needed one non-zero exit
 code (3, for a state that is not a verdict at all); `developer: absent`
@@ -934,14 +934,16 @@ Settings' `developer` field states whether a human can ever answer that
 Waiting. `developer: absent` is what an autonomous benchmark runs with: the
 narrow floor in section 10 is the only path left to the developer, since the
 agent's own choice to escalate past a `suggested: agent` measurement would
-have no one to answer it either. When the floor names the developer and
-`developer: absent`: the run records the floor decision as an escalation on
+have no one to answer it either. When the floor or a veto names the developer
+and `developer: absent`: the run records that decision as an escalation on
 the log exactly as it would with a developer present; wake prints that
 escalation's five fields exactly as Waiting always prints them; and the run
 then exits 4, instead of sitting at Waiting for an answer that cannot come.
 Exit 4 is distinct from wake's exit 3 for a non-verdict state (section 2,
-exit-code table): a floor hit in absent mode is a real Waiting verdict, just
-one this run cannot resolve, so it stops there rather than looping on wake.
+exit-code table): a floor hit or a veto in absent mode is a real Waiting
+verdict, just one this run cannot resolve, so it stops there rather than
+looping on wake. A veto counts because section 5 says nothing routes a vetoed
+draft to the agent, so its Waiting is as unanswerable as the floor's.
 
 Revised 2026-09-19: new. This states what section 5's own Waiting rule does
 in the one mode where nobody can end it, which the developer's stated reason

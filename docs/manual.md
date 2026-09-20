@@ -33,7 +33,7 @@ are listed near the end.
 - [Understand checks and their results](#understand-checks-and-their-results)
 - [Review, the adversary, and Done](#review-the-adversary-and-done)
 - [Scope: work Cairn did not expect](#scope-work-cairn-did-not-expect)
-- [The optional evaluator](#the-optional-evaluator)
+- [The evaluator: the agent's gut check](#the-evaluator-the-agents-gut-check)
 - [Sending the records with the code](#sending-the-records-with-the-code)
 - [Get unstuck](#get-unstuck)
 - [Command reference](#command-reference)
@@ -524,33 +524,48 @@ cairn scope <breach-sha> keep
 A later `cairn declare` cannot retroactively clear an existing breach; it
 only legalizes future changes.
 
-## The optional evaluator
+## The evaluator: the agent's gut check
 
-A project may turn on a model that helps decide whether a Consequential
-draft can stay the agent's decision, instead of always going to you. It is
-off by default (`typesafeai.enabled: false` in `.cairn/settings.json`) and,
-even on, starts in shadow mode: you still decide everything, and Cairn
-only records what the model would have chosen, so you can judge it before
-trusting it.
+At a Consequential decision, the agent drafts its choice, then measures it
+before deciding: `cairn measure` scores five things about the draft --
+how much evidence backs it, how far the recommended option reaches, how
+well it fits the cited requirement's contract, how much new surface it
+adds, and how ambiguous the question is -- each 0 to 4, with a confidence.
+Code, not the model, turns those five numbers into a composite and a
+`suggested: agent | developer` reading; the suggestion is advice, not a
+route. The agent reads it and decides, except in two cases code always
+catches on its own: a draft that would change an Agreed requirement's text
+or falsifier, the working agreement, or data that cannot be regenerated
+(the floor), or a draft the measurement itself flags as too consequential
+(the veto: a wide-reaching, contract-changing, or new-surface option).
+Either one sends the draft to you, and `cairn decide --consequential`
+refuses it. In every other case the agent may still choose
+`cairn escalate --consequential` past a `suggested: agent` reading, at its
+own judgment.
 
-Deterministic code owns every authority boundary; the model answers only
-narrow yes/no and multiple-choice questions after code has already ruled
-out protected paths, oversize requests, and a handful of other
-disqualifying conditions. A qualifying answer only ever vetoes agent
-authority or recommends a capture; it can never grant authority code has
-not already allowed.
+Turning on `typesafeai.enabled` in `.cairn/settings.json` picks the
+measurement's source: `jev` (`bin/typesafeai.mjs`, reading
+`TYPESAFEAI_API_KEY` from the environment and never storing it) when
+enabled, or, when it is not, the harness's own configured review model,
+started the same way `cairn brief` starts the adversary -- with none of the
+agent's own conversation context. Either way, every Consequential draft is
+measured; there is no off switch and no shadow mode, because a shadow
+default that never let a draft reach the agent was tried and measured at
+zero agent routing out of twelve expected cases
+(`.superpowers/bench/results.md`).
 
 ```sh
 cairn calibrate
 ```
 
-reports whether enough developer-labelled shadow evaluations exist, and
-how many were wrong, against the project's configured bound. Only a
-passing, policy-matched calibration lets `mode: route` actually route a
-Consequential draft to the agent instead of you; changing the policy (the
-model, a threshold, the request shape) resets calibration. Only
-`bin/typesafeai.mjs` performs the network call, reading `TYPESAFEAI_API_KEY`
-from the environment; it never stores the key.
+reports how many developer-labelled, `suggested: agent` measurements exist
+and how many you later called wrong, against a fixed 95% one-sided bound.
+It tunes `weights`, `agent_ceiling` and `confidence_floors` in
+`.cairn/settings.json`; it does not gate whether the agent may decide --
+that gate was tried too, and it produced the same zero-routing result. A
+project with `developer: absent` (an autonomous benchmark configuration)
+has no one to answer an escalation the floor raises; wake prints it
+exactly as it always prints Waiting and exits 4 instead of sitting there.
 
 ## Sending the records with the code
 
@@ -599,7 +614,7 @@ specific than the action word alone.
 | `done SLUG` | Every condition holds: `cairn done SLUG`. |
 | `promote` | No commitment is open and the backlog holds an item. Choose one; `cairn promote <item-sha>`. |
 | `reply SLUG` | You asked a question with `ask`; the agent owes an explanation: `cairn reply SLUG "..."`. |
-| `Waiting` | An escalation needs your answer. |
+| `Waiting` | An escalation needs your answer. With `developer: absent`, the one the evaluator floor raised has no one to answer it; wake exits 4 instead of sitting there. |
 
 ## Command reference
 
@@ -627,10 +642,12 @@ prints one with its references resolved.
 | `item --backlog\|--next-feature\|--defect --slug <s> --from <REQ or contract> --body <text>` | Capture an idea or a defect. |
 | `outside <item-sha> --reason <text>` | Record that a captured item is not this commitment's work. |
 | `fix <item-sha>` | Record that a defect item is fixed, naming the workspace snapshot. |
-| `decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` | Record a Consequential decision; the agent continues. |
+| `decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` | Record a spec-phase deference ruling, before any commitment is open. |
+| `decide --consequential --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Record a measured work-loop Consequential decision; the agent continues. Refused without a current `composite`-outcome measurement. |
 | `realize <decision-id> --subject <text>` | Record that a Consequential decision was built. |
-| `escalate --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Raise a Blocking decision; the agent stops. |
-| `calibrate` | Check the evaluator's shadow-mode accuracy against the configured bound. |
+| `escalate [--consequential] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Raise a decision; without `--consequential`, a Blocking one (the agent stops). With `--consequential`, the Consequential draft's own measurement forced it here, or the agent chose to. |
+| `calibrate` | Report how many labelled, suggested-agent measurements exist and how many were wrong, against the fixed bound; tunes the composite, never gates it. |
+| `measure [--brief] [--harness <name>] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` \| `measure <slug> --file <path>` | Take one measurement of a Consequential draft before `decide` or `escalate`; `--brief` prints a launch block for the review source, `--file` completes it. |
 | `answer <slug> ok\|instead\|ask [<text>] [--escalation <sha>]` | The developer's answer to an escalation. |
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
 | `dispute --commitment <s> --record <sha> --n <n> --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with a specific finding or its resolution. |
@@ -668,8 +685,8 @@ Cairn reads it back; the full field list is in
 | `answer` | Escalation sha, `ok`/`instead`/`ask`, text, developer-auth evidence. | Wake, ADR, calibration. |
 | `reply` | Escalation sha, text. | Wake, after `ask`. |
 | `read` | Decision id, developer-auth evidence. | Queue and ADR. |
-| `evaluation-intent` / `evaluation-call` / `evaluation` | The evaluator's fixed request, each attempted call, and the final route. | Escalation, capture, queue, calibration. |
-| `calibration` | Policy digest, sample, false-downgrade count, bound, pass/fail. | Route-mode validation. |
+| `evaluation-intent` / `evaluation-call` / `measurement` | The evaluator's fixed request, the one attempted call, and the five scored dimensions, composite, veto and suggestion. | Escalation, decide, queue, calibration. |
+| `calibration` | Policy digest, sample, false-downgrade count, bound, pass/fail. | Tuning `weights`, `agent_ceiling` and `confidence_floors`; never a gate. |
 | `item` | Kind (backlog/next-feature/defect), slug, source, body. | Capture, Done, next feature. |
 | `outside` | Item sha, reason. | Capture gate. |
 | `promotion` | Item sha, decision id. | After Done. |
@@ -714,7 +731,7 @@ agreement instruct the agent how to reason and when to stop.
 | Scope breaches | `lib/scope.mjs` |
 | Escalations and answers | `lib/escalate.mjs` |
 | Review, the brief, and the adversary | `lib/review.mjs` |
-| The optional evaluator | `lib/evaluate.mjs`, `bin/typesafeai.mjs` |
+| The evaluator | `lib/evaluate.mjs`, `bin/typesafeai.mjs` |
 | Pushing the durable refs | `lib/travel.mjs` |
 | Starting a project and confirming behavior | `skills/new-project/SKILL.md`, `skills/existing-project/SKILL.md`, `skills/next-feature/SKILL.md` |
 | The agent's per-turn and per-project responsibilities | `skills/new-project/templates/AGENTS.md` |

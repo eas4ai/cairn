@@ -40,8 +40,13 @@ describe('the CAIRN_BENCH and key guard', () => {
   });
   test('passes with both set', () => assert.doesNotThrow(() => assertBenchEnabled({ CAIRN_BENCH: '1', TYPESAFEAI_API_KEY: 'k' })));
   test('runBenchmark refuses before building anything, spawning anything, or touching the network', async () => {
+    // Fix (Minor M2, final-review.md): `built` used to be asserted without anything, real or
+    // fake, ever setting it true -- a tautological pass regardless of guard order. buildImpl
+    // (harness.mjs, this fix's other half) is the seam that lets this fake actually record
+    // whether building was attempted, the same way spawnImpl already does for spawning below.
     let built = false;
-    await assert.rejects(runBenchmark({ env: {} }), BenchGuardError);
+    const buildImpl = async () => { built = true; throw new Error('runBenchmark: buildImpl should never run after the guard rejects'); };
+    await assert.rejects(runBenchmark({ env: {}, buildImpl }), BenchGuardError);
     assert.equal(built, false);
   });
 });

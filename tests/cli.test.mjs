@@ -767,7 +767,7 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
 });
 
 // --- Plan 16, Task 5: cairn measure (CLI dispatch) ---------------------------------------------
-import { renderMeasureBrief } from '../lib/evaluate.mjs';
+import { renderMeasureBrief, buildScoreQuestions } from '../lib/evaluate.mjs';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -798,6 +798,14 @@ describe('the measure brief and the CLI', () => {
     assert.match(text, /- \[0\] \(recommended\) r/);
     assert.match(text, /- \[1\] the other way/);
     assert.match(text, /write its five Score answers/);
+    // Fix (Important I1, final-review.md): the brief renders each dimension's actual question
+    // instructions -- not just the static criteria -- taken from buildScoreQuestions, the same
+    // builder buildScoreRequest calls for the jev source, never retyped here. This proves reach,
+    // contract and surface carry Ruling 3's alternatives sentence and evidence/ambiguity carry
+    // their own instruction text, with the backticked state paths intact.
+    const questions = buildScoreQuestions(0);
+    for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.ok(text.includes(questions[d].instructions), d);
+    for (const d of ['reach', 'contract', 'surface']) assert.match(questions[d].instructions, /Compare it against the alternatives in `state\.options`\./);
     assert.match(text, /cairn measure .* --file/);
   });
   test('cairn measure (jev source) completes synchronously and prints the outcome', async () => {

@@ -527,10 +527,12 @@ only legalizes future changes.
 ## The evaluator: the agent's gut check
 
 At a Consequential decision, the agent drafts its choice, then measures it
-before deciding: `cairn measure` scores five things about the draft --
-how much evidence backs it, how far the recommended option reaches, how
-well it fits the cited requirement's contract, how much new surface it
-adds, and how ambiguous the question is -- each 0 to 4, with a confidence.
+before deciding: `cairn measure` scores five things about the draft -- how
+much evidence backs it, how far the recommended option reaches, how well it
+fits the cited requirement's contract, how much new surface it adds, and how
+ambiguous the question is -- each 0 to 4, with a confidence. Reach, contract
+and surface are judged for the recommended option against the draft's other
+options, which the state carries alongside it.
 Code, not the model, turns those five numbers into a composite and a
 `suggested: agent | developer` reading; the suggestion is advice, not a
 route. The agent reads it and decides, except in two cases code always

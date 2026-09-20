@@ -121,14 +121,17 @@ export function buildMeta({ settings, started, finished, cairnHead, scenarioCoun
   };
 }
 
-// scenarios/spawnImpl/sleepImpl/outDir are additional, optional test seams (all default to the
-// real 24-scenario set, the real spawnSync, a real 30s sleep, and this file's own directory) --
-// runBenchmark({env}) with no other options is exactly the brief's documented call shape and
-// writes exactly tests/bench/results.json and tests/bench/results.md.
-export async function runBenchmark({ env = process.env, scenarios = SCENARIOS.scenarios, spawnImpl = defaultSpawn, sleepImpl = defaultSleep, outDir = HERE } = {}) {
+// scenarios/spawnImpl/sleepImpl/buildImpl/outDir are additional, optional test seams (all
+// default to the real 24-scenario set, the real spawnSync, a real 30s sleep, the real
+// buildLedgerProject, and this file's own directory) -- runBenchmark({env}) with no other options
+// is exactly the brief's documented call shape and writes exactly tests/bench/results.json and
+// tests/bench/results.md. buildImpl exists so a test can prove the guard runs before building
+// anything, the same way spawnImpl already proves it runs before spawning anything (Minor M2,
+// final-review.md: the guard-order test previously asserted a `built` flag no fake ever set).
+export async function runBenchmark({ env = process.env, scenarios = SCENARIOS.scenarios, spawnImpl = defaultSpawn, sleepImpl = defaultSleep, buildImpl = buildLedgerProject, outDir = HERE } = {}) {
   assertBenchEnabled(env);
   const started = new Date().toISOString();
-  const project = await buildLedgerProject();
+  const project = await buildImpl();
   const { settings } = await loadSettings(project.dir);
   const rows = await runScenarios(project, scenarios, env, { spawnImpl, sleepImpl });
   const finished = new Date().toISOString();

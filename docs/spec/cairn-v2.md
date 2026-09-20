@@ -1366,10 +1366,12 @@ known facts and on the model's own dimension answers, never on prose the
 model was asked to trust. If `A(D)` is incomplete, no call occurs (the
 narrow floor's technical case above).
 
-Revised 2026-09-20: previously the recommended option only. The in-tree
-benchmark showed the losing options' text is what lets the model separate
-reach, contract and surface (21/24 against 16/24), and the options are part
-of `D`, so no new class of input reaches the model.
+Revised 2026-09-20: previously the recommended option only. The committed
+live run through `cairn measure` (tests/bench/results.md) showed the losing
+options' text is what lets the model separate reach, contract and surface
+(22/24 against 16/24 before the change; an isolated in-tree experiment
+measuring this change alone scored 21/24), and the options are part of `D`,
+so no new class of input reaches the model.
 
 The recommended option's code is the snapshot's action-lease diff and
 complete touched files in path order; reads do not follow symlinks. The

@@ -7,7 +7,7 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
-## 2.0.0 - 2026-09-19
+## 2.0.0 - 2026-09-20
 
 Cairn 2 is a rewrite of the kernel. It keeps the seven ideas that
 matter (agreement by falsifier, one commitment at a time, checked

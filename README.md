@@ -130,15 +130,16 @@ In Muse, install the checkout as a local bundle, where `<checkout>` is
 the absolute path of the clone:
 
 ```sh
-MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins install <checkout>
-MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins approve cairn
+muse plugins install <checkout>
+muse plugins approve cairn:hook:session-start
+muse plugins approve cairn:hook:stop
 muse plugins list
 ```
 
-Muse's plugin commands are experimental and need that variable; the
-hooks run in ordinary sessions once the plugin is approved.
-`muse plugins validate <checkout>` checks the bundle without installing
-it. To refresh the installed bundle, install it again from the checkout.
+The skills work as soon as the plugin is installed; the two hooks run
+once you approve them. `muse plugins validate <checkout>` checks the
+bundle without installing it. After pulling the checkout, run
+`muse plugins update cairn` to refresh the installed bundle.
 
 That is the install. Claude Code and Codex register the three hooks from
 the plugin's `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);
@@ -159,8 +160,8 @@ cairn --help
 
 `cairn --help` lists every command; it works outside a project and
 changes nothing. Updates come through the marketplace (in Claude Code,
-`claude plugin update cairn@cairn`), or in Muse by installing the
-checkout again.
+`claude plugin update cairn@cairn`), or in Muse with
+`muse plugins update cairn`.
 
 Then open your project and continue at
 [Start with your project](#start-with-your-project).
@@ -174,10 +175,11 @@ An agent without a plugin marketplace gets the skills through the
 npx skills add eas4ai/cairn --skill install-cairn new-project existing-project next-feature --agent codex --global
 ```
 
-Use `--agent claude-code` for Claude Code. For an agent without a
-dedicated entry, use `--agent universal`, which installs into
-`$HOME/.config/agents/skills`; point that agent at the directory if it
-does not read it already. Omit
+Use `--agent claude-code` for Claude Code. For Muse, use
+`--agent universal` without `--global`: it installs into the project's
+`.agents/skills/`, which Muse reads in a trusted workspace (with
+`--global` it installs into `$HOME/.config/agents/skills`, which Muse
+does not read). Omit
 `--global` to install only in the project where you run the command.
 Preview the available skills with `npx skills add eas4ai/cairn --list`.
 The skills carry instructions and templates, not the command. Tell your

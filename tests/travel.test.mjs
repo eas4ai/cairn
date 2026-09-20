@@ -324,7 +324,7 @@ describe('validateAfterFetch', () => {
     const snap = await writeWorkspaceSnapshot(cwd);
     await appendRecord(cwd, 'evaluation-intent', 'first-slug', {
       draft_digest: digest64, snapshot: snap, log_head: zero, adr_digest: digest64, settings_digest: digest64,
-      policy_digest: digest64, source: 'jev', request_digest: null,
+      policy_digest: digest64, source: 'jev', request_digest: null, session: null, launch: null,
     });
     const repairs = await validateAfterFetch(cwd);
     assert.deepEqual(repairs.map((r) => [r.kind, r.ref, r.missing]), [['push', 'refs/cairn/log', zero]]);

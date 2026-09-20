@@ -904,7 +904,7 @@ describe('measure()', () => {
     const intentSha = await appendRecord(cwd, 'evaluation-intent', f.slug, {
       draft_digest: draftDigest(D), snapshot: await writeWorkspaceSnapshot(cwd), log_head: logHead,
       adr_digest: await adrDigest(cwd), settings_digest: settingsDigest, policy_digest: policyDigest(settings),
-      source: 'jev', request_digest: requestDigest(request),
+      source: 'jev', request_digest: requestDigest(request), session: null, launch: null,
     });
     const callSha = await appendRecord(cwd, 'evaluation-call', f.slug, {
       intent: intentSha, source: 'jev', request_digest: requestDigest(request), outcome: 'response', model: 'jev-1.13.0',
@@ -996,6 +996,32 @@ describe('measure()', () => {
     assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
     assert.equal(log.at(-2).payload.source, 'review');
     assert.equal(log.at(-1).payload.call, null);
+  });
+});
+
+// --- Task 1 (plan 16): measure() records session on every intent, and launch for the review
+// source. Deviation from the brief text: the brief's snippet calls the fixture `scoreBody()`;
+// this file's own five-dimension answer body (Task 7, above) is named `goodBody()` -- reused here,
+// not redefined, the same as the existing `measure()` describe block above does.
+describe('measure() records session and launch on the intent', () => {
+  test('jev: session is recorded, launch is null', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, draft(), { transport: transport([goodBody()]), session: 'sess-agent' });
+    const intent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.session, 'sess-agent'); assert.equal(intent.payload.launch, null);
+  });
+  test('review: launch is the detected harness', async () => {
+    const cwd = await repoWithCommitment(false);
+    await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const intent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.session, 'sess-agent');
+    assert.deepEqual(intent.payload.launch, { harness: 'claude_code', model: null, transport: null, boundary: 'unenforced' });
+  });
+  test('a floor hit still records session', async () => {
+    const cwd = await repoWithCommitment();
+    await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] }, { session: 'sess-agent' });
+    const intent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
+    assert.equal(intent.payload.session, 'sess-agent'); assert.equal(intent.payload.launch, null);
   });
 });
 

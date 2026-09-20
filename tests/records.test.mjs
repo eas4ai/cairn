@@ -167,12 +167,25 @@ function roundTrip(kind, target, payload) {
 
 describe('measurement-family schemas', () => {
   test('evaluation-intent: one request, source settled before any call', () => {
+    // Deviation from this task's own brief text: this test predates task 1 (plan 15) and its
+    // payload had no session/launch fields. Task 1 (this task) extends the schema with both as
+    // required (nullable) keys -- lib/records.mjs's obj check counts fields exactly (`expected N
+    // fields, found M`) -- so this payload is updated here rather than left to fail, per the task
+    // brief's global constraint: "existing tests that build intents must be updated in this task,
+    // not deferred."
     const payload = { draft_digest: DIGEST, snapshot: SHA, log_head: SHA, adr_digest: DIGEST, settings_digest: DIGEST,
-      policy_digest: DIGEST, source: 'jev', request_digest: DIGEST };
+      policy_digest: DIGEST, source: 'jev', request_digest: DIGEST, session: 'sess-0', launch: null };
     assert.deepEqual(roundTrip('evaluation-intent', 'demo', payload).payload, payload);
     assert.deepEqual(roundTrip('evaluation-intent', 'demo', { ...payload, request_digest: null }).payload.request_digest, null);
     assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, source: null }), /expected one of/);
     assert.throws(() => encodeRecord('evaluation-intent', 'demo', { ...payload, owner_request: DIGEST }), /unknown key|expected/);
+  });
+  test('evaluation-intent carries session and, for review, launch', () => {
+    const payload = { draft_digest: DIGEST, snapshot: SHA, log_head: SHA, adr_digest: DIGEST, settings_digest: DIGEST,
+      policy_digest: DIGEST, source: 'review', request_digest: DIGEST, session: 'sess-1',
+      launch: { harness: 'claude_code', model: 'claude-fable-5-1', transport: 'remote', boundary: 'unenforced' } };
+    assert.deepEqual(roundTrip('evaluation-intent', 'demo', payload).payload, payload);
+    assert.deepEqual(roundTrip('evaluation-intent', 'demo', { ...payload, launch: null }).payload.launch, null);
   });
   test('evaluation-call: source, transport, session, no owner/option and no not_sent', () => {
     const payload = { intent: SHA, source: 'review', request_digest: DIGEST, outcome: 'response', model: 'claude-fable-5-1',

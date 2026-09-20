@@ -623,7 +623,7 @@ specific than the action word alone.
 | `done SLUG` | Every condition holds: `cairn done SLUG`. |
 | `promote` | No commitment is open and the backlog holds an item. Choose one; `cairn promote <item-sha>`. |
 | `reply SLUG` | You asked a question with `ask`; the agent owes an explanation: `cairn reply SLUG "..."`. |
-| `Waiting` | An escalation needs your answer. With `developer: absent`, the one the evaluator floor raised has no one to answer it; wake exits 4 instead of sitting there. |
+| `Waiting` | An escalation needs your answer. With `developer: absent`, the one the evaluator floor or a veto raised has no one to answer it; wake exits 4 instead of sitting there. |
 
 ## Command reference
 
@@ -652,7 +652,7 @@ prints one with its references resolved.
 | `outside <item-sha> --reason <text>` | Record that a captured item is not this commitment's work. |
 | `fix <item-sha>` | Record that a defect item is fixed, naming the workspace snapshot. |
 | `decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` | Record a spec-phase deference ruling, before any commitment is open. |
-| `decide --consequential --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Record a measured work-loop Consequential decision; the agent continues. Refused without a current `composite`-outcome measurement. |
+| `decide --consequential --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Record a measured work-loop Consequential decision; the agent continues. Refused without a current `composite`-outcome measurement: `cairn: no measurement for this exact draft; run cairn measure first` when the draft differs from the one measured, or a message naming the floor or veto that caught it. |
 | `realize <decision-id> --subject <text>` | Record that a Consequential decision was built. |
 | `escalate [--consequential] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Raise a decision; without `--consequential`, a Blocking one (the agent stops). With `--consequential`, the Consequential draft's own measurement forced it here, or the agent chose to. |
 | `calibrate` | Report how many labelled, suggested-agent measurements exist and how many were wrong, against the fixed bound; tunes the composite, never gates it. |

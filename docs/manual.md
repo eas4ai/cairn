@@ -570,6 +570,12 @@ project with `developer: absent` (an autonomous benchmark configuration)
 has no one to answer an escalation the floor raises; wake prints it
 exactly as it always prints Waiting and exits 4 instead of sitting there.
 
+The benchmark under `tests/bench` (24 drafts over one small ledger project;
+`CAIRN_BENCH=1 npm run bench` with the key in the environment) scores 22 of
+24 against the expected route. The ceiling and weights were chosen on those
+same drafts, so the figure is in-sample; rerun it after any change to the
+criteria text, the state or the settings defaults.
+
 ## Sending the records with the code
 
 Only `refs/cairn/log` and `refs/cairn/snapshots` travel with the code. Set

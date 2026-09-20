@@ -37,7 +37,11 @@ measurement of its own draft before deciding: five scored dimensions and a
 composite, computed in code from the model's answers, never a verdict by
 itself. Only a fixed code floor and the measurement's own veto ever force
 that decision to you instead of the agent; every other case is the agent's
-judgment, informed by the reading. You use your usual coding agent, and the
+judgment, informed by the reading. On the in-tree benchmark (24 drafts over
+one small project, `tests/bench`) the measurement's suggestion matches the
+expected route 22 times in 24; the ceiling and weights were chosen on those
+same 24 drafts, so treat the figure as in-sample, not a guarantee. You use
+your usual coding agent, and the
 agent follows the project's working agreement. The tool runs on Node and
 Git, with no build step, runtime packages, database, or service.
 

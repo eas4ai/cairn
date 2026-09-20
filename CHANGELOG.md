@@ -32,15 +32,19 @@ entry.
   refusals, write a file, commit, or call a model. The working
   agreement in `AGENTS.md` is what an agent follows either way; a
   harness without hooks is unaffected.
-- **The evaluator is optional and off by default.** A project may turn
-  on `typesafeai` in `.cairn/settings.json` to let a model help decide
-  whether a Consequential choice can stay the agent's decision. It
-  starts in shadow mode, where the developer still decides and Cairn
-  only records what the model would have chosen; it can move to route
-  mode only after a passing, policy-matched calibration. With the
-  evaluator off, nothing changes: every Consequential decision is the
-  agent's to record and continue, and every Blocking decision is an
-  escalation, exactly as before.
+- **The evaluator is the agent's gut check at a Consequential decision.**
+  `cairn measure` scores a draft on five dimensions -- evidence, reach,
+  contract fit, new surface, ambiguity -- from `jev`
+  (`typesafeai.enabled: true`) or, otherwise, the harness's own review
+  model started with none of the agent's context. Code computes a
+  composite and an advisory `suggested: agent | developer` from the five
+  numbers; the agent decides either way, except at a fixed code floor
+  (an Agreed requirement, the working agreement, or unrecoverable data)
+  or the measurement's own veto, which always go to the developer. There
+  is no shadow mode and no off switch: every Consequential draft is
+  measured, because a shadow default that never let a draft reach the
+  agent was tried and measured at zero agent routing out of twelve
+  expected cases.
 - **The action lease is explicit.** `cairn begin <action> <target>`
   claims a declared input before you change it and prints a lease sha;
   `cairn end --lease <sha>` releases it after the commit, so a stale

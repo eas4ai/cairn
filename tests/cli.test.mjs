@@ -790,9 +790,13 @@ function fakeTransportPath(body) {
 
 describe('the measure brief and the CLI', () => {
   test('renderMeasureBrief shows the five questions and M(D), never raw code paths outside option.files', () => {
-    const state = { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, contract: {}, facts: {} };
+    const state = { five: { question: 'q', recommendation: 'r', because: 'b', if_wrong: 'w', instead: 'i' }, option: { text: 'r', diff: '', files: [], omitted: [] }, options: ['r', 'the other way'], contract: {}, facts: {} };
     const text = renderMeasureBrief({ state, n: 0, launch: { name: 'claude_code', model: null, transport: null, boundary: 'unenforced' } });
     for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.match(text, new RegExp(d));
+    // Ruling 3: the review source sees every option's text, the recommended one marked, as jev does.
+    assert.match(text, /## All options/);
+    assert.match(text, /- \[0\] \(recommended\) r/);
+    assert.match(text, /- \[1\] the other way/);
     assert.match(text, /write its five Score answers/);
     assert.match(text, /cairn measure .* --file/);
   });

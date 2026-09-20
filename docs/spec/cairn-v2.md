@@ -1,5 +1,9 @@
 # Cairn 2: feature specification
 
+Prefix: CAIRN
+Scope: the Cairn 2 kernel: its records, verdicts, commands, skills and evaluator
+
+
 Status: Draft, revision 5, 2026-09-19. Nothing here is Agreed until the
 developer confirms it.
 

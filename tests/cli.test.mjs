@@ -897,4 +897,99 @@ describe('the measure brief and the CLI', () => {
     const entries = await readdir(join(cwd, '.cairn/output')).catch(() => []);
     assert.equal(entries.some((f) => f.startsWith('measure-')), false);
   });
+
+  // Fix round 1 (task-6-review.md, Important 1): plan 16 Task 6's own report ran this exact round
+  // trip only as an uncommitted, unreproducible manual smoke test against bin/cairn.mjs. This is
+  // that script, as a real automated test: `cairn measure --brief` (writing the pending review
+  // intent, the launch block and the brief file), then a fresh reviewer's answers file (a
+  // different session than the brief-writer's, the real Score answer shape with no `type` field),
+  // then `cairn measure <slug> --file <path>` completing it -- all driven through main() itself,
+  // asserting exit 0 both times, the printed lines, and the written call/measurement records.
+  //
+  // Real Score answer shape (session, transport, model, usage, answers keyed by the five
+  // dimensions with {score, confidence, probabilities}, no `type` field): mirrors
+  // tests/evaluate.test.mjs's own reviewBody fixture, not scoreBody() above (that fixture is jev's
+  // own {model, answers, usage} shape, missing session/transport, which a review-source body
+  // needs).
+  function reviewAnswers(over = {}) {
+    return JSON.stringify({
+      model: 'claude-fable-5-1', session: 'sess-fresh-reviewer', transport: 'remote',
+      usage: { input_tokens: 42, output_tokens: 7 },
+      answers: {
+        evidence: { score: 3, confidence: 0.7, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.6, 4: 0.3 } },
+        reach: { score: 0.5, confidence: 0.6, probabilities: { 0: 0.6, 1: 0.2, 2: 0.1, 3: 0.1, 4: 0 } },
+        contract: { score: 0.1, confidence: 0.9, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+        surface: { score: 0, confidence: 0.8, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+        ambiguity: { score: 1, confidence: 0.5, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
+      },
+      ...over,
+    });
+  }
+  // measureCommand's own non-file branch reads the brief-writer's session from
+  // `process.env.CAIRN_SESSION` directly (lib/cli.mjs), not from the run() helper's injected
+  // `env` (that override only reaches detectHarness, for CAIRN_HARNESS) -- set and restored around
+  // each test that needs a real, non-null brief-writer session to prove "a different session" is
+  // actually different, not merely non-null vs. null.
+  async function withCairnSession(session, fn) {
+    const prev = process.env.CAIRN_SESSION;
+    process.env.CAIRN_SESSION = session;
+    try { return await fn(); } finally {
+      if (prev === undefined) delete process.env.CAIRN_SESSION; else process.env.CAIRN_SESSION = prev;
+    }
+  }
+
+  test('cairn measure --brief then cairn measure <slug> --file <path> completes the review measurement end to end through main()', async () => {
+    await withCairnSession('sess-agent-cli', async () => {
+      const cwd = await repoWithCommitment(false);
+      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+      assert.equal(briefRun.code, 0, briefRun.err);
+      assert.match(briefRun.out, /cairn measure auth-tokens .* --file/);
+      const briefIntent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
+      assert.equal(briefIntent.payload.session, 'sess-agent-cli');
+
+      const answersPath = join(cwd, '.cairn/output', 'answers.json');
+      await writeFile(answersPath, reviewAnswers());
+
+      const fileRun = await run(['measure', 'auth-tokens', '--file', answersPath], cwd);
+      assert.equal(fileRun.code, 0, fileRun.err);
+
+      const log = await readLog(cwd);
+      const call = log.findLast((x) => x.kind === 'evaluation-call');
+      const m = log.findLast((x) => x.kind === 'measurement');
+      assert.ok(fileRun.out.includes(`cairn: measure auth-tokens ${m.sha} composite`), fileRun.out);
+      assert.equal(call.payload.source, 'review');
+      assert.equal(call.payload.session, 'sess-fresh-reviewer');
+      assert.equal(call.payload.transport, 'remote');
+      assert.notEqual(call.payload.session, briefIntent.payload.session, 'the reviewer session differs from the brief-writer session');
+      assert.equal(m.payload.source, 'review');
+      assert.equal(m.payload.outcome, 'composite');
+      assert.equal(m.payload.call, call.sha);
+    });
+  });
+
+  // Fix round 1 (task-6-review.md, Important 2): re-submitting --file against an intent that
+  // already completed must be refused non-zero, with wording naming that condition, distinct from
+  // the never-had-one message (lib/evaluate.mjs's completeReviewMeasurement, fixed alongside this
+  // test), and must not write a second call or measurement.
+  test('re-submitting cairn measure <slug> --file <path> against an already-completed review intent refuses distinctly and writes nothing new', async () => {
+    await withCairnSession('sess-agent-cli-2', async () => {
+      const cwd = await repoWithCommitment(false);
+      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+      assert.equal(briefRun.code, 0, briefRun.err);
+      const answersPath = join(cwd, '.cairn/output', 'answers.json');
+      await writeFile(answersPath, reviewAnswers({ session: 'sess-fresh-reviewer-2' }));
+
+      const first = await run(['measure', 'auth-tokens', '--file', answersPath], cwd);
+      assert.equal(first.code, 0, first.err);
+
+      const second = await run(['measure', 'auth-tokens', '--file', answersPath], cwd);
+      assert.equal(second.code, 1);
+      assert.match(second.err, /already completed/);
+      assert.doesNotMatch(second.err, /no pending/);
+
+      const log = await readLog(cwd);
+      assert.equal(log.filter((x) => x.kind === 'measurement').length, 1, 'no second measurement was written');
+      assert.equal(log.filter((x) => x.kind === 'evaluation-call').length, 1, 'no second call was written');
+    });
+  });
 });

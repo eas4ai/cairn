@@ -1098,6 +1098,24 @@ describe('completeReviewMeasurement', () => {
     const cwd = await repoWithCommitment(false);
     await assert.rejects(completeReviewMeasurement(cwd, 'auth-tokens', reviewBody()), /no pending/);
   });
+  // Fix round 1 (Important 2, task-6-review.md): re-submitting --file against an intent that
+  // already completed must be refused with a message distinct from "never had one at all"
+  // (the test immediately above), and must not write a second measurement.
+  test('refuses re-submitting --file against an already-completed review intent, with a distinct message, and writes no second measurement', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const first = await completeReviewMeasurement(cwd, r.slug, reviewBody());
+    assert.equal(first.outcome, 'composite');
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody()), (e) => {
+      assert.ok(e instanceof MeasurementError);
+      assert.match(e.message, /already completed/);
+      assert.doesNotMatch(e.message, /no pending/);
+      return true;
+    });
+    const log = await readLog(cwd);
+    assert.equal(log.filter((x) => x.kind === 'measurement').length, 1, 'no second measurement was written');
+    assert.equal(log.filter((x) => x.kind === 'evaluation-call').length, 1, 'no second call was written');
+  });
   // Not in the brief's own test list (self-review completeness):
   //
   // 1. The written measurement record's own payload, not just the call -- the brief's own first

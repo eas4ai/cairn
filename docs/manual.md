@@ -34,6 +34,8 @@ are listed near the end.
 - [Review, the adversary, and Done](#review-the-adversary-and-done)
 - [Scope: work Cairn did not expect](#scope-work-cairn-did-not-expect)
 - [The evaluator: the agent's gut check](#the-evaluator-the-agents-gut-check)
+- [Settings](#settings)
+- [Turn on the TypeSafe evaluator](#turn-on-the-typesafe-evaluator)
 - [Sending the records with the code](#sending-the-records-with-the-code)
 - [Get unstuck](#get-unstuck)
 - [Command reference](#command-reference)
@@ -575,6 +577,64 @@ The benchmark under `tests/bench` (24 drafts over one small ledger project;
 24 against the expected route. The ceiling and weights were chosen on those
 same drafts, so the figure is in-sample; rerun it after any change to the
 criteria text, the state or the settings defaults.
+
+## Settings
+
+`cairn init` writes `.cairn/settings.json`. Every key is listed here with
+its default. The file is protected: after you change it, run
+`cairn authorize` again so the new settings digest is bound to the loop;
+until then wake names the repair.
+
+| Key | Default | Meaning |
+|---|---|---|
+| `schema` | current | The settings schema version; do not edit. |
+| `authority_remote` | the remote `init` confirmed, or `null` | The one remote the records may be pushed to (`cairn push`). |
+| `outside`, `source`, `interfaces`, `data` | `[]` | Path globs that classify the tree: outside the agreement, source, public interfaces, data that cannot be regenerated. The floor and the scope check read them. |
+| `network_exclude` | `[]` | Path globs whose content never reaches any model, on top of the built-in credential patterns. |
+| `signing_key` | the key `init` chose, or `null` | The key that signs developer answers and authorizations; `null` means unsigned-local confirmation at a terminal. |
+| `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
+| `developer` | `"present"` | `"absent"` for an autonomous run: a floor or veto escalation prints as Waiting and wake exits 4 instead of waiting for an answer. |
+| `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `cairn brief` and by the review source of the evaluator. |
+| `typesafeai.enabled` | `false` | `true` sends each Consequential measurement to TypeSafe's jev model; `false` uses your harness's review model through `cairn measure --brief`. |
+| `typesafeai.model` | `null` | The versioned model id, required when enabled: `"jev-1.13.0"` at the time of writing. An alias such as `"jev"` is refused. |
+| `typesafeai.weights` | 0.2 each | The five dimension weights (`evidence`, `reach`, `contract`, `surface`, `ambiguity`); they must sum to 1. |
+| `typesafeai.agent_ceiling` | `0.35` | The composite at or under which the suggestion is `agent`; above it, `developer`. |
+| `typesafeai.confidence_floors` | 0 each | Per-dimension minimum confidence for an `agent` suggestion. |
+| `typesafeai.min_calibration_agent_predictions` | `60` | Labelled `suggested: agent` cases `cairn calibrate` needs before it reports a pass or fail. |
+| `typesafeai.request_cap_bytes` | `48000` | The largest request the evaluator sends; a draft over it is recorded `unavailable oversize` and goes to you. |
+
+The defaults for the ceiling, weights and floors are the ones the in-tree
+benchmark (`tests/bench`) scored 22 of 24 with. Change them and rerun it.
+
+### Turn on the TypeSafe evaluator
+
+By default the measurement comes from your harness's own review model and
+needs no account. To use TypeSafe's jev model instead:
+
+1. Get an API key from https://typesafe.ai and export it in the shell that
+   runs your agent: `export TYPESAFEAI_API_KEY=...`. Cairn reads it from
+   the environment only; it never writes it to a file, a record or a log,
+   and the key never appears in an error message.
+2. In `.cairn/settings.json` set `"typesafeai": { "enabled": true, "model": "jev-1.13.0", ... }`,
+   leaving the other keys at their defaults.
+3. Run `cairn authorize` to bind the changed settings.
+4. At the next Consequential decision the agent runs `cairn measure ...` and
+   the call goes to `https://api.typesafe.ai/v1/systemone` with the closed
+   state described above; the measurement record holds the five levels, the
+   composite, any veto and the suggestion. A transport failure, a rate limit
+   after the built-in retries, or an invalid answer is recorded as
+   `unavailable <class>` and the draft goes to you; nothing is retried
+   silently.
+
+Without a key, `cairn measure --brief` prints a brief and a launch block;
+a fresh session of your harness's review model answers it into a JSON file
+and `cairn measure <slug> --file <path>` completes the measurement through
+the same parser and the same composite. The two sources answer the same
+five questions over the same state; on the benchmark they agreed on every
+draft compared.
+
+To check the evaluator against the 24-scenario benchmark on your own key:
+`CAIRN_BENCH=1 npm run bench` from the checkout, one scenario at a time.
 
 ## Sending the records with the code
 

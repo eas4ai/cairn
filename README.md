@@ -159,7 +159,9 @@ cairn --help
 ```
 
 `cairn --help` lists every command; it works outside a project and
-changes nothing. Updates come through the marketplace (in Claude Code,
+changes nothing. Every key in `.cairn/settings.json`, and how to turn on
+the TypeSafe evaluator with a key from typesafe.ai, is in the manual's
+[Settings](docs/manual.md#settings) section. Updates come through the marketplace (in Claude Code,
 `claude plugin update cairn@cairn`), or in Muse with
 `muse plugins update cairn`.
 

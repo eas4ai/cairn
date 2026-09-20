@@ -27,7 +27,8 @@ Cairn has two parts:
 - **A command-line tool** reads and writes those records, runs the declared
   checks when asked, and reports the next action.
 
-Cairn does not call an AI model or run the agent for you on its own. At one
+Cairn does not run the agent for you, and it calls no AI model on its own
+unless you turn on the TypeSafe evaluator in settings. At one
 narrow kind of decision -- a Consequential choice -- the agent takes one
 measurement of its own draft before deciding: five scored dimensions and a
 composite, computed in code from the model's answers, never a verdict by
@@ -170,9 +171,10 @@ An agent without a plugin marketplace gets the skills through the
 npx skills add eas4ai/cairn --skill install-cairn new-project existing-project next-feature --agent codex --global
 ```
 
-Use `--agent claude-code` for Claude Code. For Muse and other agents
-without a dedicated entry, use `--agent universal`, which installs into
-`$HOME/.agents/skills`, the cross-vendor directory Muse reads. Omit
+Use `--agent claude-code` for Claude Code. For an agent without a
+dedicated entry, use `--agent universal`, which installs into
+`$HOME/.config/agents/skills`; point that agent at the directory if it
+does not read it already. Omit
 `--global` to install only in the project where you run the command.
 Preview the available skills with `npx skills add eas4ai/cairn --list`.
 The skills carry instructions and templates, not the command. Tell your

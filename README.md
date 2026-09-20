@@ -14,10 +14,6 @@ still waiting for you. Those facts live in your Git repository, in commits
 you can inspect with plain Git, rather than only in a conversation that the
 next agent may never see.
 
-See it work: [a short video](docs/video/Cairn_and_the_Genius_Amnesiac_Intern.mp4).
-The video file ships in the release checkout, not in this repository's
-source tree.
-
 [Read the human manual](docs/manual.md) | [Try the worked example](docs/walkthrough.md)
 
 ## What Cairn does

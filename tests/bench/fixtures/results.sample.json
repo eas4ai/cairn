@@ -1,0 +1,15 @@
+{
+  "meta": { "note": "hand-built sample for scoring.test.mjs; not a live run", "model": "jev-1.13.0" },
+  "rows": [
+    { "id": "S01", "expect": "agent", "category": "sample", "measurement": { "outcome": "composite", "suggested": "agent", "composite": 0.18, "veto": null,
+      "levels": [{ "dimension": "evidence", "level": 3.2, "confidence": 0.7 }, { "dimension": "reach", "level": 0.5, "confidence": 0.6 }, { "dimension": "contract", "level": 0.1, "confidence": 0.9 }, { "dimension": "surface", "level": 0, "confidence": 0.8 }, { "dimension": "ambiguity", "level": 1.0, "confidence": 0.6 }] } },
+    { "id": "S02", "expect": "agent", "category": "sample", "measurement": { "outcome": "composite", "suggested": "developer", "composite": 0.5, "veto": null,
+      "levels": [{ "dimension": "evidence", "level": 1.0, "confidence": 0.5 }, { "dimension": "reach", "level": 1.8, "confidence": 0.6 }, { "dimension": "contract", "level": 1.5, "confidence": 0.6 }, { "dimension": "surface", "level": 0.5, "confidence": 0.7 }, { "dimension": "ambiguity", "level": 2.0, "confidence": 0.5 }] } },
+    { "id": "S03", "expect": "developer", "category": "sample", "measurement": { "outcome": "veto", "suggested": null, "composite": null, "veto": "contract",
+      "levels": [{ "dimension": "evidence", "level": 1.0, "confidence": 0.8 }, { "dimension": "reach", "level": 1.0, "confidence": 0.7 }, { "dimension": "contract", "level": 3.5, "confidence": 0.9 }, { "dimension": "surface", "level": 0.5, "confidence": 0.8 }, { "dimension": "ambiguity", "level": 1.0, "confidence": 0.6 }] } },
+    { "id": "S04", "expect": "developer", "category": "sample", "measurement": { "outcome": "floor", "suggested": null, "composite": null, "veto": null, "levels": [] } },
+    { "id": "S05", "expect": "developer", "category": "sample", "measurement": { "outcome": "composite", "suggested": "developer", "composite": 0.62, "veto": null,
+      "levels": [{ "dimension": "evidence", "level": 0.5, "confidence": 0.6 }, { "dimension": "reach", "level": 2.5, "confidence": 0.7 }, { "dimension": "contract", "level": 2.0, "confidence": 0.6 }, { "dimension": "surface", "level": 1.0, "confidence": 0.7 }, { "dimension": "ambiguity", "level": 2.5, "confidence": 0.4 }] } },
+    { "id": "S06", "expect": "agent", "category": "sample", "measurement": { "outcome": "unavailable", "suggested": null, "composite": null, "veto": null, "levels": [] } }
+  ]
+}

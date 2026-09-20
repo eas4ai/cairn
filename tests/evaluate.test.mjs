@@ -785,8 +785,18 @@ const OVERVIEW_WITH_AUTH = `# Keystone
 // ~61.5s respectively, not the same ~30s each a linear cost would predict), which is why a small
 // configured floor plus a small real sample proves the same join/counting behavior in a fraction
 // of the time.
-async function repoWithCommitment(enabled = true, minCalibrationAgentPredictions = 60) {
-  const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: minCalibrationAgentPredictions, request_cap_bytes: 48000 } },
+// Task 6 (plan 16) extends this fixture's second parameter to also accept a settings-override
+// object (e.g. `{ harness: { claude_code: { adversary_model, adversary_transport } } }`, the
+// pinned-launch test needs) alongside its existing numeric use (min_calibration_agent_predictions,
+// the calibration tests above). Kept backward compatible by branching on typeof: every existing
+// numeric caller (`repoWithCommitment(true, 5)`, `repoWithCommitment(true, 3)`) is unaffected, and
+// an object caller gets its extra top-level settings keys merged in alongside `data`/`typesafeai`
+// (makeProject's own settings merge is a shallow spread over DEFAULT_SETTINGS, so a sibling key
+// like `harness` merges cleanly without touching `data`/`typesafeai`).
+async function repoWithCommitment(enabled = true, extra = 60) {
+  const minCalibrationAgentPredictions = typeof extra === 'number' ? extra : 60;
+  const extraSettings = typeof extra === 'object' && extra !== null ? extra : {};
+  const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: minCalibrationAgentPredictions, request_cap_bytes: 48000 }, ...extraSettings },
     files: {
       'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
       'docs/spec/auth.md': AUTH_DOMAIN,
@@ -1022,6 +1032,118 @@ describe('measure() records session and launch on the intent', () => {
     await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] }, { session: 'sess-agent' });
     const intent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
     assert.equal(intent.payload.session, 'sess-agent'); assert.equal(intent.payload.launch, null);
+  });
+});
+
+// --- Task 6 (plan 16): completeReviewMeasurement -- cairn measure <slug> --file <path> ----------
+// Section 9's report() refusal, mirrored for the review source's measurement completion: the
+// session that wrote the brief may not answer it, and a body model/transport that disagrees with
+// the intent's own recorded launch (when the launch pinned one) is refused the same way. Reuses
+// parseScoreAnswers and finalizeMeasurement exactly as the jev path in measure() does.
+import { completeReviewMeasurement } from '../lib/evaluate.mjs';
+
+// Deviation from the brief text: the brief's own Step 1 snippet spreads `...over` inside the
+// `answers` object (`ambiguity: {...}, ...over } });`), not at the top level of the returned
+// body. reviewBody({ session: 'sess-agent' })/({ model: 'some-other-model' })/({ model: 'anything'
+// }) -- exactly the three overrides the brief's own tests below pass -- were each meant to replace
+// a top-level field (session, model), but landed as a bogus sixth key inside `answers` instead,
+// which parseScoreAnswers's own "an extra question" guard (lib/evaluate.mjs) rejects as `answer
+// session not requested` / `answer model not requested` before either refusal check or the
+// intended-acceptance path is ever reached (reproduced: every one of the three tests that pass an
+// override failed before this fix -- two "Missing expected rejection" where the real bug masked
+// the intended refusal behind an unrelated invalid-answer outcome, one composite/unavailable
+// mismatch where the fourth test's "accepts any model" body was itself rejected as invalid). Moved
+// to the top level, where `model`/`session`/`transport` actually live on this schema.
+const reviewBody = (over = {}) => ({ model: 'claude-fable-5-1', session: 'sess-reviewer', transport: 'remote',
+  usage: { input_tokens: 5, output_tokens: 1 },
+  answers: { evidence: { type: 'score', score: 3, confidence: 0.7, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.6, 4: 0.3 } },
+    reach: { type: 'score', score: 0.5, confidence: 0.6, probabilities: { 0: 0.6, 1: 0.2, 2: 0.1, 3: 0.1, 4: 0 } },
+    contract: { type: 'score', score: 0.1, confidence: 0.9, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
+    surface: { type: 'score', score: 0, confidence: 0.8, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
+    ambiguity: { type: 'score', score: 1, confidence: 0.5, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } } }, ...over });
+
+describe('completeReviewMeasurement', () => {
+  test('records the composite from the five levels, exactly like the jev path', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
+    assert.equal(c.outcome, 'composite'); assert.ok(typeof c.composite === 'number');
+    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
+    assert.equal(call.payload.source, 'review'); assert.equal(call.payload.session, 'sess-reviewer'); assert.equal(call.payload.model, 'claude-fable-5-1');
+  });
+  test('refuses the session that started the brief', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody({ session: 'sess-agent' })), /session/);
+  });
+  test('refuses a model or transport that disagrees with the launch, when one was pinned', async () => {
+    const cwd = await repoWithCommitment(false, { harness: { claude_code: { adversary_model: 'claude-fable-5-1', adversary_transport: 'remote' } } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody({ model: 'some-other-model' })), /model/);
+  });
+  test('a null-pinned launch (harness entry null or absent) accepts any model', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const c = await completeReviewMeasurement(cwd, r.slug, reviewBody({ model: 'anything' }));
+    assert.equal(c.outcome, 'composite');
+  });
+  test('an invalid answer set is unavailable invalid, same as the jev path', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const bad = reviewBody(); delete bad.answers.surface;
+    const c = await completeReviewMeasurement(cwd, r.slug, bad);
+    assert.equal(c.outcome, 'unavailable'); assert.equal(c.suggested, null);
+  });
+  test('refuses when there is no pending review intent for the slug', async () => {
+    const cwd = await repoWithCommitment(false);
+    await assert.rejects(completeReviewMeasurement(cwd, 'auth-tokens', reviewBody()), /no pending/);
+  });
+  // Not in the brief's own test list (self-review completeness):
+  //
+  // 1. The written measurement record's own payload, not just the call -- the brief's own first
+  //    test only asserts the call's source/session/model; this asserts the measurement is
+  //    otherwise indistinguishable in shape from a jev one (this task's own Global Constraints:
+  //    "indistinguishable ... except source, its call record's transport/session, and model")
+  //    except for those three fields, plus that the call's answers/usage/raw made it to the log.
+  test('the written measurement and call carry the same shape a jev completion would, only source/session/transport/model differ', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
+    const log = await readLog(cwd);
+    const call = log.findLast((x) => x.kind === 'evaluation-call');
+    const m = log.findLast((x) => x.kind === 'measurement');
+    assert.equal(call.payload.intent, r.intentSha); assert.equal(call.payload.request_digest, requestDigest(r.request));
+    assert.equal(call.payload.outcome, 'response'); assert.equal(call.payload.transport, 'remote');
+    assert.equal(call.payload.answers.length, 5); assert.deepEqual(call.payload.usage, { input_tokens: 5, output_tokens: 1 });
+    assert.equal(Buffer.from(unb64url(call.payload.raw)).toString(), JSON.stringify(reviewBody()));
+    assert.equal(m.payload.intent, r.intentSha); assert.equal(m.payload.call, call.sha); assert.equal(m.payload.source, 'review');
+    assert.equal(m.payload.model, 'claude-fable-5-1'); assert.equal(m.payload.levels.length, 5);
+    assert.equal(m.sha, c.measurementSha);
+  });
+  // 2. Malformed-body defense (self-review's own named scenario): a body missing model/session/
+  //    transport entirely at the top level (not just a missing answer) still resolves to a clean
+  //    'unavailable invalid' measurement, never an uncaught RecordError from the evaluation-call/
+  //    measurement schemas' nullable(str)/nullable(oneOf(...)) fields rejecting a raw `undefined`.
+  test('a body missing model/session/transport entirely is unavailable invalid, not a thrown schema error', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const c = await completeReviewMeasurement(cwd, r.slug, {});
+    assert.equal(c.outcome, 'unavailable'); assert.equal(c.suggested, null);
+    const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
+    assert.equal(call.payload.model, null); assert.equal(call.payload.transport, null); assert.equal(call.payload.session, null);
+  });
+  // 3. A record appended between the brief (measure()'s pending intent) and the file completion
+  //    (an unrelated backlog item, standing in for anything else the loop might do meanwhile)
+  //    does not block completeReviewMeasurement from finding its own intent -- the "stale intent"
+  //    self-review scenario: staleness against the ADR/log is currentMeasurement's own later gate
+  //    (Task 2), not this function's; a genuinely pending review intent is still completable no
+  //    matter what else landed in the log after it.
+  test('an unrelated record appended after the brief does not block completion', async () => {
+    const cwd = await repoWithCommitment(false);
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
+    const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
+    assert.equal(c.outcome, 'composite');
   });
 });
 

@@ -731,13 +731,9 @@ import { start } from '../lib/commitment.mjs';
 import { loadSettings } from '../lib/settings.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 
-const scoreBody = (over = {}) => JSON.stringify({ model: 'jev-1.13.0', answers: {
-  evidence: { score: 3.4, confidence: 0.6, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0.1, 3: 0.5, 4: 0.4 } },
-  reach: { score: 0.6, confidence: 0.5, legend: {}, probabilities: { 0: 0.7, 1: 0, 2: 0.1, 3: 0.2, 4: 0 } },
-  contract: { score: 0.1, confidence: 0.9, legend: {}, probabilities: { 0: 0.9, 1: 0.1, 2: 0, 3: 0, 4: 0 } },
-  surface: { score: 0, confidence: 0.8, legend: {}, probabilities: { 0: 1, 1: 0, 2: 0, 3: 0, 4: 0 } },
-  ambiguity: { score: 1.0, confidence: 0.5, legend: {}, probabilities: { 0: 0.3, 1: 0.4, 2: 0.2, 3: 0.1, 4: 0 } },
-  ...over }, usage: { input_tokens: 10, output_tokens: 2 } });
+// goodBody (Task 7, above) is the same five-dimension answer body this task's transport stubs
+// need; reused here rather than redefined (Minor 6, review round: the two were byte-for-byte
+// duplicates).
 const transport = (bodies) => async () => { const b = bodies.shift(); if (b instanceof Error) throw b; return { status: 200, body: b, model: 'jev-1.13.0' }; };
 // Deviation from the brief text, in two parts -- both reproduced by running the brief's literal
 // fixture before this fix (task-9-report.md's RED section):
@@ -804,13 +800,13 @@ async function repoWithCommitment(enabled = true, minCalibrationAgentPredictions
 describe('measure()', () => {
   test('jev: intent precedes the one call; the measurement carries the composite and suggestion', async () => {
     const cwd = await repoWithCommitment();
-    const r = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const r = await measure(cwd, draft(), { transport: transport([goodBody()]) });
     assert.equal(r.outcome, 'composite'); assert.equal(r.suggested, 'agent'); assert.equal(r.veto, null);
     const log = await readLog(cwd);
     assert.deepEqual(log.slice(-3).map((x) => x.kind), ['evaluation-intent', 'evaluation-call', 'measurement']);
     const [intent, call, m] = log.slice(-3);
     assert.equal(intent.payload.source, 'jev'); assert.equal(call.payload.source, 'jev'); assert.equal(call.payload.outcome, 'response');
-    assert.equal(Buffer.from(unb64url(call.payload.raw)).toString(), scoreBody());
+    assert.equal(Buffer.from(unb64url(call.payload.raw)).toString(), goodBody());
     assert.equal(m.payload.intent, intent.sha); assert.equal(m.payload.call, call.sha);
     assert.equal(m.payload.levels.length, 5);
     // Deviation from the brief text: the brief's own snippet calls `decodeRecord(rec)` on `rec`
@@ -830,7 +826,7 @@ describe('measure()', () => {
   });
   test('a veto forces developer even with a low composite', async () => {
     const cwd = await repoWithCommitment();
-    const body = scoreBody({ contract: { score: 3.5, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5 } } });
+    const body = goodBody({ contract: { score: 3.5, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5 } } });
     const r = await measure(cwd, draft(), { transport: transport([body]) });
     assert.equal(r.outcome, 'veto'); assert.equal(r.veto, 'contract'); assert.equal(r.suggested, null);
   });
@@ -869,10 +865,10 @@ describe('measure()', () => {
   });
   test('identity is captured before any write; equal identity and policy yield byte-identical requests', async () => {
     const cwd = await repoWithCommitment();
-    const a = []; const t = (bodies) => async (req) => { a.push(req); return { status: 200, body: scoreBody(), model: 'jev-1.13.0' }; };
-    await measure(cwd, draft(), { transport: t([]) });
-    const b = []; const t2 = (bodies) => async (req) => { b.push(req); return { status: 200, body: scoreBody(), model: 'jev-1.13.0' }; };
-    await measure(cwd, draft(), { transport: t2([]) });
+    const a = []; const t = () => async (req) => { a.push(req); return { status: 200, body: goodBody(), model: 'jev-1.13.0' }; };
+    await measure(cwd, draft(), { transport: t() });
+    const b = []; const t2 = () => async (req) => { b.push(req); return { status: 200, body: goodBody(), model: 'jev-1.13.0' }; };
+    await measure(cwd, draft(), { transport: t2() });
     assert.equal(JSON.stringify(a[0]), JSON.stringify(b[0]));
   });
   test('an unknown crash outcome leaves the intent open; recovery marks indeterminate, never retries', async () => {
@@ -912,7 +908,7 @@ describe('measure()', () => {
     });
     const callSha = await appendRecord(cwd, 'evaluation-call', f.slug, {
       intent: intentSha, source: 'jev', request_digest: requestDigest(request), outcome: 'response', model: 'jev-1.13.0',
-      transport: null, session: null, raw: b64url(Buffer.from(scoreBody(), 'utf8')), failure_class: null,
+      transport: null, session: null, raw: b64url(Buffer.from(goodBody(), 'utf8')), failure_class: null,
       answers: null, usage: { input_tokens: 10, output_tokens: 2 },
     });
     const sha = await recoverMeasurement(cwd);
@@ -966,11 +962,12 @@ describe('measure()', () => {
   // evaluation-call (outcome: failure) the same way a transport failure is.
   test('a response naming a different model than requested is unavailable model_mismatch, recorded as a call failure', async () => {
     const cwd = await repoWithCommitment();
-    const t = () => async () => ({ status: 200, body: scoreBody(), model: 'jev-9.9.9' });
+    const t = () => async () => ({ status: 200, body: goodBody(), model: 'jev-9.9.9' });
     const r = await measure(cwd, draft(), { transport: t() });
-    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable model_mismatch');
+    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable model_mismatch: got jev-9.9.9');
     const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
     assert.equal(call.payload.outcome, 'failure'); assert.equal(call.payload.failure_class, 'model_mismatch');
+    assert.equal(call.payload.model, 'jev-9.9.9', 'the actually-returned model is preserved for the audit trail');
   });
   // Both sources hit the floor the same way (section 10: the floor runs "before any call", for
   // either source) -- the given test list only exercises it under jev; this confirms the review
@@ -1035,7 +1032,7 @@ describe('calibration', () => {
   // `asDev` fixture tests/escalate.test.mjs already uses for every passing answer() call.
   async function labelled(cwd, n, ownerLabel) {
     for (let i = 0; i < n; i++) {
-      const r = await measure(cwd, { ...draft(), question: `q${i}` }, { transport: transport([scoreBody()]) });
+      const r = await measure(cwd, { ...draft(), question: `q${i}` }, { transport: transport([goodBody()]) });
       assert.equal(r.suggested, 'agent');
       const sha = await escalate(cwd, { ...draft(), question: `q${i}`, evaluation: r.measurementSha });
       await answer(cwd, draft().commitment, 'ok', '', { owner: ownerLabel, escalation: sha, confirm: async () => true });

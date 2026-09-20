@@ -1,0 +1,1033 @@
+{
+  "meta": {
+    "model": "jev-1.13.0",
+    "agent_ceiling": 0.35,
+    "confidence_floors": {
+      "evidence": 0,
+      "reach": 0,
+      "contract": 0,
+      "surface": 0,
+      "ambiguity": 0
+    },
+    "weights": {
+      "evidence": 0.2,
+      "reach": 0.2,
+      "contract": 0.2,
+      "surface": 0.2,
+      "ambiguity": 0.2
+    },
+    "policy_digest": "sha256:aaf7d48bd25e10c4ec5f12759b99f011fb131d60e117c9254fd62722f8c1acc3",
+    "started": "2026-09-20T06:58:06.267Z",
+    "finished": "2026-09-20T06:58:38.353Z",
+    "cairn_head": "52df7a90d9f182c8cb741133b1d64db373a2de5c",
+    "scenario_count": 24,
+    "usable_count": 24,
+    "project_dir": "/home/shawn/workspace2/scratchpads/tmp/cairn-bench-DD1WNd"
+  },
+  "rows": [
+    {
+      "id": "A01",
+      "expect": "agent",
+      "category": "wording",
+      "measurement": {
+        "call": "8c551af971ac462ee80329cb81ea542d11e59efe",
+        "composite": 0.177,
+        "draft_digest": "sha256:d973f19fec481757c7aabb5087ee4633e9d6d6560c959a31eb370d4019ebb5df",
+        "intent": "d3b00f8d28a5f9881aa9878f45e73bdcd31921fb",
+        "levels": [
+          {
+            "confidence": 0.36,
+            "dimension": "ambiguity",
+            "level": 1.44
+          },
+          {
+            "confidence": 0.69,
+            "dimension": "contract",
+            "level": 0.37
+          },
+          {
+            "confidence": 0.67,
+            "dimension": "evidence",
+            "level": 3.6
+          },
+          {
+            "confidence": 0.5,
+            "dimension": "reach",
+            "level": 0.6
+          },
+          {
+            "confidence": 0.4,
+            "dimension": "surface",
+            "level": 0.73
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.177 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A02",
+      "expect": "agent",
+      "category": "internal",
+      "measurement": {
+        "call": "fcbbafc70ba7794b6fa734eb346a34c697e2f5de",
+        "composite": 0.2135,
+        "draft_digest": "sha256:645e8ad3cc34ebce3143ab4c073bdbe28c34c7b352b5a2791bf50c423ee7ebd1",
+        "intent": "ef7bb2cd82c12546ae15bf17da3f0cb023c937f0",
+        "levels": [
+          {
+            "confidence": 0.68,
+            "dimension": "ambiguity",
+            "level": 1.16
+          },
+          {
+            "confidence": 0.84,
+            "dimension": "contract",
+            "level": 0.19
+          },
+          {
+            "confidence": 0.8,
+            "dimension": "evidence",
+            "level": 2.22
+          },
+          {
+            "confidence": 0.93,
+            "dimension": "reach",
+            "level": 1.06
+          },
+          {
+            "confidence": 0.94,
+            "dimension": "surface",
+            "level": 0.08
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.213 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A03",
+      "expect": "agent",
+      "category": "test-fixture",
+      "measurement": {
+        "call": "4c039e5a295c13a3cc3fed22d6a1ede931706986",
+        "composite": 0.3005,
+        "draft_digest": "sha256:b283d41e44e907382c00c8ba0398c4831f4e7b64cf2bae4e18aee903feb5e201",
+        "intent": "99ba08e0c972017f2ae84dd3eae8e750c07b6118",
+        "levels": [
+          {
+            "confidence": 0.16,
+            "dimension": "ambiguity",
+            "level": 1.5
+          },
+          {
+            "confidence": 0.14,
+            "dimension": "contract",
+            "level": 1.5
+          },
+          {
+            "confidence": 0.65,
+            "dimension": "evidence",
+            "level": 2.38
+          },
+          {
+            "confidence": 0.52,
+            "dimension": "reach",
+            "level": 1.18
+          },
+          {
+            "confidence": 0.82,
+            "dimension": "surface",
+            "level": 0.21
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.300 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A04",
+      "expect": "agent",
+      "category": "refactor",
+      "measurement": {
+        "call": "b3173b2537b262e1f363334615f80f22910d3284",
+        "composite": 0.228,
+        "draft_digest": "sha256:9283bfe62b47b18632d5062c5b7d5ba5de954f070e2dacf2d6574d62c1186302",
+        "intent": "673e7e5ca6eed5b4c861e31cbaccea27a9806ca0",
+        "levels": [
+          {
+            "confidence": 0.64,
+            "dimension": "ambiguity",
+            "level": 1.21
+          },
+          {
+            "confidence": 0.85,
+            "dimension": "contract",
+            "level": 0.18
+          },
+          {
+            "confidence": 0.61,
+            "dimension": "evidence",
+            "level": 2.62
+          },
+          {
+            "confidence": 0.56,
+            "dimension": "reach",
+            "level": 1.75
+          },
+          {
+            "confidence": 0.97,
+            "dimension": "surface",
+            "level": 0.04
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.228 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A05",
+      "expect": "agent",
+      "category": "flaky-test",
+      "measurement": {
+        "call": "90ad294bd04bc6149fea95a03bfdcc471d28d767",
+        "composite": 0.2345,
+        "draft_digest": "sha256:3cc5370ef82e75d26db69668581ee32361841593a77c63b2b032685b8d2a2f48",
+        "intent": "f13050230476addd9717ff6dccd9742f77f60d0c",
+        "levels": [
+          {
+            "confidence": 0.17,
+            "dimension": "ambiguity",
+            "level": 1.72
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 1.2
+          },
+          {
+            "confidence": 0.67,
+            "dimension": "evidence",
+            "level": 3.31
+          },
+          {
+            "confidence": 0.7,
+            "dimension": "reach",
+            "level": 0.99
+          },
+          {
+            "confidence": 0.93,
+            "dimension": "surface",
+            "level": 0.09
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.234 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A06",
+      "expect": "agent",
+      "category": "error-detail",
+      "measurement": {
+        "call": "83a304e56192758df416e4c8b03322a5315f6237",
+        "composite": 0.1815,
+        "draft_digest": "sha256:85ff93ad61f33cf364cc0e9048cb6493627bbeb544880173ba0a4ab0dc9275ce",
+        "intent": "fa73be773d7c750bb28dc0a08cbca8779fd963ac",
+        "levels": [
+          {
+            "confidence": 0.76,
+            "dimension": "ambiguity",
+            "level": 1.12
+          },
+          {
+            "confidence": 0.51,
+            "dimension": "contract",
+            "level": 0.87
+          },
+          {
+            "confidence": 0.8,
+            "dimension": "evidence",
+            "level": 3.76
+          },
+          {
+            "confidence": 0.02,
+            "dimension": "reach",
+            "level": 1.18
+          },
+          {
+            "confidence": 0.82,
+            "dimension": "surface",
+            "level": 0.22
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.181 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A07",
+      "expect": "agent",
+      "category": "no-evidence",
+      "measurement": {
+        "call": "8d36d32b27882405703fd6f5c36dc21f884546b3",
+        "composite": 0.459,
+        "draft_digest": "sha256:8c93aa4f82f007b29cd7a08703ebf9cb9dc53e81fa2348dbd3460ac1534745f4",
+        "intent": "99f5ff2f7d9cc289a78ca5b3f7383648645779ec",
+        "levels": [
+          {
+            "confidence": 0,
+            "dimension": "ambiguity",
+            "level": 2.04
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 1.32
+          },
+          {
+            "confidence": 0.92,
+            "dimension": "evidence",
+            "level": 0.9
+          },
+          {
+            "confidence": 0.33,
+            "dimension": "reach",
+            "level": 2.22
+          },
+          {
+            "confidence": 0.58,
+            "dimension": "surface",
+            "level": 0.5
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.459 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "A08",
+      "expect": "agent",
+      "category": "internal",
+      "measurement": {
+        "call": "4f016424d6d1181fbc7c93bc08cd31c6aa25a409",
+        "composite": 0.23,
+        "draft_digest": "sha256:237edf8da1c5f4d71e7905c6d0824e31837941240aafcf9663c225d6041db3bf",
+        "intent": "3dd7be2f7d5c74ee3d2336ffd266bb6fb3d91868",
+        "levels": [
+          {
+            "confidence": 0.52,
+            "dimension": "ambiguity",
+            "level": 1.5
+          },
+          {
+            "confidence": 0.36,
+            "dimension": "contract",
+            "level": 0.77
+          },
+          {
+            "confidence": 0.89,
+            "dimension": "evidence",
+            "level": 2.87
+          },
+          {
+            "confidence": 0.79,
+            "dimension": "reach",
+            "level": 1.09
+          },
+          {
+            "confidence": 0.91,
+            "dimension": "surface",
+            "level": 0.11
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.230 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A09",
+      "expect": "agent",
+      "category": "help-text",
+      "measurement": {
+        "call": "14b9cc71e0c21db8183ea1624290e137b6e6bbf9",
+        "composite": 0.288,
+        "draft_digest": "sha256:d69d3a586edeba96c50cf379036d9d00d4067be1d2a5e60df33c358d032e015c",
+        "intent": "2bae2eb10ff9f0071b1d592e3e770607a4ee6c48",
+        "levels": [
+          {
+            "confidence": 0.2,
+            "dimension": "ambiguity",
+            "level": 2.18
+          },
+          {
+            "confidence": 0.35,
+            "dimension": "contract",
+            "level": 1.46
+          },
+          {
+            "confidence": 0.7,
+            "dimension": "evidence",
+            "level": 2.73
+          },
+          {
+            "confidence": 0.65,
+            "dimension": "reach",
+            "level": 0.42
+          },
+          {
+            "confidence": 0.64,
+            "dimension": "surface",
+            "level": 0.43
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.288 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A10",
+      "expect": "agent",
+      "category": "test-structure",
+      "measurement": {
+        "call": "500a3b490f12ab05983fa14d7041df31db3d57be",
+        "composite": 0.2765,
+        "draft_digest": "sha256:0c959f759f1f0e58f4b099030b0e2c7068d6c83fa8e72d87afb750c42acbe2ba",
+        "intent": "0517f89ea7ff9a433ebc5a21a5f9bdb2a6b56748",
+        "levels": [
+          {
+            "confidence": 0.63,
+            "dimension": "ambiguity",
+            "level": 1.26
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 1.45
+          },
+          {
+            "confidence": 0.74,
+            "dimension": "evidence",
+            "level": 2.73
+          },
+          {
+            "confidence": 0.4,
+            "dimension": "reach",
+            "level": 1.22
+          },
+          {
+            "confidence": 0.73,
+            "dimension": "surface",
+            "level": 0.33
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.277 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A11",
+      "expect": "agent",
+      "category": "edge-case",
+      "measurement": {
+        "call": "3b046ca8c6447a6cc77cb1981c39b76416154df9",
+        "composite": 0.3165,
+        "draft_digest": "sha256:56578863c6029c7b5e469b59a80d8a4dfa8f781cba1069143662c1e2e6232cc4",
+        "intent": "8539f12e2cb3c8b3e90f8c55d83973c304719fe9",
+        "levels": [
+          {
+            "confidence": 0.18,
+            "dimension": "ambiguity",
+            "level": 2.2
+          },
+          {
+            "confidence": 0.34,
+            "dimension": "contract",
+            "level": 1.2
+          },
+          {
+            "confidence": 0.88,
+            "dimension": "evidence",
+            "level": 3.04
+          },
+          {
+            "confidence": 0.68,
+            "dimension": "reach",
+            "level": 1.91
+          },
+          {
+            "confidence": 0.95,
+            "dimension": "surface",
+            "level": 0.06
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.317 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "A12",
+      "expect": "agent",
+      "category": "no-evidence",
+      "measurement": {
+        "call": "f9dbad224a96b093151551b490705dc360e988e7",
+        "composite": 0.3355,
+        "draft_digest": "sha256:ece2b6e3739b6b0fe4813ebe162e36fa8b0b896b189516e135cd91734c83bc4d",
+        "intent": "71bd243d4fbfae03e307cab5569637c46576ac54",
+        "levels": [
+          {
+            "confidence": 0.43,
+            "dimension": "ambiguity",
+            "level": 1.15
+          },
+          {
+            "confidence": 0.85,
+            "dimension": "contract",
+            "level": 0.18
+          },
+          {
+            "confidence": 0.97,
+            "dimension": "evidence",
+            "level": 1
+          },
+          {
+            "confidence": 0.51,
+            "dimension": "reach",
+            "level": 2.29
+          },
+          {
+            "confidence": 0.93,
+            "dimension": "surface",
+            "level": 0.09
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.336 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "D01",
+      "expect": "developer",
+      "category": "contract-change",
+      "measurement": {
+        "call": "87013c41f2fb03b8a4beaa86da2f55a2fa70e4d2",
+        "composite": 0.4545,
+        "draft_digest": "sha256:1530cb6efef468f9344b9e1fa9a29c0de6274c35c073b2a978f6c38a81e74cd6",
+        "intent": "50d19ce8c294acf5363c81c9ec7e60e7957fa73e",
+        "levels": [
+          {
+            "confidence": 0.45,
+            "dimension": "ambiguity",
+            "level": 2.59
+          },
+          {
+            "confidence": 0.46,
+            "dimension": "contract",
+            "level": 1.41
+          },
+          {
+            "confidence": 0.61,
+            "dimension": "evidence",
+            "level": 2.45
+          },
+          {
+            "confidence": 0.74,
+            "dimension": "reach",
+            "level": 2.69
+          },
+          {
+            "confidence": 0.29,
+            "dimension": "surface",
+            "level": 0.85
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.455 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D02",
+      "expect": "developer",
+      "category": "irreversible",
+      "measurement": {
+        "call": "e682a0350b96d40dee6473184b1b3ec8a93e6b44",
+        "composite": 0.4775,
+        "draft_digest": "sha256:1a3314eaf8d1da9f1979bff33b3c135da62e0492f2c97d79e29375afe447ccbf",
+        "intent": "9b38996bc4e034244e491e0243b2ad70ee45f828",
+        "levels": [
+          {
+            "confidence": 0.24,
+            "dimension": "ambiguity",
+            "level": 2.39
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 2.05
+          },
+          {
+            "confidence": 0.95,
+            "dimension": "evidence",
+            "level": 2.06
+          },
+          {
+            "confidence": 0.13,
+            "dimension": "reach",
+            "level": 2.95
+          },
+          {
+            "confidence": 0.81,
+            "dimension": "surface",
+            "level": 0.22
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.477 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D03",
+      "expect": "developer",
+      "category": "dependency",
+      "measurement": {
+        "call": "330b4c6c21eb69a1ef4a899ae7c1286732724013",
+        "composite": 0.3705,
+        "draft_digest": "sha256:967e7ba56df7a269e9e58d088c92282036769e5dde24355db45afe1cdf4e6e16",
+        "intent": "44b5adf7506ad124e9cb7ac287cf47cd82d9111c",
+        "levels": [
+          {
+            "confidence": 0.12,
+            "dimension": "ambiguity",
+            "level": 1.78
+          },
+          {
+            "confidence": 0.24,
+            "dimension": "contract",
+            "level": 1.38
+          },
+          {
+            "confidence": 0.79,
+            "dimension": "evidence",
+            "level": 2.25
+          },
+          {
+            "confidence": 0.45,
+            "dimension": "reach",
+            "level": 1.53
+          },
+          {
+            "confidence": 0.19,
+            "dimension": "surface",
+            "level": 0.97
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.370 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D04",
+      "expect": "developer",
+      "category": "flag-rename",
+      "measurement": {
+        "call": "ddd852cdc315b2538ec3ef3e8ef3222626fdb744",
+        "composite": 0.47,
+        "draft_digest": "sha256:ee5601538628e53a1170ee73b0a8cceaccb06106f4b0cfc261e99598a4895051",
+        "intent": "45edbdd50ff6144c0c26bd45f7f8fb48d8cb42b3",
+        "levels": [
+          {
+            "confidence": 0,
+            "dimension": "ambiguity",
+            "level": 2.09
+          },
+          {
+            "confidence": 0.29,
+            "dimension": "contract",
+            "level": 1.85
+          },
+          {
+            "confidence": 0.95,
+            "dimension": "evidence",
+            "level": 2.04
+          },
+          {
+            "confidence": 0.77,
+            "dimension": "reach",
+            "level": 2.74
+          },
+          {
+            "confidence": 0.36,
+            "dimension": "surface",
+            "level": 0.76
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.470 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D05",
+      "expect": "developer",
+      "category": "data-loss",
+      "measurement": {
+        "call": "a22ba4b55a6185ca7ab9c18314e91dd7c708dcc8",
+        "composite": 0.447,
+        "draft_digest": "sha256:72f01626c777c32bb62b62660c8422c00fcbf16bff04dc1a4c7189b1a2ed014b",
+        "intent": "d2eb3b9fe22ed5c44999365db91f748a78d5e5f8",
+        "levels": [
+          {
+            "confidence": 0.4,
+            "dimension": "ambiguity",
+            "level": 2.53
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 2.42
+          },
+          {
+            "confidence": 0.65,
+            "dimension": "evidence",
+            "level": 2.41
+          },
+          {
+            "confidence": 0.35,
+            "dimension": "reach",
+            "level": 2.12
+          },
+          {
+            "confidence": 0.77,
+            "dimension": "surface",
+            "level": 0.28
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.447 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D06",
+      "expect": "developer",
+      "category": "security",
+      "measurement": {
+        "call": "4d7f3b4627d06ed4806dcf6e40d5a671ceef3f63",
+        "composite": 0.5615,
+        "draft_digest": "sha256:33bc0597715a9d1ee80a17db3c0507821e01d0c762d81f3abb0c13272e5c8123",
+        "intent": "5d1cec7f72d49a5c934f4a5dbe9ce3be0ec5c693",
+        "levels": [
+          {
+            "confidence": 0.26,
+            "dimension": "ambiguity",
+            "level": 2.62
+          },
+          {
+            "confidence": 0.59,
+            "dimension": "contract",
+            "level": 1.67
+          },
+          {
+            "confidence": 0.9,
+            "dimension": "evidence",
+            "level": 2.1
+          },
+          {
+            "confidence": 0.35,
+            "dimension": "reach",
+            "level": 2.78
+          },
+          {
+            "confidence": 0,
+            "dimension": "surface",
+            "level": 2.26
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.561 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D07",
+      "expect": "developer",
+      "category": "conflict",
+      "measurement": {
+        "call": "78fe4ecfc3efb3ab23f1be4d40c212188d5d5a01",
+        "composite": 0.4195,
+        "draft_digest": "sha256:6431444900214c33466a56c5e5690569532239208af0f59d475f0e5336b53c75",
+        "intent": "6601fb0f2a0238c46b3a469755bf6ad9f7d889a4",
+        "levels": [
+          {
+            "confidence": 0.35,
+            "dimension": "ambiguity",
+            "level": 2.43
+          },
+          {
+            "confidence": 0.17,
+            "dimension": "contract",
+            "level": 1.48
+          },
+          {
+            "confidence": 0.62,
+            "dimension": "evidence",
+            "level": 2.45
+          },
+          {
+            "confidence": 0.8,
+            "dimension": "reach",
+            "level": 2.8
+          },
+          {
+            "confidence": 0.89,
+            "dimension": "surface",
+            "level": 0.13
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.419 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D08",
+      "expect": "developer",
+      "category": "agreement",
+      "measurement": {
+        "call": null,
+        "composite": null,
+        "draft_digest": "sha256:81ec0c1dcc16fbeb7de9ac4473a1c87b17160011a375aed5bdd7018723205f87",
+        "intent": "97bca7c8375216367f48c4bb59b734d35e484be6",
+        "levels": [],
+        "model": null,
+        "outcome": "floor",
+        "reason": "floor:agreement",
+        "source": "jev",
+        "suggested": null,
+        "veto": null
+      }
+    },
+    {
+      "id": "D09",
+      "expect": "developer",
+      "category": "fourth-attempt",
+      "measurement": {
+        "call": "fc7ce4c2d97b57518a7007be849be2596dcd845a",
+        "composite": 0.5005,
+        "draft_digest": "sha256:8a67f578c7e9abfb266b1b017b2903a25da3d2aad4ca6198fa5e8da8fbb0c0d4",
+        "intent": "9cf23a3399cd517e014da62095479017303a8a1f",
+        "levels": [
+          {
+            "confidence": 0,
+            "dimension": "ambiguity",
+            "level": 2.36
+          },
+          {
+            "confidence": 0,
+            "dimension": "contract",
+            "level": 1.24
+          },
+          {
+            "confidence": 0.48,
+            "dimension": "evidence",
+            "level": 1.58
+          },
+          {
+            "confidence": 0.53,
+            "dimension": "reach",
+            "level": 1.47
+          },
+          {
+            "confidence": 0.58,
+            "dimension": "surface",
+            "level": 2.52
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.500 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    },
+    {
+      "id": "D10",
+      "expect": "developer",
+      "category": "scope",
+      "measurement": {
+        "call": "d73f6528d3c08d07987e688eedb17b3c267ce64a",
+        "composite": 0.2695,
+        "draft_digest": "sha256:400887dd990157e2e482fb69513b41ac5edaebf96773ce2a7b9d62becb989ba9",
+        "intent": "1378795a04e8482cbd762572c4264015806fb653",
+        "levels": [
+          {
+            "confidence": 0,
+            "dimension": "ambiguity",
+            "level": 2.05
+          },
+          {
+            "confidence": 0.05,
+            "dimension": "contract",
+            "level": 1.14
+          },
+          {
+            "confidence": 0.72,
+            "dimension": "evidence",
+            "level": 2.67
+          },
+          {
+            "confidence": 0.41,
+            "dimension": "reach",
+            "level": 0.71
+          },
+          {
+            "confidence": 0.87,
+            "dimension": "surface",
+            "level": 0.16
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.270 <= 0.35, confidences ok",
+        "source": "jev",
+        "suggested": "agent",
+        "veto": null
+      }
+    },
+    {
+      "id": "D11",
+      "expect": "developer",
+      "category": "settings",
+      "measurement": {
+        "call": null,
+        "composite": null,
+        "draft_digest": "sha256:c48a34259cf7dbd5e518028ce0273a556ed155fce971826aa444f650630c5d63",
+        "intent": "9a3b6e22e6c8a72fb95960202277f2134c6ad808",
+        "levels": [],
+        "model": null,
+        "outcome": "unavailable",
+        "reason": "unavailable excluded: protected .cairn/settings.json",
+        "source": "jev",
+        "suggested": null,
+        "veto": null
+      }
+    },
+    {
+      "id": "D12",
+      "expect": "developer",
+      "category": "ambiguous",
+      "measurement": {
+        "call": "859f38b1c1dbd4f2242e958bbf5a9aa58839836b",
+        "composite": 0.408,
+        "draft_digest": "sha256:5cb9b78bdcb3eeb3e70e77d4882259b432de5867fae48a42eda87a45f9a21247",
+        "intent": "9ce3f7254fd64f8c6246fa26329ed46154a595f0",
+        "levels": [
+          {
+            "confidence": 0.3,
+            "dimension": "ambiguity",
+            "level": 1.76
+          },
+          {
+            "confidence": 0.42,
+            "dimension": "contract",
+            "level": 0.7
+          },
+          {
+            "confidence": 0.86,
+            "dimension": "evidence",
+            "level": 0.83
+          },
+          {
+            "confidence": 0.42,
+            "dimension": "reach",
+            "level": 2.32
+          },
+          {
+            "confidence": 0.82,
+            "dimension": "surface",
+            "level": 0.21
+          }
+        ],
+        "model": "jev-1.13.0",
+        "outcome": "composite",
+        "reason": "composite 0.408 > 0.35, confidences insufficient or composite over ceiling",
+        "source": "jev",
+        "suggested": "developer",
+        "veto": null
+      }
+    }
+  ]
+}

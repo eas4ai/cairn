@@ -1418,9 +1418,14 @@ kernel constant, not a setting, fixed at 5%; the sample floor is
 Calibration tunes `weights`, `agent_ceiling` and `confidence_floors`; it does
 not gate whether the agent may decide, because gating live routing behind a
 calibration pass is what produced zero agent routing under the superseded
-design. Unread Consequential decisions at Done disable the evaluator next
-commitment until read, routing every draft to the developer without editing
-settings. Supersessions are not labels.
+design. Supersessions are not labels.
+
+Revised 2026-09-19: previously "Unread Consequential decisions at Done
+disable the evaluator next commitment until read, routing every draft to the
+developer without editing settings." Removed: there is no off switch in this
+design and nothing routes; section 5's Done rule already holds an unread
+Consequential decision for the developer before the next commitment can
+open, so the evaluator needs no second lock.
 
 ### Falsifiers
 

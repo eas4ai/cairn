@@ -645,24 +645,80 @@ describe('veto and composite', () => {
     // evidence term (4-3)/4=0.25, reach 1/4=0.25, contract 0, surface 0, ambiguity 1/4=0.25; * 0.2 each, summed
     assert.ok(Math.abs(c - 0.2 * (0.25 + 0.25 + 0 + 0 + 0.25)) < 1e-9);
   });
-  test('composite ignores confidence entirely; only the levels feed it', () => {
-    assert.equal(computeComposite(levels(), dims()), computeComposite(levels(), dims()));
-  });
   // A local settings shape, not the file's top-level settings() helper: that helper's
   // confidence_floors is dims() (0.2 for every dimension), which would clear even the
   // 'under one confidence floor' case below (0.3 >= 0.2) and defeat the test's own point.
   // 0.5 floors, matching the brief, keep conf()'s 0.8 default well clear and 0.3 clearly under.
   const suggestSettings = () => ({ typesafeai: { agent_ceiling: 0.35, confidence_floors: { evidence: 0.5, reach: 0.5, contract: 0.5, surface: 0.5, ambiguity: 0.5 } } });
+  // Fix round 1 (review Minor 4): the old version of this test asserted
+  // `computeComposite(levels(), dims()) === computeComposite(levels(), dims())`, which is just a
+  // determinism check -- computeComposite never takes a confidences parameter at all, so no
+  // confidence value was ever varied to demonstrate it has no effect. This version computes the
+  // composite once (still with no confidences involved, since the signature has none), then
+  // feeds that same composite through computeSuggested under two confidence sets that flip the
+  // suggestion (one clears every floor, one does not) -- and confirms the composite value itself
+  // never moves. If a future refactor ever let confidence data reach computeComposite's math,
+  // the two computeSuggested calls below would see two different composite numbers, not just two
+  // different verdicts, and the final assert.equal(c1, c2) would fail.
+  test('composite ignores confidence entirely; only the levels feed it', () => {
+    const lv = levels(), w = dims();
+    const c1 = computeComposite(lv, w);
+    const c2 = computeComposite(lv, w);
+    assert.equal(c1, c2);
+    const s = suggestSettings();
+    assert.equal(computeSuggested(c1, conf(), s), 'agent');
+    assert.equal(computeSuggested(c2, conf({ ambiguity: 0.1 }), s), 'developer', 'confidence flips the suggestion');
+    assert.equal(c1, c2, 'but never the composite value itself');
+  });
   test('suggested is agent only when composite <= agent_ceiling and every confidence clears its floor', () => {
     const s = suggestSettings();
     assert.equal(computeSuggested(0.2, conf(), s), 'agent');
     assert.equal(computeSuggested(0.4, conf(), s), 'developer', 'over the ceiling');
     assert.equal(computeSuggested(0.2, conf({ ambiguity: 0.3 }), s), 'developer', 'under one confidence floor');
-    assert.equal(computeSuggested(0.35, conf(), s), 'agent', 'at the ceiling is still agent');
   });
-  test('boundary: composite exactly at the ceiling and a confidence exactly at its floor both pass', () => {
+  // Fix round 1 (Controller Ruling 11, review Important 1): the boundary tests above and below
+  // used to feed computeSuggested a hand-typed literal `0.35` -- that never exercises
+  // computeComposite's own summation at all, so it could not catch the real bug: `reduce`'s
+  // left-to-right float addition is not associative, and for real weight/level inputs whose
+  // exact rational composite is precisely the ceiling, the accumulated float can land a few ulps
+  // above it, flipping the suggestion from the spec-required 'agent' to 'developer'. These three
+  // tests pipe real levels and weights through computeComposite instead, so they actually
+  // exercise the summation the bug lived in.
+  test('a real computed composite, at the exact ceiling with equal weights, still suggests agent', () => {
+    // Equal weights (0.2 each): choosing raw levels so every dimension's normalized term equals
+    // the ceiling itself (0.35) makes the weighted mean exactly 0.35 by construction, whatever
+    // the weight distribution, since sum(weight_d * 0.35) = 0.35 * sum(weight_d) = 0.35 * 1.
+    // term_evidence = (4-level)/4 = 0.35 -> level = 2.6; term_d = level/4 = 0.35 -> level = 1.4
+    // for reach/contract/surface/ambiguity.
+    const c = computeComposite({ evidence: 2.6, reach: 1.4, contract: 1.4, surface: 1.4, ambiguity: 1.4 }, dims());
+    assert.equal(c, 0.35);
+    assert.equal(computeSuggested(c, conf(), suggestSettings()), 'agent');
+  });
+  test('Controller Ruling 11: a real computed composite at the exact ceiling, with unequal weights that drift a few ulps over it in unrounded float summation, still suggests agent', () => {
+    // The review's own reproduction: these weights sum to exactly 1 and this composite's true
+    // rational value is exactly 0.35 (28/80), but reduce's unrounded left-to-right float
+    // summation lands on 0.35000000000000003 -- a few ulps over the ceiling, which uncorrected
+    // flipped computeSuggested to 'developer' for a draft spec requires to read 'agent'.
+    const weights = { evidence: 0.023, reach: 0.742, contract: 0.098, surface: 0.057, ambiguity: 0.08 };
+    const lv = { evidence: 0.5, reach: 0.95, contract: 2.94, surface: 3.44, ambiguity: 1.63 };
+    const c = computeComposite(lv, weights);
+    assert.equal(c, 0.35, 'rounded to six decimals, the ulp drift is gone');
+    assert.equal(computeSuggested(c, conf(), suggestSettings()), 'agent');
+  });
+  test('a real computed composite one 1e-6 step past the ceiling still suggests developer: rounding absorbs only float noise, not a genuine excess', () => {
+    // All weight on one dimension isolates a single term, with no summation to drift at all:
+    // term = level/4 = 0.350001 needs level = 1.400004. 0.350001 is exactly one step above the
+    // ceiling at the same 1e-6 granularity computeComposite itself rounds to, proving the
+    // rounding fix only ever absorbs float-summation noise (~1e-16), never a real excess at its
+    // own resolution.
+    const weights = { evidence: 0, reach: 1, contract: 0, surface: 0, ambiguity: 0 };
+    const c = computeComposite({ evidence: 0, reach: 1.400004, contract: 0, surface: 0, ambiguity: 0 }, weights);
+    assert.equal(c, 0.350001);
+    assert.equal(computeSuggested(c, conf(), suggestSettings()), 'developer');
+  });
+  test('boundary: a confidence exactly at its floor still passes', () => {
     const s = suggestSettings();
     // s.typesafeai.confidence_floors is 0.5 for every dimension (suggestSettings, above).
-    assert.equal(computeSuggested(0.35, conf({ ambiguity: 0.5 }), s), 'agent', 'confidence exactly at its floor still clears it');
+    assert.equal(computeSuggested(0.2, conf({ ambiguity: 0.5 }), s), 'agent', 'confidence exactly at its floor still clears it');
   });
 });

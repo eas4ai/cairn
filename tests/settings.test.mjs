@@ -117,6 +117,16 @@ describe('typesafeai weights/agent_ceiling/confidence_floors', () => {
       assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), ...bad } }).join(' '), /weight|agent_ceiling|confidence/);
     }
   });
+  // computeComposite (lib/evaluate.mjs) performs no renormalization over typesafeai.weights --
+  // it is only a weighted mean over [0,1] when the five weights already sum to 1, and
+  // dimensionMap alone (shape and per-entry range) never checked that. weightsSum does, within
+  // 1e-6, and names the actual sum in its reason text.
+  test('weights must sum to 1: a sum of 0.9 is refused, naming the sum; a sum of 1.0 is accepted', () => {
+    const low = { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.1 }; // sums to 0.9
+    const reasons = validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), weights: low } });
+    assert.match(reasons.join(' '), /typesafeai\.weights must sum to 1, sums to 0\.9/);
+    assert.deepEqual(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), weights: dims() } }), []);
+  });
   test('weights and confidence_floors are closed objects over exactly the five dimensions', () => {
     const { evidence, ...four } = dims();
     assert.match(validateSettings({ ...base(), typesafeai: { ...goodTypesafeai(), weights: four } }).join(' '), /weights/);

@@ -7,6 +7,16 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.0.2 - 2026-09-20
+
+Documentation; no kernel change.
+
+- README: a full section on the evaluator under "What Cairn does": the five dimensions, the two sources, jev set up in three steps, what the agent sees, what can go wrong and who decides.
+- Manual: a Settings reference listing every key in `.cairn/settings.json` with its default and meaning, and "Turn on the TypeSafe evaluator".
+- Mermaid versions of the six process diagrams in the manual, and the work loop in the README, rendered by GitHub; the Graphviz sources stay under docs/diagrams.
+- The work-loop diagram shows the measure step at a Consequential decision, the floor-or-veto branch, the agent's own decide, and exit 4 when the developer is absent; the old routing sentence is gone.
+- The kernel spec carries a Prefix header and a spec map, so `cairn lint docs/spec` is clean on this repository.
+
 ## 2.0.1 - 2026-09-20
 
 Documentation and install fixes; no kernel change.

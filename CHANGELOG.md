@@ -7,6 +7,15 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.0.1 - 2026-09-20
+
+Documentation and install fixes; no kernel change.
+
+- Codex: ship `.agents/plugins/marketplace.json`, the manifest Codex reads a marketplace from, so `codex plugin marketplace add eas4ai/cairn` and `codex plugin add cairn@cairn` work as the README says (proven against the public repository with Codex 0.155.1).
+- Muse: the install text follows the official Muse Code docs: `muse plugins install <checkout>`, per-hook approval with `muse plugins approve cairn:hook:session-start` and `cairn:hook:stop`, `muse plugins update cairn` to refresh; no experimental flag.
+- Skills CLI: `--agent universal` installs into the project's `.agents/skills/`, which Muse reads; with `--global` it goes to `$HOME/.config/agents/skills`, which Muse does not.
+- README: the link to the 1.x video is gone; "Cairn calls no AI model on its own" now names the TypeSafe evaluator as the exception; Claude Code updates with `claude plugin update cairn@cairn`.
+
 ## 2.0.0 - 2026-09-20
 
 Cairn 2 is a rewrite of the kernel. It keeps the seven ideas that

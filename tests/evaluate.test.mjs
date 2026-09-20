@@ -779,8 +779,18 @@ const OVERVIEW_WITH_AUTH = `# Keystone
 |---|---|
 | auth.md | AUTH |
 `;
-async function repoWithCommitment(enabled = true) {
-  const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } },
+// Fix round 1 (controller ruling, task-10-review.md "Important"): `minCalibrationAgentPredictions`
+// defaults to 60 (unchanged for every caller that doesn't pass it -- the measure() tests above
+// never do) but lets the calibration tests below configure a small real floor instead of building
+// enough real measure()+escalate()+answer() cycles to clear the actual default of 60. readLog(cwd)
+// re-reads and re-decodes the whole log on every call inside measure()/escalate()/answer(), so
+// each additional cycle's cost grows with the log built so far -- a real n=60 buildup is
+// super-linear in wall time (confirmed: two n=30 buildups in the original test cost ~60s and
+// ~61.5s respectively, not the same ~30s each a linear cost would predict), which is why a small
+// configured floor plus a small real sample proves the same join/counting behavior in a fraction
+// of the time.
+async function repoWithCommitment(enabled = true, minCalibrationAgentPredictions = 60) {
+  const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: minCalibrationAgentPredictions, request_cap_bytes: 48000 } },
     files: {
       'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
       'docs/spec/auth.md': AUTH_DOMAIN,
@@ -1031,16 +1041,44 @@ describe('calibration', () => {
       await answer(cwd, draft().commitment, 'ok', '', { owner: ownerLabel, escalation: sha, confirm: async () => true });
     }
   }
-  test('60 zero-error labelled agent-suggested cases pass at 0.05; 30 cannot', async () => {
-    const cwd = await repoWithCommitment();
-    await labelled(cwd, 30, 'agent');
+  // Fix round 1 (controller ruling, task-10-review.md "Important"): this test used to build 60
+  // real labelled cycles (twice: 30, then 30 more) to reach an actual pass through the real
+  // exact-binomial bound, at a combined cost of ~121.5s of the suite's ~250s calibration total.
+  // That specific arithmetic -- upperBound(0,60) clears 0.05, upperBound(0,30) does not -- is
+  // already proven purely, with no I/O, by the "exact one-sided bound" test above; re-deriving it
+  // through real git history added wall time with no new information the pure test didn't already
+  // give. What a real-record test still needs to prove, and what the pure test cannot: that
+  // calibrate()'s `sample`/`errors`/`bound`/`pass` and its written 'calibration' record are wired
+  // to the real log (real measure() -> escalate() -> answer() records), not just to the formula in
+  // isolation, and that the configured `min_calibration_agent_predictions` setting -- not a
+  // hardcoded 60 -- is what gates `pass` on the sample-size side. Both are provable with a small
+  // real sample against a small configured floor: floor=5 here, 4 cases (below floor, `pass`
+  // false regardless of the bound), then a 5th (floor met; `pass` still false here because
+  // upperBound(0,5) is nowhere near 0.05 -- reaching an actual pass is what the pure test above
+  // already establishes, not this test's job). Also covers the Minor finding: every one of the
+  // 'calibration' record's seven payload fields is asserted against the real written record.
+  test('calibrate() counts real labelled cases against the configured floor and records all seven payload fields', async () => {
+    const cwd = await repoWithCommitment(true, 5);
+    await labelled(cwd, 4, 'agent');
     let c = await calibrate(cwd);
-    assert.deepEqual([c.pass, c.sample, c.errors], [false, 30, 0]);
-    await labelled(cwd, 30, 'agent');
+    assert.deepEqual([c.sample, c.errors, c.pass], [4, 0, false], 'below the configured floor of 5');
+    await labelled(cwd, 1, 'agent');
     c = await calibrate(cwd);
-    assert.deepEqual([c.pass, c.sample, c.errors], [true, 60, 0]);
-    const rec = (await readLog(cwd)).at(-1);
-    assert.equal(rec.kind, 'calibration'); assert.equal(rec.payload.result, 'pass'); assert.equal(rec.payload.predicted_agent, 60);
+    assert.equal(c.sample, 5); assert.equal(c.errors, 0);
+    assert.equal(c.bound, upperBound(0, 5), "calibrate()'s bound is the real upperBound(errors, sample)");
+    assert.equal(c.pass, false, 'floor met, but the bound at n=5 is nowhere near 0.05 -- reaching an actual pass is the pure bound test\'s job');
+    const log = await readLog(cwd);
+    const rec = log.at(-1);
+    const { settings } = await loadSettings(cwd);
+    assert.equal(rec.kind, 'calibration');
+    assert.equal(rec.payload.policy_digest, policyDigest(settings));
+    assert.equal(rec.payload.log_head, log.at(-2).sha);
+    assert.equal(rec.payload.predicted_agent, 5);
+    assert.equal(rec.payload.false_downgrades, 0);
+    assert.ok(rec.payload.bound >= 0 && rec.payload.bound <= 1);
+    assert.equal(rec.payload.bound, upperBound(0, 5));
+    assert.equal(rec.payload.criterion, 'false_downgrade_bound<=0.05 min_calibration_agent_predictions>=5');
+    assert.equal(rec.payload.result, 'fail');
   });
   test('denominator is suggested-agent labelled cases only; unknown labels are excluded', async () => {
     const cwd = await repoWithCommitment();
@@ -1048,10 +1086,16 @@ describe('calibration', () => {
     const c = await calibrate(cwd);
     assert.deepEqual([c.sample, c.errors], [4, 1]);
   });
+  // Fix round 1 (controller ruling, task-10-review.md "Important"): this test used to build 60
+  // real labelled cycles (~125.75s) and require an actual `pass: true` before flipping a setting,
+  // but the test's own claim is only that a policy-relevant settings change resets the sample back
+  // to 0 -- a policy_digest mismatch on the recorded evaluation-intent, unrelated to how large the
+  // sample was or whether it had already reached a pass. A handful of records demonstrates the
+  // reset exactly as well as sixty, at a fraction of the cost.
   test('a policy change resets calibration', async () => {
-    const cwd = await repoWithCommitment();
-    await labelled(cwd, 60, 'agent');
-    assert.equal((await calibrate(cwd)).pass, true);
+    const cwd = await repoWithCommitment(true, 3);
+    await labelled(cwd, 3, 'agent');
+    assert.equal((await calibrate(cwd)).sample, 3);
     const { settings } = await loadSettings(cwd);
     settings.typesafeai.agent_ceiling = 0.4;
     writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));

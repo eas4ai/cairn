@@ -617,3 +617,52 @@ describe('Score answer parsing', () => {
     assert.equal(r.usage, null);
   });
 });
+
+// --- Task 8: the veto and the composite -----------------------------------------------------
+// Section 10: code, not the model, computes what happens next from the five levels and
+// confidences. computeVeto checks reach, then contract, then surface against fixed thresholds;
+// computeComposite is the weighted mean over the five dimensions (evidence inverted); and
+// computeSuggested is the composite-vs-ceiling-and-confidence-floors advisory. `levels` here are
+// parseScoreAnswers's own `score` floats (e.g. 1.02), not rounded integers -- the boundary test
+// below (`reach: 3.99`) is exactly why the veto compares floats, not `>= 4` on a rounded level.
+import { computeVeto, computeComposite, computeSuggested } from '../lib/evaluate.mjs';
+
+const levels = (over = {}) => ({ evidence: 3, reach: 1, contract: 0, surface: 0, ambiguity: 1, ...over });
+const conf = (over = {}) => ({ evidence: 0.8, reach: 0.8, contract: 0.8, surface: 0.8, ambiguity: 0.8, ...over });
+
+describe('veto and composite', () => {
+  test('veto checks reach, then contract, then surface, in that order', () => {
+    assert.equal(computeVeto(levels({ reach: 4 })), 'reach');
+    assert.equal(computeVeto(levels({ reach: 4, contract: 3 })), 'reach', 'reach is checked first');
+    assert.equal(computeVeto(levels({ contract: 3 })), 'contract');
+    assert.equal(computeVeto(levels({ contract: 3, surface: 3 })), 'contract');
+    assert.equal(computeVeto(levels({ surface: 3 })), 'surface');
+    assert.equal(computeVeto(levels()), null);
+    assert.equal(computeVeto(levels({ reach: 3.99 })), null, 'reach needs >= 4, not >= 3');
+  });
+  test('composite: weight_d * level_d / 4, evidence inverted, summed with no renormalization', () => {
+    const c = computeComposite(levels(), dims());
+    // evidence term (4-3)/4=0.25, reach 1/4=0.25, contract 0, surface 0, ambiguity 1/4=0.25; * 0.2 each, summed
+    assert.ok(Math.abs(c - 0.2 * (0.25 + 0.25 + 0 + 0 + 0.25)) < 1e-9);
+  });
+  test('composite ignores confidence entirely; only the levels feed it', () => {
+    assert.equal(computeComposite(levels(), dims()), computeComposite(levels(), dims()));
+  });
+  // A local settings shape, not the file's top-level settings() helper: that helper's
+  // confidence_floors is dims() (0.2 for every dimension), which would clear even the
+  // 'under one confidence floor' case below (0.3 >= 0.2) and defeat the test's own point.
+  // 0.5 floors, matching the brief, keep conf()'s 0.8 default well clear and 0.3 clearly under.
+  const suggestSettings = () => ({ typesafeai: { agent_ceiling: 0.35, confidence_floors: { evidence: 0.5, reach: 0.5, contract: 0.5, surface: 0.5, ambiguity: 0.5 } } });
+  test('suggested is agent only when composite <= agent_ceiling and every confidence clears its floor', () => {
+    const s = suggestSettings();
+    assert.equal(computeSuggested(0.2, conf(), s), 'agent');
+    assert.equal(computeSuggested(0.4, conf(), s), 'developer', 'over the ceiling');
+    assert.equal(computeSuggested(0.2, conf({ ambiguity: 0.3 }), s), 'developer', 'under one confidence floor');
+    assert.equal(computeSuggested(0.35, conf(), s), 'agent', 'at the ceiling is still agent');
+  });
+  test('boundary: composite exactly at the ceiling and a confidence exactly at its floor both pass', () => {
+    const s = suggestSettings();
+    // s.typesafeai.confidence_floors is 0.5 for every dimension (suggestSettings, above).
+    assert.equal(computeSuggested(0.35, conf({ ambiguity: 0.5 }), s), 'agent', 'confidence exactly at its floor still clears it');
+  });
+});

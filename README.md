@@ -130,13 +130,15 @@ In Muse, install the checkout as a local bundle, where `<checkout>` is
 the absolute path of the clone:
 
 ```sh
-muse plugins install <checkout>
+MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins install <checkout>
+MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins approve cairn
 muse plugins list
 ```
 
-`muse plugins validate <checkout>` checks the same bundle without
-installing it. To refresh the installed bundle, run
-`muse plugins update cairn`.
+Muse's plugin commands are experimental and need that variable; the
+hooks run in ordinary sessions once the plugin is approved.
+`muse plugins validate <checkout>` checks the bundle without installing
+it. To refresh the installed bundle, install it again from the checkout.
 
 That is the install. Claude Code and Codex register the three hooks from
 the plugin's `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);
@@ -156,8 +158,9 @@ cairn --help
 ```
 
 `cairn --help` lists every command; it works outside a project and
-changes nothing. Updates come through the marketplace, or in Muse from the
-checkout with `muse plugins update cairn`.
+changes nothing. Updates come through the marketplace (in Claude Code,
+`claude plugin update cairn@cairn`), or in Muse by installing the
+checkout again.
 
 Then open your project and continue at
 [Start with your project](#start-with-your-project).

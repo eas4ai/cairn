@@ -23,7 +23,7 @@ Claude Code or Codex: `cc`. Muse: `muse`. Anything else: `other`.
 Install the Cairn plugin from its marketplace. The plugin registers the hooks in `hooks/hooks.json` (Claude Code: SessionStart, UserPromptSubmit, Stop). Do not also write hook entries by hand; two registrations run a hook twice. Continue at `link`.
 
 ### `muse`
-Install the plugin with `muse plugins install <plugin root>`; its manifest registers SessionStart and Stop. Continue at `link`.
+Install the plugin with `MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins install <plugin root>` and approve it with `MUSE_EXPERIMENTAL_PLUGINS=1 muse plugins approve cairn`; its manifest registers SessionStart and Stop. Continue at `link`.
 
 ### `other`
 Install the four skills with the skills CLI (`npx skills add eas4ai/cairn --skill install-cairn new-project existing-project next-feature --global`), then run this skill. Register `hooks/session-start.sh`, `hooks/turn.sh` and `hooks/stop.sh` under the harness's own event names where it has them. No hook system: `nohooks`.

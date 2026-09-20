@@ -1,0 +1,3 @@
+{
+  "meta": { "note": "malformed on purpose: no rows array, for scoring.test.mjs's scoreFromFile guard test" }
+}

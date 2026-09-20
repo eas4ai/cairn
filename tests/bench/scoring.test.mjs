@@ -3,10 +3,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { scoreRun, scoreFromFile, predictedRoute, renderResultsMd } from './scoring.mjs';
+import { scoreRun, scoreFromFile, predictedRoute, renderResultsMd, ScoringError } from './scoring.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SAMPLE = join(HERE, 'fixtures/results.sample.json');
+const NO_ROWS = join(HERE, 'fixtures/results.norows.json');
 
 describe('predictedRoute', () => {
   test('composite outcome predicts its own suggestion', () => {
@@ -17,6 +18,13 @@ describe('predictedRoute', () => {
     for (const outcome of ['floor', 'veto', 'unavailable', 'indeterminate']) {
       assert.equal(predictedRoute({ outcome, suggested: null }), 'developer');
     }
+  });
+  // Task 2 review Minor: a composite record with no suggested route is malformed data (the real
+  // finalizeMeasurement always sets suggested for a composite outcome; this only reaches a
+  // hand-built or corrupted results file) -- it must not silently become a stray 'null' key in
+  // the confusion matrix (scoreRun's confusion[expect][predicted]++ would otherwise add one).
+  test('throws a named error on a composite record with a null suggested, rather than emit a stray key', () => {
+    assert.throws(() => predictedRoute({ outcome: 'composite', suggested: null }), ScoringError);
   });
 });
 
@@ -78,5 +86,11 @@ describe('scoreRun and scoreFromFile (no network: reads a recorded JSON file)', 
     assert.match(text, /4\/6/);
     assert.match(text, /S02/); assert.match(text, /S06/);
     assert.ok(!/[^\x00-\x7f]/.test(text));
+  });
+  // Task 2 review Minor: a results file with no `rows` array (truncated write, wrong file, a
+  // meta-only stub) must refuse with a named error, not crash later inside scoreRun with a
+  // confusing "rows is not iterable" or (worse) silently score zero rows.
+  test('scoreFromFile refuses a file with no rows array, with a named error', async () => {
+    await assert.rejects(scoreFromFile(NO_ROWS), ScoringError);
   });
 });

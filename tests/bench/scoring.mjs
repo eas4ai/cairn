@@ -11,11 +11,23 @@ import { readFile } from 'node:fs/promises';
 const DIMENSIONS = ['evidence', 'reach', 'contract', 'surface', 'ambiguity'];
 const CLASSES = ['agent', 'developer'];
 
+// Task 2 review, Minors: named so a caller can assert.throws/assert.rejects against it
+// specifically, rather than a bare Error a malformed-input bug could equally throw.
+export class ScoringError extends Error {}
+
 // A 'composite' outcome predicts its own `suggested` route; every other outcome (floor, veto,
 // unavailable, indeterminate) is a forced-developer case by lib/evaluate.mjs's own design (plan
 // 15 Task 9), so there is no agent authority to grant and predictedRoute names 'developer'.
+//
+// Task 2 review Minor: the real finalizeMeasurement (lib/evaluate.mjs) always sets `suggested`
+// for a 'composite' outcome, so a null suggested here only ever comes from a hand-built or
+// corrupted results row. Returning it as-is used to hand scoreRun a bare `null` predicted value,
+// which confusion[expect][predicted]++ would then record as a stray 'null' key never seen in the
+// fixed agent/developer confusion matrix, rather than surfacing the bad data.
 export function predictedRoute(measurement) {
-  return measurement.outcome === 'composite' ? measurement.suggested : 'developer';
+  if (measurement.outcome !== 'composite') return 'developer';
+  if (measurement.suggested == null) throw new ScoringError('predictedRoute: a composite measurement has no suggested route');
+  return measurement.suggested;
 }
 
 function accuracyOf(pairs) {
@@ -61,8 +73,13 @@ export function scoreRun(rows) {
 
 // resultsPath -> {meta, rows, scored}: reads a recorded results JSON file ({meta, rows}, the
 // shape harness.mjs (Task 3) writes) and scores it. No network call: readFile only.
+//
+// Task 2 review Minor: a file with no `rows` array (truncated write, wrong file, a meta-only
+// stub) refuses here, by name, instead of reaching scoreRun and failing later on `rows.map is
+// not a function` or (with a nullish-coalesced rows) silently scoring as zero rows.
 export async function scoreFromFile(resultsPath) {
   const raw = JSON.parse(await readFile(resultsPath, 'utf8'));
+  if (!Array.isArray(raw.rows)) throw new ScoringError(`scoreFromFile: ${resultsPath} has no rows array`);
   const rows = raw.rows;
   return { meta: raw.meta, rows, scored: scoreRun(rows) };
 }

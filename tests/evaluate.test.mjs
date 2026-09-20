@@ -867,7 +867,7 @@ describe('measure()', () => {
   });
   test('review source: writes the intent and returns pending, no call, no measurement yet', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft());
+    const r = await measure(cwd, draft(), { env: { CLAUDECODE: '1' } });
     assert.equal(r.pending, 'review');
     const log = await readLog(cwd);
     assert.deepEqual(log.map((x) => x.kind).slice(-1), ['evaluation-intent']);
@@ -951,7 +951,7 @@ describe('measure()', () => {
   });
   test('a pending review intent is left alone by recovery, not marked indeterminate', async () => {
     const cwd = await repoWithCommitment(false);
-    await measure(cwd, draft());
+    await measure(cwd, draft(), { env: { CLAUDECODE: '1' } });
     assert.equal(await recoverMeasurement(cwd), null);
     const log = await readLog(cwd);
     assert.equal(log.at(-1).kind, 'evaluation-intent');

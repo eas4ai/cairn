@@ -103,6 +103,48 @@ specification, which you open. Neither is a place to park unfinished
 work: an in-scope problem the agent cannot solve becomes a question to you,
 not a note.
 
+Here is the work loop each `cairn wake` cycle follows: one named action
+with its completion predicate, done by the agent, then wake again.
+
+```mermaid
+flowchart TB
+  wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
+  verdict{"Verdict?"}
+  waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  answer["Developer runs cairn answer: ok, instead, or ask, signed when a key exists, explicit unsigned-local evidence otherwise"]
+  reply["reply after ask: a reply record names the escalation"]
+  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
+  act["Do the named action until its predicate holds, actions are listed in precedence order"]
+  cannot{"Cannot act, or cycle bound reached?"}
+  escalate["Write one evidence-backed escalation. Cycle guard: fourth same-target or 28th admin transition, or third unsuccessful recovery"]
+  measure["Consequential decision while acting: cairn measure the draft first. Five Score levels, composite, veto, suggested: advice, not a route"]
+  gate{"Floor or veto?"}
+  decide["The agent decides: cairn decide --consequential, composite outcome, whatever the suggestion, or escalates anyway"]
+  trace["Leave the required trace: branch commit, typed snapshot or canonical log record"]
+
+  wake --> verdict
+  verdict -->|"Waiting"| waiting
+  waiting --> answer
+  answer --> wake
+  verdict -->|"Resolvable: reply"| reply
+  reply --> wake
+  verdict -->|"Done"| stop
+  verdict -->|"Resolvable"| act
+  act --> cannot
+  cannot -->|"can act"| trace
+  cannot -->|"cannot or bounded"| escalate
+  trace --> wake
+  escalate --> wake
+  act -->|"Consequential draft"| measure
+  measure --> gate
+  gate -->|"yes: escalate --consequential"| escalate
+  gate -->|"no"| decide
+  decide -->|"decision names the measurement"| trace
+  decide -.->|"escalate anyway"| escalate
+```
+
+The Graphviz source is docs/diagrams/work-loop.dot.
+
 ## Install
 
 Cairn is a plugin. One install brings the command, the four skills, and the

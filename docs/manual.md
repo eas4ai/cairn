@@ -82,6 +82,116 @@ open the next feature specification. A defect against the current
 commitment's own requirement is neither: it is worked now, because the
 agreement already forbids it.
 
+This is the new-project skill: from an empty directory to an Agreed first
+commitment.
+
+```mermaid
+flowchart TB
+  start(["Start: /new-project"])
+  exists{"Source code or docs/spec/overview.md exists? README, license and Git do not count"}
+  switch(["Switch to /existing-project"])
+  init["Initialize Git if needed, cairn init, developer confirms settings, authority remote or local-only, and signed or unsigned-local developer authentication"]
+  ask["One open question: what is the software for?"]
+  restate["Gate 1: restate in own words, developer corrects"]
+  keystone["Write docs/spec/overview.md: what it is, its problem, what it is not, spec map"]
+  glossary["Gate 2: glossary, 5 to 15 terms as one set, developer corrects by exception"]
+  partition["Gate 3: derive domains from the keystone, developer confirms the partition"]
+  draft["Draft each domain's requirements: one actor-named obligation, Falsifier, Status: Draft"]
+  more{"More domains?"}
+  roadmap["Roadmap with Current: naming the first commitment"]
+  tail[["Gate 4: spec-phase.dot, falsifiers, self-review, lint, confirmation, commitment, mechanisms, agreement, start, wake"]]
+
+  start --> exists
+  exists -->|"yes"| switch
+  exists -->|"no"| init
+  init --> ask
+  ask --> restate
+  restate --> keystone
+  keystone --> glossary
+  glossary --> partition
+  partition --> draft
+  draft --> more
+  more -->|"yes"| draft
+  more -->|"no"| roadmap
+  roadmap --> tail
+```
+
+The Graphviz source is docs/diagrams/new-project.dot.
+
+This is the existing-project skill: from an unspecified or drifted
+codebase, or a pending supersession, to one prepared commitment.
+
+```mermaid
+flowchart TB
+  start(["Start: /existing-project"])
+  state{"Cairn state?"}
+  tonext(["Done: switch to /next-feature, this work is a later commitment"])
+  fits{"Request belongs to the open commitment?"}
+  continue(["Return to the work loop"])
+  midway{"Commitment open: developer chooses"}
+  finish(["Finish current commitment, capture request as an item"])
+  supersede["cairn supersede SUCCESSOR: close old range with decision, transition id and slug, carry open obligations, do not name a future start or move Current:"]
+  pending["Pending successor: resume the transition, the later start points back to the superseded record"]
+  init["cairn init, developer confirms settings, authority remote or local-only, and auth mode"]
+  hasspec{"docs/spec/overview.md exists?"}
+  readspec["Path B: read glossary, keystone, domains, roadmap, decisions and items first"]
+  recon["Recon before questions: manifests, entry points, data, tests, CI, scripts, non-spec docs and recent history"]
+  report["docs/recon.md, every row cited: Exists / Documented / Contradicted / Unverified, carry unresolved earlier findings"]
+  corrects["Present, developer corrects the reading"]
+  ask["One open question: feature to add or defect to fix?"]
+  radius["Trace and cite blast radius: modules, tests and spec sections"]
+  pathA["Path A: glossary from code identifiers, Observed specs in radius, map rows outside"]
+  pathB["Path B: verify every spec section in radius"]
+  verdict{"Holds / Drifted / Still Observed / Missing"}
+  drift["Raise both sides with citations, developer rules"]
+  rule{"Which side is wrong?"}
+  specwrong["Spec wrong: revise by developer ruling before successor start"]
+  codewrong["Code wrong: spec stands, create defect item"]
+  missing["Write missing behavior as Observed"]
+  confirm["Confirmed Observed sections become Draft with falsifiers, others remain Observed and are not contract"]
+  roadmap["Prepare roadmap section, a defect commitment names the violated requirement and reproducing mechanism"]
+  tail[["spec-phase.dot: confirm blocks, declare, agreement, commit, start with supersession link when present, wake"]]
+
+  start --> state
+  state -->|"Done"| tonext
+  state -->|"open commitment"| fits
+  state -->|"pending successor"| pending
+  state -->|"not initialized"| init
+  state -->|"initialized, no open range"| hasspec
+  fits -->|"yes"| continue
+  fits -->|"no"| midway
+  midway -->|"finish"| finish
+  midway -->|"supersede"| supersede
+  supersede --> pending
+  pending --> readspec
+  init --> hasspec
+  hasspec -->|"yes, path B"| readspec
+  hasspec -->|"no, path A"| recon
+  readspec --> recon
+  recon --> report
+  report --> corrects
+  corrects --> ask
+  ask --> radius
+  radius -->|"A"| pathA
+  radius -->|"B"| pathB
+  pathB --> verdict
+  verdict -->|"holds"| confirm
+  verdict -->|"drifted"| drift
+  verdict -->|"still Observed"| confirm
+  verdict -->|"missing"| missing
+  drift --> rule
+  rule -->|"spec"| specwrong
+  rule -->|"code"| codewrong
+  specwrong --> confirm
+  codewrong --> confirm
+  missing --> confirm
+  pathA --> confirm
+  confirm --> roadmap
+  roadmap --> tail
+```
+
+The Graphviz source is docs/diagrams/existing-project.dot.
+
 ## Agree on behavior you can recognize
 
 A useful requirement describes an observable result. "Make draft saving
@@ -138,6 +248,51 @@ The list applies only to that file. Cairn reads this field; it never scans
 requirement text for paths, and never copies a host path's target into a
 snapshot or a model request.
 
+The spec-phase diagram is the tail that new-project, existing-project and
+next-feature all share, from drafted requirements to the first work-loop
+action.
+
+```mermaid
+flowchart TB
+  start(["Enter: initialized project, requirements Draft, each with a falsifier"])
+  falsifiers["Propose falsifiers as one set, name the mechanism that observes each"]
+  review["Self-review contradictions, ineffective falsifiers, and requirements no mechanism can check, done, not recorded"]
+  lint{"cairn lint docs/spec clean?"}
+  present["Present by exception, invite another explanation"]
+  outcome{"Developer's answer?"}
+  explain["Explain another way"]
+  correct["Apply corrections"]
+  agreed["Confirm each block as Agreed, or record a deference decision"]
+  commitment["Write roadmap section: Agreed requirements, delivery, done-when, move Current: in the recoverable start transaction"]
+  declare["cairn declare for this commitment only, each mechanism has a failing violating example"]
+  agreement["Prepare AGENTS.md from the template for developer authorization"]
+  authorize["Developer runs cairn authorize: one record binding the final spec, agreement and settings digests"]
+  startintent["cairn start: verify authorization and write command intent, commit the prepared contract, agreement and mechanisms"]
+  startrec["Finish the start transaction: workspace snapshot plus frozen set and digests, include from_superseded when resuming, install exact refspecs when authority remote is configured"]
+  done[["Done: wake names the first work-loop action, Consequential decisions wait in the queue"]]
+
+  start --> falsifiers
+  falsifiers --> review
+  review --> lint
+  lint -->|"findings"| falsifiers
+  lint -->|"clean"| present
+  present --> outcome
+  outcome -->|"asks"| explain
+  explain --> present
+  outcome -->|"corrects"| correct
+  correct --> review
+  outcome -->|"confirms or rules"| agreed
+  agreed --> commitment
+  commitment --> declare
+  declare --> agreement
+  agreement --> authorize
+  authorize --> startintent
+  startintent --> startrec
+  startrec --> done
+```
+
+The Graphviz source is docs/diagrams/spec-phase.dot.
+
 ## Let the agent work, and know when it needs you
 
 The agent's working agreement (`AGENTS.md`) tells it to run `cairn wake`,
@@ -183,6 +338,74 @@ Records exist only once committed, or, for a workspace snapshot, once
 Cairn has captured the working tree's bytes into one. The agent should
 commit the agreement, spec, mechanisms, and its own working code as it
 goes; a fresh clone only sees what reached a commit or a Cairn record.
+
+The work loop is what runs on every `cairn wake` cycle: it names one
+action with its completion predicate, the agent does it, and it wakes
+again.
+
+```mermaid
+flowchart TB
+  wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
+  verdict{"Verdict?"}
+  waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  answer["Developer runs cairn answer: ok, instead, or ask, signed when a key exists, explicit unsigned-local evidence otherwise"]
+  reply["reply after ask: a reply record names the escalation"]
+  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
+  act["Do the named action until its predicate holds, actions are listed in precedence order"]
+  cannot{"Cannot act, or cycle bound reached?"}
+  escalate["Write one evidence-backed escalation. Cycle guard: fourth same-target or 28th admin transition, or third unsuccessful recovery"]
+  measure["Consequential decision while acting: cairn measure the draft first. Five Score levels, composite, veto, suggested: advice, not a route"]
+  gate{"Floor or veto?"}
+  decide["The agent decides: cairn decide --consequential, composite outcome, whatever the suggestion, or escalates anyway"]
+  trace["Leave the required trace: branch commit, typed snapshot or canonical log record"]
+
+  wake --> verdict
+  verdict -->|"Waiting"| waiting
+  waiting --> answer
+  answer --> wake
+  verdict -->|"Resolvable: reply"| reply
+  reply --> wake
+  verdict -->|"Done"| stop
+  verdict -->|"Resolvable"| act
+  act --> cannot
+  cannot -->|"can act"| trace
+  cannot -->|"cannot or bounded"| escalate
+  trace --> wake
+  escalate --> wake
+  act -->|"Consequential draft"| measure
+  measure --> gate
+  gate -->|"yes: escalate --consequential"| escalate
+  gate -->|"no"| decide
+  decide -->|"decision names the measurement"| trace
+  decide -.->|"escalate anyway"| escalate
+```
+
+Actions are attempted in this order:
+
+| Action | done := |
+|---|---|
+| repair PATH | hand-written input parses; no unrelated byte changed |
+| recover TRANSACTION | intent has a terminal domain or abort record; every store matches its result |
+| reconcile ACTION | local action lease is gone; action finished or was abandoned |
+| scope PATH | each durable breach is developer-kept or restored to its allowed base; later declaration never clears it |
+| fix ITEM | fix snapshot changes no protected contract; requirement has a current pass |
+| record PATH | action lease covers the path, or it is clean |
+| commit PATH | path is clean, or the action lease covers it |
+| declare REQ | mechanism definition names REQ; no prior undeclared delta was legalized |
+| run REQ | current receipt matches input snapshot, definition, text and declared execution identity |
+| implement REQ | current pass plus review metadata bound to current definition and frozen text, with fail receipt |
+| escalate REQ | after three failing attempts, an escalation exists before a fourth |
+| review mechanism REQ | review metadata binds definition and text to a fail receipt; product inputs unchanged |
+| capture ITEM | outside record or escalation names it |
+| review SLUG | current workspace snapshot; every fixed question answered for each target |
+| report SLUG | isolated projection; current brief and report; all question and interface attempts present |
+| resolve SLUG N | resolution or developer dispute names N on its exact source record |
+| accept SLUG | current acceptance examines cumulative delta and every submitted resolution; it may add findings |
+| build DECISION | realized line names base and result snapshots; actual delta passes protected-category check |
+| done SLUG | Done rule holds; cairn done writes the final record |
+| promote | one backlog item, decision, roadmap move and successor start are one transaction |
+
+The Graphviz source is docs/diagrams/work-loop.dot.
 
 ## The action lease
 
@@ -310,6 +533,47 @@ directly, that becomes an escalation of its own:
 cairn dispute --commitment reject-empty-names --record <finding-record-sha> --n 2 \
   --question '...' --recommendation '...' --because '...' --if-wrong '...' --instead '...'
 ```
+
+This is next-feature: it starts from Done and specifies the next
+commitment.
+
+```mermaid
+flowchart TB
+  start(["Start: /next-feature"])
+  isdone{"cairn wake says Done?"}
+  notdone(["Stop: hand the verdict to the working agreement"])
+  read["Read the spec set, finished roadmap section, Consequential queue, unpromoted next-feature items and backlog"]
+  ask["One open question: waiting items, a new feature, or both?"]
+
+  subgraph change["For each requested change"]
+    radius["Trace and cite the blast radius: requirements, mechanisms, code, documents"]
+    restate["Restate what changes for whom, quote affected Agreed text, give the alternative and recommendation"]
+    corrects["Developer corrects the reading"]
+    fits{"Covered by current Agreed requirements?"}
+    covered["Put it into the commitment, write no new contract text"]
+    revise["Revise under the same identifier or add Draft, Rationale: at most one line"]
+    next{"More changes?"}
+  end
+
+  tail[["spec-phase.dot: falsifiers, self-review, lint, confirmation, roadmap, declarations, agreement, start, wake"]]
+
+  start --> isdone
+  isdone -->|"no"| notdone
+  isdone -->|"yes"| read
+  read --> ask
+  ask --> radius
+  radius --> restate
+  restate --> corrects
+  corrects --> fits
+  fits -->|"yes"| covered
+  fits -->|"no"| revise
+  covered --> next
+  revise --> next
+  next -->|"yes"| radius
+  next -->|"no"| tail
+```
+
+The Graphviz source is docs/diagrams/next-feature.dot.
 
 ## Understand checks and their results
 
@@ -781,6 +1045,54 @@ working agreement in `AGENTS.md`.
 `cairn --root DIR` does not exist in this version; run commands from your
 project's repository root. There is no separate status command; `cairn
 wake` is how you see the current position.
+
+The following diagram shows the install process, from a harness with no
+Cairn to the command, hooks and skills being available.
+
+```mermaid
+flowchart TB
+  start(["Start: a harness with no Cairn"])
+  prereq{"node and git available?"}
+  missing(["Stop: name the missing prerequisite"])
+  harness{"Which harness?"}
+  cc["Claude Code or Codex: install the Cairn plugin, hooks registered by the plugin"]
+  muse["Muse: install the Cairn plugin, hooks registered by the plugin"]
+  other["Any other agent: install the skills, then run /install-cairn, register hooks where supported"]
+  nohooks["No hook system: instruction-only, the working agreement is the enforcement"]
+  link["The plugin or /install-cairn links ~/.local/bin/cairn to bin/cairn.mjs, once, no project remote is selected here"]
+  path{"~/.local/bin on PATH?"}
+  addpath["Tell the developer to add it, no hook edits the shell"]
+  help{"cairn --help prints commands and exit codes?"}
+  broken(["Stop: name the failure, link target, PATH or node"])
+  project{"Initialized Cairn project?"}
+  wake["Session-start hook prints the verdict and predicate"]
+  choose["Choose /new-project or /existing-project, the chosen flow runs cairn init"]
+  done[["Done: command and skills are available, hooks are registered where supported"]]
+
+  start --> prereq
+  prereq -->|"no"| missing
+  prereq -->|"yes"| harness
+  harness -->|"Claude Code, Codex"| cc
+  harness -->|"Muse"| muse
+  harness -->|"other"| other
+  other -->|"no hooks"| nohooks
+  cc --> link
+  muse --> link
+  other --> link
+  nohooks --> link
+  link --> path
+  path -->|"no"| addpath
+  path -->|"yes"| help
+  addpath --> help
+  help -->|"no"| broken
+  help -->|"yes"| project
+  project -->|"yes"| wake
+  project -->|"no"| choose
+  wake --> done
+  choose --> done
+```
+
+The Graphviz source is docs/diagrams/install.dot.
 
 ## Where these explanations come from
 

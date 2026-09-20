@@ -681,22 +681,34 @@ function draftArgs(d) {
 }
 
 describe('escalate --consequential and decide --consequential (CLI dispatch)', () => {
-  test('escalate --consequential routes through escalateConsequential', async () => {
+  // Fix round 1, Minor #2: reads the written record back through the real readers (readLog for
+  // the escalation, readAdr for the decision line) rather than stopping at exit code + a loose
+  // stdout regex -- confirms the CLI wiring itself (not only the library functions, already
+  // proven in tests/escalate.test.mjs) names the measurement's own sha on the record.
+  test('escalate --consequential routes through escalateConsequential, naming the measurement on the record', async () => {
     const cwd = await repoWithCommitment();
-    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const m = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
     const r = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
     assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: escalate/);
+    const sha = r.out.trim().split(' ').at(-1);
+    const esc = (await readLog(cwd)).find((x) => x.sha === sha);
+    assert.equal(esc.kind, 'escalation');
+    assert.equal(esc.payload.evaluation, m.measurementSha);
   });
   test('plain escalate (no --consequential) needs no measurement', async () => {
     const cwd = await repoWithCommitment();
     const r = await run(['escalate', ...draftArgs(draft())], cwd);
     assert.equal(r.code, 0, r.err);
   });
-  test('decide --consequential --commitment ... routes through decideConsequential', async () => {
+  test('decide --consequential --commitment ... routes through decideConsequential, naming the measurement on the ADR line', async () => {
     const cwd = await repoWithCommitment();
-    await measure(cwd, draft(), { transport: transport([scoreBody()]) });
+    const m = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
     const r = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
     assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: decide/);
+    const id = r.out.trim().split(' ').at(-1);
+    const line = (await readAdr(cwd)).find((l) => l.id === id);
+    assert.equal(line.kind, 'decision');
+    assert.equal(line.evaluation, m.measurementSha);
   });
   test('decide --consequential --title ... (the spec-phase deference shape) is unaffected', async () => {
     const cwd = await repoWithCommitment();
@@ -723,5 +735,22 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     const decRefused = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
     assert.equal(decRefused.code, 1);
     assert.equal(decRefused.err, 'cairn: no measurement for this exact draft; run cairn measure first\n');
+  });
+  // Fix round 1, Minor #3: a main()-level check that `decide --consequential --commitment` on a
+  // floor (or veto) measurement is refused with decideConsequential's own "routes to the
+  // developer" message and exits non-zero -- previously exercised only at the library level
+  // (tests/escalate.test.mjs's 'decideConsequential requires a measurement' describe block,
+  // unmodified by this fix). `named_paths: ['migrations/1.sql']` triggers the floor (repoWithCommitment's
+  // fixture declares `data: ['migrations/**']`), the same fixture escalateConsequential's own
+  // "regardless of outcome" test uses; a veto is covered at the library level already and is not
+  // re-derived here since the floor is enough to prove the CLI path reaches the same refusal.
+  test('decide --consequential --commitment on a floor measurement refuses with the developer message through main()', async () => {
+    const cwd = await repoWithCommitment();
+    const floorDraft = draft({ named_paths: ['migrations/1.sql'] });
+    const m = await measure(cwd, floorDraft);
+    assert.equal(m.outcome, 'floor');
+    const r = await run(['decide', '--consequential', ...draftArgs(floorDraft)], cwd);
+    assert.equal(r.code, 1);
+    assert.equal(r.err, `cairn: measurement ${m.measurementSha} routes to the developer (floor); cairn escalate --consequential instead of deciding\n`);
   });
 });

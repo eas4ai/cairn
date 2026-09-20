@@ -92,42 +92,15 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
 });
 
 import { readAdr } from '../lib/adr.mjs';
-import { escalateWithRoute, decideConsequential, escalateConsequential } from '../lib/escalate.mjs';
+import { decideConsequential, escalateConsequential } from '../lib/escalate.mjs';
 
-// Ruling 1 (plan 15, task 3, controller ruling): escalateWithRoute used to dynamic-import
-// lib/evaluate.mjs's old evaluate() and branch on whatever route it returned (developer, agent or
-// capture, injected here through a stub `evaluate` option) -- the router design decisions 55 and
-// 56 superseded (spec section 10). lib/evaluate.mjs is rewritten from scratch on this plan and no
-// longer exports evaluate() at all, so escalateWithRoute no longer accepts an `evaluate` option or
-// branches on a route: it always takes the path this function took before only when typesafeai
-// was disabled -- a plain escalation, no evaluation, regardless of typesafeai.enabled. The five
-// tests below this comment used to test that plumbing (the evaluator-disabled check, an
-// agent-route decision line, a developer-route evaluationSha check, and two capture-route tests);
-// all five depended on the now-removed `evaluate` option, so none is carried forward. The two
-// tests replacing them cover the same surviving contract -- escalateWithRoute always writes a
-// plain escalation -- once with typesafeai off and once with it on, to show enabled no longer
-// selects anything. Plan 16 wires measure() into this path once it exists (this plan's tasks
-// 4-10).
-const typesafeaiEnabled = { typesafeai: { enabled: true, model: 'jev-1.13.0',
-  weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
-  confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
-  min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
-
-test('escalateWithRoute always writes a plain escalation, with no evaluation', async () => {
-  const r = await loopRepo();
-  const out = await escalateWithRoute(r.cwd, draft());
-  assert.equal(out.route, 'developer');
-  const rec = decodeRecord(await catCommit(r.cwd, out.sha));
-  assert.equal(rec.kind, 'escalation');
-  assert.equal(rec.payload.evaluation, null);
-});
-
-test('escalateWithRoute ignores typesafeai.enabled -- there is no route left to select', async () => {
-  const r = await loopRepo({ settings: typesafeaiEnabled });
-  const out = await escalateWithRoute(r.cwd, draft());
-  assert.equal(out.route, 'developer');
-  assert.equal(decodeRecord(await catCommit(r.cwd, out.sha)).kind, 'escalation');
-});
+// Plan 16, Task 4 fix round 1 (Important #1): escalateWithRoute (and its constant `route: 'developer'`
+// field) is deleted outright here, not merely left untested -- it had no remaining caller once
+// escalateCommand (lib/cli.mjs) was rewritten to call escalateConsequential/escalate() directly, and
+// no other module imported it (verified by grep across lib/, bin/, tests/, skills/). Its own two
+// tests, which used to live here, are removed with it rather than kept pointing at a deleted export.
+// The router design escalateWithRoute embodied (decisions 55/56) was already superseded before this
+// plan; escalateConsequential (this file, above) and its own tests are the current, exercised path.
 
 // Deviation from this test's original text (superseded by plan 16 task 3): before this task,
 // decideConsequential wrote a decision line straight from the draft's own optional `evaluation`

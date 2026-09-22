@@ -501,7 +501,7 @@ Read the queue:
 
 ```sh
 cairn decisions
-cairn decisions --read <decision-id>
+cairn decisions --read <decision-id> --quote "<your words>"
 ```
 
 The first command renders every line in `docs/decisions.jsonl`. Reading a

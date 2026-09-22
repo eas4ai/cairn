@@ -399,6 +399,15 @@ test('authorize commits the dirty protected paths and its record names the inten
   assert.equal(log.at(-1).payload.agreement_digest, sha256('# changed\n'));
 });
 
+test('authorize commits a new spec file under a gitignored docs/ directory', async () => {
+  const cwd = await initialized();
+  writeFileSync(join(cwd, '.gitignore'), 'docs/\n');
+  writeFileSync(join(cwd, 'docs/spec/extra.md'), '# extra\n');
+  await authorize(cwd, { quote: 'ok', env: {} });
+  const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
+  assert.deepEqual(committed, ['docs/spec/extra.md']);
+});
+
 test('Fix round 1 finding 6: authorize commits only the protected paths, leaving an unrelated staged file untouched', async () => {
   const cwd = await initialized();
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');

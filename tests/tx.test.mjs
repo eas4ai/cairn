@@ -94,6 +94,19 @@ test('preIdentities records every touched store before anything is written', asy
   assert.deepEqual(pre.files, { 'docs/spec/overview.md': sha256('# k\n') });
 });
 
+test('a branch write commits a planned path that .gitignore ignores (a developer who ignores docs/)', async () => {
+  const cwd = await initialized();
+  writeFileSync(join(cwd, '.gitignore'), 'docs/\n');
+  writeFileSync(join(cwd, 'docs/decisions.jsonl'), '{"kind":"decision"}\n');
+  const plan = { identity: { i: 2 }, writes: [{ store: 'branch', paths: ['docs/decisions.jsonl'], message: 'Start commitment first' }], terminal: { kind: 'authorization', target: 'protected', payload: {} } };
+  const pre = await preIdentities(cwd, plan);
+  await stage(cwd, 'TX6', plan, pre);
+  const results = await applyWrites(cwd, await readStaging(cwd, 'TX6'));
+  const committed = (await git(['show', '--name-only', '--format=', results[0]], { cwd })).stdout.trim().split('\n').filter(Boolean);
+  assert.deepEqual(committed, ['docs/decisions.jsonl']);
+  assert.equal((await git(['status', '--porcelain', '--ignored', '--', 'docs/decisions.jsonl'], { cwd })).stdout, '', 'tracked now, no longer ignored');
+});
+
 test('applyWrites performs the ordered writes once and is idempotent when run again', async () => {
   const cwd = await initialized();
   const plan = filePlan();

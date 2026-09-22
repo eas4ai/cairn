@@ -188,7 +188,8 @@ test('report refuses a model or transport that does not match the launch instruc
   const r = await briefed();
   await assert.rejects(report(r.cwd, 'first', adversary(r, { model: 'other-model' })), /model other-model does not match the launch instruction claude-fable-5-1/);
   await assert.rejects(report(r.cwd, 'first', adversary(r, { transport: 'local' })), /transport local does not match the launch instruction remote/);
-  await assert.rejects(report(r.cwd, 'first', adversary(r, { model: null })), /model must be a string/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { model: null })), /model is the model the adversary actually ran as/);
+  await assert.rejects(report(r.cwd, 'first', adversary(r, { transport: 'any' })), /transport is the one the adversary actually ran over, local or remote/);
   const sha = await report(r.cwd, 'first', adversary(r, { builder_model: 'claude-fable-5-1' }));
   assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.builder_model, 'claude-fable-5-1');
 });

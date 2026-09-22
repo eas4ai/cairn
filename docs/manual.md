@@ -979,6 +979,7 @@ prints one with its references resolved.
 | Command | Purpose |
 |---|---|
 | `show <sha>` | Print one record, with the records and snapshots it references described. |
+| `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted or fixed. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
 | `init --remote <name>\|--local-only --signing-key <path>\|--attested [--adopt <digest>] --quote <words>` | Create or adopt `.cairn/settings.json` and the two durable refs, with the developer's answers as flags; the command asks nothing itself. |
 | `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |

@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.13 - 2026-09-22
+
+- The acceptance-round bound counts rounds since the developer's last ok or instead answer to a cycle escalation, as the escalation itself says. It used to count every round after the report, so each answer was followed by a fresh escalation on the next round.
+- `cairn show items` lists every item record with its sha, kind, slug, source, body and whether it was promoted or fixed. The next-feature skill already named it.
+- The report refusals for a missing model or transport say what goes there: what the adversary actually ran as and over. The brief's `any` accepts either transport but is not itself a report value.
+
 ## 2.1.12 - 2026-09-22
 
 - The adversary brief carries the changed paths from the start snapshot to the reviewed snapshot (name-status, never contents), so Q4 is answerable from the projection, which has no history.

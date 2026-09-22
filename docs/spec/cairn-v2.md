@@ -1022,8 +1022,9 @@ classes: the same three-attempt rule the loop applies everywhere, summed over
 the classes, so a cycle that rotates targets is caught as soon as one that
 repeats them.
 Three acceptance rounds after the report without reaching Done create the same
-kind of escalation, even when each round raises a newly numbered finding. These
-constants are in the kernel, not settings.
+kind of escalation, even when each round raises a newly numbered finding; the
+developer's ok or instead answer restarts that count. These constants are in
+the kernel, not settings.
 
 Before committing a kernel-managed mutation, the kernel evaluates the
 post-state. If its specified bookkeeping alone would create a new Cairn

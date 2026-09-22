@@ -61,6 +61,16 @@ test('<command> --help prints that command\'s usage line and runs nothing, for p
 // missing-refs, no-configured-remote condition and was not itself a runnable command.
 // requireRefs now calls the same lib/travel.mjs missingRefsLine wake itself uses, so this
 // computes its expectation the same way rather than hard-coding a second copy of the text.
+test('show items lists every item record with its sha, kind, slug, source and body', async (t) => {
+  const { cwd } = await makeProject();
+  const a = await appendRecord(cwd, 'item', 'one', { kind: 'backlog', slug: 'one', source: 'DEMO-001', body: 'first thing\nmore' });
+  const b = await appendRecord(cwd, 'item', 'two', { kind: 'defect', slug: 'two', source: 'DEMO-001', body: 'second thing' });
+  const r = await run(['show', 'items'], cwd);
+  assert.equal(r.code, 0); assert.equal(r.err, '');
+  assert.equal(r.out, `${a} backlog one from DEMO-001: first thing\n${b} defect two from DEMO-001: second thing\n`);
+  const bad = await run(['show', 'one'], cwd);
+  assert.equal(bad.code, 1); assert.match(bad.err, /show needs a record SHA, or items/);
+});
 test('show exits 3 and names the fetch when the durable refs are missing', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const expected = await missingRefsLine(repo.dir);

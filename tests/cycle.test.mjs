@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { git, gitPath } from '../lib/gitx.mjs';
-import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle, guardKernelWrite, LivenessError, withLoop } from '../lib/cycle.mjs';
+import { BOUNDS, ADMIN, bump, readCounter, resetOnProgress, settle, guardKernelWrite, LivenessError, withLoop, openCycleEscalation } from '../lib/cycle.mjs';
 import { readState, verdictOf, wake, progressMade, progressSummary } from '../lib/wake.mjs';
 import { begin } from '../lib/lease.mjs';
 import { declare } from '../lib/mechanisms.mjs';
@@ -80,6 +80,13 @@ test('the third acceptance round without Done is the same escalation', async () 
   const { bound } = await settle(r.cwd, await verdictOf(st), st);
   assert.deepEqual(bound, { kind: 'acceptanceRounds', actionClass: 'accept', target: 'first' });
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+  // An ok answer restarts the count: the next round is the first of a new three, not a new escalation.
+  const esc = openCycleEscalation(await r.log()); await r.answer(esc.sha, 'ok');
+  const res = await r.resolveFinding(rep, 4); await r.accept({ rejected: [res], findings: [{ n: 5, text: 'new' }] });
+  const st2 = await readState(r.cwd);
+  assert.deepEqual(await settle(r.cwd, await verdictOf(st2), st2), { bound: null });
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 1);
+  assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
 });
 
 test('semantic progress resets the count; a snapshot or record alone does not', async () => {

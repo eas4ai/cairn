@@ -148,6 +148,12 @@ test("every cairn invocation in the AGENTS.md template is a real command with re
 
 test("existing-project follows existing-project.dot and spec-phase.dot", () => checkSkill("existing-project", ["existing-project.dot", "spec-phase.dot"]));
 test("existing-project carries the same spec-phase tail as new-project", () => assert.equal(tail("existing-project"), tail("new-project")));
+test("existing-project migrates a 1.x project before init and carries its items after", () => {
+  const t = skill("existing-project");
+  for (const s of [".cairn/evidence", ".cairn/reviews", ".cairn/escalations", "docs/commitments", "cairn lint docs/spec", "changing no requirement's words", "cairn item --backlog"]) assert.ok(t.includes(s), s);
+  assert.ok(t.indexOf("### `migrate`") < t.indexOf("### `init`") && t.indexOf("### `init`") < t.indexOf("### `carry`"));
+});
+
 test("existing-project names supersession as two phases", () => {
   const t = skill("existing-project");
   assert.ok(t.includes("`cairn supersede ")); assert.ok(/does not move `Current:`/.test(t)); assert.ok(/points back to the superseded record/.test(t));

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.2 - 2026-09-22
+
+- The existing-project skill migrates a Cairn 1.x project: on the developer's ok it removes the 1.x record directories (Git history keeps them), converts the specification in place until `cairn lint docs/spec` is clean without changing a requirement's words, keeps each 1.x mechanism's command for the declare step, and after `cairn init` files one item record per 1.x item. Spec section 3, the diagram and the manual say the same.
+
 ## 2.1.1 - 2026-09-22
 
 Fixes from the first project run on 2.1.0; no record shape change.

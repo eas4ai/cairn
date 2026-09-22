@@ -10,7 +10,7 @@ disable-model-invocation: true
 `/existing-project` was invoked. Follow the nodes in order.
 
 ### `state`
-Run `cairn wake`. Done: `tonext`. Resolvable or Waiting with an open commitment: `fits`. Exit 3 naming a pending successor: `pending`. Exit 3 naming this skill because the project is not initialized: `init`. A verdict with no open range: `hasspec`.
+Run `cairn wake`. Done: `tonext`. Resolvable or Waiting with an open commitment: `fits`. Exit 3 naming a pending successor: `pending`. Exit 3 naming this skill because the project is not initialized: `legacy`. A verdict with no open range: `hasspec`.
 
 ### `tonext`
 Stop and switch to `/next-feature`; this work is a later commitment.
@@ -33,8 +33,17 @@ Run `cairn supersede <successor-slug> --quote "<the developer's words>"`. It wri
 ### `pending`
 A pending successor: resume the transition. Everything below prepares the successor; its later start points back to the superseded record. Continue at `readspec`.
 
+### `legacy`
+Is this a Cairn 1.x project? `.cairn/evidence/`, `.cairn/reviews/` or `.cairn/escalations/` present, or `docs/commitments/`: `migrate`. None of them: `init`.
+
+### `migrate`
+Cairn 2 reads no 1.x record; the specification is what carries over, and the 1.x records stay in Git history. Tell the developer what will be removed and what stays, and wait for ok. Then, in one commit: remove the 1.x record directories with `git rm -r`: `.cairn/evidence`, `.cairn/reviews`, `.cairn/escalations`, `.cairn/stops`, `.cairn/queue`, `.cairn/policy`, `.cairn/mechanisms`, `docs/decisions`, `docs/commitments` and `docs/audit`, keeping `.cairn/backlog/` and the 1.x directory of items waiting for the next spec phase until `carry` has read them, and copying each 1.x mechanism's command and inputs into `docs/recon.md` for `declare`. Convert the specification in place until `cairn lint docs/spec` is clean, changing no requirement's words: every block gets its own `Status:` line from its file's 1.x status; each multi-line `Falsifier:` is joined into one line; every Agreed block gets a `Mechanism:` line naming the mechanism that will observe it, declared later in the tail; a 1.x `Agreed <date> by deference <slug>` becomes `Agreed <date>` with the 1.x slug quoted in the block's rationale; each file gets a `Prefix:` header and `docs/spec/overview.md` gets the spec map; a reference to an identifier that no longer exists is removed. Then `init`.
+
 ### `init`
-Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only, and whether decisions are signed with a key or attested in their own words. Then run `cairn init --remote <name>|--local-only --signing-key <path>|--attested --quote "<their words>"`. Settings that exist without refs are adopted only with `--adopt <digest>` after the developer has confirmed that digest with you; refs without settings refuse and name the repair. Then `hasspec`.
+Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only, and whether decisions are signed with a key or attested in their own words. Then run `cairn init --remote <name>|--local-only --signing-key <path>|--attested --quote "<their words>"`. Settings that exist without refs are adopted only with `--adopt <digest>` after the developer has confirmed that digest with you; refs without settings refuse and name the repair. Then `hasspec`, or `carry` when `migrate` ran.
+
+### `carry`
+For each 1.x item file without a `Promoted to:` line: `cairn item --backlog --slug <the file name> --from <its Surfaced from: identifier> --body "<its text>"`, or `--next-feature` for an item from the directory of items waiting for the next spec phase. Then `git rm -r` both directories and commit. Then `hasspec`.
 
 ### `hasspec`
 Does `docs/spec/overview.md` exist? Yes, Path B: `readspec`. No, Path A: `recon`.

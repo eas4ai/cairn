@@ -14,7 +14,10 @@ digraph existing_project {
   finish [shape=oval, label="Finish current commitment;\ncapture request as an item"];
   supersede [label="cairn supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
   pending [label="Pending successor: resume the transition;\nthe later start points back to the superseded record"];
+  legacy [shape=diamond, label="Cairn 1.x records present?"];
+  migrate [label="Migrate: tell the developer, on ok remove the 1.x record\ndirectories (history keeps them); convert the spec in place\nuntil cairn lint docs/spec is clean, changing no requirement's words;\nkeep 1.x mechanism commands in docs/recon.md"];
   init [label="Ask the developer: authority remote or local-only,\nsigned or attested; cairn init with the answers as flags"];
+  carry [label="Carry: one cairn item per 1.x item file;\nremove the item directories"];
   hasspec [shape=diamond, label="docs/spec/overview.md exists?"];
   readspec [label="Path B: read glossary, keystone, domains,\nroadmap, decisions and items first"];
   recon [label="Recon before questions:\nmanifests, entry points, data, tests, CI, scripts,\nnon-spec docs and recent history"];
@@ -38,7 +41,12 @@ digraph existing_project {
   state -> tonext [label="Done"];
   state -> fits [label="open commitment"];
   state -> pending [label="pending successor"];
-  state -> init [label="not initialized"];
+  state -> legacy [label="not initialized"];
+  legacy -> migrate [label="yes"];
+  legacy -> init [label="no"];
+  migrate -> init;
+  init -> carry [label="after a migration"];
+  carry -> hasspec;
   state -> hasspec [label="initialized, no open range"];
   fits -> continue [label="yes"];
   fits -> midway [label="no"];
@@ -46,7 +54,7 @@ digraph existing_project {
   midway -> supersede [label="supersede"];
   supersede -> pending;
   pending -> readspec;
-  init -> hasspec;
+  init -> hasspec [label="no 1.x records"];
   hasspec -> readspec [label="yes (B)"];
   hasspec -> recon [label="no (A)"];
   readspec -> recon;

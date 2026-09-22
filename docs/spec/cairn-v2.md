@@ -615,6 +615,15 @@ prepare the successor. The successor's start names the superseded record and
 `Current:` moves in the same recoverable start transaction. An interrupted gap
 is a pending transition, not a second open commitment.
 
+A Cairn 1.x project (record directories under `.cairn/`, or
+`docs/commitments/`) is migrated before initialization, on the developer's ok:
+the 1.x record directories are removed, since Cairn 2 reads none of them and
+Git history keeps them; the specification is converted in place until
+`cairn lint docs/spec` is clean, with no requirement's words changed; each
+1.x mechanism's command and inputs are kept in `docs/recon.md` for the tail's
+declare step; and after initialization each 1.x item file becomes one item
+record. Added 2026-09-22.
+
 Recon precedes questions. Path A, for a repository without a spec, derives the
 glossary from code identifiers, writes Observed specs inside the requested blast
 radius, and writes one-line rows in the map outside it. Path B reads the current

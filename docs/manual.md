@@ -132,7 +132,10 @@ flowchart TB
   finish(["Finish current commitment, capture request as an item"])
   supersede["cairn supersede SUCCESSOR: close old range with decision, transition id and slug, carry open obligations, do not name a future start or move Current:"]
   pending["Pending successor: resume the transition, the later start points back to the superseded record"]
+  legacy{"Cairn 1.x records present?"}
+  migrate["Migrate: tell the developer, on ok remove the 1.x record directories (history keeps them), convert the spec in place until cairn lint docs/spec is clean, changing no requirement words, keep 1.x mechanism commands in docs/recon.md"]
   init["Ask the developer: authority remote or local-only, signed or attested. cairn init with the answers as flags"]
+  carry["Carry: one cairn item per 1.x item file, remove the item directories"]
   hasspec{"docs/spec/overview.md exists?"}
   readspec["Path B: read glossary, keystone, domains, roadmap, decisions and items first"]
   recon["Recon before questions: manifests, entry points, data, tests, CI, scripts, non-spec docs and recent history"]
@@ -156,7 +159,12 @@ flowchart TB
   state -->|"Done"| tonext
   state -->|"open commitment"| fits
   state -->|"pending successor"| pending
-  state -->|"not initialized"| init
+  state -->|"not initialized"| legacy
+  legacy -->|"yes"| migrate
+  legacy -->|"no"| init
+  migrate --> init
+  init -->|"after a migration"| carry
+  carry --> hasspec
   state -->|"initialized, no open range"| hasspec
   fits -->|"yes"| continue
   fits -->|"no"| midway
@@ -164,7 +172,7 @@ flowchart TB
   midway -->|"supersede"| supersede
   supersede --> pending
   pending --> readspec
-  init --> hasspec
+  init -->|"no 1.x records"| hasspec
   hasspec -->|"yes, path B"| readspec
   hasspec -->|"no, path A"| recon
   readspec --> recon

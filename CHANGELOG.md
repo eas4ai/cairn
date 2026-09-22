@@ -9,8 +9,15 @@ earlier records mean.
 
 ## 2.1.1 - 2026-09-22
 
-One kernel fix; no record shape or verdict change.
+Fixes from the first project run on 2.1.0; no record shape change.
 
+- `cairn start` and `cairn authorize` work when `docs/` is gitignored: the branch write lists ignored paths and force-adds them. Before, the commit failed with "pathspec did not match" and the transaction needed `cairn recover`.
+- The hooks compare the `cairn` they find with the plugin's own version and use the plugin's copy on a mismatch, printing one line that says so. A marketplace update used to leave the old `~/.local/bin/cairn` link running the old kernel.
+- Wake prints full record SHAs in its reasons, since every command that takes one refuses a prefix.
+- Attempts are counted from the open commitment's start record. The fail receipts that bind mechanisms during the spec phase no longer count, so a requirement no longer escalates on its first real attempt (spec section 5, "Deferral and attempts", revised).
+- `cairn check` says why a per-requirement result is unverified: the exact line it expected and the output lines that name the requirement.
+- The liveness refusal on a kernel write names the violation it would create, not only its class.
+- `cairn --version` prints the version.
 - `cairn scope <breach-sha> keep` now accepts the escalation `cairn escalate` writes. It looked for a concern spelled `scope-breach:<sha>`, which the concern parser refuses, while the parser and the command store `breach:<sha>`; no keep written through the command line could ever succeed. The refusal names the `breach:<sha>` token, and the manual shows the flag. Found by a project running 2.1.0 (reported 2026-09-22).
 
 ## 2.1.0 - 2026-09-21

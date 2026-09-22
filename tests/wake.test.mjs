@@ -300,7 +300,7 @@ test('cmdWake exits 4 through main() and prints the five fields exactly as ordin
   const out = r.runWake();
   assert.equal(out.status, 4);
   assert.equal(out.stdout, [
-    'verdict: Waiting', 'party: developer', `reason: escalation ${esc.slice(0, 7)} awaits an answer`,
+    'verdict: Waiting', 'party: developer', `reason: escalation ${esc} awaits an answer`,
     'question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I',
     `predicate: ${PREDICATES.waiting}`, '',
   ].join('\n'));
@@ -640,7 +640,7 @@ test('cairn wake prints verdict, action or party, one reason line and the predic
   out = r.runWake();
   assert.equal(out.status, 0);
   assert.equal(out.stdout, [
-    'verdict: Waiting', 'party: developer', `reason: escalation ${esc.slice(0, 7)} awaits an answer`,
+    'verdict: Waiting', 'party: developer', `reason: escalation ${esc} awaits an answer`,
     'question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I',
     `predicate: ${PREDICATES.waiting}`, '',
   ].join('\n'));

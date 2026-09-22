@@ -26,6 +26,16 @@ test("session-start names a missing link and durable refs in one line", () => {
   assert.equal(r.status, 0);
 });
 
+test("session-start uses the plugin's own copy and says so when the cairn found runs another version", () => {
+  const { dir } = throwawayRepo();
+  const bin = join(dir, "fakebin");
+  fakeCairn(bin, { stdout: "STALE VERDICT", version: "2.0.2" });
+  const r = runHook("session-start.sh", { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
+  assert.equal(r.status, 0);
+  assert.ok(r.stdout.includes("cairn: the cairn command found runs 2.0.2, this plugin is "), r.stdout);
+  assert.ok(!r.stdout.includes("STALE VERDICT"), r.stdout);
+});
+
 test("session-start names a missing PATH entry when only the link exists", () => {
   const { dir } = throwawayRepo();
   const home = join(dir, "home");

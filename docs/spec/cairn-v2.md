@@ -1092,8 +1092,11 @@ or an escalation. A defect against that commitment's requirement is worked
 under it and blocks Done; it is not deferred.
 
 After three distinct failing attempts without a pass, a fourth implementation
-attempt requires an escalation first. Attempts are keyed on product digest, not
-input snapshot; a rerun at a seen product digest and a change only to
+attempt requires an escalation first. Attempts are counted from the open
+commitment's start record; the fail receipts that bind mechanisms during the
+spec phase precede it and are not attempts (revised 2026-09-22; previously
+every fail receipt in the log counted). Attempts are keyed on product digest,
+not input snapshot; a rerun at a seen product digest and a change only to
 documents or outside paths are not new attempts. Captured output may be
 truncated at a fixed byte cap; the truncation marker lives in the output
 bytes themselves, not in a separate receipt field.

@@ -283,6 +283,25 @@ test('cairn declare writes a mechanism definition from a --file; a glob in input
   assert.equal(bad.code, 1);
   assert.match(bad.err, /^cairn: glob metacharacter in path "src\/\*\.mjs"/);
 });
+test('cairn --version prints the package version', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const r = await run(['--version'], process.cwd());
+  assert.equal(r.code, 0);
+  assert.equal(r.out, `${pkg.version}\n`);
+});
+test('cairn check says which output line it saw when a per-requirement result is unverified', async (t) => {
+  const repo = await mechanismProject();
+  t.after(repo.cleanup);
+  const file = join(repo.cwd, 'loose.json');
+  await writeFile(file, JSON.stringify({ ...MECHANISM_DEFINITION, command: 'printf "cairn: DEMO-001 pass\\n"', results: 'per-requirement' }));
+  const d = await run(['declare', 'loose', '--file', file], repo.cwd);
+  assert.equal(d.code, 0, d.err);
+  const r = await run(['check', 'DEMO-001'], repo.cwd);
+  assert.equal(r.code, 0, r.err);
+  assert.match(r.err, /^cairn: DEMO-001 is unverified: no output line is exactly "cairn: DEMO-001: pass" or "cairn: DEMO-001: fail"; saw "cairn: DEMO-001 pass"\n$/);
+});
+
 test('cairn check writes a receipt; a non-Agreed requirement is refused', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);

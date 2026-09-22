@@ -204,6 +204,14 @@ test('isCurrent accepts precomputed identities and refuses another requirement',
 
 import { attempts } from '../lib/check.mjs';
 
+test('attempts with since ignores receipts before the start record', () => {
+  const receipt = (sha, digest, result) => ({ sha, kind: 'receipt', payload: { status: 'ran', product_digest: digest, results: [{ requirement: 'DEMO-001', result }] } });
+  const log = [receipt('r1', 'sha256:a', 'fail'), receipt('r2', 'sha256:b', 'fail'), { sha: 'S', kind: 'start', payload: {} }, receipt('r3', 'sha256:c', 'fail')];
+  assert.equal(attempts(log, 'DEMO-001'), 3);
+  assert.equal(attempts(log, 'DEMO-001', { since: 'S' }), 1, 'the spec-phase binding receipts before start are not attempts');
+  assert.equal(attempts(log, 'DEMO-001', { since: 'missing' }), 0);
+});
+
 test('attempts counts distinct failing product digests since the last pass', async () => {
   const repo = await declared();
   const count = async () => attempts(await readLog(repo.cwd), 'DEMO-001');

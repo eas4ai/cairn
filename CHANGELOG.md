@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.7 - 2026-09-22
+
+- The working agreement's Waiting line no longer reads as "stop and let the developer run cairn answer". The prompt is the escalation in prose: the problem, then `ok` (the recommendation), `instead` (what it costs if wrong, and the alternative), `ask` (to discuss), ending with `ok | instead | ask`; the agent records the developer's words with `cairn answer`. Agents were handing the command back to the developer. The README, manual and work-loop diagram say the same.
+
 ## 2.1.6 - 2026-09-22
 
 - `cairn <command> --help` (or `-h`) prints that command's usage line and runs nothing. Before, the first argument was passed to the command, so `cairn push --help` pushed.

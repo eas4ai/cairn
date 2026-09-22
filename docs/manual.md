@@ -355,7 +355,7 @@ again.
 flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
-  waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent and a floor or veto escalation: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
@@ -469,7 +469,11 @@ something because the agent used confident language.
 ### Your three answer forms
 
 You answer in conversation, in your own words. The agent puts the five
-fields to you in plain prose, waits, and then records what you said.
+fields to you in plain prose: the problem, then what `ok` accepts (the
+recommendation), what `instead` means (the cost if the recommendation is
+wrong, and the alternative) and what `ask` is for (you do not understand,
+or want to discuss it). It ends with `ok | instead | ask`, waits, and then
+records what you said.
 Assume Cairn named the escalation `app-002`:
 
 | You say | The agent records | What it authorizes |

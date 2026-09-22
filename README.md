@@ -189,7 +189,7 @@ contract wait for the next feature specification, which you open.
 | Verdict | Plain meaning | Whose turn? |
 |---|---|---|
 | `Resolvable` | There is a named action, and the exact record or code that completes it. This is normal progress, not an error. | The agent. |
-| `Waiting` | An escalation is unanswered. Cairn prints its five fields; the agent adds nothing. | You. |
+| `Waiting` | An escalation is unanswered. Cairn prints its five fields; the agent asks you in prose and records your answer. | You. |
 | `Done` | Every requirement in the commitment has current passing evidence, an independent report found nothing left open, and the backlog holds nothing to promote. | You: open the next feature when you choose. |
 
 Done does not mean the whole product is finished, deployed, or guaranteed
@@ -223,7 +223,7 @@ with its completion predicate, done by the agent, then wake again.
 flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
-  waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent and a floor or veto escalation: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]

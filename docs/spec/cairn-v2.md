@@ -392,8 +392,9 @@ resolution with a reason, and may raise new findings anywhere in that delta.
 **Escalation, answer and reply.** An escalation has five one-line fields:
 question, recommendation, because, if wrong, and instead. Wake prints them
 verbatim. The agent puts them to the developer in conversation, in plain
-prose without a choice widget, and asks for a decision, a different direction
-or a question. The developer answers in their own words. The agent records
+prose without a choice widget: the problem, then the recommendation as `ok`,
+the cost if wrong and the alternative as `instead`, and discussion as `ask`,
+ending with `ok | instead | ask`. The developer answers in their own words. The agent records
 `ok`, `instead` or `ask`, quoting those words verbatim, with
 `cairn answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until
 an agent reply. Developer-only commands use the authentication rule in

@@ -33,16 +33,17 @@
 <!-- waiting -->
 <g id="node3" class="node">
 <title>waiting</title>
-<path fill="none" stroke="black" d="M779.52,-648.12C779.52,-648.12 406.52,-648.12 406.52,-648.12 400.52,-648.12 394.52,-642.12 394.52,-636.12 394.52,-636.12 394.52,-611.62 394.52,-611.62 394.52,-605.62 400.52,-599.62 406.52,-599.62 406.52,-599.62 779.52,-599.62 779.52,-599.62 785.52,-599.62 791.52,-605.62 791.52,-611.62 791.52,-611.62 791.52,-636.12 791.52,-636.12 791.52,-642.12 785.52,-648.12 779.52,-648.12"/>
-<text xml:space="preserve" text-anchor="middle" x="593.02" y="-633.67" font-family="Helvetica,sans-Serif" font-size="11.00">Waiting: print the escalation&#39;s five fields verbatim;</text>
-<text xml:space="preserve" text-anchor="middle" x="593.02" y="-620.17" font-family="Helvetica,sans-Serif" font-size="11.00">the agent adds nothing and stops</text>
-<text xml:space="preserve" text-anchor="middle" x="593.02" y="-606.67" font-family="Helvetica,sans-Serif" font-size="11.00">(developer: absent and a floor or veto escalation: same print, exit 4)</text>
+<path fill="none" stroke="black" d="M779.52,-654.88C779.52,-654.88 406.52,-654.88 406.52,-654.88 400.52,-654.88 394.52,-648.88 394.52,-642.88 394.52,-642.88 394.52,-604.88 394.52,-604.88 394.52,-598.88 400.52,-592.88 406.52,-592.88 406.52,-592.88 779.52,-592.88 779.52,-592.88 785.52,-592.88 791.52,-598.88 791.52,-604.88 791.52,-604.88 791.52,-642.88 791.52,-642.88 791.52,-648.88 785.52,-654.88 779.52,-654.88"/>
+<text xml:space="preserve" text-anchor="middle" x="593.02" y="-640.42" font-family="Helvetica,sans-Serif" font-size="11.00">Waiting: print the escalation&#39;s five fields verbatim;</text>
+<text xml:space="preserve" text-anchor="middle" x="593.02" y="-626.92" font-family="Helvetica,sans-Serif" font-size="11.00">the agent adds nothing to the work, asks the developer in prose</text>
+<text xml:space="preserve" text-anchor="middle" x="593.02" y="-613.42" font-family="Helvetica,sans-Serif" font-size="11.00">and records their answer with cairn answer</text>
+<text xml:space="preserve" text-anchor="middle" x="593.02" y="-599.92" font-family="Helvetica,sans-Serif" font-size="11.00">(developer: absent and a floor or veto escalation: same print, exit 4)</text>
 </g>
 <!-- verdict&#45;&gt;waiting -->
 <g id="edge2" class="edge">
 <title>verdict&#45;&gt;waiting</title>
-<path fill="none" stroke="black" d="M593.02,-907.33C593.02,-859.2 593.02,-723.72 593.02,-659.49"/>
-<polygon fill="black" stroke="black" points="596.52,-659.88 593.02,-649.88 589.52,-659.88 596.52,-659.88"/>
+<path fill="none" stroke="black" d="M593.02,-907.33C593.02,-860.87 593.02,-733.01 593.02,-666.42"/>
+<polygon fill="black" stroke="black" points="596.52,-666.63 593.02,-656.63 589.52,-666.63 596.52,-666.63"/>
 <text xml:space="preserve" text-anchor="middle" x="611.77" y="-876.25" font-family="Helvetica,sans-Serif" font-size="10.00">Waiting</text>
 </g>
 <!-- reply -->
@@ -100,8 +101,8 @@
 <!-- waiting&#45;&gt;answer -->
 <g id="edge3" class="edge">
 <title>waiting&#45;&gt;answer</title>
-<path fill="none" stroke="black" d="M574.36,-599.36C531.33,-545.16 425.12,-411.36 375.87,-349.31"/>
-<polygon fill="black" stroke="black" points="378.65,-347.18 369.69,-341.53 373.17,-351.54 378.65,-347.18"/>
+<path fill="none" stroke="black" d="M568.83,-592.4C522.8,-534.41 422.97,-408.65 375.76,-349.17"/>
+<polygon fill="black" stroke="black" points="378.55,-347.06 369.59,-341.4 373.07,-351.41 378.55,-347.06"/>
 </g>
 <!-- answer&#45;&gt;wake -->
 <g id="edge4" class="edge">

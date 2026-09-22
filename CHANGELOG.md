@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.1 - 2026-09-22
+
+One kernel fix; no record shape or verdict change.
+
+- `cairn scope <breach-sha> keep` now accepts the escalation `cairn escalate` writes. It looked for a concern spelled `scope-breach:<sha>`, which the concern parser refuses, while the parser and the command store `breach:<sha>`; no keep written through the command line could ever succeed. The refusal names the `breach:<sha>` token, and the manual shows the flag. Found by a project running 2.1.0 (reported 2026-09-22).
+
 ## 2.1.0 - 2026-09-21
 
 The developer is never asked to run a command.

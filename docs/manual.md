@@ -785,7 +785,8 @@ cairn scope <breach-sha> restore
 ```
 
 Or, when the work is correct and belongs, ask you to keep it explicitly
-with `cairn escalate`, then:
+with `cairn escalate --concern breach:<breach-sha> ...`, record your ok,
+then:
 
 ```sh
 cairn scope <breach-sha> keep

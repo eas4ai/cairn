@@ -249,14 +249,14 @@ test('the first-observed snapshot and snapshots written under an open breach are
 // (also used by 'authorization', reused unchanged from Task 6's fix) needs the full closed
 // 'unsigned-local' variant -- purpose, subject, nonce and author as {name, email}, not a string --
 // the same shape tests/init.test.mjs's own fixtures already build.
-const escalate = (r, b) => r.add('escalation', r.slug, { slug: r.slug, question: 'Keep src/stray.mjs?', recommendation: 'keep', because: 'it is the helper the fix needs', if_wrong: 'delete it', instead: 'restore', concerns: `scope-breach:${b}`, evaluation: null });
+const escalate = (r, b) => r.add('escalation', r.slug, { slug: r.slug, question: 'Keep src/stray.mjs?', recommendation: 'keep', because: 'it is the helper the fix needs', if_wrong: 'delete it', instead: 'restore', concerns: `breach:${b}`, evaluation: null });
 const answer = (r, esc, kind) => r.add('answer', r.slug, { escalation: esc, kind, text: '', owner: null, evidence: { mode: 'unsigned-local', purpose: 'answer', subject: r.slug, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true } });
 
 test('keep is refused without an escalation answered ok, and closes the breach with one', async () => {
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
-  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns scope-breach:${b}`);
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns breach:${b}`);
   const esc = await escalate(r, b);
   await answer(r, esc, 'ask');
   await assert.rejects(dispose(r.cwd, b, 'keep'), ScopeError);
@@ -266,6 +266,20 @@ test('keep is refused without an escalation answered ok, and closes the breach w
   assert.deepEqual([rec.kind, rec.payload.breach, rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['scope', b, 'keep', esc, ans]);
   assert.equal(openBreaches(await r.log()).length, 0);
   assert.equal(await allowedBase(r.cwd, await r.log()), rec.payload.snapshot);
+});
+
+test('keep accepts the escalation cairn escalate itself writes, with the breach:<sha> token the parser accepts', async () => {
+  const { escalate: escalateDraft, answer: answerDraft } = await import('../lib/escalate.mjs');
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  const draft = { commitment: r.slug, concerns: [`breach:${b}`], question: 'Keep src/stray.mjs?', recommendation: 'keep', because: 'it is the helper the fix needs', if_wrong: 'delete it', instead: 'restore', options: [], named_paths: [], cited_decisions: [] };
+  const esc = await escalateDraft(r.cwd, draft);
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns breach:${b}`);
+  const ans = await answerDraft(r.cwd, r.slug, 'ok', { quote: 'keep it', env: {} });
+  const s = await dispose(r.cwd, b, 'keep');
+  const rec = (await r.log()).find((x) => x.sha === s);
+  assert.deepEqual([rec.kind, rec.payload.breach, rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['scope', b, 'keep', esc, ans]);
 });
 
 test('restore is refused while the path differs from its allowed base', async () => {

@@ -471,3 +471,7 @@ checks, and the agent must demonstrate what makes them fail.
 Cairn's own development uses the same workflow. From this repository,
 `node bin/cairn.mjs wake` reports its current action, and
 `node bin/cairn.mjs lint docs/spec` checks the specification.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

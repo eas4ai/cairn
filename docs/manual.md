@@ -1048,9 +1048,12 @@ Cairn reads it back; the full field list is in
 ## Installation details
 
 See the [README](../README.md#install) for the marketplace and checkout
-install paths. In every path, the agent links `$HOME/.local/bin/cairn` to
-the plugin's or checkout's `bin/cairn.mjs`, once, only when nothing is
-there; it never replaces a link whose target still exists. Claude Code and
+install paths. In every path, the agent installs the shim `bin/cairn.sh`
+at `$HOME/.local/bin/cairn`, once; the shim runs the newest installed
+Cairn (`$CAIRN_ROOT` when set, else the newest Claude Code or Codex plugin
+cache entry or the checkout, by version), so a plugin update never strands
+the command. The skill replaces only a symlink an earlier Cairn made or an
+older copy of the shim, never another file; no hook writes it. Claude Code and
 Codex read `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);
 Muse reads two entries (SessionStart, Stop) from
 `.muse-plugin/plugin.json`. Every hook prints the current wake verdict, in
@@ -1075,7 +1078,7 @@ flowchart TB
   muse["Muse: install the Cairn plugin, hooks registered by the plugin"]
   other["Any other agent: install the skills, then run /install-cairn, register hooks where supported"]
   nohooks["No hook system: instruction-only, the working agreement is the enforcement"]
-  link["The plugin or /install-cairn links ~/.local/bin/cairn to bin/cairn.mjs, once, no project remote is selected here"]
+  link["/install-cairn installs the shim bin/cairn.sh at ~/.local/bin/cairn, once; it runs the newest installed Cairn; no project remote is selected here"]
   path{"~/.local/bin on PATH?"}
   addpath["Tell the developer to add it, no hook edits the shell"]
   help{"cairn --help prints commands and exit codes?"}

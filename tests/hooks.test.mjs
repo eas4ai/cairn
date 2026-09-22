@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, symlinkSync, lstatSync, chmodSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { spawnSync } from "node:child_process";
 import { ROOT, throwawayRepo, fakeCairn, fingerprint, runHook, RESOLVABLE } from "./helpers/hookenv.mjs";
 
 function env(dir, verdict) {
@@ -34,6 +35,31 @@ test("session-start uses the plugin's own copy and says so when the cairn found 
   assert.equal(r.status, 0);
   assert.ok(r.stdout.includes("cairn: the cairn command found runs 2.0.2, this plugin is "), r.stdout);
   assert.ok(!r.stdout.includes("STALE VERDICT"), r.stdout);
+});
+
+// A fake plugin root: package.json with a version and a bin/cairn.mjs that prints a marker.
+function fakeRoot(dir, version, marker) {
+  mkdirSync(join(dir, "bin"), { recursive: true });
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ version }));
+  writeFileSync(join(dir, "bin", "cairn.mjs"), `process.stdout.write(${JSON.stringify(marker)});\n`);
+  return dir;
+}
+const nodeDir = dirname(process.execPath);
+
+test("the shim runs the newest installed Cairn across the Claude Code and Codex caches, or says how to install", () => {
+  const { dir } = throwawayRepo();
+  const shim = join(dir, "shim"); writeFileSync(shim, readFileSync(join(ROOT, "bin", "cairn.sh"))); chmodSync(shim, 0o755);
+  const run = () => spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin` } });
+  const none = run();
+  assert.equal(none.status, 127); assert.ok(none.stderr.includes("run /install-cairn"), none.stderr);
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.0.2"), "2.0.2", "cache-2.0.2");
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.1.10"), "2.1.10", "cache-2.1.10");
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.1.9"), "2.1.9", "cache-2.1.9");
+  assert.equal(run().stdout, "cache-2.1.10", "newest by numeric version, not by string order");
+  fakeRoot(join(dir, ".codex", "plugins", "cache", "m", "cairn", "2.2.0"), "2.2.0", "codex-2.2.0");
+  assert.equal(run().stdout, "codex-2.2.0", "the Codex cache is scanned too");
+  const pinned = fakeRoot(join(dir, "pinned"), "1.0.0", "pinned");
+  assert.equal(spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, CAIRN_ROOT: pinned } }).stdout, "pinned", "CAIRN_ROOT wins");
 });
 
 test("session-start names a missing PATH entry when only the link exists", () => {

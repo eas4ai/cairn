@@ -9,12 +9,13 @@ if command -v cairn >/dev/null 2>&1; then run="cairn"
 elif [ -x "$link" ]; then run="$link"; missing="$missing PATH entry ~/.local/bin"
 else run="node $here/bin/cairn.mjs"; missing="$missing command link ~/.local/bin/cairn"
 fi
-# Prefer this plugin's own copy when the command found runs a different version: a marketplace
-# update leaves an older ~/.local/bin/cairn link in place, and a session would run the old kernel.
+# Prefer this plugin's own copy when the command found runs a different version: a symlink into
+# a versioned plugin cache is stranded by a marketplace update. The shim bin/cairn.sh, installed
+# by /install-cairn, runs the newest installed Cairn and never strands; this hook writes nothing.
 want=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$here/package.json" | head -n 1)
 have=$($run --version 2>/dev/null | head -n 1)
 if [ -n "$want" ] && [ "$have" != "$want" ]; then
-  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Fix the link: ln -sfn %s/bin/cairn.mjs ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
+  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/cairn.sh ~/.local/bin/cairn && chmod +x ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
   run="node $here/bin/cairn.mjs"
 fi
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

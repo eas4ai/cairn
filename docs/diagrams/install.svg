@@ -105,9 +105,9 @@
 <!-- link -->
 <g id="node9" class="node">
 <title>link</title>
-<path fill="none" stroke="black" d="M367.5,-577.25C367.5,-577.25 159.5,-577.25 159.5,-577.25 153.5,-577.25 147.5,-571.25 147.5,-565.25 147.5,-565.25 147.5,-540.75 147.5,-540.75 147.5,-534.75 153.5,-528.75 159.5,-528.75 159.5,-528.75 367.5,-528.75 367.5,-528.75 373.5,-528.75 379.5,-534.75 379.5,-540.75 379.5,-540.75 379.5,-565.25 379.5,-565.25 379.5,-571.25 373.5,-577.25 367.5,-577.25"/>
-<text xml:space="preserve" text-anchor="middle" x="263.5" y="-562.8" font-family="Helvetica,sans-Serif" font-size="11.00">The plugin or /install&#45;cairn links</text>
-<text xml:space="preserve" text-anchor="middle" x="263.5" y="-549.3" font-family="Helvetica,sans-Serif" font-size="11.00">~/.local/bin/cairn to bin/cairn.mjs, once</text>
+<path fill="none" stroke="black" d="M425.62,-577.25C425.62,-577.25 101.38,-577.25 101.38,-577.25 95.38,-577.25 89.38,-571.25 89.38,-565.25 89.38,-565.25 89.38,-540.75 89.38,-540.75 89.38,-534.75 95.38,-528.75 101.38,-528.75 101.38,-528.75 425.62,-528.75 425.62,-528.75 431.62,-528.75 437.62,-534.75 437.62,-540.75 437.62,-540.75 437.62,-565.25 437.62,-565.25 437.62,-571.25 431.62,-577.25 425.62,-577.25"/>
+<text xml:space="preserve" text-anchor="middle" x="263.5" y="-562.8" font-family="Helvetica,sans-Serif" font-size="11.00">/install&#45;cairn installs the shim bin/cairn.sh</text>
+<text xml:space="preserve" text-anchor="middle" x="263.5" y="-549.3" font-family="Helvetica,sans-Serif" font-size="11.00">at ~/.local/bin/cairn, once; it runs the newest installed Cairn</text>
 <text xml:space="preserve" text-anchor="middle" x="263.5" y="-535.8" font-family="Helvetica,sans-Serif" font-size="11.00">(no project remote is selected here)</text>
 </g>
 <!-- cc&#45;&gt;link -->
@@ -139,8 +139,8 @@
 <!-- other&#45;&gt;link -->
 <g id="edge10" class="edge">
 <title>other&#45;&gt;link</title>
-<path fill="none" stroke="black" d="M454.6,-734.37C489.7,-704.83 538.15,-653.39 507.5,-614.25 492.15,-594.64 441.99,-580.55 391.11,-570.94"/>
-<polygon fill="black" stroke="black" points="391.87,-567.52 381.4,-569.17 390.61,-574.41 391.87,-567.52"/>
+<path fill="none" stroke="black" d="M454.6,-734.37C489.7,-704.83 538.15,-653.39 507.5,-614.25 496.61,-600.34 468.19,-589.2 434.42,-580.47"/>
+<polygon fill="black" stroke="black" points="435.3,-577.08 424.75,-578.08 433.62,-583.88 435.3,-577.08"/>
 </g>
 <!-- nohooks&#45;&gt;link -->
 <g id="edge11" class="edge">

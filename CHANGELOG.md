@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.5 - 2026-09-22
+
+- The command at `~/.local/bin/cairn` is a shim, `bin/cairn.sh`, that runs the newest installed Cairn at run time: `$CAIRN_ROOT` when set, else the newest Claude Code or Codex plugin cache entry or the checkout at `~/.local/share/cairn`, by version. A symlink into a versioned plugin cache was stranded by every marketplace update. `/install-cairn` installs the shim, replacing only a symlink an earlier Cairn made or an older shim; the hooks print the one command that installs it when they find a stale `cairn`, and still write nothing.
+
 ## 2.1.4 - 2026-09-22
 
 - While a scope breach's own escalation is unanswered, wake says Waiting and prints it, instead of naming `scope PATH`. Scope outranks Waiting so that an unrelated escalation cannot hide captured work, but when the open escalation is about that breach the developer's answer is the next step; naming scope read as "act now" and produced a second escalation.

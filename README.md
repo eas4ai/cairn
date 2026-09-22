@@ -300,12 +300,15 @@ That is the install. Claude Code and Codex register the three hooks from
 the plugin's `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);
 Muse reads two hook entries, SessionStart and Stop, from the plugin's
 `.muse-plugin/plugin.json`. Ask your agent to use the `install-cairn`
-skill once: it links `$HOME/.local/bin/cairn` to the plugin's
-`bin/cairn.mjs` when nothing is there yet. Inside a Cairn project, the
-session-start hook prints the wake verdict; outside one, it names
-`/new-project` or `/existing-project`. No hook creates the link, refuses a
-stop, counts anything, or writes a record; a hook only prints, and a
-harness without hooks relies on the working agreement in `AGENTS.md`.
+skill once: it installs a small shim at `$HOME/.local/bin/cairn` that
+runs the newest installed Cairn, so a plugin update never strands the
+command. Inside a Cairn project, the session-start hook prints the wake
+verdict; outside one, it names `/new-project` or `/existing-project`. When
+the `cairn` it finds runs another version than the plugin, it uses the
+plugin's copy and prints the one command that installs the shim. No hook
+creates the link, refuses a stop, counts anything, or writes a record; a
+hook only prints, and a harness without hooks relies on the working
+agreement in `AGENTS.md`.
 Make sure `$HOME/.local/bin` is on your `PATH`:
 
 ```sh
@@ -356,14 +359,18 @@ Cairn itself. Run this in the directory where you keep the checkout:
 git clone https://github.com/eas4ai/cairn.git
 ```
 
-Then, once per machine, link the command:
+Then, once per machine, install the command shim:
 
 ```sh
 mkdir -p "$HOME/.local/bin"
-[ -e "$HOME/.local/bin/cairn" ] || ln -s "$(pwd)/cairn/bin/cairn.mjs" "$HOME/.local/bin/cairn"
+[ -e "$HOME/.local/bin/cairn" ] || cp "$(pwd)/cairn/bin/cairn.sh" "$HOME/.local/bin/cairn"
+chmod +x "$HOME/.local/bin/cairn"
 ```
 
-This never replaces an existing file at that path. Put `$HOME/.local/bin`
+The shim runs the newest Cairn it finds: `$CAIRN_ROOT` when set, else the
+newest Claude Code or Codex plugin cache entry or the checkout at
+`$HOME/.local/share/cairn`, by version. This never replaces an existing
+file at that path. Put `$HOME/.local/bin`
 on your `PATH` as above and check `cairn --help`. Then register the hooks
 under `hooks/` with your agent's own hook configuration, once, using the
 event names in `hooks/hooks.json`. They are optional: the working

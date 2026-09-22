@@ -32,10 +32,12 @@ Install the four skills with the skills CLI (`npx skills add eas4ai/cairn --skil
 Instruction-only: the working agreement in AGENTS.md is the enforcement and the agent runs `cairn wake` itself. Continue at `link`.
 
 ### `link`
-Link the command once, only when nothing is there, and never replace an existing file. No remote is selected here.
+Install the command shim, `bin/cairn.sh`, at `~/.local/bin/cairn`. It runs the newest installed Cairn at run time (`$CAIRN_ROOT` when set, else the newest Claude Code or Codex plugin cache entry or the checkout at `~/.local/share/cairn`, by version), so a plugin update never strands it. Write it when nothing is there, or when what is there is a symlink to a `bin/cairn.mjs` or an earlier copy of the shim; never replace any other file. No remote is selected here.
 
     mkdir -p ~/.local/bin
-    [ -e ~/.local/bin/cairn ] || ln -s "<plugin root>/bin/cairn.mjs" ~/.local/bin/cairn
+    if [ ! -e ~/.local/bin/cairn ] || [ -L ~/.local/bin/cairn ] || grep -q 'cairn command shim' ~/.local/bin/cairn; then
+      rm -f ~/.local/bin/cairn && cp "<plugin root>/bin/cairn.sh" ~/.local/bin/cairn && chmod +x ~/.local/bin/cairn
+    fi
 
 ### `path`
 Is `~/.local/bin` on PATH? `command -v cairn` answers. Yes: `help`. No: `addpath`.

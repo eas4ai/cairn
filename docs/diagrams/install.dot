@@ -13,7 +13,7 @@ digraph install {
   muse [label="Muse:\ninstall the Cairn plugin\n(hooks registered by the plugin)"];
   other [label="Any other agent:\ninstall the skills, then /install-cairn;\nregister hooks where supported"];
   nohooks [label="No hook system: instruction-only;\nthe working agreement is the enforcement"];
-  link [label="The plugin or /install-cairn links\n~/.local/bin/cairn to bin/cairn.mjs, once\n(no project remote is selected here)"];
+  link [label="/install-cairn installs the shim bin/cairn.sh\nat ~/.local/bin/cairn, once; it runs the newest installed Cairn\n(no project remote is selected here)"];
   path [shape=diamond, label="~/.local/bin on PATH?"];
   addpath [label="Tell the developer to add it;\nno hook edits the shell"];
   help [shape=diamond, label="cairn --help prints\ncommands and exit codes?"];

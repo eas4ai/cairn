@@ -11,7 +11,7 @@ else run="node $here/bin/cairn.mjs"; fi
 want=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$here/package.json" | head -n 1)
 have=$($run --version 2>/dev/null | head -n 1)
 if [ -n "$want" ] && [ "$have" != "$want" ]; then
-  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Fix the link: ln -sfn %s/bin/cairn.mjs ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
+  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/cairn.sh ~/.local/bin/cairn && chmod +x ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
   run="node $here/bin/cairn.mjs"
 fi
 out=$($run wake 2>&1); code=$?

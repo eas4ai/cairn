@@ -14,7 +14,7 @@ fi
 want=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$here/package.json" | head -n 1)
 have=$($run --version 2>/dev/null | head -n 1)
 if [ -n "$want" ] && [ "$have" != "$want" ]; then
-  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy (relink ~/.local/bin/cairn to %s/bin/cairn.mjs)\n' "${have:-an older version}" "$want" "$here"
+  printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Fix the link: ln -sfn %s/bin/cairn.mjs ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
   run="node $here/bin/cairn.mjs"
 fi
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then

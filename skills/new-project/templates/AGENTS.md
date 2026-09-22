@@ -20,6 +20,7 @@ The move for each action wake can name:
 - `scope PATH`: restore the path to its allowed base and run `cairn scope <breach> restore`, or ask the developer to keep it with `cairn escalate` and, after `ok`, `cairn scope <breach> keep`.
 - `fix ITEM`: write a test that fails, make it pass, commit, check, then `cairn fix <item>`.
 - `record PATH` and `commit PATH`: put the change under a lease with `cairn begin`, commit it, or revert it.
+- `docs/decisions.jsonl` is appended by `cairn decide`, `cairn answer`, `cairn realize` and `cairn decisions --read` and is not committed by them: commit it with your next commit (`git add -f` when `docs/` is ignored). A declaration does not go through while a path it would cover has uncommitted changes: commit that path or lease it with `cairn begin <action> <target> --touch <path>` first.
 - `declare REQ`: `cairn declare` a mechanism naming REQ; show it fail on a violating example before trusting it.
 - `run REQ`: `cairn check REQ`.
 - `implement REQ`: read the latest receipt and its output, change the code under a lease, commit, `cairn end`, `cairn check REQ`.

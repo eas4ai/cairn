@@ -45,6 +45,17 @@ test('--help exits 0 and lists commands; an unknown command exits 1 with one cai
   const bad = await run(['bogus'], repo.dir);
   assert.equal(bad.code, 1); assert.match(bad.err, /^cairn: unknown command bogus/); assert.equal(bad.err.split('\n').length, 2);
 });
+test('<command> --help prints that command\'s usage line and runs nothing, for push above all', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  // No .cairn/settings.json here: a push that ran would refuse on settings with exit 1.
+  const push = await run(['push', '--help'], repo.dir);
+  assert.equal(push.code, 0); assert.equal(push.out, 'usage: cairn push\n'); assert.equal(push.err, '');
+  const short = await run(['answer', '-h'], repo.dir);
+  assert.equal(short.code, 0); assert.match(short.out, /^usage: cairn answer /); assert.equal(short.err, '');
+  // A later --help is the command's own input: backlog records it as text instead of printing help.
+  const later = await run(['backlog', 'push', '--help', 'pushes'], repo.dir);
+  assert.notEqual(later.out, 'usage: cairn backlog <text>\n');
+});
 // Fix round 1 item 3 (Minor, review-1.md finding 3): this used to compare against cli.mjs's own
 // placeholder "<authority>" line, which disagreed with what `cairn wake` prints for the identical
 // missing-refs, no-configured-remote condition and was not itself a runnable command.

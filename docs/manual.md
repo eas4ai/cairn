@@ -1006,7 +1006,7 @@ prints one with its references resolved.
 | `accept <slug> --file <path>` | Record the adversary's verdict on the post-report delta. |
 | `push` | Push the branch and both durable refs to the authority remote. |
 | `wake` | Print the current verdict. Writes nothing. |
-| `--help` | Print the command list. |
+| `--help` | Print the command list. `cairn <command> --help` (or `-h`) prints that command's usage line and runs nothing. |
 | `--version` | Print the version; the first thing to compare with this manual when behavior differs. |
 
 ## Record reference

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.6 - 2026-09-22
+
+- `cairn <command> --help` (or `-h`) prints that command's usage line and runs nothing. Before, the first argument was passed to the command, so `cairn push --help` pushed.
+
 ## 2.1.5 - 2026-09-22
 
 - `cairn end` handles a `--touch` path that is a directory: the outcome compares the listing of files below it, before and after, instead of failing to hash the directory and leaving the touch unwritten.

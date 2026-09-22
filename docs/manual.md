@@ -849,8 +849,8 @@ criteria text, the state or the settings defaults.
 ## Settings
 
 `cairn init` writes `.cairn/settings.json`. Every key is listed here with
-its default. The file is protected: after you change it, run
-tell the agent; it states the change and, on your ok, runs
+its default. The file is protected: after you change it, tell the agent.
+It states the change and, on your ok, runs
 `cairn authorize --quote "<your words>"` so the new settings digest is
 bound to the loop. Until then wake names the repair.
 

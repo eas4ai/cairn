@@ -578,9 +578,9 @@ asked its questions at the controlling terminal. Protection begins at the
 settings digest in that record. Initialization makes no evaluator call.
 
 If settings exist but the refs do not, initialization adopts them only with
-`--adopt <digest>` naming the digest the developer confirmed in conversation. If refs exist but settings do not, it
-refuses and names repair. Re-running initialization against the same identity is
-idempotent.
+`--adopt <digest>` naming the digest the developer confirmed in conversation.
+If refs exist but settings do not, it refuses and names repair. Re-running
+initialization against the same identity is idempotent.
 
 ### New project
 

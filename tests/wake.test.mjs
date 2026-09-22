@@ -119,6 +119,7 @@ test('wake writes nothing: the Git directory and worktree hash the same before a
 // play (the exact state that, before item 1's fix, added three loose objects per call).
 test('wake adds no loose Git object when checking currency against a dirty declared input', async () => {
   const r = await loopRepo();
+  await git(['config', 'gc.auto', '0'], { cwd: r.cwd });   // an automatic gc mid-test packs objects and breaks the count
   await r.passReq('DEMO-001');
   await r.write('src/demo.mjs', 'console.log("hello");\n// dirty\n');
   const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd: r.cwd })).stdout.trim();

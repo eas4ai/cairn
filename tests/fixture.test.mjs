@@ -199,6 +199,9 @@ export async function work(p) {
   p.cairn(["reply", "fixture", "No caller in src passes NaN today."]);
   await p.wakeIs("Waiting");
   await p.developer.answer("fixture", "ok", "ok");
+  // The kernel appends the ADR line and commits nothing; wake names the commit until the agent makes it.
+  await p.wakeIs("Resolvable", "commit", "docs/decisions.jsonl");
+  p.commit("Record the answer");
   await p.wakeIs("Resolvable", "review", "fixture");
 
   // Scope breach: an undeclared, non-outside file observed by the next state-changing command.
@@ -306,6 +309,7 @@ export async function finish(p) {
   // after every protected-path edit this commitment still intends to make, not before.
   const decideOut = p.cairn(["decide", "--consequential", "--title", "Export add as default too", "--rests-on", "callers import default", "--wrong-if", "no caller does", "--body", "Add a default export of add."]);
   const decisionId = /^decide ([0-9A-Z]{26})/.exec(decideOut.stdout)[1];
+  p.commit("Record the decision");
 
   const resolveOut = p.cairn(["resolve", "fixture", "1", "The glossary now says any finite numbers; the requirement text is unchanged."]);
   const resolutionSha = /^cairn: resolution fixture ([0-9a-f]{40})/.exec(resolveOut.stdout)[1];
@@ -325,6 +329,7 @@ export async function finish(p) {
   p.write("src/add.mjs", readFileSync(join(p.dir, "src/add.mjs"), "utf8") + "export default add;\n");
   p.commit("Add the default export"); p.cairn(["end"]); p.cairn(["check", "REQ-001"]);
   p.cairn(["realize", decisionId, "--subject", "default export added"]);
+  p.commit("Record the realization");
   const adr = readFileSync(join(p.dir, "docs/decisions.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
   // Deviation from the plan text: the ADR already carries the nan-policy escalation's "ok"
   // answer's `answered` line (written before `cairn decide` ran, in work()), so the full sequence
@@ -395,6 +400,7 @@ test("carried item (b): a dangling answer is completed by the next cairn answer;
   // Running the command again now finds nothing dangling and refuses the ordinary way (already
   // answered), not the dangling-completion way a second time.
   await assert.rejects(p.developer.answer("fixture", "ok", "ok"), /no unanswered escalation for fixture/);
+  p.commit("Record the completed answer");
   await p.wakeIs("Resolvable", "implement", "REQ-001");
 });
 

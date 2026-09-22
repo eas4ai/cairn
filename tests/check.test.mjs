@@ -212,6 +212,15 @@ test('attempts with since ignores receipts before the start record', () => {
   assert.equal(attempts(log, 'DEMO-001', { since: 'missing' }), 0);
 });
 
+test('attempts ignores a receipt in which a sibling requirement of the commitment also failed', () => {
+  const receipt = (sha, digest, results) => ({ sha, kind: 'receipt', payload: { status: 'ran', product_digest: digest, results } });
+  const both = (d) => [{ requirement: 'DEMO-001', result: 'fail' }, { requirement: 'DEMO-002', result: 'fail' }];
+  const alone = (d) => [{ requirement: 'DEMO-001', result: 'fail' }, { requirement: 'DEMO-002', result: 'pass' }];
+  const log = [receipt('r1', 'sha256:a', both()), receipt('r2', 'sha256:b', both()), receipt('r3', 'sha256:c', alone()), receipt('r4', 'sha256:d', [{ requirement: 'DEMO-001', result: 'fail' }, { requirement: 'OTHER-001', result: 'fail' }])];
+  assert.equal(attempts(log, 'DEMO-001'), 4);
+  assert.equal(attempts(log, 'DEMO-001', { siblings: ['DEMO-001', 'DEMO-002'] }), 2, 'the two runs where DEMO-002 also failed are not attempts; OTHER-001 is not a sibling');
+});
+
 test('attempts counts distinct failing product digests since the last pass', async () => {
   const repo = await declared();
   const count = async () => attempts(await readLog(repo.cwd), 'DEMO-001');

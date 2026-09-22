@@ -146,6 +146,9 @@ test('a refused write counts toward the same-target bound: the fourth refusal wr
   const esc = await cycle();
   assert.equal(esc.length, 1);
   assert.match(esc[0].payload.question, /declare \.cairn\/mechanisms\/demo-001\.json was refused 4 times: it would create a record violation \(src\/util\.mjs/);
+  // the open Waiting does not hide the violation: the same write is still refused, and no second escalation is written
+  await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /record violation/.test(e.message));
+  assert.equal((await cycle()).length, 1, 'one escalation per cycle');
 });
 
 // Fix round 1, item 3 and 12: the liveness invariant now walks the real precedence predicates

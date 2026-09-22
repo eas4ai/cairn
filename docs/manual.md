@@ -398,11 +398,11 @@ Actions are attempted in this order:
 | scope PATH | each durable breach is developer-kept or restored to its allowed base; later declaration never clears it |
 | fix ITEM | fix snapshot changes no protected contract; requirement has a current pass |
 | record PATH | action lease covers the path, or it is clean |
-| commit PATH | path is clean, or the action lease covers it |
+| commit PATH | path is clean, or the action lease covers it; docs/decisions.jsonl is named here whenever it has uncommitted lines |
 | declare REQ | mechanism definition names REQ; no prior undeclared delta was legalized |
 | run REQ | current receipt matches input snapshot, definition, text and declared execution identity |
 | implement REQ | current pass plus review metadata bound to current definition and frozen text, with fail receipt |
-| escalate REQ | after three failing attempts, an escalation exists before a fourth |
+| escalate REQ | after three failing attempts, an escalation exists before a fourth; a run where a sibling requirement also failed is not an attempt |
 | review mechanism REQ | review metadata binds definition and text to a fail receipt; product inputs unchanged |
 | capture ITEM | outside record or escalation names it |
 | review SLUG | current workspace snapshot; every fixed question answered for each target |

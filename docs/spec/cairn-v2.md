@@ -888,11 +888,11 @@ predicate. The table is normative.
 | `scope PATH` | every scope-breach record for the path has a developer-approved keep disposition or a restore snapshot equal to its allowed base |
 | `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract; its requirement has a current pass at or after it |
 | `record PATH` | the action lease covers the path through its target's declared inputs, or the path is clean |
-| `commit PATH` | the path is clean, or the action lease covers it |
+| `commit PATH` | the path is clean, or the action lease covers it; `docs/decisions.jsonl` is named here whenever it has uncommitted lines (added 2026-09-22) |
 | `declare REQ` | a mechanism definition names the requirement and no pre-existing undeclared delta was legalized |
 | `run REQ` | a current receipt carries a result for the requirement |
 | `implement REQ` | a current receipt says pass and review metadata binds the requirement to the current definition and text digests with a fail receipt |
-| `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth |
+| `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth; a receipt where another requirement of the commitment also failed is not an attempt |
 | `review mechanism REQ` | review metadata binds the requirement to the current definition and text digests with a fail receipt |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `review SLUG` | a review names the current workspace snapshot and answers every fixed question for every target |
@@ -1107,7 +1107,10 @@ or an escalation. A defect against that commitment's requirement is worked
 under it and blocks Done; it is not deferred.
 
 After three distinct failing attempts without a pass, a fourth implementation
-attempt requires an escalation first. Attempts are counted from the open
+attempt requires an escalation first. A fail receipt in which another
+requirement of the same commitment also failed is not an attempt at this one
+(added 2026-09-22: a requirement whose gate includes other requirements'
+falsifiers cannot pass until they do). Attempts are counted from the open
 commitment's start record; the fail receipts that bind mechanisms during the
 spec phase precede it and are not attempts (revised 2026-09-22; previously
 every fail receipt in the log counted). Attempts are keyed on product digest,

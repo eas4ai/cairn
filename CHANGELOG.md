@@ -10,6 +10,9 @@ earlier records mean.
 ## 2.1.3 - 2026-09-22
 
 - A refused kernel write no longer escalates on its own. It names the violation it would create and its cause, tells the agent to resolve that and run the command again, and counts as one administrative occurrence toward the cycle bounds; the fourth refusal of the same write, or the twenty-eighth administrative transition, writes the one cycle escalation, which now says what was refused and why. Before, every refusal wrote a "the loop is cycling" escalation and cost the developer an answer (spec section 5, "Waiting and liveness", revised on the developer's ruling).
+- The liveness guard skips Waiting when it looks for the first violation a kernel write would create. An open cycle escalation used to outrank and hide a record violation, so the same refused declare went through once the escalation existed.
+- Wake names `commit docs/decisions.jsonl` whenever the decisions file has uncommitted lines, including under a gitignored `docs/`; the kernel appends it and never committed it, and nothing said so.
+- A fail receipt in which another requirement of the same commitment also failed is not an attempt: a requirement whose gate includes its siblings' falsifiers no longer burns three attempts and an escalation while they are being fixed (spec section 5, "Deferral and attempts").
 - The hooks print the exact `ln -sfn` command that fixes a stale `~/.local/bin/cairn` link.
 - The working agreement says that `docs/decisions.jsonl` is appended but not committed by the kernel, so the agent commits it with its next commit, and that a path must be committed or leased before a declaration covers it.
 

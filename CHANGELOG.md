@@ -7,6 +7,16 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.0 - 2026-09-21
+
+The developer is never asked to run a command.
+
+- The agent asks in conversation and records the answer. Escalations, decision reads and authorizations are answered in the developer's own words; the agent quotes them: `cairn answer <slug> ok|instead|ask --quote "<words>"`, `cairn decisions --read <id> --quote "<words>"`, `cairn authorize --quote "<words>"`. No choice widget: a sentence and a wait is the prompt.
+- Attested evidence replaces the terminal confirmation. With `signing_key: null`, a developer-only record holds the quoted words, the harness name (`claude_code`, `codex`, `muse` or `none`) and the Git author; Cairn says "evidence, not authentication" wherever it reports it. The kernel never opens a terminal. Records written by 2.0.x with `unsigned-local` evidence still read.
+- `cairn authorize instead|ask --quote "<words>"` writes a `direction` record, a new kind that keeps the developer's change request or question in the log and binds nothing.
+- `cairn init` takes its former questions as flags: `--remote <name>` or `--local-only`, `--signing-key <path>` or `--attested`, `--adopt <digest>` for settings that exist without refs, and `--quote`. It refuses, naming the flag, when an answer is missing.
+- Spec revision 6, the working-agreement template, the three skills, the manual, the README and the diagrams say the same thing.
+
 ## 2.0.2 - 2026-09-20
 
 Documentation; no kernel change.

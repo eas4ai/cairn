@@ -14,7 +14,7 @@ digraph existing_project {
   finish [shape=oval, label="Finish current commitment;\ncapture request as an item"];
   supersede [label="cairn supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
   pending [label="Pending successor: resume the transition;\nthe later start points back to the superseded record"];
-  init [label="cairn init; developer confirms settings,\nauthority remote or local-only, and auth mode"];
+  init [label="Ask the developer: authority remote or local-only,\nsigned or attested; cairn init with the answers as flags"];
   hasspec [shape=diamond, label="docs/spec/overview.md exists?"];
   readspec [label="Path B: read glossary, keystone, domains,\nroadmap, decisions and items first"];
   recon [label="Recon before questions:\nmanifests, entry points, data, tests, CI, scripts,\nnon-spec docs and recent history"];

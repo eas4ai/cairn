@@ -16,7 +16,7 @@ Does source code or `docs/spec/overview.md` exist here? A README, a license and 
 Stop and switch to `/existing-project`.
 
 ### `init`
-Initialize Git if there is none (`git init -b main`). Run `cairn init`: the developer confirms settings, the authority remote or explicit local-only operation, and signed or unsigned-local developer authentication; it writes the init record and the ref roots. Rerunning it with the same answers is idempotent.
+Initialize Git if there is none (`git init -b main`). Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only, and whether decisions are signed with a key or attested in their own words. Then run `cairn init --remote <name>|--local-only --signing-key <path>|--attested --quote "<their words>"`; it writes the init record and the ref roots. The command asks nothing itself. Rerunning it is idempotent.
 
 ### `ask`
 One open question, verbatim: "What is the software for?"
@@ -81,7 +81,7 @@ For this commitment only: `cairn declare <name> --file <path>`, reading the mech
 Copy `templates/AGENTS.md` from this skill to `AGENTS.md` for developer authorization. Do not edit it after authorization.
 
 ### `authorize`
-The developer runs `cairn authorize`: one record binding the final spec, agreement and settings digests. The agent never runs it.
+State what would be bound: the specification, the working agreement and settings, and what changed in them. Ask for ok, changes or a question, and wait. On ok run `cairn authorize --quote "<their words>"`: one record binding the final spec, agreement and settings digests. On changes or a question run `cairn authorize instead|ask --quote "<their words>"`, act on it, and ask again.
 
 ### `startintent`
 Run `cairn start <slug>`. It verifies the authorization, writes the command intent, and commits the prepared contract, agreement and mechanisms.

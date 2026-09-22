@@ -17,7 +17,7 @@ digraph spec_phase {
   commitment [label="Write roadmap section: Agreed requirements, delivery, done-when;\nmove Current: in the recoverable start transaction"];
   declare [label="cairn declare for this commitment only;\neach mechanism has a failing violating example"];
   agreement [label="Prepare AGENTS.md from the template\nfor developer authorization"];
-  authorize [label="Developer runs cairn authorize:\none record binding the final spec,\nagreement and settings digests"];
+  authorize [label="State what would be bound and ask; on ok\ncairn authorize --quote: one record binding the final spec,\nagreement and settings digests\n(changes or a question: authorize instead | ask, binds nothing)"];
   startintent [label="cairn start: verify authorization and write command intent;\ncommit the prepared contract, agreement and mechanisms"];
   startrec [label="Finish the start transaction: workspace snapshot plus frozen\nset and digests; include from_superseded when resuming;\ninstall exact refspecs when authority remote is configured"];
   done [shape=box, peripheries=2, label="Done: wake names the first work-loop action;\nConsequential decisions wait in the queue"];

@@ -8,7 +8,7 @@ digraph new_project {
   start [shape=oval, label="Start: /new-project"];
   exists [shape=diamond, label="Source code or docs/spec/overview.md exists?\n(README, license and Git do not count)"];
   switch [shape=oval, label="Switch to /existing-project"];
-  init [label="Initialize Git if needed; cairn init;\ndeveloper confirms settings, authority remote or local-only,\nand signed or unsigned-local developer authentication"];
+  init [label="Initialize Git if needed; ask the developer:\nauthority remote or local-only, signed or attested;\ncairn init with the answers as flags"];
   ask [label="One open question:\nwhat is the software for?"];
   restate [label="Gate 1: restate in own words;\ndeveloper corrects"];
   keystone [label="Write docs/spec/overview.md:\nwhat it is, its problem, what it is not, spec map"];

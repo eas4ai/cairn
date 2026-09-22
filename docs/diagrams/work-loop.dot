@@ -9,7 +9,7 @@ digraph work_loop {
   verdict [shape=diamond, label="Verdict?"];
 
   waiting [label="Waiting: print the escalation's five fields verbatim;\nthe agent adds nothing and stops\n(developer: absent and a floor or veto escalation: same print, exit 4)"];
-  answer [label="Developer runs cairn answer\nok | instead | ask; signed when a key exists,\nexplicit unsigned-local evidence otherwise"];
+  answer [label="The agent asks the developer in conversation and records the words:\ncairn answer ok | instead | ask --quote;\nsigned when a key exists, attested otherwise"];
   reply [label="reply after ask:\na reply record names the escalation"];
 
   stop [shape=box, peripheries=2, label="Done: a done record exists and nothing waits;\nrender unread queue and stop\n(backlog waiting: wake names promote)"];

@@ -106,10 +106,11 @@ answers. On the in-tree benchmark they agreed on every draft compared.
    }
    ```
 
-3. Bind the changed settings, since the file is protected:
+3. Tell the agent. The file is protected, so the agent states the change
+   and, on your ok, binds it:
 
    ```sh
-   cairn authorize
+   cairn authorize --quote "ok, turn jev on"
    ```
 
 That is all. From the next Consequential decision on, `cairn measure`
@@ -138,7 +139,7 @@ Then one of two commands, with the same draft flags:
 | The agent runs | When | What it records |
 |---|---|---|
 | `cairn decide --consequential ...` | the outcome is `composite`, whatever the suggestion says | a decision line that names the measurement; the work continues |
-| `cairn escalate --consequential ...` | the floor or the veto caught the draft, or the agent chooses to ask you anyway | an escalation that names the measurement; the work waits for `cairn answer` |
+| `cairn escalate --consequential ...` | the floor or the veto caught the draft, or the agent chooses to ask you anyway | an escalation that names the measurement; the work waits for your answer |
 
 Both refuse a draft that was not measured, or was changed after it was
 measured: `cairn: no measurement for this exact draft; run cairn measure
@@ -223,7 +224,7 @@ flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
   waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
-  answer["Developer runs cairn answer: ok, instead, or ask, signed when a key exists, explicit unsigned-local evidence otherwise"]
+  answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
   act["Do the named action until its predicate holds, actions are listed in precedence order"]
@@ -395,18 +396,18 @@ For a project already under Cairn, once the loop reports Done:
 > /next-feature Specify [the waiting item or the feature] as the next
 > commitment.
 
-Each of these skills runs `cairn init` the first time it is needed: it
-asks you to confirm one authority remote, or explicit local-only
-operation, and to choose a signing key or accept unsigned-local evidence
-as the record of your decisions. Nothing else in Cairn asks for that
-setup.
+Each of these skills runs `cairn init` the first time it is needed. Before
+it does, the agent asks you two things in conversation: which Git remote
+holds the records, or explicit local-only operation, and whether your
+decisions are signed with a key or attested in your own words. Nothing else
+in Cairn asks for that setup, and you never type a command yourself.
 
 The agent should explain requirements in terms you understand and propose
 observable failures that would show they are not met. Cairn calls one of
 these a **falsifier**. "An empty name is accepted" is a concrete example.
-You confirm the behavior and its falsifier; the agent writes the files and
-runs `cairn authorize` only after you do, since that command is yours to
-run.
+You confirm the behavior and its falsifier; the agent writes the files,
+tells you what would be bound, and runs `cairn authorize` only after you
+say ok, quoting your words in the record.
 
 Once the agreement is recorded, ask the agent to continue under Cairn. It
 starts with `cairn wake` from your project's repository root.
@@ -422,8 +423,8 @@ You do not need to approve every implementation detail. Pay attention to:
 - **The agreement.** Does it describe the behavior you want? Does the
   proposed check expose a real failure of that behavior?
 - **Escalations.** Is the choice clear, and do you understand what your
-  answer authorizes? `cairn answer <slug> ask '<question>'` keeps the
-  decision open.
+  answer authorizes? Asking a question keeps the decision open; the
+  agent records it as an `ask` answer.
 - **The decision queue.** Some consequential decisions are recorded for
   your review while the agent continues. These are different from
   escalations: work does not wait for you to read them.

@@ -34,7 +34,7 @@ Run `cairn supersede <successor-slug> --quote "<the developer's words>"`. It wri
 A pending successor: resume the transition. Everything below prepares the successor; its later start points back to the superseded record. Continue at `readspec`.
 
 ### `init`
-Run `cairn init`; the developer confirms settings, the authority remote or local-only, and the developer-authentication mode. Settings without refs are adopted only after the developer confirms their digest; refs without settings refuse and name the repair. Then `hasspec`.
+Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only, and whether decisions are signed with a key or attested in their own words. Then run `cairn init --remote <name>|--local-only --signing-key <path>|--attested --quote "<their words>"`. Settings that exist without refs are adopted only with `--adopt <digest>` after the developer has confirmed that digest with you; refs without settings refuse and name the repair. Then `hasspec`.
 
 ### `hasspec`
 Does `docs/spec/overview.md` exist? Yes, Path B: `readspec`. No, Path A: `recon`.
@@ -126,7 +126,7 @@ For this commitment only: `cairn declare <name> --file <path>`, reading the mech
 Copy `templates/AGENTS.md` from this skill to `AGENTS.md` for developer authorization. Do not edit it after authorization.
 
 ### `authorize`
-The developer runs `cairn authorize`: one record binding the final spec, agreement and settings digests. The agent never runs it.
+State what would be bound: the specification, the working agreement and settings, and what changed in them. Ask for ok, changes or a question, and wait. On ok run `cairn authorize --quote "<their words>"`: one record binding the final spec, agreement and settings digests. On changes or a question run `cairn authorize instead|ask --quote "<their words>"`, act on it, and ask again.
 
 ### `startintent`
 Run `cairn start <slug>`. It verifies the authorization, writes the command intent, and commits the prepared contract, agreement and mechanisms.

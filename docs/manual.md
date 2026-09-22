@@ -60,11 +60,11 @@ currently does is marked **Observed**. It becomes an agreement about what
 the code should do only after you confirm it.
 
 Each of these skills runs `cairn init` the first time your project needs
-it. It asks you three things: whether Cairn's durable records should travel
-to a Git remote (naming one, or explicit local-only operation), whether to
-verify your decisions with a signing key or record them as unsigned-local
-evidence, and then it confirms that choice once. You do this once per
-project, not once per commitment.
+it. Before that the agent asks you two things in conversation: whether
+Cairn's durable records should travel to a Git remote (naming one, or
+explicit local-only operation), and whether to verify your decisions with
+a signing key or record them as attested, in your own words. You answer
+once per project, not once per commitment, and you never type a command.
 
 Expect the agent to propose the first **commitment**: one selected piece of
 work with a defined result. A commitment is not a Git commit or a promise
@@ -90,7 +90,7 @@ flowchart TB
   start(["Start: /new-project"])
   exists{"Source code or docs/spec/overview.md exists? README, license and Git do not count"}
   switch(["Switch to /existing-project"])
-  init["Initialize Git if needed, cairn init, developer confirms settings, authority remote or local-only, and signed or unsigned-local developer authentication"]
+  init["Initialize Git if needed. Ask the developer: authority remote or local-only, signed or attested. cairn init with the answers as flags"]
   ask["One open question: what is the software for?"]
   restate["Gate 1: restate in own words, developer corrects"]
   keystone["Write docs/spec/overview.md: what it is, its problem, what it is not, spec map"]
@@ -132,7 +132,7 @@ flowchart TB
   finish(["Finish current commitment, capture request as an item"])
   supersede["cairn supersede SUCCESSOR: close old range with decision, transition id and slug, carry open obligations, do not name a future start or move Current:"]
   pending["Pending successor: resume the transition, the later start points back to the superseded record"]
-  init["cairn init, developer confirms settings, authority remote or local-only, and auth mode"]
+  init["Ask the developer: authority remote or local-only, signed or attested. cairn init with the answers as flags"]
   hasspec{"docs/spec/overview.md exists?"}
   readspec["Path B: read glossary, keystone, domains, roadmap, decisions and items first"]
   recon["Recon before questions: manifests, entry points, data, tests, CI, scripts, non-spec docs and recent history"]
@@ -266,7 +266,7 @@ flowchart TB
   commitment["Write roadmap section: Agreed requirements, delivery, done-when, move Current: in the recoverable start transaction"]
   declare["cairn declare for this commitment only, each mechanism has a failing violating example"]
   agreement["Prepare AGENTS.md from the template for developer authorization"]
-  authorize["Developer runs cairn authorize: one record binding the final spec, agreement and settings digests"]
+  authorize["State what would be bound and ask. On ok, cairn authorize --quote: one record binding the final spec, agreement and settings digests. Changes or a question: authorize instead or ask, binds nothing"]
   startintent["cairn start: verify authorization and write command intent, commit the prepared contract, agreement and mechanisms"]
   startrec["Finish the start transaction: workspace snapshot plus frozen set and digests, include from_superseded when resuming, install exact refspecs when authority remote is configured"]
   done[["Done: wake names the first work-loop action, Consequential decisions wait in the queue"]]
@@ -348,7 +348,7 @@ flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
   waiting["Waiting: print the escalation's five fields verbatim, the agent adds nothing and stops. Developer: absent and a floor or veto escalation: same print, exit 4"]
-  answer["Developer runs cairn answer: ok, instead, or ask, signed when a key exists, explicit unsigned-local evidence otherwise"]
+  answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
   act["Do the named action until its predicate holds, actions are listed in precedence order"]
@@ -460,26 +460,29 @@ something because the agent used confident language.
 
 ### Your three answer forms
 
+You answer in conversation, in your own words. The agent puts the five
+fields to you in plain prose, waits, and then records what you said.
 Assume Cairn named the escalation `app-002`:
 
-| Your choice | Command | What it authorizes |
+| You say | The agent records | What it authorizes |
 |---|---|---|
-| Accept the recommendation. | `cairn answer app-002 ok` | Proceed on the recommendation, within the agreed scope. |
-| Give a different instruction. | `cairn answer app-002 instead 'Keep drafts on this device only.'` | Use your stated direction; update the agreement if the scope changes. |
-| Ask for an explanation. | `cairn answer app-002 ask 'What would syncing change for users?'` | Explain the choice. It does not authorize implementation. |
+| "Ok, reject it." | `cairn answer app-002 ok --quote "Ok, reject it."` | Proceed on the recommendation, within the agreed scope. |
+| "Keep drafts on this device only." | `cairn answer app-002 instead --quote "Keep drafts on this device only."` | Use your stated direction; update the agreement if the scope changes. |
+| "What would syncing change for users?" | `cairn answer app-002 ask --quote "What would syncing change for users?"` | Explain the choice. It does not authorize implementation. |
 
 An `ask` answer keeps the question open. The agent records its explanation
 with `cairn reply app-002 "<explanation>"`, and the decision comes back to
-you. You can ask again; only `ok` or `instead` closes it. You can tell the
-agent your answer in conversation and ask it to record that exact answer;
-you do not have to operate the terminal yourself.
+you. You can ask again; only `ok` or `instead` closes it. You never type a
+command: the agent asks, you answer, the agent records.
 
-`cairn answer` and `cairn decisions --read` authenticate you. With a
-signing key configured, your answer must carry a valid `--signature`; the
-command prints the exact bytes to sign and the `--nonce` to repeat when it
-needs one. Without a signing key, the project uses unsigned-local mode: the
-command asks you to confirm at a real terminal and records your Git author
-identity as evidence, not as cryptographic proof it was you.
+`cairn answer`, `cairn decisions --read` and `cairn authorize` carry
+evidence of your decision. With a signing key configured, the record must
+carry a valid signature; the command prints the exact bytes to sign and the
+nonce to repeat when it needs one. Without a signing key, the project uses
+attested mode: the record holds your words as the agent quoted them, the
+name of the harness the conversation ran in, and your Git author identity.
+That is evidence, not cryptographic proof it was you, and Cairn says so
+wherever it reports the decision.
 
 ## Decisions that did not stop the work
 
@@ -502,8 +505,9 @@ cairn decisions --read <decision-id>
 ```
 
 The first command renders every line in `docs/decisions.jsonl`. Reading a
-decision is a developer-authenticated act, the same as answering an
-escalation; `--read` marks it seen, appending a `read` line rather than
+decision carries your evidence, the same as answering an escalation: after
+the agent has explained a decision and you have said you read it, the agent
+runs `--read` with your words quoted, appending a `read` line rather than
 deleting anything. You can ask:
 
 > Show me the queued decisions. For each, explain what was chosen, what it
@@ -846,8 +850,9 @@ criteria text, the state or the settings defaults.
 
 `cairn init` writes `.cairn/settings.json`. Every key is listed here with
 its default. The file is protected: after you change it, run
-`cairn authorize` again so the new settings digest is bound to the loop;
-until then wake names the repair.
+tell the agent; it states the change and, on your ok, runs
+`cairn authorize --quote "<your words>"` so the new settings digest is
+bound to the loop. Until then wake names the repair.
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -855,7 +860,7 @@ until then wake names the repair.
 | `authority_remote` | the remote `init` confirmed, or `null` | The one remote the records may be pushed to (`cairn push`). |
 | `outside`, `source`, `interfaces`, `data` | `[]` | Path globs that classify the tree: outside the agreement, source, public interfaces, data that cannot be regenerated. The floor and the scope check read them. |
 | `network_exclude` | `[]` | Path globs whose content never reaches any model, on top of the built-in credential patterns. |
-| `signing_key` | the key `init` chose, or `null` | The key that signs developer answers and authorizations; `null` means unsigned-local confirmation at a terminal. |
+| `signing_key` | the key `init` chose, or `null` | The key that signs developer answers and authorizations; `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. |
 | `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
 | `developer` | `"present"` | `"absent"` for an autonomous run: a floor or veto escalation prints as Waiting and wake exits 4 instead of waiting for an answer. |
 | `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `cairn brief` and by the review source of the evaluator. |
@@ -881,7 +886,7 @@ needs no account. To use TypeSafe's jev model instead:
    and the key never appears in an error message.
 2. In `.cairn/settings.json` set `"typesafeai": { "enabled": true, "model": "jev-1.13.0", ... }`,
    leaving the other keys at their defaults.
-3. Run `cairn authorize` to bind the changed settings.
+3. Tell the agent; on your ok it runs `cairn authorize --quote "<your words>"` to bind the changed settings.
 4. At the next Consequential decision the agent runs `cairn measure ...` and
    the call goes to `https://api.typesafe.ai/v1/systemone` with the closed
    state described above; the measurement record holds the five levels, the
@@ -959,9 +964,9 @@ prints one with its references resolved.
 |---|---|
 | `show <sha>` | Print one record, with the records and snapshots it references described. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
-| `init` | Create or adopt `.cairn/settings.json` and the two durable refs; the developer confirms the remote, the signing choice, and settings adoption. |
-| `authorize` | Bind the current digests of the specification, the working agreement, and settings in one developer-authenticated record. |
-| `decisions [--read <id>]` | Print the ADR file, or mark one decision read (developer-authenticated). |
+| `init --remote <name>\|--local-only --signing-key <path>\|--attested [--adopt <digest>] --quote <words>` | Create or adopt `.cairn/settings.json` and the two durable refs, with the developer's answers as flags; the command asks nothing itself. |
+| `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |
+| `decisions [--read <id> --quote <words>]` | Print the ADR file, or mark one decision read, quoting the developer. |
 | `recover <transaction>` | Finish or safely abandon an interrupted multi-record write. |
 | `begin <action> <target> [--touch <path>]...` | Claim the local action lease before changing a declared input; `--touch` provisionally declares a new path. |
 | `end [--abandon] [--lease <sha>]` | Release the action lease; `--lease` refuses a mismatched sha; `--abandon` releases without claiming touched paths. |
@@ -981,7 +986,7 @@ prints one with its references resolved.
 | `escalate [--consequential] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Raise a decision; without `--consequential`, a Blocking one (the agent stops). With `--consequential`, the Consequential draft's own measurement forced it here, or the agent chose to. |
 | `calibrate` | Report how many labelled, suggested-agent measurements exist and how many were wrong, against the fixed bound; tunes the composite, never gates it. |
 | `measure [--brief] [--harness <name>] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` \| `measure <slug> --file <path>` | Take one measurement of a Consequential draft before `decide` or `escalate`; `--brief` prints a launch block for the review source, `--file` completes it. |
-| `answer <slug> ok\|instead\|ask [<text>] [--escalation <sha>]` | The developer's answer to an escalation. |
+| `answer <slug> ok\|instead\|ask --quote <words> [--escalation <sha>]` | The developer's answer to an escalation, in their own words. |
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
 | `dispute --commitment <s> --record <sha> --n <n> --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with a specific finding or its resolution. |
 | `review <slug> --file <path>` | Record the builder's review. |
@@ -1006,6 +1011,7 @@ Cairn reads it back; the full field list is in
 |---|---|---|
 | `init` | Settings digest, authority remote or local-only, developer-auth mode. | Every project command. |
 | `authorization` | Spec, agreement, and settings digests; developer-auth evidence. | `start` and every protected write. |
+| `direction` | `instead` or `ask` on an authorization, the developer's words, harness, Git author. | Nothing; the log keeps it. |
 | `command-intent` / `command-abort` | A multi-record write's plan, or its verified rollback. | `wake` and `recover`, until finished. |
 | `start` | Slug, roadmap workspace snapshot, the frozen requirement set with text digests. | Every wake; opens the range. |
 | `receipt` | Mechanism and definition digest, input snapshot, per-requirement result and text digest, output digest. | Freshness and attempt counting. |
@@ -1015,7 +1021,7 @@ Cairn reads it back; the full field list is in
 | `resolution` | Source record sha, finding number, workspace snapshot, explanation. | Acceptance and Done. |
 | `acceptance` | Slug, report sha, workspace snapshot, accepted/rejected resolutions, new findings. | The next resolve, accept, and Done. |
 | `escalation` | Slug, the five fields, concern reference. | Every wake, until answered. |
-| `answer` | Escalation sha, `ok`/`instead`/`ask`, text, developer-auth evidence. | Wake, ADR, calibration. |
+| `answer` | Escalation sha, `ok`/`instead`/`ask`, the developer's words, developer-auth evidence. | Wake, ADR, calibration. |
 | `reply` | Escalation sha, text. | Wake, after `ask`. |
 | `read` | Decision id, developer-auth evidence. | Queue and ADR. |
 | `evaluation-intent` / `evaluation-call` / `measurement` | The evaluator's fixed request, the one attempted call, and the five scored dimensions, composite, veto and suggestion. | Escalation, decide, queue, calibration. |

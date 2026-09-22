@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.3 - 2026-09-22
+
+- A refused kernel write no longer escalates on its own. It names the violation it would create and its cause, tells the agent to resolve that and run the command again, and counts as one administrative occurrence toward the cycle bounds; the fourth refusal of the same write, or the twenty-eighth administrative transition, writes the one cycle escalation, which now says what was refused and why. Before, every refusal wrote a "the loop is cycling" escalation and cost the developer an answer (spec section 5, "Waiting and liveness", revised on the developer's ruling).
+- The hooks print the exact `ln -sfn` command that fixes a stale `~/.local/bin/cairn` link.
+- The working agreement says that `docs/decisions.jsonl` is appended but not committed by the kernel, so the agent commits it with its next commit, and that a path must be committed or leased before a declaration covers it.
+
 ## 2.1.2 - 2026-09-22
 
 - The existing-project skill migrates a Cairn 1.x project: on the developer's ok it removes the 1.x record directories (Git history keeps them), converts the specification in place until `cairn lint docs/spec` is clean without changing a requirement's words, keeps each 1.x mechanism's command for the declare step, and after `cairn init` files one item record per 1.x item. Spec section 3, the diagram and the manual say the same.

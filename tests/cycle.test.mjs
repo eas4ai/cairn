@@ -121,7 +121,7 @@ test('disposing a scope breach alone is not semantic progress', async () => {
 // bytes that fail this gate (both always canonicalize what they write), so exercising it needs a
 // direct byte injection; the fix round 1 item 3/12 test below drives the deeper, scratch-state
 // precedence check through the real functions instead.
-test('a kernel-managed write with corrupted or noncanonical bytes is refused with the cycle escalation', async () => {
+test('a kernel-managed write with corrupted or noncanonical bytes is refused, and the first refusal writes no escalation', async () => {
   const r = await loopRepo();
   const mechPath = '.cairn/mechanisms/demo-001.json';
   const good = await readFile(join(r.cwd, mechPath));
@@ -130,7 +130,22 @@ test('a kernel-managed write with corrupted or noncanonical bytes is refused wit
   const adr = await readFile(join(r.cwd, 'docs/decisions.jsonl')).catch(() => Buffer.alloc(0));
   await assert.rejects(guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"kind": "read"}\n')]), { action: 'decide' }), /would create a scope violation/);   // the space makes the line noncanonical
   await guardKernelWrite(r.cwd, 'docs/decisions.jsonl', Buffer.concat([adr, Buffer.from('{"id":"01HZZZZZZZZZZZZZZZZZZZZZZZ","kind":"read","of":"x","record":"y","ts":"2026-09-19T00:00:00Z"}\n')]), { action: 'decide' });
-  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 1);
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 0);
+});
+
+test('a refused write counts toward the same-target bound: the fourth refusal writes one cycle escalation naming the violation', async () => {
+  const r = await loopRepo();
+  await r.write('src/util.mjs', 'export const x = 1;\n');
+  const widened = { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] };
+  const cycle = async () => (await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle');
+  for (let i = 1; i <= 3; i++) {
+    await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /record violation \(src\/util\.mjs is a declared input/.test(e.message) && !/escalation written/.test(e.message));
+    assert.equal((await cycle()).length, 0, `refusal ${i} writes no escalation`);
+  }
+  await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /cycle escalation written/.test(e.message));
+  const esc = await cycle();
+  assert.equal(esc.length, 1);
+  assert.match(esc[0].payload.question, /declare \.cairn\/mechanisms\/demo-001\.json was refused 4 times: it would create a record violation \(src\/util\.mjs/);
 });
 
 // Fix round 1, item 3 and 12: the liveness invariant now walks the real precedence predicates
@@ -149,7 +164,7 @@ test('declare is refused when its new input would legalize a pre-existing undecl
     LivenessError,
   );
   const esc = (await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle');
-  assert.equal(esc.length, 1);
+  assert.equal(esc.length, 0, 'a first refusal writes no escalation');
   // the refused declare wrote nothing: the mechanism definition still has its original inputs
   const before = JSON.parse(await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8'));
   assert.deepEqual(before.definition.inputs, ['flags/DEMO-001', 'src/demo.mjs']);

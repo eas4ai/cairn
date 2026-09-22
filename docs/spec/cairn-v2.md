@@ -1026,8 +1026,14 @@ constants are in the kernel, not settings.
 
 Before committing a kernel-managed mutation, the kernel evaluates the
 post-state. If its specified bookkeeping alone would create a new Cairn
-violation of equal or higher precedence, it refuses the mutation and writes the
-cycle escalation instead. This is the liveness invariant. A synthetic fixture
+violation of equal or higher precedence, it refuses the mutation, names the
+violation and its cause, and counts the refusal as one administrative
+occurrence of that action class and target toward the cycle bounds above; the
+bounds, not the refusal, write the cycle escalation. This is the liveness
+invariant. Revised 2026-09-22: previously "it refuses the mutation and writes
+the cycle escalation instead", so one pre-existing untracked file cost the
+developer an answer per refusal while nothing had cycled; the developer ruled
+"ok" on the change. A synthetic fixture
 that repeats administrative actions without semantic progress is a required
 regression test.
 

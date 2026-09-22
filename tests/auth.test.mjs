@@ -119,10 +119,10 @@ test('attested: a missing or blank quote refuses with the exact --quote message'
   const { cwd } = await repoWith({});
   await assert.rejects(
     authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', nonce: 'n', env: {} }),
-    /^AuthError: cairn: read needs --quote <the developer's words>$/);
+    /^AuthError: cairn: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
   await assert.rejects(
     authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: '   ', nonce: 'n', env: {} }),
-    /^AuthError: cairn: read needs --quote <the developer's words>$/);
+    /^AuthError: cairn: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
 });
 
 test('verifyEvidence refuses attested evidence when a signing key is set', () => {

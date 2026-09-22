@@ -149,12 +149,9 @@ export function buildProject({ settings = SETTINGS } = {}) {
   return { dir, remote, git, cairn, wakeIs, kinds, developer, write, commit, outFile, readLog: () => readLog(dir), remove: (p) => rmSync(join(dir, p), { force: true }) };
 }
 
-// Deviation from the plan text: lib/cli.mjs registers only a top-level `cairn --help` (no
-// per-command `cairn <command> --help`; an unrecognized `--help` positional reaches the command's
-// own arg parser and is refused like any other bad invocation). assertFlags instead reads the
-// global help text once and checks each flag is a substring of that command's own usage line
-// (`usage()` in lib/cli.mjs lists one line per command), which is the closest real equivalent to
-// "verifies each against cairn <command> --help" the shipped CLI offers.
+// `cairn <command> --help` prints the same usage line `usage()` in lib/cli.mjs lists for the
+// command (since 2.1.6); assertFlags reads the global help text once and checks each flag is a
+// substring of that command's own line, which is that line without a spawn per command.
 export function assertFlags(cmd, flags) {
   const help = spawnSync(process.execPath, [KERNEL, "--help"], { encoding: "utf8" }).stdout;
   const name = cmd.split(" ")[0];

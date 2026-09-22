@@ -100,7 +100,7 @@ test('init with --signing-key records auth_mode signed', async () => {
 test('attested mode without a quote refuses', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(init(cwd, fresh({ quote: undefined })),
-    /^AuthError: cairn: init needs --quote <the developer's words>$/);
+    /^AuthError: cairn: init needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
   assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
 });
 

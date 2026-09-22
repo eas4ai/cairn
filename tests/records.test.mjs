@@ -121,7 +121,7 @@ test('the parser rejects subjects that are not kind and token', async (t) => {
   await assert.rejects(decodeRaw(repo, 'Release 2.0', body), /subject/);
 });
 
-import { updateRefCAS, CasError } from '../lib/gitx.mjs';
+import { updateRefCAS, CasError, catCommits, commitTree } from '../lib/gitx.mjs';
 import { appendRecord, readLog, range, LOG_REF } from '../lib/records.mjs';
 
 test('appendRecord chains empty commits on refs/cairn/log and readLog returns them oldest first', async (t) => {
@@ -132,6 +132,27 @@ test('appendRecord chains empty commits on refs/cairn/log and readLog returns th
   assert.deepEqual(log.map((r) => [r.sha, r.kind, r.parent]), [[s1, 'start', null], [s2, 'done', s1]]);
   assert.equal((await catCommit(repo.dir, s2)).tree, await emptyTree(repo.dir));
   assert.equal(await repo.git('rev-parse', 'refs/cairn/log'), s2);
+});
+test('readLog reads the whole log in one cat-file batch and caches it by head: a record appended by another process is seen on the next read, and a caller cannot mutate the cache', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const s1 = await appendRecord(repo.dir, 'start', 'hooks', START);
+  const first = await readLog(repo.dir);
+  assert.deepEqual(first.map((r) => r.sha), [s1]);
+  first.pop(); first.push({ sha: 'bogus' });
+  assert.deepEqual((await readLog(repo.dir)).map((r) => r.sha), [s1]);
+  // Another process appends (a raw commit chained on the log head, as appendRecord makes one).
+  const { subject, body, trailers } = encodeRecord('done', 'hooks', { slug: 'hooks', snapshot: WS });
+  const s2 = await commitTree(repo.dir, { tree: await emptyTree(repo.dir), parents: [s1], subject, body, trailers });
+  await updateRefCAS(repo.dir, LOG_REF, s2, s1);
+  assert.deepEqual((await readLog(repo.dir)).map((r) => [r.sha, r.kind, r.parent]), [[s1, 'start', null], [s2, 'done', s1]]);
+});
+test('catCommits returns commits in the order asked and refuses a non-commit', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const a = await repo.commit('first'); const b = await repo.commit('second');
+  const [cb, ca] = await catCommits(repo.dir, [b, a]);
+  assert.equal(cb.subject, 'second'); assert.equal(ca.subject, 'first'); assert.deepEqual(cb.parents, [a]);
+  assert.deepEqual(await catCommits(repo.dir, []), []);
+  await assert.rejects(catCommits(repo.dir, [a, await emptyTree(repo.dir)]), /not a commit/);
 });
 test('the log ref refuses a stale old OID', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);

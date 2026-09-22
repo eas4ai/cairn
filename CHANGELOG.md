@@ -7,6 +7,14 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.10 - 2026-09-22
+
+- `cairn wake` no longer contacts the authority remote: the remote's tips are fetched only when a repair has to name a fetch or a push. Every wake, and so every hook turn, made one `git ls-remote` to the remote.
+- A tree identity, a snapshot and a lease touch hash their files in one `git hash-object` call instead of one spawn per file. A wake in a project with a thousand declared input files made a thousand spawns per receipt it examined.
+- Git is found on PATH once per process and spawned by absolute path. Each spawn used to try every PATH entry in the child first.
+- The hooks declare a 90 second timeout.
+- A snapshot stores a file whose name begins with a double quote under its own name; the index update used to unquote it.
+
 ## 2.1.9 - 2026-09-22
 
 - Every command runs at the repository top level whatever directory it is typed in. `cairn wake` from a subdirectory used to hash declared inputs against that directory and fail on the first one. A `--file` or `--signing-key` path is still read from where it was typed.

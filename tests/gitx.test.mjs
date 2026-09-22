@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isAbsolute } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 import { git, gitPath, readRef, updateRefCAS, deleteRefCAS, GitError, CasError } from '../lib/gitx.mjs';
 
@@ -82,7 +82,7 @@ test('a large stdin write to a git process that exits without draining it reject
 // plus a sibling blob whose name is a prefix of the directory's own name) exercises
 // treeShaFromEntries' recursive grouping and its git-matching sort rule ('foo.txt' before 'foo/').
 import { treeIdentityReadOnly, treeShaFromEntries } from '../lib/gitx.mjs';
-import { readdir } from 'node:fs/promises';
+import { readdir, chmod, symlink } from 'node:fs/promises';
 
 async function looseObjectCount(cwd) {
   const gitDir = (await git(['rev-parse', '--absolute-git-dir'], { cwd })).stdout.trim();
@@ -105,6 +105,20 @@ test('treeIdentityReadOnly matches writeTreeFromPaths exactly and writes no obje
   const readOnly = await treeIdentityReadOnly(repo.dir, { paths: ['foo/inner.txt', 'foo.txt', 'a/b/deep.txt'], exclude: [] });
   assert.equal(readOnly, written);
   assert.equal(await looseObjectCount(repo.dir), before);
+});
+
+test('batched hashing matches a real git tree for an executable, a symlink and a path that begins with a double quote', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  await repo.write('bin/run.sh', '#!/bin/sh\n'); await chmod(join(repo.dir, 'bin/run.sh'), 0o755);
+  await repo.write('"quoted".txt', 'q\n');
+  await repo.write('plain.txt', 'p\n');
+  await symlink('plain.txt', join(repo.dir, 'link'));
+  await repo.commit('all four');
+  const real = (await git(['rev-parse', 'HEAD^{tree}'], { cwd: repo.dir })).stdout.trim();
+  const paths = ['bin/run.sh', '"quoted".txt', 'plain.txt', 'link'];
+  const tree = (await git(['ls-tree', '-r', 'HEAD'], { cwd: repo.dir })).stdout;
+  assert.equal(await treeIdentityReadOnly(repo.dir, { paths, exclude: [] }), real, tree);
+  assert.equal(await writeTreeFromPaths(repo.dir, { paths, exclude: [] }), real);
 });
 
 test('treeShaFromEntries recomputes a real write-tree sha from that tree\'s own flat entries', async (t) => {

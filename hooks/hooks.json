@@ -1,4 +1,4 @@
 { "hooks": {
-  "SessionStart":     [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"" }] }],
-  "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/turn.sh\"" }] }],
-  "Stop":             [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh\"" }] }] } }
+  "SessionStart":     [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"", "timeout": 90 }] }],
+  "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/turn.sh\"", "timeout": 90 }] }],
+  "Stop":             [{ "hooks": [{ "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh\"", "timeout": 90 }] }] } }

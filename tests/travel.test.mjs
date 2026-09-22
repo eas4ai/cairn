@@ -239,6 +239,12 @@ describe('validateAfterFetch', () => {
     const { cwd } = await started();
     assert.deepEqual(await validateAfterFetch(cwd), []);
   });
+  test('a consistent clone never contacts the authority remote: an unreachable remote is no error', async () => {
+    const { cwd } = await started();
+    const remote = (await loadSettings(cwd)).settings.authority_remote;
+    await git(['remote', 'set-url', remote, join(tmpdir(), 'no-such-remote-' + Date.now())], { cwd });
+    assert.deepEqual(await validateAfterFetch(cwd), []);
+  });
   // Kernel fix round (plan 14 fixture, defect 1, ruling B): the ordinary spec-phase state --
   // Current: already names the roadmap section about to start, but no start record exists yet
   // anywhere in the log -- is not a dangling reference and must report no repair.

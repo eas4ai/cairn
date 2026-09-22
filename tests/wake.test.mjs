@@ -181,6 +181,20 @@ test('an undisposed breach is named before an unanswered escalation', async () =
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
 
+test("the breach's own unanswered escalation is Waiting, not scope; an ok answer brings scope back until keep", async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.deepEqual([(await wake(r.cwd)).action, (await wake(r.cwd)).target], ['scope', 'src/stray.mjs']);
+  const esc = await r.escalate(`breach:${b}`);
+  const w = await wake(r.cwd);
+  assert.equal(w.verdict, 'Waiting', JSON.stringify(w));
+  await r.answer(esc, 'ok');
+  assert.deepEqual([(await wake(r.cwd)).verdict, (await wake(r.cwd)).action], ['Resolvable', 'scope']);
+  await dispose(r.cwd, b, 'keep');
+  assert.notEqual((await wake(r.cwd)).action, 'scope');
+});
+
 test('an escalation without a final answer is Waiting with the five fields verbatim; ask makes reply Resolvable', async () => {
   const r = await loopRepo();
   const esc = await r.escalate('DEMO-001');

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.4 - 2026-09-22
+
+- While a scope breach's own escalation is unanswered, wake says Waiting and prints it, instead of naming `scope PATH`. Scope outranks Waiting so that an unrelated escalation cannot hide captured work, but when the open escalation is about that breach the developer's answer is the next step; naming scope read as "act now" and produced a second escalation.
+
 ## 2.1.3 - 2026-09-22
 
 - A refused kernel write no longer escalates on its own. It names the violation it would create and its cause, tells the agent to resolve that and run the command again, and counts as one administrative occurrence toward the cycle bounds; the fourth refusal of the same write, or the twenty-eighth administrative transition, writes the one cycle escalation, which now says what was refused and why. Before, every refusal wrote a "the loop is cycling" escalation and cost the developer an answer (spec section 5, "Waiting and liveness", revised on the developer's ruling).

@@ -395,7 +395,7 @@ Actions are attempted in this order:
 | repair PATH | hand-written input parses; no unrelated byte changed |
 | recover TRANSACTION | intent has a terminal domain or abort record; every store matches its result |
 | reconcile ACTION | local action lease is gone; action finished or was abandoned |
-| scope PATH | each durable breach is developer-kept or restored to its allowed base; later declaration never clears it |
+| scope PATH | each durable breach is developer-kept or restored to its allowed base; later declaration never clears it; while the breach's own escalation is unanswered, wake says Waiting |
 | fix ITEM | fix snapshot changes no protected contract; requirement has a current pass |
 | record PATH | action lease covers the path, or it is clean |
 | commit PATH | path is clean, or the action lease covers it; docs/decisions.jsonl is named here whenever it has uncommitted lines |

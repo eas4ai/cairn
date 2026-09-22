@@ -31,7 +31,7 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
     min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } });
 async function initialized() {
   const { cwd } = await repoWith({ '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n' });
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   return cwd;
 }
 
@@ -78,7 +78,7 @@ test('begin refuses an unknown action and a touch path that is reserved, protect
 test('begin refuses a --touch path that is outside or names a glob metacharacter (finding 1a)', async (t) => {
   const settings = { ...JSON.parse(SETTINGS), outside: ['README.md'] };
   const { cwd } = await repoWith({ '.cairn/settings.json': JSON.stringify(settings), 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n', 'README.md': 'r\n' });
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['README.md'], env: {} }),
     /^LeaseError: cairn: --touch README\.md is an outside path and cannot be a mechanism input/);
   await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['src/*.mjs'], env: {} }),

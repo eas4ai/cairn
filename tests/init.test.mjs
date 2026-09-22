@@ -21,7 +21,7 @@ import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 
 const yes = async () => true;
 const answers = (over = {}) => ({ confirmRemote: async () => null, chooseKey: async () => null,
-  confirm: yes, confirmDigest: yes, ...over });
+  quote: 'ok', confirmDigest: yes, env: {}, ...over });
 
 test('init on a plain directory initializes Git, writes settings, init record and ref roots', async (t) => {
   const cwd = mkdtempSync(join(tmpdir(), 'cairn-init-'));
@@ -46,7 +46,9 @@ test('init on a plain directory initializes Git, writes settings, init record an
 test('init is idempotent on the same identity', async () => {
   const { cwd } = await repoWith({});
   const a = await init(cwd, answers());
-  const b = await init(cwd, answers({ confirm: async () => { throw new Error('must not ask again'); } }));
+  // A blank quote would make authenticateDeveloper refuse if init() actually re-authenticated on
+  // this idempotent path; passing it proves the idempotent early return never reaches that call.
+  const b = await init(cwd, answers({ quote: undefined }));
   assert.equal(b.created, false);
   assert.equal(a.sha, b.sha);
   assert.equal((await readLog(cwd)).length, 1);
@@ -114,7 +116,7 @@ test('a re-run of init repairs a missing snapshot root even on the idempotent pa
   assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
   await git(['update-ref', '-d', 'refs/cairn/snapshots'], { cwd });
   assert.equal(await readRef(cwd, 'refs/cairn/snapshots'), null);
-  const b = await init(cwd, answers({ confirm: async () => { throw new Error('must not ask again'); } }));
+  const b = await init(cwd, answers({ quote: undefined }));
   assert.equal(b.created, false);
   assert.equal(a.sha, b.sha);
   assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));

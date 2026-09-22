@@ -238,7 +238,7 @@ test('the same number on two records is ambiguous until --source names one; a se
   assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.source, r.rev);
   await dispute(r.cwd, { commitment: 'first', record: r.rep, n: 1, question: 'Defect?', recommendation: 'No.', because: 'whitespace is valid here', if_wrong: 'bad input passes', instead: 'trim' });
   await assert.rejects(resolve(r.cwd, 'first', 1, 'y', { source: r.rep }), /is under escalation/);
-  await answer(r.cwd, 'first', 'ok', '', { confirm: async () => true });
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
   assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.source, f.status]), [[r.rev, 'submitted'], [r.rep, 'disputed']]);
 });
 

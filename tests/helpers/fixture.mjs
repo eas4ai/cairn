@@ -121,16 +121,16 @@ export function buildProject({ settings = SETTINGS } = {}) {
     return w;
   };
   const kinds = async () => (await readLog(dir)).map((r) => r.kind);
-  const confirm = async () => true;
   // supersede is developer-only, exactly like authorize/answer: run as a raw child process (via
-  // p.cairn) with no injected confirm, lib/cli.mjs's supersedeCommand falls back to ttyConfirm,
-  // which needs a real controlling terminal (/dev/tty) -- unavailable in a node --test run.
-  // Called through the lib directly here, the same pattern already used for init/authorize/answer.
+  // p.cairn) with no injected --quote, lib/cli.mjs's supersedeCommand refuses "needs --quote"
+  // with none -- called through the lib directly here, the same pattern already used for
+  // init/authorize/answer. Spec revision 6: the developer's quoted words (--quote) are both the
+  // record's own text and, in attested mode (no signing_key here), the developer evidence itself.
   const developer = {
-    init: () => init(dir, { confirmRemote: async () => "origin", chooseKey: async () => null, confirm, confirmDigest: async () => true }),
-    authorize: () => authorize(dir, { confirm }),
-    answer: (slug, kind, text) => answer(dir, slug, kind, text, { confirm }),
-    supersede: (successor, quote) => supersede(dir, successor, { quote, confirm }),
+    init: () => init(dir, { confirmRemote: async () => "origin", chooseKey: async () => null, quote: "ok", confirmDigest: async () => true, env: {} }),
+    authorize: () => authorize(dir, { quote: "ok", env: {} }),
+    answer: (slug, kind, text) => answer(dir, slug, kind, { quote: text, env: {} }),
+    supersede: (successor, quote) => supersede(dir, successor, { quote, env: {} }),
   };
   const write = (p, text) => { mkdirSync(join(dir, p, ".."), { recursive: true }); writeFileSync(join(dir, p), text); };
   const commit = (msg) => { git("add", "-A"); git("commit", "-q", "-m", msg); return git("rev-parse", "HEAD").trim(); };

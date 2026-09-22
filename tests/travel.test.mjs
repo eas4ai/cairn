@@ -69,10 +69,10 @@ async function project({ remote = makeRemote(), authority = 'authority' } = {}) 
       assert.ok(names.includes(authority), `confirmRemote sees ${authority} among the configured remotes`);
       return authority;
     },
-    chooseKey: async () => null, confirm: yes, confirmDigest: yes,
+    chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {},
   });
   assert.equal(confirmRemoteCalls, 1, 'cairn init asked the developer to confirm the authority remote');
-  await authorize(repo.dir, { confirm: yes });
+  await authorize(repo.dir, { quote: 'ok', env: {} });
   return { cwd: repo.dir, remote, authority };
 }
 async function started(opts) {

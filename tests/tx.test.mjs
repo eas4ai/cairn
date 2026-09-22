@@ -75,7 +75,7 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
 const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n' };
 async function initialized() {
   const { cwd } = await repoWith(BASE);
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   return cwd;
 }
 const filePlan = (bytes = 'v2\n') => ({ identity: { i: 1 },

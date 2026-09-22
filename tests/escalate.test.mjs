@@ -128,7 +128,7 @@ import { ADR_PATH, AdrError } from '../lib/adr.mjs';
 import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const asDev = { confirm: async () => true };
+const asDev = { quote: 'ok', env: {} };
 
 // Fix round 2 finding 14: a signed-project fixture with an open commitment, built the same way
 // as tests/cli.test.mjs's own signedCommitmentRepo (round 1, finding 1) -- signedProject-style
@@ -157,8 +157,8 @@ async function signedCommitmentRepo() {
   await repo.write('docs/spec/roadmap.md', ROADMAP);
   await repo.write('src/main.mjs', 'console.log("hello");\n');
   await repo.commit('Add the demo specification');
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirm: yes, confirmDigest: yes, sign });
-  await authorize(repo.dir, { sign, confirm: yes });
+  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes, sign });
+  await authorize(repo.dir, { sign });
   await start(repo.dir, 'first');
   return { cwd: repo.dir, sign };
 }
@@ -175,7 +175,7 @@ test('answer refuses before writing anything when the ADR file is unreadable (fi
   const r = await loopRepo();
   await escalate(r.cwd, draft());
   await appendFile(join(r.cwd, ADR_PATH), 'not json\n');
-  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), (e) => e instanceof AdrError && /not canonical JSON/.test(e.message));
+  await assert.rejects(answer(r.cwd, 'first', 'ok', asDev), (e) => e instanceof AdrError && /not canonical JSON/.test(e.message));
   assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer'), []);
   assert.equal(unanswered(await r.log()).length, 1);
 });
@@ -198,7 +198,7 @@ test('a crash between the log record and the ADR line is completed by the next c
   assert.equal((await readAdr(r.cwd)).some((l) => l.kind === 'answered'), false);
   assert.equal(escalationState(await r.log(), esc).status, 'answered');
   await assert.rejects(
-    answer(r.cwd, 'first', 'instead', 'Fourteen days instead.', asDev),
+    answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Fourteen days instead.' }),
     new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   // No new answer record: the developer's own "instead" text for this call was never recorded.
@@ -206,7 +206,7 @@ test('a crash between the log record and the ADR line is completed by the next c
   const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
   // Now that the line exists, a normal retry (nothing left dangling) refuses normally.
-  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), /no unanswered escalation for first/);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', asDev), /no unanswered escalation for first/);
 });
 
 // Fix round 2 finding 13, the reviewer's exact reproduction: a dangling answer for escalation A
@@ -220,7 +220,7 @@ test('a dangling answer is completed even while another escalation is open; the 
   const danglingSha = await r.add('answer', 'first', { escalation: a, kind: 'ok', text: '', owner: null, evidence });
   assert.deepEqual(unanswered(await r.log()).map((u) => u.sha), [b]);
   await assert.rejects(
-    answer(r.cwd, 'first', 'instead', 'Do X instead.', asDev),
+    answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Do X instead.' }),
     new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   // B is still open: the "instead" text was not silently applied to it.
@@ -229,7 +229,7 @@ test('a dangling answer is completed even while another escalation is open; the 
   const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [a, danglingSha]);
   // B can now be answered normally, on the next call.
-  const bSha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const bSha = await answer(r.cwd, 'first', 'ok', asDev);
   assert.equal(decodeRecord(await catCommit(r.cwd, bSha)).payload.escalation, b);
 });
 
@@ -241,82 +241,79 @@ test('the dangling-answer completion path authenticates before writing the ADR l
   const esc = await escalate(cwd, draft());
   const danglingEvidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
   const danglingSha = await appendRecord(cwd, 'answer', 'first', { escalation: esc, kind: 'ok', text: '', owner: null, evidence: danglingEvidence });
-  await assert.rejects(answer(cwd, 'first', 'ok', '', {}), /cairn: /);
+  await assert.rejects(answer(cwd, 'first', 'ok', {}), /cairn: /);
   assert.equal((await readAdr(cwd)).some((l) => l.kind === 'answered'), false);
   await assert.rejects(
-    answer(cwd, 'first', 'ok', '', { sign }),
+    answer(cwd, 'first', 'ok', { sign }),
     new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   const line = (await readAdr(cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
 });
 
-test('answer refuses without developer evidence: no terminal, or a declined confirmation', async () => {
+test('answer refuses without developer evidence: no quote, or a blank quote', async () => {
   const r = await loopRepo();
   const sha = await escalate(r.cwd, draft());
-  await assert.rejects(answer(r.cwd, 'first', 'ok', ''), /cairn: /);
-  await assert.rejects(answer(r.cwd, 'first', 'ok', '', { confirm: async () => false }), /cairn: /);
+  await assert.rejects(answer(r.cwd, 'first', 'ok'), /cairn: /);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', { quote: '  ', env: {} }), /cairn: /);
   assert.equal(escalationState(await r.log(), sha).status, 'open');
 });
 
-// Deviation from the plan text: the plan's own note ("The stored evidence is plan 01's shape
-// {mode, author, signature}") does not match the actual `evidence` variant lib/records.mjs
-// (already committed) uses for the answer/authorization/read record kinds -- the 'unsigned-local'
-// branch needs {mode, purpose, subject, nonce, author: {name, email}, confirmed}, with no
-// top-level `signature` field at all; tests/helpers/loop.mjs's own fixture documents this same
-// gap. Checked against that real shape instead: mode, confirmed, and a non-empty author.name.
+// The stored evidence is lib/auth.mjs's real attested evidence shape: {mode, purpose, subject,
+// nonce, quote, harness, author: {name, email}}. answer()'s text field is the same quote (revision
+// 6: the developer's quoted words serve both as the record's text and the authentication evidence).
 test('ok writes the answer record with the evidence and the answered ADR line', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
-  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const sha = await answer(r.cwd, 'first', 'ok', asDev);
   const rec = decodeRecord(await catCommit(r.cwd, sha));
   assert.equal(rec.target, 'first');
-  assert.deepEqual([rec.payload.escalation, rec.payload.kind, rec.payload.text, rec.payload.owner], [esc, 'ok', '', null]);
-  assert.equal(rec.payload.evidence.mode, 'unsigned-local');
-  assert.equal(rec.payload.evidence.confirmed, true);
+  assert.deepEqual([rec.payload.escalation, rec.payload.kind, rec.payload.text, rec.payload.owner], [esc, 'ok', 'ok', null]);
+  assert.equal(rec.payload.evidence.mode, 'attested');
+  assert.equal(rec.payload.evidence.quote, 'ok');
   assert.ok(rec.payload.evidence.author.name.length > 0);
   const line = (await readAdr(r.cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [esc, sha]);
   assert.equal(escalationState(await r.log(), esc).status, 'answered');
   assert.deepEqual(unanswered(await r.log()), []);
-  await assert.rejects(answer(r.cwd, 'first', 'instead', 'no', asDev), /no unanswered escalation for first/);
+  await assert.rejects(answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'no' }), /no unanswered escalation for first/);
 });
 
-test('ask stays open until a reply and writes no answered line; instead needs text; kinds are closed', async () => {
+test('ask stays open until a reply and writes no answered line; every kind needs --quote; kinds are closed', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
-  await assert.rejects(answer(r.cwd, 'first', 'instead', '', asDev), /needs text/);
-  await assert.rejects(answer(r.cwd, 'first', 'maybe', 'x', asDev), /must be ok, instead or ask/);
-  await answer(r.cwd, 'first', 'ask', 'Why 30 and not 14?', asDev);
+  await assert.rejects(answer(r.cwd, 'first', 'instead', { ...asDev, quote: '' }), /needs --quote/);
+  await assert.rejects(answer(r.cwd, 'first', 'maybe', { ...asDev, quote: 'x' }), /must be ok, instead or ask/);
+  await answer(r.cwd, 'first', 'ask', { ...asDev, quote: 'Why 30 and not 14?' });
   const log = await r.log();
   assert.equal(escalationState(log, esc).status, 'asked');
   assert.deepEqual(unanswered(log).map((u) => [u.target, u.awaiting]), [['first', 'reply']]);
   assert.equal((await readAdr(r.cwd)).some((l) => l.kind === 'answered'), false);
-  await assert.rejects(answer(r.cwd, 'first', 'ok', '', asDev), /awaits the agent's reply/);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', asDev), /awaits the agent's reply/);
 });
 
 test('two open escalations: the oldest is answered first unless --escalation names the other', async () => {
   const r = await loopRepo();
   const a = await escalate(r.cwd, draft());
   const b = await escalate(r.cwd, draft({ question: 'Second?' }));
-  const s2 = await answer(r.cwd, 'first', 'ok', '', { ...asDev, escalation: b });
+  const s2 = await answer(r.cwd, 'first', 'ok', { ...asDev, escalation: b });
   assert.equal(decodeRecord(await catCommit(r.cwd, s2)).payload.escalation, b);
-  const s1 = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const s1 = await answer(r.cwd, 'first', 'ok', asDev);
   assert.equal(decodeRecord(await catCommit(r.cwd, s1)).payload.escalation, a);
 });
 
 // Fix round 1 finding 6 (plan 09 review): escalate.mjs's own describeEvidence read ev.author as
 // a string, but the answer record's real stored evidence (authenticateDeveloper's return value,
-// stored as-is since Task 4) has author: {name, email} for unsigned-local -- so calling it on a
-// real stored record produced "unsigned-local, author [object Object]: evidence, not
-// authentication". lib/auth.mjs already exports a describeEvidence that reads the real shape;
-// checked here against a real stored answer record instead of a hand-built flat object.
-test('describeEvidence (lib/auth.mjs) reads a real stored answer record: unsigned-local is evidence, not authentication', async () => {
+// stored as-is since Task 4) has author: {name, email} -- so calling it on a real stored record
+// produced "..., author [object Object]: evidence, not authentication". lib/auth.mjs already
+// exports a describeEvidence that reads the real shape; checked here against a real stored answer
+// record instead of a hand-built flat object.
+test('describeEvidence (lib/auth.mjs) reads a real stored answer record: attested is evidence, not authentication', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
-  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const sha = await answer(r.cwd, 'first', 'ok', asDev);
   const rec = decodeRecord(await catCommit(r.cwd, sha));
-  assert.equal(describeEvidence(rec.payload.evidence), 'unsigned-local: terminal confirmation by Cairn Test <test@example.invalid>; evidence, not authentication');
+  assert.equal(describeEvidence(rec.payload.evidence), 'attested: "ok" through none by Cairn Test <test@example.invalid>; evidence, not authentication');
 });
 
 // Fix round 1 finding 7 (plan 09 review): answer() now re-checks its evidence with
@@ -329,7 +326,7 @@ test('describeEvidence (lib/auth.mjs) reads a real stored answer record: unsigne
 test('the evidence answer() stores verifies with lib/auth.mjs verifyEvidence, the same check answer() now runs before writing', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
-  const sha = await answer(r.cwd, 'first', 'ok', '', asDev);
+  const sha = await answer(r.cwd, 'first', 'ok', asDev);
   const rec = decodeRecord(await catCommit(r.cwd, sha));
   const { settings } = await loadSettings(r.cwd);
   assert.equal(verifyEvidence(settings, rec.payload.evidence, { purpose: 'answer', subject: esc }), true);
@@ -341,7 +338,7 @@ test('reply names the open ask; after it the escalation awaits the developer aga
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
   await assert.rejects(reply(r.cwd, 'first', 'Because the fixture says so.'), /no open ask/);
-  await answer(r.cwd, 'first', 'ask', 'Why 30?', asDev);
+  await answer(r.cwd, 'first', 'ask', { ...asDev, quote: 'Why 30?' });
   await assert.rejects(reply(r.cwd, 'first', ''), /reply needs text/);
   const sha = await reply(r.cwd, 'first', 'Because the fixture says so.');
   assert.deepEqual(decodeRecord(await catCommit(r.cwd, sha)).payload, { escalation: esc, text: 'Because the fixture says so.' });
@@ -349,7 +346,7 @@ test('reply names the open ask; after it the escalation awaits the developer aga
   assert.equal(escalationState(log, esc).status, 'open');
   assert.deepEqual(unanswered(log).map((u) => u.awaiting), ['answer']);
   await assert.rejects(reply(r.cwd, 'first', 'Again.'), /no open ask/);
-  await answer(r.cwd, 'first', 'instead', 'Fourteen days.', asDev);
+  await answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Fourteen days.' });
   assert.equal(escalationState(await r.log(), esc).final.payload.text, 'Fourteen days.');
 });
 
@@ -373,10 +370,10 @@ test('a dispute names finding N on its exact source record and is settled only b
   const sha = await dispute(r.cwd, disputeFields(rev, 1));
   assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.concerns, `finding:${rev}#1`);
   assert.equal(disputes(await r.log(), rev, 1), null);
-  await answer(r.cwd, 'first', 'ask', 'Which fixture?', asDev);
+  await answer(r.cwd, 'first', 'ask', { ...asDev, quote: 'Which fixture?' });
   assert.equal(disputes(await r.log(), rev, 1), null);
   await reply(r.cwd, 'first', 'hello.txt');
-  await answer(r.cwd, 'first', 'ok', '', asDev);
+  await answer(r.cwd, 'first', 'ok', asDev);
   const log = await r.log();
   assert.equal(disputes(log, rev, 1), sha);
   assert.equal(disputes(log, rev, 2), null);
@@ -386,7 +383,7 @@ test('an instead answer keeps the dispute open: it directs the resolution but do
   const r = await loopRepo();
   const rev = await r.review([{ n: 1, text: 'reads an undeclared fixture' }]);
   const sha = await dispute(r.cwd, disputeFields(rev, 1));
-  await answer(r.cwd, 'first', 'instead', 'Declare hello.txt as an input and re-run.', asDev);
+  await answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Declare hello.txt as an input and re-run.' });
   assert.equal(escalationState(await r.log(), sha).status, 'answered');
   assert.equal(disputes(await r.log(), rev, 1), null);
 });
@@ -402,7 +399,7 @@ test('an escalation concerning a requirement is found by identifier, answered or
   assert.equal(escalatedRequirement(log, 'DEMO-002'), false);
   assert.deepEqual(concerns(log, 'DEMO-001').map((e) => e.sha), [sha]);
   assert.deepEqual(concerns(log, 'DEMO-00'), []);
-  await answer(r.cwd, 'first', 'ok', '', asDev);
+  await answer(r.cwd, 'first', 'ok', asDev);
   log = await r.log();
   assert.equal(escalatedRequirement(log, 'DEMO-001'), true);
 });
@@ -455,14 +452,14 @@ test('escalate, answer, reply and dispute commands print one line and use exit c
   const e = await cliEscalate(r.cwd, argv);
   assert.equal(e.code, 0);
   assert.match(e.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
-  const bad = await cliAnswer(r.cwd, ['first', 'ok'], { confirm: async () => false });
+  const bad = await cliAnswer(r.cwd, ['first', 'ok'], { env: {} });
   assert.equal(bad.code, 1);
   assert.match(bad.out, /^cairn: .*\n$/);
-  const ask = await cliAnswer(r.cwd, ['first', 'ask', 'Why?'], asDev);
+  const ask = await cliAnswer(r.cwd, ['first', 'ask', '--quote', 'Why?'], { env: {} });
   assert.match(ask.out, /^cairn: answer first [0-9a-f]{40}\n$/);
   const rp = await cliReply(r.cwd, ['first', 'Because.']);
   assert.match(rp.out, /^cairn: reply first [0-9a-f]{40}\n$/);
-  await cliAnswer(r.cwd, ['first', 'ok'], asDev);
+  await cliAnswer(r.cwd, ['first', 'ok', '--quote', 'ok'], { env: {} });
   const rev = await r.review([{ n: 1, text: 'x' }]);
   const d = await cliDispute(r.cwd, ['--commitment', 'first', '--record', rev, '--n', '1', '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it']);
   assert.match(d.out, /^cairn: escalation first [0-9a-f]{40}\n$/);

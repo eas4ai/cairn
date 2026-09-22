@@ -1,11 +1,8 @@
 // tests/auth.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { makeRepo } from './helpers/repo.mjs';
 
 // Plan 01's makeRepo() returns {dir, git, write, commit, readRef, remove}; this wrapper
@@ -93,70 +90,72 @@ test('signingPayload is the canonical JSON of purpose, subject and nonce', () =>
   assert.equal(Buffer.from(bytes).toString(), '{"nonce":"x","purpose":"read","subject":"D1"}');
 });
 
-test('unsigned-local: terminal confirmation records the Git author as evidence', async () => {
+// Spec revision 6, "Developer evidence": the null-key path is attested, not a terminal
+// confirmation -- the agent asks the developer in conversation and passes the quoted words as
+// --quote; authenticateDeveloper records that quote, the harness it detected and the Git author.
+test('attested: authenticateDeveloper records the quote, harness and Git author as evidence', async () => {
   const { cwd } = await repoWith({});
-  const prompts = [];
-  const confirm = async (prompt) => { prompts.push(prompt); return true; };
-  const ev = await authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm, nonce: 'n' });
-  assert.deepEqual(ev, { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
-    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true });
-  assert.match(prompts[0], /read D1/);
+  const ev = await authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: 'yes, 30 days', nonce: 'n', env: {} });
+  assert.deepEqual(ev, { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'yes, 30 days',
+    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } });
   assert.equal(verifyEvidence({ signing_key: null }, ev), true);
   assert.match(describeEvidence(ev), /evidence, not authentication/);
 });
 
-test('unsigned-local: a declined confirmation is refused', async () => {
+// harnessName (attested via authenticateDeveloper): env.CAIRN_HARNESS wins outright; otherwise the
+// first HARNESS_ENV hit; otherwise 'none'.
+test('attested: harness comes from CAIRN_HARNESS, else the first HARNESS_ENV hit, else none', async () => {
+  const { cwd } = await repoWith({});
+  const auth = (env) => authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: 'ok', nonce: 'n', env });
+  assert.equal((await auth({ CLAUDECODE: '1' })).harness, 'claude_code');
+  assert.equal((await auth({})).harness, 'none');
+  assert.equal((await auth({ CAIRN_HARNESS: 'muse' })).harness, 'muse');
+  // CAIRN_HARNESS wins even when a HARNESS_ENV variable is also present.
+  assert.equal((await auth({ CLAUDECODE: '1', CAIRN_HARNESS: 'muse' })).harness, 'muse');
+});
+
+// A missing or blank quote refuses with the exact message every developer-only command shares.
+test('attested: a missing or blank quote refuses with the exact --quote message', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(
-    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', confirm: async () => false }),
-    /^AuthError: cairn: the developer did not confirm read D1/);
+    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', nonce: 'n', env: {} }),
+    /^AuthError: cairn: read needs --quote <the developer's words>$/);
+  await assert.rejects(
+    authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: '   ', nonce: 'n', env: {} }),
+    /^AuthError: cairn: read needs --quote <the developer's words>$/);
 });
 
-// Fix round 1, item 6: the deleted test injected a confirm function that itself threw the exact
-// message the assertion checked for, so no line of ttyConfirm ever ran; it could not have caught a
-// regression in ttyConfirm at all. This drives the real ttyConfirm in a child process detached into
-// its own session (no controlling terminal, per setsid(2)) with piped, not inherited, stdio, and
-// checks its actual refusal.
-test('ttyConfirm refuses without a controlling terminal', async (t) => {
-  const dir = mkdtempSync(join(tmpdir(), 'cairn-tty-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const authPath = fileURLToPath(new URL('../lib/auth.mjs', import.meta.url));
-  const scriptPath = join(dir, 'run.mjs');
-  writeFileSync(scriptPath, `
-    import(${JSON.stringify(authPath)}).then(async ({ ttyConfirm }) => {
-      try { await ttyConfirm('confirm?'); process.stdout.write('UNEXPECTED_SUCCESS'); process.exit(0); }
-      catch (e) { process.stderr.write(String(e.message)); process.exit(1); }
-    });
-  `);
-  const { code, stdout, stderr } = await new Promise((resolve) => {
-    const child = spawn(process.execPath, [scriptPath], { detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '', stderr = '';
-    child.stdout.on('data', (d) => { stdout += d; });
-    child.stderr.on('data', (d) => { stderr += d; });
-    child.on('close', (code) => resolve({ code, stdout, stderr }));
-  });
-  assert.equal(stdout, '');
-  assert.equal(code, 1);
-  assert.equal(stderr, 'cairn: no controlling terminal; unsigned-local confirmation needs a TTY');
-});
-
-test('verifyEvidence refuses unsigned-local evidence when a signing key is set', () => {
-  const ev = { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
-    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
+test('verifyEvidence refuses attested evidence when a signing key is set', () => {
+  const ev = { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'ok',
+    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } };
   assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
 });
 
 // Fix round 1, item 11: verifyEvidence previously took no expected purpose/subject, so evidence
 // lifted from a different record (right shape, wrong subject) verified anyway; and a settings
-// object that omits the signing_key key entirely fell open to the unsigned-local branch, the same
-// as an explicit signing_key: null.
+// object that omits the signing_key key entirely fell open to the attested branch, the same as an
+// explicit signing_key: null.
 test('verifyEvidence checks the expected purpose and subject, and refuses a settings object without signing_key', () => {
-  const ev = { mode: 'unsigned-local', purpose: 'read', subject: 'D1', nonce: 'n',
-    author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true };
+  const ev = { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'ok',
+    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } };
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'D1' }), true);
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'authorize', subject: 'D1' }), false);
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'other' }), false);
   assert.equal(verifyEvidence({}, ev), false);
+});
+
+// A legacy 'unsigned-local' evidence record (written before this change) still decodes: the
+// schema keeps reading it, even though nothing writes it any more.
+test('a legacy unsigned-local record still decodes', async () => {
+  const { cwd } = await repoWith({});
+  const id = '01J0000000000000000000ABCD';
+  const evidence = { mode: 'unsigned-local', purpose: 'read', subject: id, nonce: 'n',
+    author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
+  await appendRecord(cwd, 'read', id, { decision: id, evidence });
+  const rec = (await readLog(cwd)).at(-1);
+  assert.equal(rec.kind, 'read');
+  assert.deepEqual(rec.payload.evidence, evidence);
+  assert.match(describeEvidence(rec.payload.evidence), /unsigned-local: terminal confirmation/);
 });
 
 import { appendRecord, readLog, decodeRecord } from '../lib/records.mjs';
@@ -168,13 +167,13 @@ const yes = async () => true;
 const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
 async function initialized(files = BASE) {
   const { cwd } = await repoWith(files);
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   return cwd;
 }
 
 test('authorize writes one record binding the three digests with verified evidence', async () => {
   const cwd = await initialized();
-  const sha = await authorize(cwd, { confirm: yes });
+  const sha = await authorize(cwd, { quote: 'ok', env: {} });
   const log = await readLog(cwd);
   const rec = log.at(-1);
   assert.equal(rec.sha, sha);
@@ -189,7 +188,8 @@ test('authorize writes one record binding the three digests with verified eviden
   // fixture files match what init() already saw), so authorize's transaction has no branch write and
   // its only earlier record is the command-intent that withTransaction appends; intent now names it.
   assert.equal(rec.payload.intent, log.at(-2).sha);
-  assert.equal(rec.payload.evidence.mode, 'unsigned-local');
+  assert.equal(rec.payload.evidence.mode, 'attested');
+  assert.equal(rec.payload.evidence.quote, 'ok');
   assert.equal(rec.payload.evidence.subject, canonicalize({ spec: d.spec, agreement: d.agreement, settings: d.settings }));
   assert.equal((await catCommit(cwd, sha)).subject, 'cairn: authorization protected');
   assert.deepEqual(decodeRecord(await catCommit(cwd, sha)).payload, rec.payload);
@@ -199,18 +199,18 @@ test('authorize writes one record binding the three digests with verified eviden
 
 test('authorize refuses before init', async () => {
   const { cwd } = await repoWith(BASE);
-  await assert.rejects(authorize(cwd, { confirm: yes }), /^AuthError: cairn: run cairn init first/);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /^AuthError: cairn: run cairn init first/);
 });
 
 test('authorize refuses without AGENTS.md', async () => {
   const cwd = await initialized({ '.cairn/settings.json': SETTINGS, 'docs/spec/overview.md': '# k\n' });
-  await assert.rejects(authorize(cwd, { confirm: yes }), /cairn: AGENTS.md is missing; authorize binds the working agreement/);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /cairn: AGENTS.md is missing; authorize binds the working agreement/);
 });
 
-test('authorize refuses a declined confirmation and writes nothing', async () => {
+test('authorize refuses a missing quote and writes nothing', async () => {
   const cwd = await initialized();
   const before = (await readLog(cwd)).length;
-  await assert.rejects(authorize(cwd, { confirm: async () => false }), /did not confirm/);
+  await assert.rejects(authorize(cwd, { env: {} }), /needs --quote/);
   assert.equal((await readLog(cwd)).length, before);
 });
 
@@ -230,7 +230,7 @@ test('protectedClass names the three developer-owned classes', () => {
 
 test('a roadmap change needs no authorization while a docs/spec change does', async () => {
   const cwd = await initialized();
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   writeFileSync(join(cwd, 'docs/spec/roadmap.md'), 'Current: hooks\n');
   await refuseUnauthorizedProtected(cwd, await readLog(cwd)); // does not throw: roadmap is excepted
   writeFileSync(join(cwd, 'docs/spec/overview.md'), 'changed\n');
@@ -244,15 +244,15 @@ test('a protected change is authorized only by a record naming its before and af
   assert.equal(await isAuthorized(cwd, '.cairn/settings.json', null, initDigest), true);
   const d1 = await protectedDigests(cwd);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d1.agreement), false);
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d1.agreement), true);
   assert.equal(await isAuthorized(cwd, 'docs/spec/overview.md', null, d1.spec), true);
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
   const d2 = await protectedDigests(cwd);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)),
-    /^AuthError: cairn: AGENTS.md changed to sha256:[0-9a-f]{64} without a developer authorization; run cairn authorize/);
-  await authorize(cwd, { confirm: yes });
+    /^AuthError: cairn: AGENTS.md changed to sha256:[0-9a-f]{64} without a developer authorization; ask the developer and record the answer with cairn authorize --quote <words>/);
+  await authorize(cwd, { quote: 'ok', env: {} });
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), true);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d2.agreement), false, 'before digest must match the chain');
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
@@ -260,11 +260,11 @@ test('a protected change is authorized only by a record naming its before and af
 
 test('a settings change needs a new authorization naming the new digest', async () => {
   const cwd = await initialized();
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   const s = JSON.parse(SETTINGS); s.outside = ['README.md'];
   writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(s));
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.cairn\/settings\.json changed to/);
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
 });
 
@@ -282,7 +282,7 @@ test('the protected check re-verifies chain record evidence and refuses a forged
   const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign2(null, bytes, privateKey));
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes, sign });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirmDigest: yes, sign });
   await authorize(cwd, { sign });
   const d1 = await protectedDigests(cwd);
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
@@ -315,7 +315,7 @@ test("the protected check trusts only the log's first record as the init record;
   const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign3(null, bytes, privateKey));
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes, sign });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirmDigest: yes, sign });
   const before = await protectedDigests(cwd);
   const forgedDigest = 'sha256:' + '1'.repeat(64);
   await appendRecord(cwd, 'init', 'project', { settings_digest: forgedDigest, authority_remote: null, auth_mode: 'unsigned-local' });
@@ -328,7 +328,7 @@ import { readDecision, runDecisionsRead } from '../lib/auth.mjs';
 
 test('decisions --read writes a read record with developer evidence', async () => {
   const cwd = await initialized();
-  const sha = await readDecision(cwd, '01J0000000000000000000ABCD', { confirm: yes });
+  const sha = await readDecision(cwd, '01J0000000000000000000ABCD', { quote: 'ok', env: {} });
   const rec = (await readLog(cwd)).at(-1);
   assert.equal(rec.sha, sha);
   assert.equal(rec.kind, 'read');
@@ -339,10 +339,10 @@ test('decisions --read writes a read record with developer evidence', async () =
   assert.equal(verifyEvidence({ signing_key: null }, rec.payload.evidence), true);
 });
 
-test('decisions --read refuses a malformed decision id and an unconfirmed read', async () => {
+test('decisions --read refuses a malformed decision id and a missing quote', async () => {
   const cwd = await initialized();
-  await assert.rejects(readDecision(cwd, 'not-a-ulid', { confirm: yes }), /^AuthError: cairn: decision id must be a 26-character ULID/);
-  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { confirm: async () => false }), /did not confirm read/);
+  await assert.rejects(readDecision(cwd, 'not-a-ulid', { quote: 'ok', env: {} }), /^AuthError: cairn: decision id must be a 26-character ULID/);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { env: {} }), /needs --quote/);
 });
 
 test('runDecisionsRead exits 1 with one cairn: line when the signature is missing in signed mode', async () => {
@@ -364,8 +364,8 @@ import { encodeRecord } from '../lib/records.mjs';
 
 test('init, authorization and read records round-trip and refuse unknown or missing keys', async () => {
   const cwd = await initialized();
-  await authorize(cwd, { confirm: yes });
-  await readDecision(cwd, '01J0000000000000000000ABCD', { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
+  await readDecision(cwd, '01J0000000000000000000ABCD', { quote: 'ok', env: {} });
   for (const rec of await readLog(cwd)) {
     const commit = await catCommit(cwd, rec.sha);
     assert.deepEqual(decodeRecord(commit), { kind: rec.kind, target: rec.target, payload: rec.payload });
@@ -386,7 +386,7 @@ import { git } from '../lib/gitx.mjs';
 test('authorize commits the dirty protected paths and its record names the intent', async () => {
   const cwd = await initialized();
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
-  const sha = await authorize(cwd, { confirm: yes });
+  const sha = await authorize(cwd, { quote: 'ok', env: {} });
   const log = await readLog(cwd);
   assert.deepEqual(log.slice(-2).map((r) => r.kind), ['command-intent', 'authorization']);
   assert.equal(log.at(-1).payload.intent, log.at(-2).sha);
@@ -401,7 +401,7 @@ test('Fix round 1 finding 6: authorize commits only the protected paths, leaving
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
   writeFileSync(join(cwd, 'unrelated.txt'), 'developer work in progress\n');
   await git(['add', 'unrelated.txt'], { cwd });
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
   assert.deepEqual(committed, ['AGENTS.md'], 'only the dirty protected path is in the commit');
   assert.equal((await git(['status', '--porcelain', '--', 'unrelated.txt'], { cwd })).stdout.trim(), 'A  unrelated.txt',
@@ -411,7 +411,7 @@ test('Fix round 1 finding 6: authorize commits only the protected paths, leaving
 test('Fix round 1 finding 6: a rename inside a protected path is fully committed by both its new and old name', async () => {
   const cwd = await initialized();
   await git(['mv', 'docs/spec/overview.md', 'docs/spec/keystone.md'], { cwd });
-  await authorize(cwd, { confirm: yes });
+  await authorize(cwd, { quote: 'ok', env: {} });
   // git show --name-only reports only the resulting path for a rename; --name-status shows the
   // R<score> <old> <new> triple, which is what proves the fix reads and commits the old name too
   // (the previous l.slice(3) parser, and --only with just the new path, orphan the old blob).
@@ -426,12 +426,51 @@ test('Fix round 1 finding 6: a rename inside a protected path is fully committed
 // init() writes it to disk but never commits it (repoWith's own fixture commit ran before init).
 test('Fix round 1 finding 6: the first authorize commits a never-before-tracked protected path', async () => {
   const { cwd } = await repoWith({ 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' });
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   assert.equal((await git(['status', '--porcelain', '--', '.cairn/settings.json'], { cwd })).stdout.trim().slice(0, 2), '??',
     '.cairn/settings.json is on disk but never git-added, the case that broke --only');
-  const sha = await authorize(cwd, { confirm: yes });
+  const sha = await authorize(cwd, { quote: 'ok', env: {} });
   assert.ok(sha);
   assert.equal((await git(['status', '--porcelain'], { cwd })).stdout, '');
   const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
   assert.deepEqual(committed, ['.cairn/settings.json']);
+});
+
+// authorize() with a real quote binds the three digests, and the stored evidence's own
+// describeEvidence text starts with 'attested:' (spec revision 6).
+test('authorize with a quote binds; describeEvidence of the record starts with attested:', async () => {
+  const cwd = await initialized();
+  const sha = await authorize(cwd, { quote: 'looks right to me', env: {} });
+  const rec = (await readLog(cwd)).find((r) => r.sha === sha);
+  assert.equal(rec.payload.evidence.mode, 'attested');
+  assert.match(describeEvidence(rec.payload.evidence), /^attested:/);
+});
+
+import { direction } from '../lib/auth.mjs';
+
+// Spec revision 6, "Direction": `cairn authorize instead|ask` writes a direction record instead of
+// binding the protected digests -- the developer's own words, with no nonce or subject to verify
+// later (nothing protected changes).
+test('direction writes a record with kind, target protected and the developer evidence fields', async () => {
+  const cwd = await initialized();
+  const sha = await direction(cwd, { kind: 'instead', quote: 'Ship the smaller version first.', env: {} });
+  const rec = (await readLog(cwd)).find((r) => r.sha === sha);
+  assert.equal(rec.kind, 'direction');
+  assert.equal(rec.target, 'protected');
+  assert.deepEqual(rec.payload, {
+    purpose: 'authorize', kind: 'instead', text: 'Ship the smaller version first.', harness: 'none',
+    author: { name: 'Cairn Test', email: 'test@example.invalid' },
+  });
+});
+
+test('direction refuses a kind other than instead or ask', async () => {
+  const cwd = await initialized();
+  await assert.rejects(direction(cwd, { kind: 'ok', quote: 'x', env: {} }),
+    /^AuthError: cairn: authorize takes ok, instead or ask$/);
+});
+
+test('direction refuses a missing or blank quote', async () => {
+  const cwd = await initialized();
+  await assert.rejects(direction(cwd, { kind: 'ask', env: {} }), /needs --quote/);
+  await assert.rejects(direction(cwd, { kind: 'ask', quote: '  ', env: {} }), /needs --quote/);
 });

@@ -1273,7 +1273,7 @@ describe('calibration', () => {
       const r = await measure(cwd, { ...draft(), question: `q${i}` }, { transport: transport([goodBody()]) });
       assert.equal(r.suggested, 'agent');
       const sha = await escalate(cwd, { ...draft(), question: `q${i}`, evaluation: r.measurementSha });
-      await answer(cwd, draft().commitment, 'ok', '', { owner: ownerLabel, escalation: sha, confirm: async () => true });
+      await answer(cwd, draft().commitment, 'ok', { owner: ownerLabel, escalation: sha, quote: 'ok', env: {} });
     }
   }
   // Fix round 1 (controller ruling, task-10-review.md "Important"): this test used to build 60
@@ -1341,7 +1341,7 @@ describe('calibration', () => {
     const r = await measure(cwd, { ...draft(), named_paths: ['migrations/1.sql'] });
     assert.equal(r.suggested, null);
     const sha = await escalate(cwd, { ...draft(), evaluation: r.measurementSha });
-    await answer(cwd, draft().commitment, 'ok', '', { owner: 'developer', escalation: sha, confirm: async () => true });
+    await answer(cwd, draft().commitment, 'ok', { owner: 'developer', escalation: sha, quote: 'ok', env: {} });
     assert.deepEqual((await calibrate(cwd)).sample, 0);
   });
 });

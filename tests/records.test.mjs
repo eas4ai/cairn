@@ -19,9 +19,11 @@ const msg = (subject, body, trailers = [['Cairn-Schema', '1'], ['Cairn-Digest', 
   Buffer.concat([Buffer.from(`${subject}\n\n`), body, Buffer.from('\n\n' + trailers.map(([k, v]) => `${k}: ${v}`).join('\n') + '\n')]);
 const decodeRaw = (repo, subject, body, trailers) => rawCommit(repo, msg(subject, Buffer.isBuffer(body) ? body : Buffer.from(body), trailers)).then(decodeRecord);
 
-test('the table has the 27 kinds of section 4 and no admin-transition', () => {
-  assert.equal(KINDS.size, 27);
-  assert.ok(KINDS.has('read') && !KINDS.has('admin-transition'));
+// Spec revision 6 adds 'direction' (section 4: `cairn authorize instead|ask`), so the table now has
+// 28 kinds, not 27.
+test('the table has the 28 kinds of section 4 and no admin-transition', () => {
+  assert.equal(KINDS.size, 28);
+  assert.ok(KINDS.has('read') && KINDS.has('direction') && !KINDS.has('admin-transition'));
   for (const k of KINDS) assert.ok(Object.keys(SCHEMAS[k]).length > 0, k);
 });
 // Fix round 1 item 2 (review-1.md finding 2): refFieldsOf must find every ref-typed field, not

@@ -187,7 +187,7 @@ import { authorize } from '../lib/auth.mjs';
 test('an authorize()-produced authorization record exempts the same protected change from a breach', async () => {
   const r = await loopRepo();
   await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
-  await authorize(r.cwd, { confirm: async () => true });
+  await authorize(r.cwd, { quote: 'ok', env: {} });
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
 });
 

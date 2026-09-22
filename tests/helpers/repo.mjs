@@ -56,11 +56,11 @@ export async function makeProject({ settings = {}, files = {} } = {}) {
   await repo.write('.cairn/settings.json', JSON.stringify(merged, null, 2) + '\n');
   for (const [path, content] of Object.entries({ ...DEFAULT_PROJECT_FILES, ...files })) await repo.write(path, content);
   await repo.commit('fixture');
-  await init(repo.dir, { confirmRemote: async () => 'origin', chooseKey: async () => null, confirm: yes, confirmDigest: yes });
+  await init(repo.dir, { confirmRemote: async () => 'origin', chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
   const remove = async () => { await repo.remove(); await rm(remote, { recursive: true, force: true }); };
   return {
     cwd: repo.dir, dir: repo.dir, git: repo.git, write: repo.write, commit: repo.commit, readRef: repo.readRef,
-    authorize: () => authorize(repo.dir, { confirm: yes }),
+    authorize: () => authorize(repo.dir, { quote: 'ok', env: {} }),
     cleanup: remove, remove,
   };
 }

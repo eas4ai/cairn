@@ -198,7 +198,7 @@ export async function work(p) {
   await p.wakeIs("Resolvable", "reply", "fixture");
   p.cairn(["reply", "fixture", "No caller in src passes NaN today."]);
   await p.wakeIs("Waiting");
-  await p.developer.answer("fixture", "ok", "");
+  await p.developer.answer("fixture", "ok", "ok");
   await p.wakeIs("Resolvable", "review", "fixture");
 
   // Scope breach: an undeclared, non-outside file observed by the next state-changing command.
@@ -350,6 +350,11 @@ const EVALUATOR = ["evaluation-intent", "evaluation-call", "measurement", "calib
 const UNREACHABLE = {
   "command-abort": "written only when a multi-store command dies before any planned write; the crash fixture variant B reaches it",
   read: "excluded by the task: the developer's queue read is a developer-authenticated act tested in plan 03",
+  // Spec revision 6, "Direction": `cairn authorize instead|ask` writes this instead of an
+  // ordinary authorization -- a developer-authenticated act this state-changing work-loop
+  // fixture never runs (the same reason `read`, above, is excluded); covered directly by
+  // tests/auth.test.mjs's own direction() tests.
+  direction: "the developer's redirect or question through cairn authorize instead|ask is a developer-authenticated act tested in tests/auth.test.mjs",
 };
 
 // Carried item (b): a dangling answer (an 'answer' log record with no matching 'answered' ADR
@@ -382,14 +387,14 @@ test("carried item (b): a dangling answer is completed by the next cairn answer;
   // missing line to write), rather than silently succeeding or crashing. Called through the lib
   // directly (like every other developer-only command in this fixture; a raw CLI spawn needs a
   // real controlling terminal it does not have here).
-  await assert.rejects(p.developer.answer("fixture", "ok", ""), /completed the dangling answer .* for fixture; run the command again/);
+  await assert.rejects(p.developer.answer("fixture", "ok", "ok"), /completed the dangling answer .* for fixture; run the command again/);
   const adrAfter = readFileSync(join(p.dir, "docs/decisions.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
   assert.deepEqual(adrAfter.map((l) => l.kind), ["answered"]);
   assert.equal(adrAfter[0].escalation, escSha);
 
   // Running the command again now finds nothing dangling and refuses the ordinary way (already
   // answered), not the dangling-completion way a second time.
-  await assert.rejects(p.developer.answer("fixture", "ok", ""), /no unanswered escalation for fixture/);
+  await assert.rejects(p.developer.answer("fixture", "ok", "ok"), /no unanswered escalation for fixture/);
   await p.wakeIs("Resolvable", "implement", "REQ-001");
 });
 

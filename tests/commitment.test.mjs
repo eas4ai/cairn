@@ -208,21 +208,11 @@ import { supersede, carriedRecords } from '../lib/commitment.mjs';
 import { readAdr } from '../lib/adr.mjs';
 import { appendRecord } from '../lib/records.mjs';
 
-// Deviation from the plan text: lib/auth.mjs's authenticateDeveloper (already committed) defaults
-// its unsigned-local confirm to ttyConfirm, which opens /dev/tty and throws without a controlling
-// terminal -- there is none in this test run. The plan's own supersede() Interfaces line documents
-// only {quote}, with no confirm/sign passthrough and no stub in its test code, so every test that
-// actually reaches authenticateDeveloper would throw AuthError as written. supersede() (below) is
-// implemented to accept the same {confirm, sign, nonce} passthrough authorize()/readDecision()
-// already take, and the two tests that exercise a real supersede pass this same non-interactive
-// stub tests/auth.test.mjs itself uses.
-const confirmYes = async () => true;
-
 test('supersede writes the developer-quoted decision and a superseded record, and does not move Current:', async () => {
   const repo = await project();
   const s = await start(repo.cwd, 'first');
   const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
-  const sha = await supersede(repo.cwd, 'second', { quote: 'Drop the greeting work; the name argument matters more.', confirm: confirmYes });
+  const sha = await supersede(repo.cwd, 'second', { quote: 'Drop the greeting work; the name argument matters more.', env: {} });
   const rec = await last(repo.cwd, 'superseded');
   assert.equal(rec.sha, sha);
   // Deviation from the plan text: the already-committed 'superseded' schema (lib/records.mjs) has
@@ -248,7 +238,7 @@ test('supersede writes the developer-quoted decision and a superseded record, an
 test('the successor start names the superseded record and Current: moves in its own transaction', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
-  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', env: {} });
   await assert.rejects(start(repo.cwd, 'drafty'), /pending supersession names successor second, not drafty/);
   const s2 = await start(repo.cwd, 'second');
   const rec = await last(repo.cwd, 'start');
@@ -473,18 +463,18 @@ test('Fix round 1 finding 2: promote on a roadmap with no Current: line leaves n
 test('Fix round 1 finding 6: supersede refuses the open commitment naming itself as successor', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
-  await assert.rejects(supersede(repo.cwd, 'first', { quote: 'x', confirm: confirmYes }), /successor first is the same as the open commitment first/);
+  await assert.rejects(supersede(repo.cwd, 'first', { quote: 'x', env: {} }), /successor first is the same as the open commitment first/);
 });
 
 test('Fix round 1 finding 3: an item still open from an earlier supersession is carried again by the next one', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
   const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
-  const sup1 = await supersede(repo.cwd, 'second', { quote: 'Switch once.', confirm: confirmYes });
+  const sup1 = await supersede(repo.cwd, 'second', { quote: 'Switch once.', env: {} });
   const rec1 = (await readLog(repo.cwd)).find((r) => r.sha === sup1);
   assert.deepEqual(rec1.payload.carried, [d], 'the defect, still unfixed, carries on the first supersession');
   await start(repo.cwd, 'second');
-  const sup2 = await supersede(repo.cwd, 'third', { quote: 'Switch again.', confirm: confirmYes });
+  const sup2 = await supersede(repo.cwd, 'third', { quote: 'Switch again.', env: {} });
   const rec2 = (await readLog(repo.cwd)).find((r) => r.sha === sup2);
   assert.deepEqual(rec2.payload.carried, [d], 'the same defect, still unfixed, carries on the second supersession too');
 });
@@ -552,7 +542,7 @@ test('Fix round 1 findings 2, 10: a supersession successor start crashed after e
   for (let n = 0; n < 3; n++) {
     const repo = await project();
     await start(repo.cwd, 'first');
-    await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+    await supersede(repo.cwd, 'second', { quote: 'Switch.', env: {} });
     await assert.rejects(start(repo.cwd, 'second', { failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
     const log0 = await readLog(repo.cwd);
     const intent = log0.findLast((r) => r.kind === 'command-intent');
@@ -569,7 +559,7 @@ test('Fix round 1 findings 2, 10: supersede crashed after each write recovers to
   for (let n = 0; n < 2; n++) {
     const repo = await project();
     await start(repo.cwd, 'first');
-    await assert.rejects(supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes, failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
+    await assert.rejects(supersede(repo.cwd, 'second', { quote: 'Switch.', env: {}, failAfterWrite: n }), new RegExp(`simulated crash after write ${n}`));
     const log0 = await readLog(repo.cwd);
     const intent = log0.findLast((r) => r.kind === 'command-intent');
     assert.ok(intent, `write ${n}: the intent record exists even after the crash`);
@@ -585,7 +575,7 @@ test('Fix round 1 finding 4: start refuses to move Current: outside a supersessi
   const repo = await project();
   await assert.rejects(start(repo.cwd, 'second'), /roadmap names first as Current:, not second/);
   await start(repo.cwd, 'first');
-  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', confirm: confirmYes });
+  const sup = await supersede(repo.cwd, 'second', { quote: 'Switch.', env: {} });
   const s2 = await start(repo.cwd, 'second');
   assert.equal((await readLog(repo.cwd)).find((r) => r.sha === s2).payload.from_superseded, sup);
   assert.match(await readFile(join(repo.cwd, 'docs/spec/roadmap.md'), 'utf8'), /^Current: second$/m);

@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.11 - 2026-09-22
+
+- A keep is a disposition of the path's content. A kept path whose mode and blob still match the keep's snapshot is not observed again, so fifteen concurrent breaches can be kept one at a time and converge. Before, while any other breach was open, the next command wrote a fresh breach for every kept path.
+- A file's mode is 100755 only when its owner execute bit is set, as git reads it. A file at mode 0605 used to show as modified on a clean tree, in the workspace delta, the snapshot and the lease touch.
+
 ## 2.1.10 - 2026-09-22
 
 - `cairn wake` no longer contacts the authority remote: the remote's tips are fetched only when a repair has to name a fetch or a push. Every wake, and so every hook turn, made one `git ls-remote` to the remote.

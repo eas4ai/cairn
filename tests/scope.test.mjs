@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loopRepo } from './helpers/loop.mjs';
+import { chmod } from 'node:fs/promises';
 
 test('loopRepo opens a commitment with one declared requirement', async () => {
   const r = await loopRepo();
@@ -21,11 +22,10 @@ test('workspaceDelta lists added, modified and deleted paths against a snapshot 
   await r.write('src/new.mjs', 'export const n = 1;\n');
   await r.write('src/demo.mjs', 'console.log("hi");\n');
   await r.remove('README.md');
-  assert.deepEqual(await workspaceDelta(r.cwd, tree), [
-    { path: 'README.md', change: 'deleted' },
-    { path: 'src/demo.mjs', change: 'modified' },
-    { path: 'src/new.mjs', change: 'added' },
-  ]);
+  const delta = await workspaceDelta(r.cwd, tree);
+  assert.deepEqual(delta.map((d) => [d.path, d.change]), [['README.md', 'deleted'], ['src/demo.mjs', 'modified'], ['src/new.mjs', 'added']]);
+  assert.deepEqual(delta.map((d) => d.mode), [null, '100644', '100644']);
+  assert.match(delta[1].sha, /^[0-9a-f]{40}$/); assert.equal(delta[0].sha, null);
 });
 
 import { declaredPaths, isDeclared, leaseCovers, declarationSetDigest } from '../lib/scope.mjs';
@@ -63,8 +63,19 @@ test('the declaration-set digest changes when a definition digest changes', () =
 
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { git } from '../lib/gitx.mjs';
 import { appendDecision } from '../lib/adr.mjs';
 import { protectedDigests, kernelManagedValid } from '../lib/scope.mjs';
+
+test('a file with a group or other execute bit but no owner bit is 100644, as git reads it', async () => {
+  const r = await loopRepo();
+  await chmod(join(r.cwd, 'src/demo.mjs'), 0o605);
+  const tree = (await git(['rev-parse', 'HEAD^{tree}'], { cwd: r.cwd })).stdout.trim();
+  assert.deepEqual(await workspaceDelta(r.cwd, tree), []);
+  await chmod(join(r.cwd, 'src/demo.mjs'), 0o755);
+  assert.deepEqual((await workspaceDelta(r.cwd, tree)).map((d) => [d.path, d.change, d.mode]), [['src/demo.mjs', 'modified', '100755']]);
+});
+
 
 // Deviation from the plan text: KEYS.decision on this branch (lib/adr.mjs) also requires an
 // `interfaces` field (a string list), and appendDecision(cwd, line, {command}) now takes a required
@@ -268,6 +279,20 @@ test('keep is refused without an escalation answered ok, and closes the breach w
   assert.equal(await allowedBase(r.cwd, await r.log()), rec.payload.snapshot);
 });
 
+test('a kept path is not observed again while another breach is still open, and is again once its content changes', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray1.mjs', 'x\n'); await r.write('src/stray2.mjs', 'y\n');
+  const [b1] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  const esc = await escalate(r, b1); await answer(r, esc, 'ok');
+  await dispose(r.cwd, b1, 'keep');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['src/stray2.mjs']);
+  await r.write('src/stray1.mjs', 'x changed\n');
+  const again = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.equal(again.length, 1);
+  assert.equal((await r.log()).find((x) => x.sha === again[0]).payload.path, 'src/stray1.mjs');
+});
+
 test('keep accepts the escalation cairn escalate itself writes, with the breach:<sha> token the parser accepts', async () => {
   const { escalate: escalateDraft, answer: answerDraft } = await import('../lib/escalate.mjs');
   const r = await loopRepo();
@@ -296,7 +321,6 @@ test('restore is refused while the path differs from its allowed base', async ()
 
 import { runWithPreflight, STATE_CHANGING } from '../lib/scope.mjs';
 import { readMechanisms } from '../lib/mechanisms.mjs';
-import { git } from '../lib/gitx.mjs';
 
 test('declare runs the preflight first, so a declaration legalizes only future changes', async () => {
   const r = await loopRepo();
@@ -524,7 +548,8 @@ test('a renamed file is reported as the old path deleted and the new path added'
   const text = await readFile(join(r.cwd, 'src/demo.mjs'), 'utf8');
   await r.remove('src/demo.mjs');
   await r.write('src/renamed.mjs', text);
-  assert.deepEqual(await workspaceDelta(r.cwd, tree), [
+  const delta = await workspaceDelta(r.cwd, tree);
+  assert.deepEqual(delta.map((d) => ({ path: d.path, change: d.change })), [
     { path: 'src/demo.mjs', change: 'deleted' },
     { path: 'src/renamed.mjs', change: 'added' },
   ]);
@@ -566,7 +591,7 @@ test('a changed symlink target text is modified', async () => {
   const { tree } = await readSnapshot(r.cwd, await r.snap(), 'workspace');
   await r.remove('src/link.mjs');
   await symlink('other.mjs', join(r.cwd, 'src/link.mjs'));
-  assert.deepEqual(await workspaceDelta(r.cwd, tree), [{ path: 'src/link.mjs', change: 'modified' }]);
+  assert.deepEqual((await workspaceDelta(r.cwd, tree)).map((d) => [d.path, d.change, d.mode]), [['src/link.mjs', 'modified', '120000']]);
 });
 
 // Item 1: `--stdin-paths` also runs a clean filter and EOL conversion named by .gitattributes,

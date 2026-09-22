@@ -1,4 +1,4 @@
-{ "schemaVersion": 1, "name": "cairn", "displayName": "Cairn", "version": "2.1.12",
+{ "schemaVersion": 1, "name": "cairn", "displayName": "Cairn", "version": "2.1.13",
   "description": "The referee for agent-led software development: reads the repository, names the next action.",
   "compat": { "manifestDir": ".muse-plugin", "source": "native" },
   "capabilities": { "commands": [], "mcpServers": [], "reminders": [],

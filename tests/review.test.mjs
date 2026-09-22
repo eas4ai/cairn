@@ -138,7 +138,7 @@ test('brief writes the record, the projection and the rendered file, and prints 
   assert.match(p.exclusions_digest, /^sha256:/);
   assert.ok(b.briefPath.startsWith(path.join(r.cwd, '.cairn/output/brief-')));
   assert.equal(await fs.readFile(b.briefPath, 'utf8'), b.text);
-  for (const s of ['## Interface obligations\nsrc/api/x.mjs\n', '## Builder findings\n1. no test\n', '[DEMO-001]', 'Falsifier:', 'mechanism demo-001 Q1 observed:',
+  for (const s of ['## Interface obligations\nsrc/api/x.mjs\n', '## Changed paths (start snapshot to reviewed snapshot; A added, M modified, D deleted)\n', '\nA src/api/x.mjs\n', 'compare the changed paths above with the claim', '## Builder findings\n1. no test\n', '[DEMO-001]', 'Falsifier:', 'mechanism demo-001 Q1 observed:',
     'cannot detect a secret a person or primary coding agent copied into ordinary prose', 'You may read only the projection directory. Boundary: unenforced.']) assert.ok(b.text.includes(s), s);
   const lines = b.launch.split('\n');
   assert.equal(lines[0], `cairn: brief first ${b.sha}`);

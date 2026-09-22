@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.12 - 2026-09-22
+
+- The adversary brief carries the changed paths from the start snapshot to the reviewed snapshot (name-status, never contents), so Q4 is answerable from the projection, which has no history.
+
 ## 2.1.11 - 2026-09-22
 
 - A keep is a disposition of the path's content. A kept path whose mode and blob still match the keep's snapshot is not observed again, so fifteen concurrent breaches can be kept one at a time and converge. Before, while any other breach was open, the next command wrote a fresh breach for every kept path.

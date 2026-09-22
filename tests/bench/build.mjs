@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { init } from '../../lib/init.mjs';
+import { loadSettings } from '../../lib/settings.mjs';
 import { declare } from '../../lib/mechanisms.mjs';
 import { authorize } from '../../lib/auth.mjs';
 import { start } from '../../lib/commitment.mjs';
@@ -52,14 +53,15 @@ export async function buildLedgerProject({ dir } = {}) {
   for (const [p, text] of Object.entries(project.files)) write(cwd, p, text);
   sh(cwd, ['add', '-A']); sh(cwd, ['commit', '-q', '-m', 'Prepare the ledger project']);
 
-  const confirm = async () => true;
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirm, confirmDigest: async () => true });
+  // Settings are already on disk (written just above), so this adopts them: --adopt <digest> is
+  // the flag that matters (lib/init.mjs's own comment on init()).
+  await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
 
   const inputs = project.mechanism.inputs.map((p) => p.replace(/\/$/, ''));   // trailing '/' is an empty path component (lib/paths.mjs)
   await declare(cwd, project.mechanism.name, { command: project.mechanism.command, cwd: null, inputs, documents: [], requirements: project.mechanism.requirements, results: 'per-requirement' });
   sh(cwd, ['add', '-A']); sh(cwd, ['commit', '-q', '-m', `Declare the ${project.mechanism.name} mechanism`]);
 
-  await authorize(cwd, { confirm });
+  await authorize(cwd, { quote: 'ok', env: {} });
   const startSha = await start(cwd, SLUG);
   const leaseSha = await begin(cwd, { action: 'implement', target: LEASE_TARGET, touch: ['src/ledger.mjs', 'tests/ledger.test.mjs'], env: { ...process.env, CAIRN_SESSION: 'bench' } });
 

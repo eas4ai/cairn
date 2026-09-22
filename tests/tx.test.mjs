@@ -59,9 +59,9 @@ test('stage writes plan, pre-identities and exact bytes by rename, never a parti
 import { git, readRef, catCommit } from '../lib/gitx.mjs';
 import { readLog, appendRecord } from '../lib/records.mjs';
 import { init } from '../lib/init.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 import { preIdentities, applyWrites } from '../lib/tx.mjs';
 
-const yes = async () => true;
 // Deviation from the plan text: lib/settings.mjs's validateSettings (plan 02, already committed)
 // requires every typesafeai.* threshold key to be present (a closed object schema; see lib/init.mjs's
 // own DEFAULT_SETTINGS comment for the same issue), so the plan's smaller
@@ -75,7 +75,7 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
 const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n' };
 async function initialized() {
   const { cwd } = await repoWith(BASE);
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
   return cwd;
 }
 const filePlan = (bytes = 'v2\n') => ({ identity: { i: 1 },

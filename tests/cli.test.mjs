@@ -2,19 +2,22 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot, writeInputSnapshot } from '../lib/snapshots.mjs';
 import { main } from '../lib/cli.mjs';
 import { missingRefsLine } from '../lib/travel.mjs';
 import { init } from '../lib/init.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 import { b64url, canonicalize } from '../lib/canon.mjs';
 
-// Fix round 1, item 5: extra takes the test-only confirm/confirmRemote/chooseKey/confirmDigest
-// overrides main() now passes through to init/authorize/decisions --read, so their success and
-// refusal paths can be driven through main() itself without a controlling terminal.
+// Fix round 1, item 5: extra takes the test-only env override main() now passes through to
+// init/authorize/decisions --read, so their success and refusal paths can be driven through
+// main() itself deterministically (no real harness environment variables leaking in).
 const run = async (argv, cwd, extra = {}) => { let out = '', err = ''; const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } }, ...extra }); return { code, out, err }; };
-const yes = async () => true;
 
 function extractPayload(out) {
   const m = /^cairn: sign this payload: (.+)$/m.exec(out);
@@ -31,7 +34,7 @@ async function signedProject(t) {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
   const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes, sign });
+  await init(repo.dir, { localOnly: true, signingKeyPem: pem, sign, env: {} });
   return { cwd: repo.dir, repo, privateKey, pem };
 }
 
@@ -93,16 +96,17 @@ test('cairn lint docs/spec prints findings and exits 1, exits 0 when clean, refu
 
 // Fix round 1, item 5: the typed CLI surface (runInit, runAuthorize, runDecisionsRead, cliSigner's
 // supplied-signature branch, and main()'s dispatch) was untested. These drive cairn init, cairn
-// authorize and cairn decisions --read through main() with injected io and injected confirm,
-// covering the success and refusal path for each in unsigned-local mode.
+// authorize and cairn decisions --read through main() with injected io, covering the success and
+// refusal path for each. Spec revision 6: cairn init takes the developer's answers as flags on
+// argv (no more injected confirm callbacks), so the flags themselves go straight on argv here.
 test('cairn init: success prints the evidence description; refusal is one cairn: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  const ok = await run(['init'], repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, confirm: yes });
+  const ok = await run(['init', '--local-only', '--attested', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
-  assert.match(ok.out, /^cairn: initialized; init record [0-9a-f]{40} \(unsigned-local: terminal confirmation by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+  assert.match(ok.out, /^cairn: initialized; init record [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
 
   const repo2 = await makeRepo(); t.after(repo2.remove);
-  const refused = await run(['init'], repo2.dir, { confirmRemote: async () => 'upstream', chooseKey: async () => null, confirm: yes });
+  const refused = await run(['init', '--remote', 'upstream', '--attested', '--quote', 'ok'], repo2.dir, { env: {} });
   assert.equal(refused.code, 1);
   assert.equal(refused.err, 'cairn: authority_remote upstream is not a configured remote\n');
 });
@@ -112,7 +116,7 @@ test('cairn authorize: success prints the evidence description; refusal is one c
   await repo.write('AGENTS.md', '# agreement\n');
   await repo.write('docs/spec/overview.md', '# keystone\n');
   await repo.commit('fixture');
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(repo.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const ok = await run(['authorize', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
   assert.match(ok.out, /^cairn: authorization [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
@@ -120,7 +124,7 @@ test('cairn authorize: success prints the evidence description; refusal is one c
   const repo2 = await makeRepo(); t.after(repo2.remove);
   await repo2.write('docs/spec/overview.md', '# keystone\n');
   await repo2.commit('fixture');
-  await init(repo2.dir, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(repo2.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const refused = await run(['authorize', '--quote', 'ok'], repo2.dir, { env: {} });
   assert.equal(refused.code, 1);
   assert.equal(refused.err, 'cairn: AGENTS.md is missing; authorize binds the working agreement\n');
@@ -128,7 +132,7 @@ test('cairn authorize: success prints the evidence description; refusal is one c
 
 test('cairn decisions --read: success prints the evidence description; refusal is one cairn: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(repo.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const ok = await run(['decisions', '--read', '01J0000000000000000000ABCD', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
   assert.match(ok.out, /^cairn: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
@@ -160,23 +164,37 @@ test('cairn init: the full two-step signed flow succeeds; a signature over a dif
   const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
-  const io = { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes };
+
+  // The signing key lives outside the repository, not written into its working tree: a *.pem
+  // path under the project itself is a sensitive path lib/snapshots.mjs's own workspace snapshot
+  // refuses to capture untracked.
+  const keyPath = join(mkdtempSync(join(tmpdir(), 'cairn-key-')), 'dev.pem');
+  writeFileSync(keyPath, pem);
 
   const repo = await makeRepo(); t.after(repo.remove);
-  const run1 = await run(['init'], repo.dir, io);
+  const argv = ['init', '--local-only', '--signing-key', keyPath];
+  const run1 = await run(argv, repo.dir, { env: {} });
   assert.equal(run1.code, 1);
   const payload = extractPayload(run1.out);
   const nonce = JSON.parse(payload).nonce;
   const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
-  const run2 = await run(['init', '--nonce', nonce, '--signature', signature], repo.dir, io);
+  // Run 1's own write already put settings.json on disk before it failed asking for a signature
+  // (init() validates and writes settings before authenticating); run 2 is therefore an "existing
+  // settings" call and needs --adopt <digest> too (init's own creating-vs-adopting rule), alongside
+  // the same --local-only/--signing-key argv run 1 used -- harmless once --adopt names the digest
+  // already on disk (lib/init.mjs's own comment on init()).
+  const digest = (await loadSettings(repo.dir)).digest;
+  const run2 = await run([...argv, '--adopt', digest, '--nonce', nonce, '--signature', signature], repo.dir, { env: {} });
   assert.equal(run2.code, 0);
   assert.match(run2.out, /^cairn: initialized; init record [0-9a-f]{40} \(signed by the developer key\)\n$/);
 
   const repo2 = await makeRepo(); t.after(repo2.remove);
-  const bad1 = await run(['init'], repo2.dir, io);
+  const argv2 = ['init', '--local-only', '--signing-key', keyPath];
+  const bad1 = await run(argv2, repo2.dir, { env: {} });
   const badPayload = extractPayload(bad1.out);
   const badSignature = b64url(cryptoSign(null, Buffer.from(badPayload), privateKey));
-  const bad2 = await run(['init', '--nonce', 'a-different-nonce', '--signature', badSignature], repo2.dir, io);
+  const digest2 = (await loadSettings(repo2.dir)).digest;
+  const bad2 = await run([...argv2, '--adopt', digest2, '--nonce', 'a-different-nonce', '--signature', badSignature], repo2.dir, { env: {} });
   assert.equal(bad2.code, 1);
   assert.match(bad2.err, /does not verify against signing_key/);
   assert.equal(await repo2.readRef('refs/cairn/log'), null);
@@ -231,7 +249,6 @@ test('cairn decisions --read: the full two-step signed flow succeeds; a signatur
 import { declared as mechanismDeclared, project as mechanismProject, DEFINITION as MECHANISM_DEFINITION } from './helpers/mechanism-fixture.mjs';
 import { readMechanisms } from '../lib/mechanisms.mjs';
 import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 
 // Fix round 1 item 6 addendum: `cairn declare` and `cairn check` were never wired into main()'s
 // argv dispatch by any plan (confirmed: neither appeared in `cairn --help`), though both were
@@ -536,7 +553,7 @@ async function signedCommitmentRepo(t) {
   await repo.write('docs/spec/roadmap.md', ROADMAP);
   await repo.write('src/main.mjs', 'console.log("hello");\n');
   await repo.commit('Add the demo specification');
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes, sign });
+  await init(repo.dir, { localOnly: true, signingKeyPem: pem, sign, env: {} });
   await authorize(repo.dir, { sign });
   await start(repo.dir, 'first');
   return { cwd: repo.dir, repo, privateKey };
@@ -768,9 +785,7 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
 
 // --- Plan 16, Task 5: cairn measure (CLI dispatch) ---------------------------------------------
 import { renderMeasureBrief, buildScoreQuestions } from '../lib/evaluate.mjs';
-import { mkdtempSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 
 // fakeTransportPath: writes a small ESM module whose default export replaces `post`
 // (bin/typesafeai.mjs) -- the test-only `--transport-module <path>` flag (this task) loads it the

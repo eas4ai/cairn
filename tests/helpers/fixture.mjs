@@ -8,6 +8,7 @@ import { wake } from "../../lib/wake.mjs";
 import { readLog } from "../../lib/records.mjs";
 import { authorize } from "../../lib/auth.mjs";
 import { init } from "../../lib/init.mjs";
+import { loadSettings } from "../../lib/settings.mjs";
 import { answer } from "../../lib/escalate.mjs";
 import { supersede } from "../../lib/commitment.mjs";
 
@@ -127,7 +128,9 @@ export function buildProject({ settings = SETTINGS } = {}) {
   // init/authorize/answer. Spec revision 6: the developer's quoted words (--quote) are both the
   // record's own text and, in attested mode (no signing_key here), the developer evidence itself.
   const developer = {
-    init: () => init(dir, { confirmRemote: async () => "origin", chooseKey: async () => null, quote: "ok", confirmDigest: async () => true, env: {} }),
+    // Settings are already on disk (written above), so this adopts them: --adopt <digest> is the
+    // flag that matters (lib/init.mjs's own comment on init()).
+    init: async () => init(dir, { adopt: (await loadSettings(dir)).digest, quote: "ok", env: {} }),
     authorize: () => authorize(dir, { quote: "ok", env: {} }),
     answer: (slug, kind, text) => answer(dir, slug, kind, { quote: text, env: {} }),
     supersede: (successor, quote) => supersede(dir, successor, { quote, env: {} }),

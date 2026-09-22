@@ -162,12 +162,15 @@ import { appendRecord, readLog, decodeRecord } from '../lib/records.mjs';
 import { catCommit } from '../lib/gitx.mjs';
 import { authorize, authorizations, latestProtected } from '../lib/auth.mjs';
 import { init } from '../lib/init.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 
-const yes = async () => true;
 const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+// Settings are already on disk (BASE writes .cairn/settings.json before init() ever runs), so
+// this adopts them: --adopt <digest> is the flag that matters (lib/init.mjs's own comment on
+// init()).
 async function initialized(files = BASE) {
   const { cwd } = await repoWith(files);
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
   return cwd;
 }
 
@@ -282,7 +285,7 @@ test('the protected check re-verifies chain record evidence and refuses a forged
   const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign2(null, bytes, privateKey));
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirmDigest: yes, sign });
+  await init(cwd, { adopt: (await loadSettings(cwd)).digest, sign });
   await authorize(cwd, { sign });
   const d1 = await protectedDigests(cwd);
   writeFileSync(join(cwd, 'AGENTS.md'), '# changed\n');
@@ -315,7 +318,7 @@ test("the protected check trusts only the log's first record as the init record;
   const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign3(null, bytes, privateKey));
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, confirmDigest: yes, sign });
+  await init(cwd, { adopt: (await loadSettings(cwd)).digest, sign });
   const before = await protectedDigests(cwd);
   const forgedDigest = 'sha256:' + '1'.repeat(64);
   await appendRecord(cwd, 'init', 'project', { settings_digest: forgedDigest, authority_remote: null, auth_mode: 'unsigned-local' });
@@ -426,7 +429,7 @@ test('Fix round 1 finding 6: a rename inside a protected path is fully committed
 // init() writes it to disk but never commits it (repoWith's own fixture commit ran before init).
 test('Fix round 1 finding 6: the first authorize commits a never-before-tracked protected path', async () => {
   const { cwd } = await repoWith({ 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' });
-  await init(cwd, { confirmRemote: async () => null, chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  await init(cwd, { localOnly: true, attested: true, quote: 'ok', env: {} });
   assert.equal((await git(['status', '--porcelain', '--', '.cairn/settings.json'], { cwd })).stdout.trim().slice(0, 2), '??',
     '.cairn/settings.json is on disk but never git-added, the case that broke --only');
   const sha = await authorize(cwd, { quote: 'ok', env: {} });

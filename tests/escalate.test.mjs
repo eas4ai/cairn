@@ -141,8 +141,6 @@ import { init } from '../lib/init.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
 
-const yes = async () => true;
-
 async function signedCommitmentRepo() {
   const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -157,7 +155,7 @@ async function signedCommitmentRepo() {
   await repo.write('docs/spec/roadmap.md', ROADMAP);
   await repo.write('src/main.mjs', 'console.log("hello");\n');
   await repo.commit('Add the demo specification');
-  await init(repo.dir, { confirmRemote: async () => null, chooseKey: async () => pem, confirmDigest: yes, sign });
+  await init(repo.dir, { localOnly: true, signingKeyPem: pem, sign, env: {} });
   await authorize(repo.dir, { sign });
   await start(repo.dir, 'first');
   return { cwd: repo.dir, sign };

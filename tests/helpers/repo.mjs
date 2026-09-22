@@ -38,8 +38,8 @@ export async function makeRepo() {
 // tests/helpers/repo.mjs (append)
 import { init, DEFAULT_SETTINGS } from '../../lib/init.mjs';
 import { authorize } from '../../lib/auth.mjs';
+import { loadSettings } from '../../lib/settings.mjs';
 
-const yes = async () => true;
 // Deviation from the plan text: authorize() (Task 4) refuses without AGENTS.md and docs/spec, but
 // the plan's own makeProject code writes neither by default, so its own Task 9 test's p.authorize()
 // call would throw. Every later plan is told to build fixtures on makeProject and expects an
@@ -56,7 +56,14 @@ export async function makeProject({ settings = {}, files = {} } = {}) {
   await repo.write('.cairn/settings.json', JSON.stringify(merged, null, 2) + '\n');
   for (const [path, content] of Object.entries({ ...DEFAULT_PROJECT_FILES, ...files })) await repo.write(path, content);
   await repo.commit('fixture');
-  await init(repo.dir, { confirmRemote: async () => 'origin', chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {} });
+  // Settings are already on disk (merged just above, so callers can override any field the
+  // init() flags don't reach, such as outside/typesafeai), so this is an "adopt existing
+  // settings" call: --adopt <digest> is the one flag that actually matters here (lib/init.mjs's
+  // own comment on init() -- remote/attested go unused once a correct --adopt is given, but are
+  // passed anyway to match a real `cairn init --remote <name> --attested --quote <words>`
+  // invocation's shape).
+  const { digest } = await loadSettings(repo.dir);
+  await init(repo.dir, { remote: 'origin', attested: true, adopt: digest, quote: 'ok', env: {} });
   const remove = async () => { await repo.remove(); await rm(remote, { recursive: true, force: true }); };
   return {
     cwd: repo.dir, dir: repo.dir, git: repo.git, write: repo.write, commit: repo.commit, readRef: repo.readRef,

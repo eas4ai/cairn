@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { makeRepo, makeProject } from './helpers/repo.mjs';
 import { git, readRef } from '../lib/gitx.mjs';
 import { init } from '../lib/init.mjs';
+import { loadSettings } from '../lib/settings.mjs';
 import { authorize } from '../lib/auth.mjs';
 import { start } from '../lib/commitment.mjs';
 import { appendRecord, readLog } from '../lib/records.mjs';
@@ -45,13 +46,13 @@ function makeRemote() {
 //
 // Fix round 1 item 4 (Minor, review-1.md finding 4): the earlier version of this fixture wrote
 // .cairn/settings.json to disk itself, before calling init() -- init()'s own `hadSettings` branch
-// then skipped confirmRemote entirely (it only runs when no settings file exists yet), so no
-// travel test ever exercised cairn init's actual developer-confirmation-of-remote step, only the
-// "adopt an already-written digest" path. Settings are no longer pre-written: init() itself
-// builds them from confirmRemote's return value (the same DEFAULT_SETTINGS(remote, key) it always
-// uses), and this project() asserts confirmRemote is actually called, with the real configured
-// remote names, on every call -- so a future regression back to the old bypassing order fails
-// every travel test immediately rather than silently losing this coverage again.
+// then skipped the remote question entirely (it only runs when no settings file exists yet), so no
+// travel test ever exercised cairn init's actual remote-naming step, only the "adopt an
+// already-written digest" path. Settings are no longer pre-written: init() itself builds them from
+// the --remote flag's value (the same DEFAULT_SETTINGS(remote, key) it always uses), and this
+// project() asserts the resulting settings actually carry the real configured remote name, so a
+// future regression back to the old bypassing order fails every travel test immediately rather
+// than silently losing this coverage again.
 async function project({ remote = makeRemote(), authority = 'authority' } = {}) {
   const repo = await makeRepo();
   sh(repo.dir, 'remote', 'add', authority, remote);
@@ -61,17 +62,8 @@ async function project({ remote = makeRemote(), authority = 'authority' } = {}) 
   await repo.write('docs/spec/roadmap.md', 'Current: first-slug\n\n## first-slug\n\nRequirements: \n\n## second-slug\n\nRequirements: \n');
   await repo.write('README.md', 'hello\n');
   await repo.commit('fixture');
-  const yes = async () => true;
-  let confirmRemoteCalls = 0;
-  await init(repo.dir, {
-    confirmRemote: async (names) => {
-      confirmRemoteCalls++;
-      assert.ok(names.includes(authority), `confirmRemote sees ${authority} among the configured remotes`);
-      return authority;
-    },
-    chooseKey: async () => null, quote: 'ok', confirmDigest: yes, env: {},
-  });
-  assert.equal(confirmRemoteCalls, 1, 'cairn init asked the developer to confirm the authority remote');
+  await init(repo.dir, { remote: authority, attested: true, quote: 'ok', env: {} });
+  assert.equal((await loadSettings(repo.dir)).settings.authority_remote, authority, `cairn init named ${authority} as the authority remote`);
   await authorize(repo.dir, { quote: 'ok', env: {} });
   return { cwd: repo.dir, remote, authority };
 }

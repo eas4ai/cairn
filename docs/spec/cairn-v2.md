@@ -4,8 +4,17 @@ Prefix: CAIRN
 Scope: the Cairn 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 5, 2026-09-19. Nothing here is Agreed until the
+Status: Draft, revision 6, 2026-09-21. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 6 changes one rule: the developer is never asked to run a command.
+The developer answers in conversation; the agent records the answer, quoting
+the developer's words, with the developer-only commands. Unsigned evidence is
+now the quoted answer, the harness that carried it and the Git author, called
+attested evidence. The controlling-terminal confirmation is gone. Revision 5
+had "one authorization command at start" run by the developer; the developer
+ruled on 2026-09-21: "The user should never be asked to run cli commands for
+anything" and "It should be a prompt... the model can run the cli command".
 
 Revision 5 is a consistency revision. It closes the remaining authority,
 record, supersession, calibration, egress, scope, initialization and liveness
@@ -150,9 +159,13 @@ after the developer confirms it. Its fields are:
   request, adversary brief or adversary projection. It does not govern the
   project's ordinary Git remotes or the primary coding agent.
 - `signing_key`: the developer's public verification key, or `null`. With a
-  key, developer-only records must verify. With `null`, the command requires an
-  explicit controlling-terminal confirmation and records the Git author; this
-  is evidence, not cryptographic authentication.
+  key, developer-only records must verify. With `null` the project is in
+  attested mode: the agent asks the developer in conversation, and the command
+  records the developer's answer in their own words, the harness that carried
+  the conversation and the Git author; this is evidence, not cryptographic
+  authentication. The kernel never prompts. Revised 2026-09-21: previously
+  "the command requires an explicit controlling-terminal confirmation", which
+  the developer had to type as a command.
 - `attribution`: `forbidden` or `allowed`, for the release script.
 - `harness`: one entry per supported harness, including the adversary model and
   whether the adversary is local or remote.
@@ -378,9 +391,27 @@ resolution with a reason, and may raise new findings anywhere in that delta.
 
 **Escalation, answer and reply.** An escalation has five one-line fields:
 question, recommendation, because, if wrong, and instead. Wake prints them
-verbatim. The developer writes `ok`, `instead <text>` or `ask <text>` with
-`cairn answer`; `ask` stays open until an agent reply. Developer-only commands
-use the authentication rule in Settings.
+verbatim. The agent puts them to the developer in conversation, in plain
+prose without a choice widget, and asks for a decision, a different direction
+or a question. The developer answers in their own words. The agent records
+`ok`, `instead` or `ask`, quoting those words verbatim, with
+`cairn answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until
+an agent reply. Developer-only commands use the authentication rule in
+Settings. Revised 2026-09-21: previously "The developer writes `ok`,
+`instead <text>` or `ask <text>` with `cairn answer`".
+
+**Developer evidence.** Every developer-only record carries evidence of the
+developer's decision. `signed` evidence is a signature over the purpose,
+subject and nonce that verifies against `signing_key`. `attested` evidence is
+the developer's words quoted verbatim by the agent that asked, the name of the
+harness that carried the conversation (`claude_code`, `codex`, `muse` or
+`none`), and the Git author. Records written before revision 6 may carry
+`unsigned-local` evidence; the kernel reads them and never writes one again.
+
+**Direction.** The record `cairn authorize instead|ask --quote <words>`
+writes when the developer asks for a change or a question before binding:
+the kind, the developer's words, the harness and the Git author. It binds
+nothing and wake ignores it; it keeps the developer's words in the log.
 
 **Evaluation intent, call and measurement.** The three record kinds that make
 the evaluator recoverable. The intent fixes the draft, pre-write identity,
@@ -536,14 +567,18 @@ prints the current verdict; elsewhere it names `/new-project` or
 
 New-project and existing-project run `cairn init` before they need settings,
 mechanisms or refs. It initializes Git when the new-project directory has none;
-validates or creates settings; asks the developer to confirm the authority
-remote or explicit local-only operation; asks the developer to choose a signing
-key or explicitly accept unsigned-local evidence; writes the init record; and
-creates the durable ref roots with compare-and-swap. Protection begins at the
+validates or creates settings; takes the developer's answers as flags:
+`--remote <name>` or `--local-only` for the authority, `--signing-key <path>`
+or `--attested` for developer evidence, and `--quote <words>` in attested
+mode; writes the init record; and creates the durable ref roots with
+compare-and-swap. The agent asks those questions in conversation before it
+runs the command; the command asks nothing itself and refuses, naming the
+flag, when an answer is missing. Revised 2026-09-21: previously the command
+asked its questions at the controlling terminal. Protection begins at the
 settings digest in that record. Initialization makes no evaluator call.
 
-If settings exist but the refs do not, initialization adopts them only after
-the developer confirms their digest. If refs exist but settings do not, it
+If settings exist but the refs do not, initialization adopts them only with
+`--adopt <digest>` naming the digest the developer confirmed in conversation. If refs exist but settings do not, it
 refuses and names repair. Re-running initialization against the same identity is
 idempotent.
 
@@ -623,9 +658,16 @@ ruling. Each confirmed block becomes `Status: Agreed <date>`.
 
 The agent writes the roadmap section and moves `Current:`, declares mechanisms
 for this commitment's requirements only, demonstrates each on a violating
-example, and writes or updates the working agreement. The developer then runs
-`cairn authorize`, one command that binds the final digests of the
-specification, the working agreement and settings in one authorization record. `cairn start` stages a command intent, commits the prepared contract,
+example, and writes or updates the working agreement. The agent then states
+what would be bound: the specification, the working agreement and settings,
+each by digest, and what changed in them since the last authorization; asks
+the developer for ok, for changes, or for a question; and on ok runs
+`cairn authorize --quote <words>`, one command that binds the final digests of
+the specification, the working agreement and settings in one authorization
+record. A request for changes or a question is recorded with
+`cairn authorize instead|ask --quote <words>` as a direction record, binds
+nothing, and the agent acts on it and asks again. Revised 2026-09-21:
+previously "The developer then runs `cairn authorize`". `cairn start` stages a command intent, commits the prepared contract,
 agreement and mechanism bytes, and writes the workspace snapshot and start
 record as one recoverable transaction, including the frozen set and optional
 supersession link. It installs exact fetch and push
@@ -697,7 +739,8 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `resolution` | source record SHA, finding number, `<ws>`, explanation | acceptance and Done |
 | `acceptance` | slug, report SHA, `<ws>`, cumulative-delta digest, accepted and rejected resolution SHAs with reasons, new findings | subsequent resolution, acceptance and Done |
 | `escalation` | slug, five fields, concern reference, optional evaluation SHA | every wake until answered |
-| `answer` | escalation SHA, `ok|instead|ask`, text, optional owner label, developer-auth evidence | wake, ADR and calibration |
+| `answer` | escalation SHA, `ok|instead|ask`, the developer's words, optional owner label, developer-auth evidence | wake, ADR and calibration |
+| `direction` | `instead|ask`, the developer's words, harness, Git author | nothing; the log keeps it |
 | `reply` | escalation SHA, text | wake after `ask` |
 | `read` | decision ID, developer-auth evidence | queue and ADR |
 | `evaluation-intent` | draft digest, `<ws>`, pre-write log head, ADR digest, settings digest, policy digest, source `jev|review`, nullable request digest, session, launch (harness, model, transport, boundary) | measurement recovery |
@@ -765,7 +808,8 @@ the review chain. `cairn escalate`, `answer` and `reply` write the decision
 chain. `cairn item`, `outside` and `fix` manage items. `cairn decide`, `realize`,
 `decisions --read` and `promote` manage the ADR. `cairn authorize` binds the
 protected digests in one record; a settings change is a new authorization
-naming the new digest. `cairn start`, `done` and `supersede` bound commitments. Wake writes
+naming the new digest; `cairn authorize instead|ask` writes one direction
+record and nothing else. `cairn start`, `done` and `supersede` bound commitments. Wake writes
 nothing. No command edits a record.
 
 Four commands write to more than one store: `start`, `promote`, `supersede`
@@ -1093,12 +1137,18 @@ agent reads the measurement, including its advisory `suggested: agent |
 developer`, and decides, except at the narrow floor or a veto, or when the
 agent itself chooses to escalate anyway; no other level is measured.
 
-The developer runs `cairn answer` and `cairn decisions --read`; the agent never
-does. With a signing key their records must verify. In explicit unsigned-local
-mode the controlling-terminal confirmation and Git author are evidence only;
-Cairn says so wherever it reports the decision. With `developer: absent`,
-none of this paragraph's developer commands has anyone to run them; section
-5 states what the floor does instead.
+The agent runs `cairn answer`, `cairn decisions --read` and `cairn authorize`
+only after the developer has answered in conversation, and never asks the
+developer to run a command. With a signing key their records must verify. In
+attested mode the developer's quoted words, the harness name and the Git
+author are evidence only; Cairn says so wherever it reports the decision.
+With `developer: absent`, none of this paragraph's questions has anyone to
+answer it; section 5 states what the floor does instead. Revised
+2026-09-21: previously "The developer runs `cairn answer` and `cairn
+decisions --read`; the agent never does", with a controlling-terminal
+confirmation as the unsigned evidence. The developer ruled that nobody is
+ever asked to run a command; the answer is given in conversation and the
+agent records it.
 
 Revised 2026-09-19: previously "With evaluation disabled or outside its
 envelope, the requested command uses the kernel level. In shadow mode the
@@ -1521,8 +1571,10 @@ specification.
 9. Promotion never Agrees text and promotes one backlog item at a time.
 10. Verdicts are Resolvable, Waiting and Done; Waiting alone is the developer's
     turn.
-11. The developer runs `cairn answer` and `cairn decisions --read`; unsigned
-    local authorship is evidence, not authentication.
+11. The developer answers in conversation and the agent records the answer
+    with `cairn answer`, `cairn decisions --read` and `cairn authorize`; a
+    quoted answer with the harness and Git author is evidence, not
+    authentication.
 12. Global install makes the command link and hooks. Project initialization,
     not install, configures a repository.
 13. The spec-phase self-review is performed but not recorded.

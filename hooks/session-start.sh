@@ -9,12 +9,15 @@ if command -v cairn >/dev/null 2>&1; then run="cairn"
 elif [ -x "$link" ]; then run="$link"; missing="$missing PATH entry ~/.local/bin"
 else run="node $here/bin/cairn.mjs"; missing="$missing command link ~/.local/bin/cairn"
 fi
-# Prefer this plugin's own copy when the command found runs a different version: a symlink into
-# a versioned plugin cache is stranded by a marketplace update. The shim bin/cairn.sh, installed
-# by /install-cairn, runs the newest installed Cairn and never strands; this hook writes nothing.
+# The command found runs when it is this plugin's version or newer: the shim bin/cairn.sh runs
+# the newest installed Cairn, which a session started before a plugin update sees as newer than
+# this hook's own copy, and that is fine. Only an older command, or one that cannot say its
+# version, is stranded (a symlink into a versioned plugin cache after a marketplace update):
+# then this plugin's copy runs and one line says how to install the shim. Writes nothing.
 want=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$here/package.json" | head -n 1)
 have=$($run --version 2>/dev/null | head -n 1)
-if [ -n "$want" ] && [ "$have" != "$want" ]; then
+older() { awk -v a="$1" -v b="$2" 'BEGIN{split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){p=x[i]+0;q=y[i]+0;if(p<q)exit 0;if(p>q)exit 1}exit 1}'; }
+if [ -n "$want" ] && older "$have" "$want"; then
   printf 'cairn: the cairn command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/cairn.sh ~/.local/bin/cairn && chmod +x ~/.local/bin/cairn\n' "${have:-an older version}" "$want" "$here"
   run="node $here/bin/cairn.mjs"
 fi

@@ -10,6 +10,32 @@ import { makeProject } from './helpers/repo.mjs';
 import { declare } from '../lib/mechanisms.mjs';
 import { appendDecision } from '../lib/adr.mjs';
 import { git, readRef, catCommit, commitTree, updateRefCAS } from '../lib/gitx.mjs';
+import { main } from '../lib/cli.mjs';
+import { mkdir, writeFile } from 'node:fs/promises';
+
+const cli = async (argv, cwd) => { let out = '', err = ''; const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } }); return { code, out, err }; };
+test('a command typed in a subdirectory runs at the repository top level, and a --file path is read from where it was typed', async () => {
+  const r = await loopRepo();
+  const sub = join(r.cwd, 'src', 'deep'); await mkdir(sub, { recursive: true });
+  // cmdWake prints to process.stdout itself, so wake runs as a child process here.
+  const spawnWake = (cwd) => spawnSync(process.execPath, [join(process.cwd(), 'bin/cairn.mjs'), 'wake'], { cwd, encoding: 'utf8' });
+  const fromRoot = spawnWake(r.cwd), fromSub = spawnWake(sub);
+  assert.equal(fromSub.stderr, ''); assert.equal(fromSub.stdout, fromRoot.stdout); assert.match(fromRoot.stdout, /action: run DEMO-001/);
+  await writeFile(join(sub, 'def.json'), JSON.stringify(mechanismFor('DEMO-001')));
+  const declared = await cli(['declare', 'demo-001', '--file', 'def.json'], sub);
+  assert.equal(declared.err, ''); assert.equal(declared.code, 0);
+});
+test('record names an untracked file under a declared input and says a build artifact is gitignored instead', async () => {
+  const r = await loopRepo();
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src', 'flags/DEMO-001'] });
+  await r.commit('declare src/ as an input');
+  await r.write('src/__pycache__/demo.pyc', 'x');
+  const spawnWake = () => spawnSync(process.execPath, [join(process.cwd(), 'bin/cairn.mjs'), 'wake'], { cwd: r.cwd, encoding: 'utf8' }).stdout;
+  const w = spawnWake();
+  assert.match(w, /action: record src\/__pycache__\/demo.pyc/); assert.match(w, /untracked file under a declared input.*gitignore/);
+  await r.write('.gitignore', '__pycache__/\n');
+  assert.doesNotMatch(spawnWake(), /__pycache__/);
+});
 import { check } from '../lib/check.mjs';
 import { ulid } from '../lib/canon.mjs';
 import { wake, FETCH_LINE, ORDER, readState, verdictOf, PREDICATES, doneRule, predicates } from '../lib/wake.mjs';

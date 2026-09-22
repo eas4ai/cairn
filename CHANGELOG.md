@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.9 - 2026-09-22
+
+- Every command runs at the repository top level whatever directory it is typed in. `cairn wake` from a subdirectory used to hash declared inputs against that directory and fail on the first one. A `--file` or `--signing-key` path is still read from where it was typed.
+- The hooks use the cairn command found when it runs this plugin's version or a newer one. A session started before a plugin update saw the shim's newer Cairn as a mismatch and printed the install advice every turn. Only an older command, or one that cannot say its version, falls back to the plugin copy.
+- The `record PATH` reason names an untracked file under a declared input as such and says a build artifact (a Python cache, a build output) is gitignored instead. The working agreement and manual say to lease the action that changes the path; `record` is a verdict, not a `cairn begin` action.
+
 ## 2.1.8 - 2026-09-22
 
 - Reading the log costs one `git cat-file --batch` instead of one spawn per record, and a process reads a given log head once. A project with 1500 records took 9 s for `cairn wake` and tens of seconds for a state-changing command; both now take well under a second.

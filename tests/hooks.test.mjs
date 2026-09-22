@@ -37,6 +37,27 @@ test("session-start uses the plugin's own copy and says so when the cairn found 
   assert.ok(!r.stdout.includes("STALE VERDICT"), r.stdout);
 });
 
+test("session-start and turn use a cairn found that runs a newer version than this plugin, silently", () => {
+  for (const name of ["session-start.sh", "turn.sh"]) {
+    const { dir } = throwawayRepo();
+    const bin = join(dir, "fakebin");
+    fakeCairn(bin, { stdout: "NEWER VERDICT", version: "99.0.0" });
+    const r = runHook(name, { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
+    assert.equal(r.status, 0);
+    assert.ok(r.stdout.includes("NEWER VERDICT"), `${name}: ${r.stdout}`);
+    assert.ok(!r.stdout.includes("using the plugin copy"), `${name}: ${r.stdout}`);
+  }
+});
+test("session-start falls back to the plugin copy when the cairn found cannot say its version", () => {
+  const { dir } = throwawayRepo();
+  const bin = join(dir, "fakebin");
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(join(bin, "cairn"), "#!/bin/sh\n[ \"$1\" = --version ] && exit 1\nprintf 'ANCIENT'\nexit 0\n"); chmodSync(join(bin, "cairn"), 0o755);
+  const r = runHook("session-start.sh", { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
+  assert.equal(r.status, 0);
+  assert.ok(r.stdout.includes("runs an older version, this plugin is"), r.stdout);
+  assert.ok(!r.stdout.includes("ANCIENT"), r.stdout);
+});
 // A fake plugin root: package.json with a version and a bin/cairn.mjs that prints a marker.
 function fakeRoot(dir, version, marker) {
   mkdirSync(join(dir, "bin"), { recursive: true });

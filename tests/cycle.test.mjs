@@ -139,7 +139,7 @@ test('a refused write counts toward the same-target bound: the fourth refusal wr
   const widened = { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] };
   const cycle = async () => (await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle');
   for (let i = 1; i <= 3; i++) {
-    await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /record violation \(src\/util\.mjs is a declared input/.test(e.message) && !/escalation written/.test(e.message));
+    await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /record violation \(src\/util\.mjs is an untracked file under a declared input/.test(e.message) && !/escalation written/.test(e.message));
     assert.equal((await cycle()).length, 0, `refusal ${i} writes no escalation`);
   }
   await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /cycle escalation written/.test(e.message));

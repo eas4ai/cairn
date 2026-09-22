@@ -13,6 +13,9 @@ command for when you want to act directly. Examples using `APP-001` or
 Cairn actually prints. Run project commands from your project's repository
 root.
 
+Inside a repository every command runs at the top level whatever directory
+you are in: the paths it prints and takes are repository-relative, except a
+`--file` or `--signing-key` path, which is read from where you typed it.
 Run `cairn --help` for the full list of commands. It works outside a
 project and changes nothing.
 
@@ -950,7 +953,7 @@ specific than the action word alone.
 | `reconcile ACTION` | A local action lease exists with no matching finished work. Finish it and `cairn end --lease <sha>`, or `cairn end --abandon`. |
 | `scope PATH` | An undeclared change was observed. Restore it (`cairn scope <breach> restore`) or ask to keep it (`cairn escalate`, then `cairn scope <breach> keep`). |
 | `fix ITEM` | A recorded defect against this commitment is still open. Write a failing test, fix it, commit, check, then `cairn fix <item-sha>`. |
-| `record PATH` / `commit PATH` | A declared input has uncommitted changes with no covering lease. Put it under `cairn begin`, or commit or revert it. |
+| `record PATH` / `commit PATH` | A declared input has uncommitted changes with no covering lease. Lease the action that changes it with `cairn begin <action> <target>` (`record` is not a begin action), then commit; or revert it. An untracked build artifact under a declared input is gitignored instead. |
 | `declare REQ` | No mechanism speaks for this requirement yet. `cairn declare` one. |
 | `run REQ` | A check is due: `cairn check REQ`. |
 | `implement REQ` | The latest receipt is not a current pass. Read it and the captured output, then fix the code under a lease. |

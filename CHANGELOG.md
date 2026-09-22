@@ -9,6 +9,8 @@ earlier records mean.
 
 ## 2.1.5 - 2026-09-22
 
+- `cairn end` handles a `--touch` path that is a directory: the outcome compares the listing of files below it, before and after, instead of failing to hash the directory and leaving the touch unwritten.
+- The working agreement tells the agent to run tools that rewrite `AGENTS.md` (GitNexus keeps a block there) with their skip option while a commitment is open, or to restore the file; such a rewrite is a scope breach on a protected path, not a Cairn defect.
 - The command at `~/.local/bin/cairn` is a shim, `bin/cairn.sh`, that runs the newest installed Cairn at run time: `$CAIRN_ROOT` when set, else the newest Claude Code or Codex plugin cache entry or the checkout at `~/.local/share/cairn`, by version. A symlink into a versioned plugin cache was stranded by every marketplace update. `/install-cairn` installs the shim, replacing only a symlink an earlier Cairn made or an older shim; the hooks print the one command that installs it when they find a stale `cairn`, and still write nothing.
 
 ## 2.1.4 - 2026-09-22

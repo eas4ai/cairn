@@ -318,6 +318,21 @@ test('cairn check writes a receipt; a non-Agreed requirement is refused', async 
   assert.match(bad.err, /^cairn: DEMO-002 is not Agreed; only Agreed requirements are checked\n$/);
 });
 
+test('cairn end writes a --touch path that is a directory once a file exists below it, and drops it when nothing was written', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  assert.equal((await run(['begin', 'implement', 'DEMO-001', '--touch', 'helpers'], repo.cwd)).code, 0);
+  await repo.write('helpers/a.mjs', 'export const a = 1;\n');
+  const ended = await run(['end'], repo.cwd);
+  assert.equal(ended.code, 0);
+  assert.match(ended.out, /^cairn: lease ended\n$/, ended.out + ended.err);
+  assert.ok((await readMechanisms(repo.cwd)).greeter.definition.inputs.includes('helpers'));
+  assert.equal((await run(['begin', 'implement', 'DEMO-001', '--touch', 'empty-dir'], repo.cwd)).code, 0);
+  const dropped = await run(['end'], repo.cwd);
+  assert.equal(dropped.code, 0);
+  assert.equal((await readMechanisms(repo.cwd)).greeter.definition.inputs.includes('empty-dir'), false, 'an untouched directory is not declared');
+});
+
 test('cairn end writes a changed --touch path into the mechanism definition (finding 2)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);

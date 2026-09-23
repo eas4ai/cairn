@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { changesVerdict, expressionOf, parseWake, statusTextOf, type Verdict } from '../mod/verdict.ts'
+import { cannotStart, changesVerdict, expressionOf, MULTI_WORD_ACTIONS, parseWake, statusTextOf, usesSudus, type Verdict } from '../mod/verdict.ts'
+import { ORDER } from '../lib/wake.mjs'
 
 // The exact lines lib/wake.mjs render() prints.
 const RESOLVABLE = 'verdict: Resolvable\naction: run WTE-001\nreason: no current receipt carries a result for WTE-001\npredicate: a current receipt carries a result for the requirement\nlayout: .cairn (the former name); sudus migrate moves it to .sudus between commitments\n'
@@ -66,4 +67,36 @@ test('a sudus, cairn or history-changing git command refreshes; other commands d
   assert.equal(changesVerdict('git status'), false)
   assert.equal(changesVerdict('npm test'), false)
   assert.equal(changesVerdict('echo sudusness'), false)
+})
+
+test('review mechanism is read as one action, and every multi-word action wake names is known', () => {
+  const v = verdictOf(parseWake('verdict: Resolvable\naction: review mechanism WTE-001\nreason: r\npredicate: p\n', 0))
+  assert.deepEqual([v.action, v.target], ['review mechanism', 'WTE-001'])
+  assert.equal(statusTextOf(v, false, false), 'Sudus | Resolvable | review mechanism WTE-001 | r')
+  assert.deepEqual(ORDER.filter((a: string) => a.includes(' ')), [...MULTI_WORD_ACTIONS])
+})
+
+test('a long line is cut by characters, never inside one', () => {
+  const reason = 'x'.repeat(100) + '\u{1F600}'.repeat(20)
+  const s = statusTextOf(parseWake(`verdict: Resolvable\naction: fix gate\nreason: ${reason}\npredicate: p\n`, 0), false, false)!
+  assert.equal(Array.from(s).length, 120)
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s))
+})
+
+test('a Sudus project is found from a subdirectory and in a linked worktree, and never past the working tree root', async () => {
+  const fs = (...paths: string[]) => async (p: string) => paths.includes(p)
+  // A linked worktree: .git is a file there, and only its branch carries the settings.
+  assert.equal(await usesSudus('/w/tree/src/deep', fs('/w/tree/.git', '/w/tree/.sudus/settings.json')), true)
+  assert.equal(await usesSudus('/w/tree/', fs('/w/tree/.git', '/w/tree/.cairn/settings.json')), true)
+  assert.equal(await usesSudus('/w/main', fs('/w/main/.git')), false)
+  // A repository inside another project's directory is its own working tree.
+  assert.equal(await usesSudus('/a/b', fs('/a/.sudus/settings.json', '/a/b/.git')), false)
+  assert.equal(await usesSudus('/not/a/repo', fs()), false)
+  assert.equal(await usesSudus('/', fs('/.sudus/settings.json')), true)
+})
+
+test('only a command that cannot start sends the status line to the plugin copy', () => {
+  // The engine's own words (Claude Code 2.1.281) for a command missing from PATH.
+  assert.equal(cannotStart('HooksError: sudus: $.process.run(sudus) failed to start: ENOENT: Executable not found in $PATH: "sudus"'), true)
+  assert.equal(cannotStart('HooksError: sudus: $.process.run(sudus) aborted: still running after 20000ms'), false)
 })

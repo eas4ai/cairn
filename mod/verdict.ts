@@ -20,9 +20,36 @@ export type Verdict =
   | { kind: 'missing'; detail: string }
   | { kind: 'none' }
 
-// A repository with neither .sudus/settings.json nor .cairn/settings.json at its root does not use
-// Sudus: wake is not run there, the status line is cleared and the pane says so.
+// A working tree with neither .sudus/settings.json nor .cairn/settings.json does not use Sudus:
+// wake is not run there, the status line is cleared and the pane says so.
 export const SETTINGS_FILES: readonly string[] = ['.sudus/settings.json', '.cairn/settings.json']
+
+// Whether the session's directory belongs to a Sudus project: a settings file of either layout in
+// it or an ancestor, up to the working tree's root, the first directory holding .git (a directory
+// in the main tree, a file in a linked worktree, whose own branch may be the only one on Sudus).
+export async function usesSudus(cwd: string, exists: (path: string) => Promise<boolean>): Promise<boolean> {
+  let dir = cwd.replace(/\/+$/, '')
+  for (;;) {
+    for (const f of SETTINGS_FILES) if (await exists(`${dir}/${f}`)) return true
+    if (dir === '' || await exists(`${dir}/.git`)) return false
+    dir = dir.slice(0, dir.lastIndexOf('/'))
+  }
+}
+
+// Whether `$.process.run` rejected because the command cannot start, the one case the status line
+// runs this plugin's own copy instead; a command that is only slow is reported, never replaced.
+export function cannotStart(err: unknown): boolean {
+  return /failed to start|\bENOENT\b/.test(String(err))
+}
+
+// The actions wake names with more than one word (lib/wake.mjs ORDER), read whole before the target.
+export const MULTI_WORD_ACTIONS: readonly string[] = ['review mechanism']
+
+function splitAction(act: string): [string, string | null] {
+  const multi = MULTI_WORD_ACTIONS.find(a => act === a || act.startsWith(`${a} `))
+  const sp = multi !== undefined ? multi.length : act.indexOf(' ')
+  return sp < 0 ? [act, null] : [act.slice(0, sp), act.slice(sp + 1) || null]
+}
 
 // Wake prints `key: value` lines: verdict; `action: <word> <target>` for Resolvable,
 // `commitment: <slug>` for Done, `party:` and the escalation's `question:` for Waiting; reason,
@@ -38,12 +65,12 @@ export function parseWake(stdout: string, exitCode: number): Verdict {
   const verdict = fields.get('verdict')
   if (verdict === 'Resolvable' || verdict === 'Waiting' || verdict === 'Done') {
     const act = fields.get('action') ?? null
-    const sp = act === null ? -1 : act.indexOf(' ')
+    const [action, actionTarget] = act === null ? [null, null] : splitAction(act)
     return {
       kind: 'verdict',
       verdict,
-      action: act === null ? null : sp < 0 ? act : act.slice(0, sp),
-      target: fields.get('commitment') ?? (act === null || sp < 0 ? null : act.slice(sp + 1)),
+      action,
+      target: fields.get('commitment') ?? actionTarget,
       party: fields.get('party') ?? null,
       question: fields.get('question') ?? null,
       reason: fields.get('reason') ?? '',
@@ -83,7 +110,7 @@ export const ASCII_FACE: Record<Expression, string> = {
 const STATUS_MAX = 120
 
 // One line under the prompt, or undefined to clear it where the repository does not use Sudus.
-// ASCII only; the reason is cut to fit.
+// The reason is cut to fit by characters, never inside one.
 export function statusTextOf(v: Verdict, isTurnRunning: boolean, withFace: boolean): string | undefined {
   if (v.kind === 'none') return undefined
   const face = withFace ? `${ASCII_FACE[expressionOf(v, isTurnRunning)]} ` : ''
@@ -93,8 +120,8 @@ export function statusTextOf(v: Verdict, isTurnRunning: boolean, withFace: boole
   else if (v.verdict === 'Done') text = v.target ? `Sudus | Done | ${v.target}` : 'Sudus | Done'
   else if (v.verdict === 'Waiting') text = `Sudus | Waiting for the ${v.party ?? 'developer'} | ${v.question ?? v.reason}`
   else text = `Sudus | Resolvable | ${v.action ?? ''} ${v.target ?? ''} | ${v.reason}`.replace(/\s+\|/g, ' |')
-  const full = face + text
-  return full.length <= STATUS_MAX ? full : full.slice(0, STATUS_MAX - 3) + '...'
+  const chars = Array.from(face + text)
+  return chars.length <= STATUS_MAX ? chars.join('') : chars.slice(0, STATUS_MAX - 3).join('') + '...'
 }
 
 // Whether a Bash command can change the verdict: any sudus or cairn invocation, or a git commit.

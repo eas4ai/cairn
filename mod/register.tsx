@@ -4,7 +4,7 @@ import type { Register } from 'claude-code'
 import { EXPRESSIONS, SUDUS_SVG, type Expression } from './faces.ts'
 import { latest } from './latest.ts'
 import { rasterOf, type Raster } from './raster.ts'
-import { changesVerdict, expressionOf, parseWake, SETTINGS_FILES, statusTextOf, type Verdict } from './verdict.ts'
+import { cannotStart, changesVerdict, expressionOf, parseWake, statusTextOf, usesSudus, type Verdict } from './verdict.ts'
 
 // The Sudus plugin's hooks module: what `sudus wake` names next, in front of the person, as a
 // status line under the prompt, a pane beside the transcript, or both, with a blobatar face whose
@@ -94,23 +94,24 @@ export const register: Register = (on, options) => {
       void refreshes(async () => {
         try {
           const cwd = await $.session.cwd()
-          const root = (await $.session.repo())?.root ?? cwd
-          let usesSudus = false
-          for (const f of SETTINGS_FILES) if (await $.fs.exists(`${root}/${f}`)) usesSudus = true
-          if (!usesSudus) verdict = { kind: 'none' }
+          if (!(await usesSudus(cwd, p => $.fs.exists(p)))) verdict = { kind: 'none' }
           else {
-            const argv = isPluginCopy ? ['node', `${$.plugin.root}/bin/sudus.mjs`, 'wake'] : [command, 'wake']
-            const run = await $.process.run(argv, { cwd, timeoutMs: WAKE_TIMEOUT_MS }).catch(err => {
+            const init = { cwd, timeoutMs: WAKE_TIMEOUT_MS }
+            const pluginCopy = ['node', `${$.plugin.root}/bin/sudus.mjs`, 'wake']
+            const run = await $.process.run(isPluginCopy ? pluginCopy : [command, 'wake'], init).catch(err => {
               // The sudus on PATH cannot start: run this plugin's own copy from now on, as the
-              // session-start hook does. A command the person named in settings is theirs to fix.
-              if (isPluginCopy || command !== 'sudus') throw err
+              // session-start hook does. A slow sudus, or a command the person named in settings,
+              // is reported as it is.
+              if (isPluginCopy || command !== 'sudus' || !cannotStart(err)) throw err
               isPluginCopy = true
-              return $.process.run(['node', `${$.plugin.root}/bin/sudus.mjs`, 'wake'], { cwd, timeoutMs: WAKE_TIMEOUT_MS })
+              $.ui.log(`sudus: ${command} cannot start (${String(err).split('\n')[0]}); running this plugin's copy`)
+              return $.process.run(pluginCopy, init)
             })
             verdict = parseWake(run.stdout, run.exitCode)
           }
         } catch (err) {
-          verdict = { kind: 'missing', detail: `${command} did not run (${String(err).split('\n')[0]}); the install-sudus skill sets it up` }
+          const why = String(err).split('\n')[0]
+          verdict = { kind: 'missing', detail: cannotStart(err) ? `${command} cannot start (${why}); the install-sudus skill sets it up` : `${command} wake did not finish (${why})` }
         }
         hasRefreshed = true
         paint()

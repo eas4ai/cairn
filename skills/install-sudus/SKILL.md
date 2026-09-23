@@ -20,7 +20,7 @@ Stop and name the missing prerequisite. Do not install it silently.
 Claude Code or Codex: `cc`. Muse: `muse`. Anything else: `other`.
 
 ### `cc`
-Install the Sudus plugin from its marketplace. The plugin registers the hooks in `hooks/hooks.json` (Claude Code: SessionStart, UserPromptSubmit, Stop). Do not also write hook entries by hand; two registrations run a hook twice. Continue at `link`.
+Install the Sudus plugin from its marketplace. The plugin registers the hooks in `hooks/hooks.json` (Claude Code: SessionStart, UserPromptSubmit, Stop). Do not also write hook entries by hand; two registrations run a hook twice. A plugin installed under the former name, `cairn`, carries the same hooks: remove it, so they do not run twice either. Continue at `link`.
 
 ### `muse`
 Install the plugin with `muse plugins install <plugin root>`, then approve its two hooks with `muse plugins approve sudus:hook:session-start` and `muse plugins approve sudus:hook:stop`; its manifest registers SessionStart and Stop. Continue at `link`.

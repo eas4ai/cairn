@@ -4,8 +4,15 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 6, 2026-09-21. Nothing here is Agreed until the
+Status: Draft, revision 7, 2026-09-23. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 7 changes the name. Sudus was Cairn through 2.2.2; the developer
+renamed it on 2026-09-23 after the old name collided with an autonomous
+penetration-testing tool. The command answers to both names, a project
+recorded under the former layout keeps working, and `sudus migrate` moves
+it between commitments (section 2, Layouts; section 4, Commands). No
+verdict, record shape or document meaning changed.
 
 Revision 6 changes one rule: the developer is never asked to run a command.
 The developer answers in conversation; the agent records the answer, quoting
@@ -103,6 +110,22 @@ Reserved does not mean immutable. It separates two kinds of authority:
 
 This split is a kernel invariant. Sudus's own valid bookkeeping cannot create a
 Sudus violation merely because it wrote bookkeeping.
+
+**Layouts.** A project's state lives under one of two layouts, read from the
+settings file that exists: the Sudus layout (`.sudus/`, `refs/sudus/log`,
+`refs/sudus/snapshots`, `refs/sudus/in-progress`, records with the subject
+prefix `sudus:` and the trailers `Sudus-Schema` and `Sudus-Digest`) or the
+former layout (`.cairn/`, `refs/cairn/*`, `cairn:` records with `Cairn-*`
+trailers), which a project initialized before 3.0.0 keeps until `sudus
+migrate` moves it. Every command works on either. Both state directories are
+reserved in every project. Readers accept both record envelopes whatever the
+layout, and a mechanism's output line counts under either prefix, so a
+migrated log and an unchanged mechanism read as before. `sudus migrate` runs
+only between commitments: it renames the refs, moves the directory and the
+matching `.gitignore` lines in one commit, and refuses while a commitment,
+lease or transaction is open or the directory has uncommitted changes. The
+records already written keep their envelope. Wake prints one line naming the
+move while a project is on the former layout.
 
 Every repository path in settings, mechanisms, records and evaluator drafts is
 a UTF-8, slash-separated Git path relative to the worktree. The kernel rejects
@@ -621,7 +644,7 @@ prepare the successor. The successor's start names the superseded record and
 `Current:` moves in the same recoverable start transaction. An interrupted gap
 is a pending transition, not a second open commitment.
 
-A Sudus 1.x project (record directories under `.sudus/`, or
+A Sudus 1.x project (record directories under `.cairn/`, or
 `docs/commitments/`) is migrated before initialization, on the developer's ok:
 the 1.x record directories are removed, since Sudus 2 reads none of them and
 Git history keeps them; the specification is converted in place until
@@ -721,7 +744,9 @@ Sudus-Schema: 1
 Sudus-Digest: sha256:<hex of the body bytes>
 ```
 
-The trailers carry only the schema and the digest; content never lives in a
+A record written under the former layout has the subject prefix `cairn:` and
+the trailers `Cairn-Schema` and `Cairn-Digest`; every reader accepts either
+envelope (section 2, Layouts). The trailers carry only the schema and the digest; content never lives in a
 trailer. Each kind has a closed object schema: required keys, no unknown or duplicate keys,
 fixed scalar types, ordered arrays where order is meaningful, and lowercase
 hex of fixed length for SHAs and digests. Arbitrary strings live only as JSON
@@ -824,7 +849,9 @@ chain. `sudus item`, `outside` and `fix` manage items. `sudus decide`, `realize`
 `decisions --read` and `promote` manage the ADR. `sudus authorize` binds the
 protected digests in one record; a settings change is a new authorization
 naming the new digest; `sudus authorize instead|ask` writes one direction
-record and nothing else. `sudus start`, `done` and `supersede` bound commitments. Wake writes
+record and nothing else. `sudus start`, `done` and `supersede` bound commitments. `sudus
+migrate` moves a project from the former layout, once, between commitments
+(section 2, Layouts). Wake writes
 nothing. No command edits a record.
 
 Four commands write to more than one store: `start`, `promote`, `supersede`
@@ -1061,7 +1088,8 @@ Where a harness has a per-turn hook, it runs wake before every agent turn and
 prints the verdict, action, reason and predicate. A skipped step is therefore in
 front of the model. The stop hook prints the same line and is only the fallback
 for a harness without a per-turn hook. The session-start hook prints the current
-state and, in one line, any missing command link, PATH entry or durable ref. It
+state and, in one line, any missing command link, PATH entry or durable ref; a
+project on the former layout (section 2, Layouts) is missing nothing. It
 writes nothing: `sudus brief` reads the harness from its environment when it
 runs, or from `--harness <name>` naming a settings entry.
 
@@ -1547,7 +1575,8 @@ suggestion was `agent`.
 
 Sudus ships as one plugin: the command, hooks, four skills (`install-sudus`,
 `new-project`, `existing-project`, `next-feature`) and the optional evaluator
-module. Claude Code, Codex and Muse manifests share one version. The skills also
+module. The command also answers to its former name, `cairn`, so a shim, hook
+or working agreement written before 3.0.0 still runs. Claude Code, Codex and Muse manifests share one version. The skills also
 install through the skills CLI. The runtime is Node and Git, with no build,
 package dependency or service. Linux and macOS are supported.
 
@@ -1562,9 +1591,9 @@ specification.
 
 ## 12. Removed from 1.x
 
-- The record directories `.sudus/evidence`, `.sudus/reviews`,
-  `.sudus/escalations`, `.sudus/backlog`, `.sudus/next-iteration`,
-  `.sudus/stops`, `.sudus/queue`, `docs/decisions/`, `docs/commitments/` and
+- The record directories `.cairn/evidence`, `.cairn/reviews`,
+  `.cairn/escalations`, `.cairn/backlog`, `.cairn/next-iteration`,
+  `.cairn/stops`, `.cairn/queue`, `docs/decisions/`, `docs/commitments/` and
   `docs/audit`. Records are a log ref plus one ADR JSONL file.
 - The autonomy and former Jev modes that were Agreed but never built.
 - Stop-hook refusal, refusal counts, stop records and `explain`.

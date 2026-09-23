@@ -150,7 +150,7 @@ test("existing-project follows existing-project.dot and spec-phase.dot", () => c
 test("existing-project carries the same spec-phase tail as new-project", () => assert.equal(tail("existing-project"), tail("new-project")));
 test("existing-project migrates a 1.x project before init and carries its items after", () => {
   const t = skill("existing-project");
-  for (const s of [".sudus/evidence", ".sudus/reviews", ".sudus/escalations", "docs/commitments", "sudus lint docs/spec", "changing no requirement's words", "sudus item --backlog"]) assert.ok(t.includes(s), s);
+  for (const s of [".cairn/evidence", ".cairn/reviews", ".cairn/escalations", "docs/commitments", "sudus lint docs/spec", "changing no requirement's words", "sudus item --backlog"]) assert.ok(t.includes(s), s);
   assert.ok(t.indexOf("### `migrate`") < t.indexOf("### `init`") && t.indexOf("### `init`") < t.indexOf("### `carry`"));
 });
 

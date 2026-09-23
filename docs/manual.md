@@ -40,6 +40,7 @@ are listed near the end.
 - [Settings](#settings)
 - [Turn on the TypeSafe evaluator](#turn-on-the-typesafe-evaluator)
 - [Sending the records with the code](#sending-the-records-with-the-code)
+- [Moving a project from Cairn](#moving-a-project-from-cairn)
 - [Get unstuck](#get-unstuck)
 - [Command reference](#command-reference)
 - [Record reference](#record-reference)
@@ -942,6 +943,42 @@ names the exact fetch or push that repairs a gap; it never guesses. A
 clone missing the durable refs is told the exact `git fetch` to run, or,
 with no remote configured, to run `sudus init`.
 
+## Moving a project from Cairn
+
+Sudus was named Cairn until 3.0.0, and a project that started under that
+name keeps its records under `.cairn/` and `refs/cairn/*`. Every command
+reads and writes them there; a mechanism that prints `cairn: REQ-001:
+pass` still passes; the `cairn` command still runs. The only sign is one
+line after the wake verdict:
+
+```
+layout: .cairn (the former name); sudus migrate moves it to .sudus between commitments
+```
+
+The move is one command, and it is the agent's to run, not yours:
+
+```sh
+sudus migrate
+```
+
+It runs only between commitments (before the first `sudus start`, or
+after Done), because the next start's snapshot is the next allowed base
+and nothing is then compared against a snapshot that still names `.cairn/`
+paths. It refuses while a commitment, an action lease or a transaction is
+open, and while anything under `.cairn/` or `.gitignore` is changed and
+uncommitted, so that the move is the whole of its commit. It renames the
+three refs, moves the directory with `git mv`, rewrites the `.cairn`
+lines of `.gitignore`, and commits `sudus: migrate from the .cairn layout
+to .sudus`. The records already on the log keep their original subject
+and trailers; new ones are written as `sudus:` records, and the log reads
+as one. `.cairn/**` stays a reserved path afterwards, so a stray file
+there is never plain work.
+
+With an authority remote, `sudus push` publishes the moved refs. Another
+clone that pulls the move sees `.sudus/` on its branch but still holds
+`refs/cairn/*`; wake names `sudus migrate` there, and it moves the refs
+alone. The remote's old `refs/cairn/*` are left behind unused.
+
 ## Get unstuck
 
 Read the reason and predicate printed below the verdict; they are more
@@ -983,6 +1020,7 @@ prints one with its references resolved.
 | `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted or fixed. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
 | `init --remote <name>\|--local-only --signing-key <path>\|--attested [--adopt <digest>] --quote <words>` | Create or adopt `.sudus/settings.json` and the two durable refs, with the developer's answers as flags; the command asks nothing itself. |
+| `migrate` | Move a project from the former layout (`.cairn/`, `refs/cairn/*`) to `.sudus/` and `refs/sudus/*`, once, between commitments; nothing to do on a Sudus project. |
 | `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |
 | `decisions [--read <id> --quote <words>]` | Print the ADR file, or mark one decision read, quoting the developer. |
 | `recover <transaction>` | Finish or safely abandon an interrupted multi-record write. |
@@ -1060,9 +1098,9 @@ Sudus reads it back; the full field list is in
 See the [README](../README.md#install) for the marketplace and checkout
 install paths. In every path, the agent installs the shim `bin/sudus.sh`
 at `$HOME/.local/bin/sudus`, once; the shim runs the newest installed
-Sudus (`$SUDUS_ROOT` when set, else the newest Claude Code or Codex plugin
-cache entry or the checkout, by version), so a plugin update never strands
-the command. The skill replaces only a symlink an earlier Sudus made or an
+Sudus (`$SUDUS_ROOT` or `$CAIRN_ROOT` when set, else the newest Claude Code or
+Codex plugin cache entry under either name or the checkout, by version), so
+a plugin update never strands the command. The skill replaces only a symlink an earlier Sudus made or an
 older copy of the shim, never another file; no hook writes it. Claude Code and
 Codex read `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);
 Muse reads two entries (SessionStart, Stop) from

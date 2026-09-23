@@ -7,6 +7,13 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.0.0 - 2026-09-23
+
+- Cairn is renamed Sudus. The old name collided with an autonomous penetration-testing tool and two other agent tools of the same name. The command, package, plugins, marketplace, skills, spec, manual and README carry the new name; the repositories are eas4ai/sudus and eas4ai/sudus-dev, and GitHub redirects the old addresses.
+- Nothing a project recorded breaks. The command answers to both names (`bin/cairn.mjs` runs the same kernel), the shim finds a plugin cache under either name and reads `CAIRN_ROOT`, and `CAIRN_SIGNATURE` still supplies a signature. A project initialized before 3.0.0 keeps `.cairn/` and `refs/cairn/*`: every command reads and writes them there, readers accept both record envelopes, a mechanism that prints `cairn: REQ: pass` still passes, and wake adds one line naming the move. The session-start hook does not report the former refs as missing.
+- `sudus migrate` moves such a project to `.sudus/` and `refs/sudus/*` once, between commitments: it renames the refs, moves the directory and the matching `.gitignore` lines in one commit, and refuses while a commitment, lease or transaction is open or the directory has uncommitted changes. A clone that pulls the move with its refs still under the former name is told to run it, and it moves the refs alone. Spec revision 7 (section 2, Layouts).
+- Both state directories are reserved paths in every project.
+
 ## 2.2.2 - 2026-09-23
 
 - No scope breach is observed between commitments (issue #3). The spec phase writes the next commitment's mechanism files, tests and declarations before `cairn start`, and every one of them read as an undeclared change against the finished commitment's base, so the developer was asked to keep files the working agreement had just told the agent to create. The next start's snapshot is the next allowed base; only the kernel-managed ledger is still checked in the gap. A gap breach recorded by an earlier version is closed by the next start, so a project already carrying one is unblocked on upgrade. Spec definition revised in place.

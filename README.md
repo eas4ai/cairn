@@ -265,6 +265,28 @@ hooks. Have Node 24 and Git 2.40 or newer available. Sudus runs on Linux
 and macOS; Windows is not supported, since the hooks use symbolic links and
 `$HOME`.
 
+### Coming from Cairn
+
+Sudus was named Cairn until 3.0.0. Everything a project recorded under
+that name still works, and nothing has to change on the day you upgrade:
+
+- The command answers to both names. A shim, hook or working agreement
+  that runs `cairn wake` runs the same kernel.
+- A project that keeps its records under `.cairn/` and `refs/cairn/*` is
+  read and written there. Wake adds one line naming the move.
+- A mechanism that prints `cairn: REQ-001: pass` is still a pass.
+
+Between commitments, when wake says Done or before the first start, the
+agent runs `sudus migrate` once. It renames `refs/cairn/*` to
+`refs/sudus/*`, moves `.cairn/` to `.sudus/` in one commit, rewrites the
+matching lines of `.gitignore`, and refuses while a commitment, lease or
+transaction is open. Records already on the log keep their original
+form, and the log reads as one. With an authority remote, `sudus push`
+then publishes the moved refs, and every other clone runs `sudus migrate`
+once after it pulls. Install the plugin under its new name (below) and
+remove the one named `cairn` from your harness, so two copies of the
+hooks do not run. The old GitHub address redirects to `eas4ai/sudus`.
+
 ### Install the plugin
 
 In Claude Code:
@@ -367,9 +389,10 @@ mkdir -p "$HOME/.local/bin"
 chmod +x "$HOME/.local/bin/sudus"
 ```
 
-The shim runs the newest Sudus it finds: `$SUDUS_ROOT` when set, else the
-newest Claude Code or Codex plugin cache entry or the checkout at
-`$HOME/.local/share/sudus`, by version. This never replaces an existing
+The shim runs the newest Sudus it finds: `$SUDUS_ROOT` (or `$CAIRN_ROOT`)
+when set, else the newest Claude Code or Codex plugin cache entry, under
+either name, or the checkout at `$HOME/.local/share/sudus` or
+`$HOME/.local/share/cairn`, by version. This never replaces an existing
 file at that path. Put `$HOME/.local/bin`
 on your `PATH` as above and check `sudus --help`. Then register the hooks
 under `hooks/` with your agent's own hook configuration, once, using the

@@ -31,10 +31,12 @@ test('assertInside refuses a path that escapes after symlink resolution', async 
   await assert.rejects(assertInside(repo.dir, 'vendor/not/yet/there'), /escapes/);
 });
 test('the reserved constants are kernel constants', () => {
-  assert.deepEqual(RESERVED, ['.sudus/**', 'docs/spec/**', 'docs/decisions.jsonl', 'AGENTS.md']);
-  assert.deepEqual(PROTECTED, ['.sudus/settings.json', 'docs/spec/**', 'AGENTS.md']);
+  // Both layouts' state directories are reserved: a project moved by `sudus migrate` must never
+  // treat a stray .cairn/ path as plain, and a project still on the former layout is protected too.
+  assert.deepEqual(RESERVED, ['.sudus/**', '.cairn/**', 'docs/spec/**', 'docs/decisions.jsonl', 'AGENTS.md']);
+  assert.deepEqual(PROTECTED, ['.sudus/settings.json', '.cairn/settings.json', 'docs/spec/**', 'AGENTS.md']);
   assert.deepEqual(PROTECTED_EXCEPT, ['docs/spec/roadmap.md']);
-  assert.deepEqual(KERNEL_MANAGED, ['.sudus/mechanisms', '.sudus/mechanisms/**', 'docs/decisions.jsonl']);
+  assert.deepEqual(KERNEL_MANAGED, ['.sudus/mechanisms', '.sudus/mechanisms/**', '.cairn/mechanisms', '.cairn/mechanisms/**', 'docs/decisions.jsonl']);
   assert.ok(CREDENTIAL_PATTERNS.includes('**/.env.*') && CREDENTIAL_PATTERNS.includes('**/id_ed25519'));
 });
 

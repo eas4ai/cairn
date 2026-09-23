@@ -47,13 +47,15 @@ import { loadSettings } from '../../lib/settings.mjs';
 // unless the caller's own `files` supply them (files wins the merge below).
 const DEFAULT_PROJECT_FILES = { 'AGENTS.md': '# Working agreement\n', 'docs/spec/overview.md': '# Keystone\n' };
 
-export async function makeProject({ settings = {}, files = {} } = {}) {
+// `layout: 'cairn'` builds a project under the former layout (.cairn/, refs/cairn/*): init reads
+// the state directory that exists, so writing settings there is all it takes.
+export async function makeProject({ settings = {}, files = {}, layout = 'sudus' } = {}) {
   const repo = await makeRepo();
   const remote = await mkdtemp(join(tmpdir(), 'sudus-remote-'));
   await run('git', ['init', '-q', '--bare', remote]);
   await repo.git('remote', 'add', 'origin', remote);
   const merged = { ...DEFAULT_SETTINGS('origin', null), ...settings };
-  await repo.write('.sudus/settings.json', JSON.stringify(merged, null, 2) + '\n');
+  await repo.write(`.${layout}/settings.json`, JSON.stringify(merged, null, 2) + '\n');
   for (const [path, content] of Object.entries({ ...DEFAULT_PROJECT_FILES, ...files })) await repo.write(path, content);
   await repo.commit('fixture');
   // Settings are already on disk (merged just above, so callers can override any field the

@@ -22,8 +22,8 @@ export const mechanismFor = (r) => ({
   results: 'per-requirement', identity: {},
 });
 
-export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings = {} } = {}) {
-  const { cwd } = await makeProject({ settings: { outside: ['README.md', 'notes/**'], source: ['src/**'], ...settings } });
+export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings = {}, layout = 'sudus' } = {}) {
+  const { cwd } = await makeProject({ settings: { outside: ['README.md', 'notes/**'], source: ['src/**'], ...settings }, layout });
   const write = async (p, text) => {
     await mkdir(dirname(join(cwd, p)), { recursive: true });
     await writeFile(join(cwd, p), text);

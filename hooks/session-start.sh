@@ -21,7 +21,9 @@ if [ -n "$want" ] && older "$have" "$want"; then
   printf 'sudus: the sudus command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/sudus.sh ~/.local/bin/sudus && chmod +x ~/.local/bin/sudus\n' "${have:-an older version}" "$want" "$here"
   run="node $here/bin/sudus.mjs"
 fi
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+# A project still on the former layout (refs/cairn/*, before 3.0.0) is not missing anything: wake
+# runs on it unchanged and prints the one line that names `sudus migrate`.
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && ! git rev-parse -q --verify refs/cairn/log >/dev/null 2>&1; then
   for ref in refs/sudus/log refs/sudus/snapshots; do
     git rev-parse -q --verify "$ref" >/dev/null 2>&1 || missing="$missing durable ref $ref"
   done

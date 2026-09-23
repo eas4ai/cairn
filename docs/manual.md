@@ -767,7 +767,8 @@ same finding raises its own escalation automatically.
 
 Done requires the latest acceptance to examine the final workspace
 snapshot with every resolution accepted and every finding, anywhere,
-resolved or disputed by you. When it holds:
+resolved or disputed by you. A report with no findings and no change after
+it needs no acceptance: there is nothing to examine. When it holds:
 
 ```sh
 cairn done reject-empty-names

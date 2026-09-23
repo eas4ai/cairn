@@ -966,7 +966,12 @@ Done requires all of the following:
 - A review and report exist at the reviewed workspace snapshot.
 - The latest acceptance examines the cumulative delta at the final workspace
   snapshot; every resolution is accepted; every finding on the review, report
-  or any acceptance is resolved or developer-disputed.
+  or any acceptance is resolved or developer-disputed. When no resolution
+  exists and the workspace still equals the reported snapshot, there is no
+  delta to examine and no acceptance is required. (Revised 2026-09-22: the
+  kernel always held this exception; the text said the acceptance was
+  unconditional. The developer accepted documenting the exception over
+  demanding an empty acceptance record.)
 - No escalation is unanswered, scope breach undisposed, defect unfixed,
   transaction incomplete, action lease stale, Consequential decision
   unrealized, or administrative-cycle escalation unresolved.
@@ -979,7 +984,7 @@ The report is written once at the candidate snapshot. Every later fix is a
 resolution. Each acceptance examines the whole delta from that reported
 snapshot to the current one, not only the named fix, and may add findings.
 There is no unreviewed final mutation because Done requires the latest
-acceptance at the final snapshot. A second rejection of a resolution for the
+acceptance at the final snapshot whenever anything changed after the report. A second rejection of a resolution for the
 same finding escalates.
 
 ### Waiting and liveness

@@ -650,6 +650,13 @@ async function finished() {
 // `doneRule(st).failed` and `doneRule(await readState(...)).holds` without awaiting doneRule
 // itself, which reads properties off a pending Promise (always undefined) rather than the
 // resolved object.
+test('Done rule: a clean report with no change after it needs no acceptance record (documented exception)', async () => {
+  const r = await finished();
+  assert.equal((await r.log()).some((x) => x.kind === 'acceptance'), false);
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
+  await r.write('README.md', '# demo, changed after the report\n'); await r.commit('a change after the report');
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
+});
 test('Done rule bullet 1: every frozen requirement has a current bound pass', async () => {
   const r = await finished();
   await r.write('src/demo.mjs', 'console.log("changed");\n'); await r.commit('stale the receipt');

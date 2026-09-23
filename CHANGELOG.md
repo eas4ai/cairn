@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.2.1 - 2026-09-22
+
+- The spec and manual state the Done rule's acceptance exception the kernel always applied: a report with no findings and no change after it needs no acceptance record. Found by the adversarial review; the developer chose documenting the exception over demanding an empty acceptance.
+
 ## 2.2.0 - 2026-09-22
 
 From an adversarial review of the kernel by six independent agents; every finding was reproduced with a script before it was fixed, and each fix carries that reproduction as a test.

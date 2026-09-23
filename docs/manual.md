@@ -400,6 +400,7 @@ Actions are attempted in this order:
 | recover TRANSACTION | intent has a terminal domain or abort record; every store matches its result |
 | reconcile ACTION | local action lease is gone; action finished or was abandoned |
 | scope PATH | each durable breach is developer-kept or restored to its allowed base; later declaration never clears it; while the breach's own escalation is unanswered, wake says Waiting |
+| supersede SLUG | every set requirement's Agreed text still has the digest its start froze, or a superseded record closes the commitment |
 | fix ITEM | fix snapshot changes no protected contract; requirement has a current pass |
 | record PATH | action lease covers the path, or it is clean |
 | commit PATH | path is clean, or the action lease covers it; docs/decisions.jsonl is named here whenever it has uncommitted lines |
@@ -994,6 +995,7 @@ specific than the action word alone.
 | `recover TRANSACTION` | A multi-record write (`start`, `promote`, `supersede`, `authorize`) was interrupted. Run `sudus recover <transaction>`. |
 | `reconcile ACTION` | A local action lease exists with no matching finished work, usually left by a session that ended. Finish the action and `sudus end`, or `sudus end --abandon`; a dead session's lease needs no `--lease`. |
 | `scope PATH` | An undeclared change was observed. Restore it (`sudus scope PATH restore`) or ask to keep it (`sudus escalate`, then `sudus scope PATH keep`); the breach sha wake's reason names works too. |
+| `supersede SLUG` | The Agreed text of a requirement in the open commitment was revised under it, and no check or review can bind to both the frozen and the current text. Restore the text the start froze, or ask the developer and `sudus supersede <successor> --quote "..."` so the successor freezes the revised text. |
 | `fix ITEM` | A recorded defect is still open: this commitment's own while it is open, any defect between commitments. Write a failing test, fix it, commit, check, then `sudus fix ITEM` (the slug wake prints, or the sha). |
 | `record PATH` / `commit PATH` | A declared input has uncommitted changes with no covering lease. Lease the action that changes it with `sudus begin <action> <target>` (`record` is not a begin action), then commit; or revert it. An untracked build artifact under a declared input is gitignored instead. |
 | `declare REQ` | No mechanism speaks for this requirement yet. `sudus declare` one. |

@@ -4,8 +4,12 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 7, 2026-09-23. Nothing here is Agreed until the
+Status: Draft, revision 8, 2026-09-23. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 8 adds the `supersede` action (section 5; section 8, Freshness).
+A commitment whose Agreed text was revised under it could never bind a
+mechanism review; wake now names the exit.
 
 Revision 7 changes the name. Sudus was Cairn through 2.2.2; the developer
 renamed it on 2026-09-23 after the old name collided with an autonomous
@@ -920,6 +924,7 @@ predicate. The table is normative.
 | `recover TRANSACTION` | the intent has one terminal domain or abort record and every store matches its resulting identity |
 | `reconcile ACTION` | the local action lease is gone and the action it named finished or was explicitly abandoned |
 | `scope PATH` | every scope-breach record for the path has a developer-approved keep disposition or a restore snapshot equal to its allowed base; an unanswered escalation that concerns the breach is Waiting instead (added 2026-09-22) |
+| `supersede SLUG` | every requirement in the open commitment's set has Agreed text whose digest equals the one its start froze, or a superseded record closes the commitment (added 2026-09-23: the frozen contract is not amended; wake names the exit, restore or supersede, instead of a mechanism review that can never bind) |
 | `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract of the commitment open when it was recorded (between commitments no contract is frozen and none is measured); its requirement has a current pass at or after it, whether or not the last commitment owns that requirement |
 | `record PATH` | the action lease covers the path through its target's declared inputs, or the path is clean |
 | `commit PATH` | the path is clean, or the action lease covers it; `docs/decisions.jsonl` is named here whenever it has uncommitted lines (added 2026-09-22) |
@@ -979,7 +984,8 @@ there is no breach to preserve.
 Wake tests in this order and names the first unmet predicate: unreadable
 hand-written input (`repair`); incomplete transaction (`recover`); stale action
 lease (`reconcile`); scope breach (`scope`); unanswered escalation (`Waiting`,
-or `reply` after `ask`); unfixed defect (`fix`); uncovered dirty input (`record`,
+or `reply` after `ask`); Agreed text of a set requirement revised under the
+open commitment (`supersede`); unfixed defect (`fix`); uncovered dirty input (`record`,
 `commit`); missing declaration (`declare`); missing or failing receipt (`run`,
 `implement`, or `escalate` after three attempts); stale mechanism review
 (`review mechanism`); uncaptured item from the commitment (`capture`); missing
@@ -1143,7 +1149,11 @@ either class because the reservation is compiled into the kernel.
 An active commitment's frozen contract does not change under it. If the
 developer decides Agreed text or the working agreement must change, the current
 commitment is finished or superseded and the change is made before the successor
-start. Settings may change during a commitment only by a new authorization
+start. When the Agreed text of a set requirement is revised anyway, wake names
+`supersede`: receipts and mechanism reviews bind to the text as it reads, the
+start record and the Done rule hold the frozen digest, and no review could
+satisfy both. The agent restores the text, or supersedes on the developer's
+ruling to a successor that freezes the revised text. Settings may change during a commitment only by a new authorization
 naming the new digest, committed with the file; the new digest immediately invalidates any
 evaluation policy or calibration that depended on the old one.
 

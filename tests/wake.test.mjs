@@ -97,7 +97,7 @@ test('a pending supersession and an interrupted transaction are not verdicts', a
 });
 
 test('the precedence order is the one section 5 states', () => {
-  assert.deepEqual(ORDER, ['repair', 'recover', 'reconcile', 'scope', 'waiting', 'fix', 'record', 'declare', 'run', 'review mechanism', 'capture', 'review', 'report', 'resolve', 'accept', 'build', 'done', 'promote']);
+  assert.deepEqual(ORDER, ['repair', 'recover', 'reconcile', 'scope', 'waiting', 'supersede', 'fix', 'record', 'declare', 'run', 'review mechanism', 'capture', 'review', 'report', 'resolve', 'accept', 'build', 'done', 'promote']);
 });
 
 async function treeHash(dir) {
@@ -452,6 +452,7 @@ test('declare is named for the first set requirement no definition names', async
   assert.notEqual((await wake(r.cwd)).action, 'declare');                   // the fixture declares every requirement it starts
   const st = await readState(r.cwd);
   st.set = [...st.set, { requirement: 'DEMO-003', text_digest: 'sha256:' + '0'.repeat(64) }];
+  st.blocks.set('DEMO-003', { textDigest: 'sha256:' + '0'.repeat(64) });   // the text reads as frozen; only the declaration is missing
   const v = await verdictOf(st);
   assert.deepEqual([v.action, v.target], ['declare', 'DEMO-003']);
   assert.equal(v.predicate, 'a mechanism definition names the requirement and no pre-existing undeclared delta was legalized');
@@ -824,4 +825,43 @@ test('a defect against a requirement outside the last commitment\'s set is disch
   const v = await wake(r.cwd);
   assert.notEqual(v.reason, 'DEMO-001 has no current pass at or after the fix', JSON.stringify(v));
   assert.notEqual(v.target, 'gate', JSON.stringify(v));
+});
+// Report of 2026-09-23 (a consumer project, 3.0.3): an Agreed requirement's text was revised under
+// the open commitment. Receipts and the mechanism review bound to the revised text, wake's review
+// predicate and the Done rule held the frozen digest, and wake named `review mechanism` after
+// every review. The frozen contract is not amended (invariant 49): wake names the exit.
+test('Agreed text revised under an open commitment is supersede, not review mechanism forever', async () => {
+  const { check } = await import('../lib/check.mjs');
+  const { reviewMechanism } = await import('../lib/mechanisms.mjs');
+  const { authorize } = await import('../lib/auth.mjs');
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  const spec = await readFile(join(r.cwd, 'docs/spec/demo.md'), 'utf8');
+  await r.write('docs/spec/demo.md', spec.replace('prints hello for DEMO-001.', 'prints hello for DEMO-001 within 1 ms.'));
+  await r.commit('raise the bound under the open commitment');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['supersede', 'first'], JSON.stringify(v));
+  assert.match(v.reason, /the Agreed text of DEMO-001 changed under first .*restore the text the start froze, or with the developer's ruling supersede first/);
+  // Re-checking and re-reviewing against the revised text does not change the verdict.
+  await r.write('flags/DEMO-001', 'fail\n'); await r.commit('flag fail');
+  await reviewMechanism(r.cwd, 'demo-001', 'DEMO-001', await check(r.cwd, 'DEMO-001'));
+  await r.write('flags/DEMO-001', 'pass\n'); await r.commit('flag pass');
+  await check(r.cwd, 'DEMO-001');
+  assert.equal((await wake(r.cwd)).action, 'supersede');
+  // Restoring the frozen text is one exit: one review against the frozen text, and the loop moves on.
+  await r.write('docs/spec/demo.md', spec); await r.commit('restore the frozen text');
+  v = await wake(r.cwd);
+  assert.notEqual(v.action, 'supersede', JSON.stringify(v));
+  await r.write('flags/DEMO-001', 'fail\n'); await r.commit('flag fail again');
+  await reviewMechanism(r.cwd, 'demo-001', 'DEMO-001', await check(r.cwd, 'DEMO-001'));
+  await r.write('flags/DEMO-001', 'pass\n'); await r.commit('flag pass again');
+  await check(r.cwd, 'DEMO-001');
+  v = await wake(r.cwd);
+  assert.ok(!['supersede', 'review mechanism'].includes(v.action), JSON.stringify(v));
+  // Superseding with the developer's ruling is the other.
+  await r.write('docs/spec/demo.md', spec.replace('prints hello for DEMO-001.', 'prints hello for DEMO-001 within 1 ms.'));
+  await r.commit('raise the bound again');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await supersede(r.cwd, 'second', { quote: 'raise the bound to 1 ms now', env: {} });
+  assert.deepEqual(await wake(r.cwd), { exit: 3, line: 'sudus: pending supersession to second; run /existing-project' });
 });

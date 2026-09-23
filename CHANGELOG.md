@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.1.0 - 2026-09-23
+
+- Wake names `supersede SLUG` when the Agreed text of a requirement in the open commitment was revised under it. Receipts and `sudus review mechanism` bind to the text as it reads now, while the start record, the review predicate and the Done rule hold the frozen digest, so wake named `review mechanism` after every review and nothing in the project could satisfy it. The frozen contract is not amended: the reason names both exits, restoring the frozen text or superseding on the developer's ruling to a successor that freezes the revised text. New action row in the spec's section 5 and the manual; the precedence order places it after Waiting and before `fix`.
+
 ## 3.0.3 - 2026-09-23
 
 - Between commitments, a defect against a requirement the last commitment never owned can now be discharged (issue #6). Wake's fix predicate read the pass table built for that commitment's requirement set, found nothing for the defect's requirement, and named `fix` after every later passing check. It now looks the pass up for the defect's own requirement. Thanks to John Lockwood for the report.

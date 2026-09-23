@@ -1,4 +1,4 @@
-![Sudus - Keep agent work tied to what you agreed to build.](../assets/cover.webp)
+![Sudus - Keep agent work tied to what you agreed to build.](../assets/cover.png)
 
 # Using Sudus: a human manual
 

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.1.2 - 2026-09-23
+
+- After `sudus migrate`, the first scope preflight between commitments no longer records the migration's own move of the mechanism definitions as breaches (issue #7). The base is the last done snapshot, which still names the former paths, so each moved file read as two breaches: the former path as a deletion, the new path as bytes with no base and no ledger line. A kernel-managed path now resolves its counterpart under the other layout: the moved file is valid when its bytes are what the base or the ledger holds for the former path, and the former path's absence is valid when the counterpart holds those bytes. Thanks to John Lockwood for the report.
+
 ## 3.1.1 - 2026-09-23
 
 - The working agreement template no longer tells the agent that better evidence lowers the measure composite. The evidence requirement stands on its own; a sentence describing the score's mechanics steered effort toward the score instead of the evidence (prompt audit, accepted by the developer).

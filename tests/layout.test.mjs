@@ -7,7 +7,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { makeProject } from './helpers/repo.mjs';
-import { loopRepo } from './helpers/loop.mjs';
+import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { throwawayRepo, runHook, fakeSudus } from './helpers/hookenv.mjs';
 import { layoutOf, forgetLayout, SUDUS, CAIRN } from '../lib/layout.mjs';
 import { readLog, appendRecord } from '../lib/records.mjs';
@@ -17,6 +17,7 @@ import { missingRefsLine } from '../lib/travel.mjs';
 import { wake } from '../lib/wake.mjs';
 import { declare } from '../lib/mechanisms.mjs';
 import { check } from '../lib/check.mjs';
+import { preflight } from '../lib/scope.mjs';
 import { cliSigner } from '../lib/auth.mjs';
 import { version } from '../lib/cli.mjs';
 import { project } from './helpers/commitment-fixture.mjs';
@@ -226,4 +227,33 @@ test('migrate refuses when the authority remote already holds refs/sudus/*, nami
   await git(['fetch', '-q', 'origin', 'refs/sudus/log:refs/sudus/log', 'refs/sudus/snapshots:refs/sudus/snapshots'], { cwd: clone });
   assert.equal(await missingRefsLine(clone), null);
   assert.equal((await readLog(clone)).length, (await readLog(repo.cwd)).length);
+});
+
+// Issue #7 (johnwlockwood, 3.1.1): after migrate, the first preflight between commitments read the
+// migration's own move of the mechanism definitions as breaches, one per side of each moved file.
+// The former path was a deletion; the new path had no bytes in the base tree and no ledger line,
+// because declare had recorded its write under the former path. A kernel-managed path now resolves
+// its former-layout counterpart: the moved file's bytes, or the ledger line under the old path.
+test('after migrate, the moved mechanism files are not scope breaches at the next preflight (issue #7)', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  await repo.write('flags/DEMO-001', 'fail\n'); await repo.commit('flag');
+  await declare(repo.cwd, 'demo-001', mechanismFor('DEMO-001'));
+  await repo.commit('declare demo-001');
+  await start(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
+  const r = await migrate(repo.cwd);
+  assert.equal(r.dir, '.cairn -> .sudus');
+  // The spec phase for the next commitment: a new mechanism, then a check. The CLI runs the scope
+  // preflight before each; it is called here the way runWithPreflight does.
+  await repo.write('flags/DEMO-002', 'fail\n'); await repo.commit('flag 2');
+  await preflight(repo.cwd, await readLog(repo.cwd), { command: 'declare' });
+  await declare(repo.cwd, 'demo-002', mechanismFor('DEMO-002'));
+  await repo.commit('declare demo-002');
+  await preflight(repo.cwd, await readLog(repo.cwd), { command: 'check' });
+  await check(repo.cwd, 'DEMO-001');
+  const breaches = (await readLog(repo.cwd)).filter((x) => x.kind === 'scope-breach').map((x) => x.payload.path);
+  assert.deepEqual(breaches, [], JSON.stringify(breaches));
+  const v = await wake(repo.cwd);
+  assert.notEqual(v.action, 'scope', JSON.stringify(v));
 });

@@ -964,8 +964,10 @@ sudus migrate
 
 It runs only between commitments (before the first `sudus start`, or
 after Done), because the next start's snapshot is the next allowed base
-and nothing is then compared against a snapshot that still names `.cairn/`
-paths. It refuses while a commitment, an action lease or a transaction is
+and the work of the next spec phase is compared against the last done
+snapshot only for kernel-managed paths. That snapshot still names the
+`.cairn/` mechanism files; their move is the kernel's own and is never a
+scope breach. It refuses while a commitment, an action lease or a transaction is
 open, and while anything under `.cairn/` or `.gitignore` is changed and
 uncommitted, so that the move is the whole of its commit. It renames the
 three refs, moves the directory with `git mv`, rewrites the `.cairn`

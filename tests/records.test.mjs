@@ -237,3 +237,18 @@ describe('measurement-family schemas', () => {
     assert.throws(() => encodeRecord('measurement', 'demo', { ...payload, source: null }), /expected one of/);
   });
 });
+
+// Issue #8: the base a successor is measured from.
+test('chainStart follows every supersede back to the first start, and returns a start with none as it is', async () => {
+  const { chainStart } = await import('../lib/records.mjs');
+  const rec = (sha, kind, payload) => ({ sha, kind, payload });
+  const a = rec('a', 'start', { slug: 'first', from_superseded: null });
+  const b = rec('b', 'start', { slug: 'second', from_superseded: 's1' });
+  const c = rec('c', 'start', { slug: 'third', from_superseded: 's2' });
+  const log = [a, rec('s1', 'superseded', { slug: 'first', start: 'a' }), b, rec('s2', 'superseded', { slug: 'second', start: 'b' }), c];
+  assert.equal(chainStart(log, c), a);
+  assert.equal(chainStart(log, b), a);
+  assert.equal(chainStart(log, a), a);
+  const lost = rec('x', 'start', { slug: 'lost', from_superseded: 'missing' });
+  assert.equal(chainStart([lost], lost), lost);
+});

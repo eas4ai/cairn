@@ -4,8 +4,13 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 8, 2026-09-23. Nothing here is Agreed until the
+Status: Draft, revision 9, 2026-09-23. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 9 measures a successor's brief from the first start of its
+supersession chain (section 9, Brief and projection). The work a successor
+carries was committed before its own start, so its changed paths and
+interface obligations went unreviewed.
 
 Revision 8 adds the `supersede` action (section 5; section 8, Freshness).
 A commitment whose Agreed text was revised under it could never bind a
@@ -1287,7 +1292,12 @@ Each question is answered `observed` with a command, path or output, or
 When the review exists, wake names `report SLUG`. `sudus brief <slug>` writes a
 brief record and renders the roadmap section, frozen requirements and
 falsifiers, mechanism definitions, builder claims and findings, interface
-obligations, exclusion manifest and brief digest.
+obligations, exclusion manifest and brief digest. The changed paths and the
+interface obligations run from the commitment's start snapshot to the reviewed
+snapshot. A successor started after a supersede carries the superseded
+commitment's work, so for it both run from the first start of its
+supersession chain; `sudus report` and wake's report predicate measure the
+interface attempts from the same start.
 
 Before any remote adversary starts, Sudus creates an **adversary projection**:
 a materialized export of the reviewed workspace snapshot with every

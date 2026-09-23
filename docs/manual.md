@@ -739,6 +739,12 @@ whose brief is stale, whose model, transport, or projection digest does
 not match the brief's launch instruction, or which leaves a required
 question or interface attempt missing. There is one report per commitment.
 
+The brief's changed paths and interface paths run from the commitment's
+start to the reviewed snapshot. A commitment started after a supersede
+carries the work of the one it superseded, committed before its own
+start, so its brief, its report and wake measure from the first start of
+that chain instead.
+
 Every finding, from the review or the report, is answered:
 
 ```sh

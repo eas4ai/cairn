@@ -581,3 +581,41 @@ test('fix round 2 new finding 2: a blob above the documented size limit is refus
   const bytes = await catBlob(r.cwd, entry.sha);
   assert.equal(bytes.length, 1024);
 });
+
+// Issue #8: a successor started after a supersede carries the superseded commitment's work, all
+// of it committed before the successor's own start. The brief, the report and wake measure the
+// changed paths and the interface obligations from the first start of the supersession chain.
+import { supersede, start as startCommitment } from '../lib/commitment.mjs';
+import { authorize } from '../lib/auth.mjs';
+import { readState, predicates } from '../lib/wake.mjs';
+import { chainStart } from '../lib/records.mjs';
+
+test('after a supersede, the brief, the report and wake measure the successor from the first start of the chain (issue #8)', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  await r.commit('change an interface under first');
+  const roadmap = await fs.readFile(path.join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap + '\n## second\n\nRequirements: DEMO-001\n\nCarries the work of first.\n');
+  await r.commit('second section');
+  await supersede(r.cwd, 'second', { quote: 'go on under second', env: {} });
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await startCommitment(r.cwd, 'second');
+  const log = await r.log();
+  const second = log.findLast((x) => x.kind === 'start');
+  assert.equal(chainStart(log, second).sha, r.startSha);
+  const s = { ...r, slug: 'second' };
+  r.rev = await review(r.cwd, 'second', await claims(s), { env: { SUDUS_SESSION: 's-builder' } });
+  r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
+  r.b = await brief(r.cwd, 'second', { harness: 'claude_code' });
+  r.bp = decodeRecord(await catCommit(r.cwd, r.b.sha)).payload;
+  for (const x of ['## Interface obligations\nsrc/api/x.mjs\n', '\nA src/api/x.mjs\n',
+    '## Changed paths (start snapshot of first, whose work second carries through a supersede, to reviewed snapshot; A added, M modified, D deleted)\n']) assert.ok(r.b.text.includes(x), x);
+  await assert.rejects(report(r.cwd, 'second', adversary(r, { interface_attempts: [] })), /interface src\/api\/x\.mjs has no attempt/);
+  // Wake's report predicate reads the same base: a report record that skipped the carried
+  // interface does not satisfy it (the verdict itself stops earlier, at run, in this fixture).
+  await r.add('report', 'second', { slug: 'second', session: 's-adversary', snapshot: r.revPayload.snapshot, brief: r.b.sha, model: 'claude-fable-5-1', transport: 'remote', boundary: 'unenforced', builder_model: null, projection_digest: r.bp.projection_digest, attempts: adversary(r).attempts, findings: [], interface_attempts: [] });
+  const reportP = predicates.find((p) => p.name === 'report');
+  const v = await reportP.test(await readState(r.cwd));
+  assert.deepEqual([v?.action, v?.target], ['report', 'second'], JSON.stringify(v));
+  assert.match(v.reason, /no caller-level attempt at interface src\/api\/x\.mjs/);
+});

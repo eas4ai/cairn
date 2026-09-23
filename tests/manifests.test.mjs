@@ -22,6 +22,18 @@ test("Claude Code registers session-start, turn and stop", () => {
   assert.ok(h.UserPromptSubmit[0].hooks[0].command.endsWith('/hooks/turn.sh"'));
   assert.ok(h.Stop[0].hooks[0].command.endsWith('/hooks/stop.sh"'));
 });
+test("Claude Code reads the status line module through plugin.json, never through hooks/hooks.json", () => {
+  // Codex reads hooks/hooks.json too, so it keeps the shell hooks alone; the module and its settings
+  // are Claude Code's.
+  assert.deepEqual(Object.keys(read("hooks/hooks.json")), ["hooks"]);
+  const p = read(".claude-plugin/plugin.json");
+  assert.equal(p.hooks, "./mod/hooks.json");
+  assert.deepEqual(read("mod/hooks.json").modules, ["./register.tsx"]);
+  assert.ok(existsSync(join(ROOT, "mod/register.tsx")));
+  assert.deepEqual(Object.keys(p.userConfig), ["view", "face", "asciiFace", "command"]);
+  assert.equal(p.userConfig.view.default, "status-line");
+  for (const m of [".codex-plugin/plugin.json", ".muse-plugin/plugin.json"]) assert.ok(!readFileSync(join(ROOT, m), "utf8").includes("mod/"), m);
+});
 test("Muse registers the hooks it supports and lists the four skills", () => {
   const m = read(".muse-plugin/plugin.json");
   assert.deepEqual(m.capabilities.hooks.map((x) => x.event).sort(), ["SessionStart", "Stop"]);
@@ -33,12 +45,12 @@ test("Codex lists the skills directory and the four skills exist", () => {
   for (const s of SKILLS) assert.ok(existsSync(join(ROOT, "skills", s, "SKILL.md")), s);
 });
 test("no manifest, hook file or skill names next-iteration", () => {
-  for (const p of [...MANIFESTS, "hooks/hooks.json", ...SKILLS.map((s) => `skills/${s}/SKILL.md`)]) {
+  for (const p of [...MANIFESTS, "hooks/hooks.json", "mod/hooks.json", ...SKILLS.map((s) => `skills/${s}/SKILL.md`)]) {
     if (existsSync(join(ROOT, p))) assert.ok(!readFileSync(join(ROOT, p), "utf8").includes("next-iteration"), p);
   }
 });
 test("docs/plans is not shipped", () => {
   const files = read("package.json").files;
   assert.ok(Array.isArray(files) && !files.some((f) => f.startsWith("docs/plans")));
-  for (const f of ["bin/", "lib/", "hooks/", "skills/"]) assert.ok(files.includes(f), f);
+  for (const f of ["bin/", "lib/", "hooks/", "mod/", "skills/"]) assert.ok(files.includes(f), f);
 });

@@ -1,0 +1,4 @@
+{
+  "description": "The Sudus status line and pane: session.start binds the refresh and runs wake, turn.start and turn.complete refresh the face and the verdict, tool.call on Bash refreshes after a sudus, cairn or git command, ui.render draws the pane, ui.close remembers a pane the person closed. Claude Code reads this file through plugin.json; hooks/hooks.json keeps the shell hooks every harness reads",
+  "modules": ["./register.tsx"]
+}

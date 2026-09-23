@@ -467,6 +467,53 @@ You do not need to approve every implementation detail. Pay attention to:
 The [human manual](docs/manual.md) walks through each of these moments,
 including exactly how `ok`, `instead`, and `ask` work.
 
+### The verdict under the prompt in Claude Code
+
+The plugin can keep the current verdict on screen while the agent works:
+one status line under the prompt, a pane beside the transcript, or both.
+A face drawn by [blobatar](https://github.com/Alain00/blobatar) shows the
+verdict at a glance:
+
+```
+(o_o) Sudus | Resolvable | run WTE-001 | no current receipt carries a result for WTE-001
+```
+
+| Verdict | Face |
+|---|---|
+| a turn is running | thinking `(o_o)?` |
+| Resolvable: the agent has work to do | idle `(o_o)` |
+| Waiting: you owe an answer | sad `(;_;)` |
+| Waiting with no developer to answer (exit 4) | mad `(>_<)` |
+| a repair, or `sudus wake` could not run | sick `(x_x)` |
+| Done | happy `(^_^)` |
+
+It costs no tokens: the plugin runs `sudus wake` itself after every turn
+and after every `sudus`, `cairn` or history-changing `git` command, and
+never asks the model. A repository without `.sudus/settings.json` or
+`.cairn/settings.json` shows nothing. When `sudus` is not on PATH, the
+plugin runs its own copy.
+
+It runs as a Claude Code hooks module, which is early access. Turn it
+on, and choose the view, in `~/.claude/settings.json`:
+
+```json
+{
+  "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" },
+  "pluginConfigs": { "sudus": { "options": { "view": "status-line" } } }
+}
+```
+
+| Option | Values | Default |
+|---|---|---|
+| `view` | `status-line`, `pane`, `both`, `off` | `status-line` |
+| `face` | any text; blobatar draws the same face from the same text every time. `sudus` is built in; other text is fetched from blobatar.dev once per session | `sudus` |
+| `asciiFace` | `true` puts the small ASCII face before the status line | `true` |
+| `command` | the command the status line runs | `sudus` |
+
+Without the flag, Claude Code does not load the module, and the plugin's
+shell hooks work as before. Codex and Muse do not read it. The pane draws
+the face as a picture on a terminal with image support (kitty graphics).
+
 ## What Sudus can and cannot establish
 
 Sudus can detect missing or stale evidence, malformed declarations,
@@ -514,3 +561,8 @@ John Lockwood ([johnwlockwood](https://github.com/johnwlockwood)) filed
 the first bug reports against Sudus, each with the exact timeline, the
 cause in the code and the expected behavior. Issues #1 through #7 were
 fixed from them, in 2.1.14, 2.2.2, 3.0.1, 3.0.3 and 3.1.2.
+
+The face in the status line and the pane is drawn by
+[blobatar](https://github.com/Alain00/blobatar), by Alain00, under the
+MIT license. `mod/faces.ts` holds its drawing of the name `sudus`, and
+`node scripts/faces.mjs` fetches it again.

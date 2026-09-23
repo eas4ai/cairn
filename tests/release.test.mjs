@@ -10,7 +10,7 @@ const SETTINGS = { schema: 1, authority_remote: null, outside: [], source: [], i
 
 function releasable() {
   const r = throwawayRepo();
-  mkdirSync(join(r.dir, ".cairn")); writeFileSync(join(r.dir, ".cairn/settings.json"), JSON.stringify(SETTINGS) + "\n");
+  mkdirSync(join(r.dir, ".sudus")); writeFileSync(join(r.dir, ".sudus/settings.json"), JSON.stringify(SETTINGS) + "\n");
   writeFileSync(join(r.dir, "package.json"), '{"name":"x","version":"2.0.0"}\n');
   for (const d of [".claude-plugin", ".codex-plugin", ".muse-plugin"]) { mkdirSync(join(r.dir, d)); writeFileSync(join(r.dir, d, "plugin.json"), '{"version":"2.0.0"}\n'); }
   writeFileSync(join(r.dir, ".claude-plugin/marketplace.json"), '{"plugins":[{"version":"2.0.0"}]}\n');

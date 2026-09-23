@@ -6,7 +6,7 @@ import { ROOT } from "./helpers/hookenv.mjs";
 
 const read = (p) => JSON.parse(readFileSync(join(ROOT, p), "utf8"));
 const MANIFESTS = [".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json", ".muse-plugin/plugin.json"];
-const SKILLS = ["install-cairn", "new-project", "existing-project", "next-feature"];
+const SKILLS = ["install-sudus", "new-project", "existing-project", "next-feature"];
 
 test("every manifest carries package.json's version exactly once", () => {
   const v = read("package.json").version;

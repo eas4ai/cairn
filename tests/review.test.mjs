@@ -12,7 +12,7 @@ export const SETTINGS = {
 export async function claims(r, over = {}) {
   const t = await targets(r.cwd, await r.log(), r.slug);
   const answers = [
-    ...t.mechanisms.flatMap((m) => [{ question: 'Q1', target: m, status: 'observed', text: `flag fail: cairn: ${m.toUpperCase()}: fail at receipt 3f2` }, { question: 'Q2', target: m, status: 'observed', text: 'the printed line names the flag, not a setup error' }]),
+    ...t.mechanisms.flatMap((m) => [{ question: 'Q1', target: m, status: 'observed', text: `flag fail: sudus: ${m.toUpperCase()}: fail at receipt 3f2` }, { question: 'Q2', target: m, status: 'observed', text: 'the printed line names the flag, not a setup error' }]),
     ...t.requirements.flatMap((q) => [{ question: 'Q3', target: q, status: 'observed', text: 'node check.mjs with an empty flag exits 1' }, { question: 'Q4', target: q, status: 'not-checked', text: 'the logger changed too' }]),
     { question: 'Q5', target: r.slug, status: 'not-checked', text: 'a race between two writers' }, { question: 'Q6', target: r.slug, status: 'not-checked', text: '' },
   ];
@@ -22,9 +22,9 @@ export async function claims(r, over = {}) {
 test('a review records the current snapshot, session, examined entries, every answer and numbered findings', async () => {
   for (const k of ['review', 'brief', 'report', 'resolution', 'acceptance']) assert.ok(KINDS.has(k));
   const r = await loopRepo();
-  const sha = await review(r.cwd, 'first', await claims(r, { findings: [{ n: 1, text: 'no empty-input test' }] }), { env: { CAIRN_SESSION: 's-builder' } });
+  const sha = await review(r.cwd, 'first', await claims(r, { findings: [{ n: 1, text: 'no empty-input test' }] }), { env: { SUDUS_SESSION: 's-builder' } });
   const c = await catCommit(r.cwd, sha);
-  assert.equal(c.subject, 'cairn: review first');
+  assert.equal(c.subject, 'sudus: review first');
   const p = decodeRecord(c).payload;
   assert.deepEqual([p.slug, p.session, p.examined, p.findings], ['first', 's-builder', ['src/demo.mjs'], [{ n: 1, text: 'no empty-input test' }]]);
   assert.match(p.snapshot, /^[0-9a-f]{40}$/);
@@ -60,7 +60,7 @@ import { loadSettings } from '../lib/settings.mjs';
 import { project } from '../lib/review.mjs';
 
 async function tree(r) { await git(['add', '-A'], { cwd: r.cwd }); return (await git(['write-tree'], { cwd: r.cwd })).stdout.trim(); }
-const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'cairn-proj-'));
+const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'sudus-proj-'));
 
 test('the projection omits network_exclude and credential paths, names them in the manifest without contents, and has no .git', async () => {
   const r = await loopRepo({ settings: SETTINGS });
@@ -74,7 +74,7 @@ test('the projection omits network_exclude and credential paths, names them in t
   assert.equal(JSON.stringify(out.manifest).includes('secret'), false);
   for (const gone of ['fixtures/private/k.json', '.env', 'server.pem', '.git']) await assert.rejects(fs.stat(path.join(dir, gone)));
   assert.equal(await fs.readFile(path.join(dir, 'src/b.mjs'), 'utf8'), 'export const b = 2;\n');
-  assert.ok((await fs.stat(path.join(dir, '.cairn/settings.json'))).isFile());
+  assert.ok((await fs.stat(path.join(dir, '.sudus/settings.json'))).isFile());
   assert.match(out.projectionDigest, /^sha256:[0-9a-f]{64}$/);
   assert.match(out.exclusionsDigest, /^sha256:[0-9a-f]{64}$/);
 });
@@ -108,9 +108,9 @@ import { detectHarness, brief, interfaceObligations, CONFINES } from '../lib/rev
 // the previous implementation refused it, and this test previously asserted that refusal. The
 // spec is the binding authority, so `muse` (absent from SETTINGS.harness entirely, the same as
 // `codex: null`) now resolves the same way `codex` does: any model, any transport.
-test('the harness comes from --harness, then CAIRN_HARNESS, then the harness environment; an absent or null settings entry means any model and any transport', () => {
+test('the harness comes from --harness, then SUDUS_HARNESS, then the harness environment; an absent or null settings entry means any model and any transport', () => {
   assert.deepEqual(detectHarness(SETTINGS, { harness: 'claude_code', env: {} }), { name: 'claude_code', model: 'claude-fable-5-1', transport: 'remote', boundary: 'unenforced' });
-  assert.equal(detectHarness(SETTINGS, { env: { CAIRN_HARNESS: 'claude_code' } }).name, 'claude_code');
+  assert.equal(detectHarness(SETTINGS, { env: { SUDUS_HARNESS: 'claude_code' } }).name, 'claude_code');
   assert.equal(detectHarness(SETTINGS, { env: { CLAUDECODE: '1' } }).name, 'claude_code');
   assert.deepEqual(detectHarness(SETTINGS, { harness: 'codex', env: {} }), { name: 'codex', model: null, transport: null, boundary: 'unenforced' });
   assert.throws(() => detectHarness(SETTINGS, { env: {} }), /no harness detected; pass --harness/);
@@ -122,7 +122,7 @@ export async function reviewed(over = {}) {
   const r = await loopRepo({ settings: SETTINGS });
   await r.write('src/api/x.mjs', 'export const x = 2;\n');
   await r.commit('change an interface');
-  r.rev = await review(r.cwd, 'first', await claims(r, over), { env: { CAIRN_SESSION: 's-builder' } });
+  r.rev = await review(r.cwd, 'first', await claims(r, over), { env: { SUDUS_SESSION: 's-builder' } });
   r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
   return r;
 }
@@ -136,14 +136,14 @@ test('brief writes the record, the projection and the rendered file, and prints 
   assert.deepEqual([p.slug, p.review, p.payload_digest], ['first', r.rev, sha256(b.text)]);
   assert.match(p.projection_digest, /^sha256:/);
   assert.match(p.exclusions_digest, /^sha256:/);
-  assert.ok(b.briefPath.startsWith(path.join(r.cwd, '.cairn/output/brief-')));
+  assert.ok(b.briefPath.startsWith(path.join(r.cwd, '.sudus/output/brief-')));
   assert.equal(await fs.readFile(b.briefPath, 'utf8'), b.text);
   for (const s of ['## Interface obligations\nsrc/api/x.mjs\n', '## Changed paths (start snapshot to reviewed snapshot; A added, M modified, D deleted)\n', '\nA src/api/x.mjs\n', 'compare the changed paths above with the claim', '## Builder findings\n1. no test\n', '[DEMO-001]', 'Falsifier:', 'mechanism demo-001 Q1 observed:',
     'cannot detect a secret a person or primary coding agent copied into ordinary prose', 'You may read only the projection directory. Boundary: unenforced.']) assert.ok(b.text.includes(s), s);
   const lines = b.launch.split('\n');
-  assert.equal(lines[0], `cairn: brief first ${b.sha}`);
+  assert.equal(lines[0], `sudus: brief first ${b.sha}`);
   assert.deepEqual(lines.slice(5, 9), ['harness: claude_code', 'model: claude-fable-5-1', 'transport: remote', 'boundary: unenforced']);
-  assert.equal(lines[9], `start: in claude_code, start a fresh adversary with model claude-fable-5-1 over remote, working directory ${b.projectionDir}, with the file ${b.briefPath} as its entire prompt; when it finishes, run: cairn report first --file <its report>`);
+  assert.equal(lines[9], `start: in claude_code, start a fresh adversary with model claude-fable-5-1 over remote, working directory ${b.projectionDir}, with the file ${b.briefPath} as its entire prompt; when it finishes, run: sudus report first --file <its report>`);
   assert.equal(lines[10], '');
   await assert.rejects(fs.stat(path.join(b.projectionDir, '.git')));
   assert.deepEqual(await interfaceObligations(r.cwd, SETTINGS, r.startSnapshot, r.revPayload.snapshot), ['src/api/x.mjs']);
@@ -304,11 +304,11 @@ test('three acceptance rounds without Done create the cycle escalation through p
 // tests/review.test.mjs (append)
 import { cliReview, cliBrief, cliReport, cliResolve, cliAccept } from '../lib/review.mjs';
 
-test('the five commands print one line each and exit 1 with a cairn: line on refusal', async () => {
+test('the five commands print one line each and exit 1 with a sudus: line on refusal', async () => {
   const r = await loopRepo({ settings: SETTINGS });
   await r.write('src/api/x.mjs', 'export const x = 2;\n');
   await r.commit('interface change');
-  const file = async (name, obj) => { const p = path.join(r.cwd, '.cairn/output', name); await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p, JSON.stringify(obj)); return p; };
+  const file = async (name, obj) => { const p = path.join(r.cwd, '.sudus/output', name); await fs.mkdir(path.dirname(p), { recursive: true }); await fs.writeFile(p, JSON.stringify(obj)); return p; };
   // Deviation from the plan text: the plan's own literal call gave the review a finding
   // ({n: 1, text: 'x'}), which is never resolved anywhere in this test, so the later
   // `reviewState(...).ready === true` assertion cannot hold together with a correct reviewState
@@ -316,63 +316,63 @@ test('the five commands print one line each and exit 1 with a cairn: line on ref
   // developer-disputed" -- Task 6's own tests exercise exactly this rule). Passing no findings here
   // keeps the CLI round-trip this test is actually checking (all five commands, each argument shape)
   // without contradicting the readiness rule Task 6 already covers.
-  const rv = await cliReview(r.cwd, ['first', '--file', await file('rv.json', await claims(r, { findings: [] }))], { env: { CAIRN_SESSION: 'b' } });
-  assert.match(rv.out, /^cairn: review first [0-9a-f]{40}\n$/);
+  const rv = await cliReview(r.cwd, ['first', '--file', await file('rv.json', await claims(r, { findings: [] }))], { env: { SUDUS_SESSION: 'b' } });
+  assert.match(rv.out, /^sudus: review first [0-9a-f]{40}\n$/);
   r.rev = rv.out.trim().split(' ')[3];
   r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
   const br = await cliBrief(r.cwd, ['first', '--harness', 'claude_code']);
   assert.equal(br.code, 0);
-  assert.match(br.out, /^cairn: brief first [0-9a-f]{40}\nbrief: .*\nbrief digest: sha256:[0-9a-f]{64}\nprojection: .*\nprojection digest: sha256:[0-9a-f]{64}\nharness: claude_code\nmodel: claude-fable-5-1\ntransport: remote\nboundary: unenforced\nstart: in claude_code, .*\n$/);
+  assert.match(br.out, /^sudus: brief first [0-9a-f]{40}\nbrief: .*\nbrief digest: sha256:[0-9a-f]{64}\nprojection: .*\nprojection digest: sha256:[0-9a-f]{64}\nharness: claude_code\nmodel: claude-fable-5-1\ntransport: remote\nboundary: unenforced\nstart: in claude_code, .*\n$/);
   r.bp = decodeRecord(await catCommit(r.cwd, br.out.split('\n')[0].split(' ')[3])).payload;
   const bad = await cliReport(r.cwd, ['first', '--file', await file('bad.json', adversary(r, { model: 'x' }))]);
-  assert.deepEqual([bad.code, bad.out.startsWith('cairn: report: model x does not match')], [1, true]);
+  assert.deepEqual([bad.code, bad.out.startsWith('sudus: report: model x does not match')], [1, true]);
   const rp = await cliReport(r.cwd, ['first', '--file', await file('rp.json', adversary(r))]);
-  assert.match(rp.out, /^cairn: report first [0-9a-f]{40}\n$/);
+  assert.match(rp.out, /^sudus: report first [0-9a-f]{40}\n$/);
   await r.write('src/demo.mjs', 'export const demo = 9;\n');
   const rs = await cliResolve(r.cwd, ['first', '1', 'fixed', '--source', rp.out.trim().split(' ')[3]]);
-  assert.match(rs.out, /^cairn: resolution first [0-9a-f]{40}\n$/);
+  assert.match(rs.out, /^sudus: resolution first [0-9a-f]{40}\n$/);
   const ac = await cliAccept(r.cwd, ['first', '--file', await file('ac.json', { resolutions: [{ sha: rs.out.trim().split(' ')[3], verdict: 'accepted', reason: '' }], findings: [] })]);
-  assert.match(ac.out, /^cairn: acceptance first [0-9a-f]{40}\n$/);
+  assert.match(ac.out, /^sudus: acceptance first [0-9a-f]{40}\n$/);
   assert.equal((await reviewState(r.cwd, 'first')).ready, true);
   const nofile = await cliAccept(r.cwd, ['first']);
-  assert.deepEqual([nofile.code, nofile.out], [1, 'cairn: --file <path> is required\n']);
+  assert.deepEqual([nofile.code, nofile.out], [1, 'sudus: --file <path> is required\n']);
 });
 
 // tests/review.test.mjs (fix round 1, item 1)
 import { spawnSync } from 'node:child_process';
-const cairnBin = new URL('../bin/cairn.mjs', import.meta.url).pathname;
-function cairn(args, cwd) { return spawnSync(process.execPath, [cairnBin, ...args], { cwd, encoding: 'utf8' }); }
+const sudusBin = new URL('../bin/sudus.mjs', import.meta.url).pathname;
+function sudus(args, cwd) { return spawnSync(process.execPath, [sudusBin, ...args], { cwd, encoding: 'utf8' }); }
 
 test('the brief record carries the launch instruction; report derives it from the brief, never the report body', async () => {
   const r = await briefed();
   assert.deepEqual([r.bp.harness, r.bp.model, r.bp.transport, r.bp.boundary], ['claude_code', 'claude-fable-5-1', 'remote', 'unenforced']);
   await assert.rejects(
     report(r.cwd, 'first', adversary(r, { harness: 'codex', model: 'gpt-nano-0', transport: 'local' })),
-    /cairn: report: harness codex does not match the brief's claude_code/,
+    /sudus: report: harness codex does not match the brief's claude_code/,
   );
   // A model/transport substitution with no harness field at all is refused too: the launch
   // instruction is not re-derived from any part of the body, only checked against it.
   await assert.rejects(
     report(r.cwd, 'first', adversary(r, { harness: undefined, model: 'gpt-nano-0' })),
-    /cairn: report: model gpt-nano-0 does not match the launch instruction claude-fable-5-1/,
+    /sudus: report: model gpt-nano-0 does not match the launch instruction claude-fable-5-1/,
   );
   const sha = await report(r.cwd, 'first', adversary(r));
   assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.boundary, 'unenforced');
 });
 
-test('end to end: cairn brief then cairn report refuses a report naming a different harness, model and transport', async () => {
+test('end to end: sudus brief then sudus report refuses a report naming a different harness, model and transport', async () => {
   const r = await reviewed();
-  const briefRes = cairn(['brief', 'first', '--harness', 'claude_code'], r.cwd);
+  const briefRes = sudus(['brief', 'first', '--harness', 'claude_code'], r.cwd);
   assert.equal(briefRes.status, 0);
   assert.match(briefRes.stdout, /harness: claude_code\nmodel: claude-fable-5-1\ntransport: remote/);
   const briefSha = briefRes.stdout.split('\n')[0].split(' ')[3];
   r.bp = decodeRecord(await catCommit(r.cwd, briefSha)).payload;
-  const rpPath = path.join(r.cwd, '.cairn/output', 'rp.json');
+  const rpPath = path.join(r.cwd, '.sudus/output', 'rp.json');
   await fs.mkdir(path.dirname(rpPath), { recursive: true });
   await fs.writeFile(rpPath, JSON.stringify(adversary(r, { harness: 'codex', model: 'gpt-nano-0', transport: 'local' })));
-  const reportRes = cairn(['report', 'first', '--file', rpPath], r.cwd);
+  const reportRes = sudus(['report', 'first', '--file', rpPath], r.cwd);
   assert.equal(reportRes.status, 1);
-  assert.match(reportRes.stderr, /^cairn: report: /);
+  assert.match(reportRes.stderr, /^sudus: report: /);
 });
 
 // tests/review.test.mjs (fix round 1, item 2)
@@ -405,7 +405,7 @@ test('accept refuses a resolution sha that appears in both accepted and rejected
 import { readRef } from '../lib/gitx.mjs';
 import { SNAPSHOTS_REF } from '../lib/snapshots.mjs';
 
-test('a refused report leaves refs/cairn/snapshots unchanged', async () => {
+test('a refused report leaves refs/sudus/snapshots unchanged', async () => {
   const r = await briefed();
   const before = await readRef(r.cwd, SNAPSHOTS_REF);
   await assert.rejects(report(r.cwd, 'first', adversary(r, { model: 'nope' })), /model nope does not match/);
@@ -416,7 +416,7 @@ test('a refused report leaves refs/cairn/snapshots unchanged', async () => {
   assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
 });
 
-test('reviewState is read-only: calling it twice leaves refs/cairn/snapshots unchanged', async () => {
+test('reviewState is read-only: calling it twice leaves refs/sudus/snapshots unchanged', async () => {
   const r = await reported();
   const before = await readRef(r.cwd, SNAPSHOTS_REF);
   await reviewState(r.cwd, 'first');
@@ -424,7 +424,7 @@ test('reviewState is read-only: calling it twice leaves refs/cairn/snapshots unc
   assert.equal(await readRef(r.cwd, SNAPSHOTS_REF), before);
 });
 
-test('a refused accept leaves refs/cairn/snapshots unchanged; a successful one advances it exactly once and names the snapshot it wrote', async () => {
+test('a refused accept leaves refs/sudus/snapshots unchanged; a successful one advances it exactly once and names the snapshot it wrote', async () => {
   const r = await reported();
   const r1 = await fixed(r, 1, 'a fix');
   const before = await readRef(r.cwd, SNAPSHOTS_REF);
@@ -483,7 +483,7 @@ test('brief renders the real roadmap section, not a decoy heading whose title co
   const r = await loopRepo({ settings: SETTINGS });
   await r.write('docs/spec/roadmap.md', 'Current: first\n\n## first-pass (abandoned)\n\nDECOY TEXT THAT IS NOT THIS COMMITMENT\n\n## first\n\nRequirements: DEMO-001\n\nThe real section.\n');
   await r.commit('decoy roadmap heading above the real section');
-  r.rev = await review(r.cwd, 'first', await claims(r), { env: { CAIRN_SESSION: 's-builder' } });
+  r.rev = await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
   const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
   assert.ok(b.text.includes('The real section.'));
   assert.equal(b.text.includes('DECOY TEXT THAT IS NOT THIS COMMITMENT'), false);
@@ -493,15 +493,15 @@ test('brief renders the real roadmap section, not a decoy heading whose title co
 test('cliResolve refuses a missing, non-integer or less-than-1 finding number, naming it', async () => {
   const r = await reported();
   const abc = await cliResolve(r.cwd, ['first', 'abc', 'why']);
-  assert.deepEqual([abc.code, abc.out], [1, 'cairn: resolve: finding number "abc" must be a positive integer\n']);
+  assert.deepEqual([abc.code, abc.out], [1, 'sudus: resolve: finding number "abc" must be a positive integer\n']);
   const zero = await cliResolve(r.cwd, ['first', '0', 'why']);
-  assert.deepEqual([zero.code, zero.out], [1, 'cairn: resolve: finding number "0" must be a positive integer\n']);
+  assert.deepEqual([zero.code, zero.out], [1, 'sudus: resolve: finding number "0" must be a positive integer\n']);
   const frac = await cliResolve(r.cwd, ['first', '1.5', 'why']);
-  assert.deepEqual([frac.code, frac.out], [1, 'cairn: resolve: finding number "1.5" must be a positive integer\n']);
+  assert.deepEqual([frac.code, frac.out], [1, 'sudus: resolve: finding number "1.5" must be a positive integer\n']);
   const missing = await cliResolve(r.cwd, ['first']);
-  assert.deepEqual([missing.code, missing.out], [1, 'cairn: resolve: finding number (none given) must be a positive integer\n']);
+  assert.deepEqual([missing.code, missing.out], [1, 'sudus: resolve: finding number (none given) must be a positive integer\n']);
   const good = await cliResolve(r.cwd, ['first', '1', 'why']);
-  assert.match(good.out, /^cairn: resolution first [0-9a-f]{40}\n$/);
+  assert.match(good.out, /^sudus: resolution first [0-9a-f]{40}\n$/);
 });
 
 // tests/review.test.mjs (fix round 2, new finding 1)
@@ -518,7 +518,7 @@ test('fix round 2 new finding 1: accept reads the workspace tree exactly once; a
   await r.write('src/api/x.mjs', 'export const x = 2;\n');
   for (let i = 0; i < 250; i++) await r.write(`src/bulk/f${i}.mjs`, `export const f${i} = ${i};\n`);
   await r.commit('bulk fixture for the race window');
-  r.rev = await review(r.cwd, 'first', await claims(r), { env: { CAIRN_SESSION: 's-builder' } });
+  r.rev = await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
   r.revPayload = decodeRecord(await catCommit(r.cwd, r.rev)).payload;
   r.b = await brief(r.cwd, 'first', { harness: 'claude_code' });
   r.bp = decodeRecord(await catCommit(r.cwd, r.b.sha)).payload;
@@ -539,10 +539,10 @@ test('fix round 2 new finding 1: accept reads the workspace tree exactly once; a
   finally { clearTimeout(timer); }
   if (crash) {
     // Pre-fix, this is exactly new finding 1(a): a raw GitError ("git diff-tree exited 128:
-    // fatal: bad object <sha>") with no "cairn: " prefix, after refs/cairn/snapshots had already
+    // fatal: bad object <sha>") with no "sudus: " prefix, after refs/sudus/snapshots had already
     // advanced. The fix removes the second, independent read this crash depended on, so any
-    // throw here must at minimum be a clean cairn: refusal.
-    assert.ok(crash.message.startsWith('cairn: '), `expected a clean cairn: refusal, got: ${crash.constructor.name}: ${crash.message}`);
+    // throw here must at minimum be a clean sudus: refusal.
+    assert.ok(crash.message.startsWith('sudus: '), `expected a clean sudus: refusal, got: ${crash.constructor.name}: ${crash.message}`);
   } else {
     const p = decodeRecord(await catCommit(r.cwd, sha)).payload;
     const rep = (await readLog(r.cwd)).find((x) => x.kind === 'report');
@@ -560,14 +560,14 @@ test('fix round 2 new finding 1: accept reads the workspace tree exactly once; a
 // tests/review.test.mjs (fix round 2, new finding 2)
 import { checkBlobSize, MAX_BLOB_BYTES } from '../lib/review.mjs';
 
-test('fix round 2 new finding 2: a blob above the documented size limit is refused with a cairn: line, checked before any bytes are read', async () => {
+test('fix round 2 new finding 2: a blob above the documented size limit is refused with a sudus: line, checked before any bytes are read', async () => {
   // A pure, stub-driven check: no 300+ MiB file needed. checkBlobSize takes the size
   // `git cat-file -s` would have reported and applies the same refusal catBlob does.
   assert.equal(MAX_BLOB_BYTES, 256 * 1024 * 1024);
   assert.equal(checkBlobSize('a'.repeat(40), MAX_BLOB_BYTES), MAX_BLOB_BYTES);
   assert.throws(
     () => checkBlobSize('a'.repeat(40), MAX_BLOB_BYTES + 1),
-    (e) => e instanceof ReviewError && e.message === `cairn: brief: blob ${'a'.repeat(40)} is ${MAX_BLOB_BYTES + 1} bytes, over the ${MAX_BLOB_BYTES} byte limit`,
+    (e) => e instanceof ReviewError && e.message === `sudus: brief: blob ${'a'.repeat(40)} is ${MAX_BLOB_BYTES + 1} bytes, over the ${MAX_BLOB_BYTES} byte limit`,
   );
   // An ordinary blob still round-trips through the real catBlob (git cat-file -s runs first,
   // then the actual read); this is the same 3MB blob fix round 1 item 5 already exercises,

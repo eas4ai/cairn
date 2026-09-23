@@ -78,9 +78,9 @@ describe('the narrow floor', () => {
   });
   // Fix round 1 (Controller Ruling 7): section 10's narrow floor names exactly three conditions
   // (contract, agreement, data) plus the technical no-request cases. Reserved/protected-path
-  // writes ('settings', a .cairn/settings.json write; 'reserved', a reserved or kernel-managed
+  // writes ('settings', a .sudus/settings.json write; 'reserved', a reserved or kernel-managed
   // path), the fourth-attempt rule and scope rulings are "already enforced by section 2 and
-  // section 5 independent of this floor" (docs/spec/cairn-v2.md section 10) -- floorReasons no
+  // section 5 independent of this floor" (docs/spec/sudus-v2.md section 10) -- floorReasons no
   // longer fires on them, so those four assertions (present in the brief's own Step 1 test) are
   // removed along with the reasons themselves. The reasons that remain: data, contract, agreement,
   // missing-recommendation, incomplete-projection.
@@ -256,11 +256,11 @@ describe('C(c) and M(D)', () => {
     });
     test('a kernel-reserved path throws EgressError naming the path', async () => {
       const { cwd } = await makeProject();
-      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/log'] }));
+      const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.sudus/log'] }));
       const C = await contractState(cwd, f);
       await assert.rejects(
-        measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/log'] }), 0, C, f),
-        (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '.cairn/log' && e.message.includes('.cairn/log'),
+        measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.sudus/log'] }), 0, C, f),
+        (e) => e instanceof EgressError && e.klass === 'reserved' && e.path === '.sudus/log' && e.message.includes('.sudus/log'),
       );
     });
     test('a kernel-managed path (the ADR file) throws EgressError naming the path', async () => {
@@ -303,12 +303,12 @@ describe('C(c) and M(D)', () => {
   });
   test('a kernel output path throws EgressError classed output', async () => {
     const { cwd } = await makeProject();
-    await mkdirAndWrite(cwd, '.cairn/output/report.txt', 'report\n');
-    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/output/report.txt'] }));
+    await mkdirAndWrite(cwd, '.sudus/output/report.txt', 'report\n');
+    const f = await kernelFacts(cwd, normalizeDraft({ ...draft(), named_paths: ['.sudus/output/report.txt'] }));
     const C = await contractState(cwd, f);
     await assert.rejects(
-      measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.cairn/output/report.txt'] }), 0, C, f),
-      (e) => e instanceof EgressError && e.klass === 'output' && e.path === '.cairn/output/report.txt',
+      measureState(cwd, normalizeDraft({ ...draft(), named_paths: ['.sudus/output/report.txt'] }), 0, C, f),
+      (e) => e instanceof EgressError && e.klass === 'output' && e.path === '.sudus/output/report.txt',
     );
   });
   // TYPESAFEAI_API_KEY is set to an invented, non-real placeholder for the duration of this test
@@ -758,7 +758,7 @@ const transport = (bodies) => async () => { const b = bodies.shift(); if (b inst
 //    it anywhere docs/spec can see: real `start()` (lib/commitment.mjs's prepareStart) runs
 //    lib/spec.mjs's lint() first and refuses with "reference to absent identifier AUTH-003", and
 //    even past that, prepareStart also refuses without a current authorization
-//    (`currentAuthorization`) -- `cairn authorize` was never run. This codebase's own working
+//    (`currentAuthorization`) -- `sudus authorize` was never run. This codebase's own working
 //    pattern for a real (non-hand-appended) start() is tests/helpers/commitment-fixture.mjs's
 //    project(): a domain file (Prefix + an Agreed block with a mechanism, since an Agreed block
 //    with no mechanism is its own lint finding), an overview.md spec-map row naming it, and
@@ -882,7 +882,7 @@ describe('measure()', () => {
   });
   // Fix (Critical C1, final-review.md): detectHarness (lib/review.mjs) throws a bare ReviewError
   // when no harness can be detected -- an `env` object that carries none of --harness,
-  // CAIRN_HARNESS, or a recognized harness env var (CLAUDECODE/CODEX_HOME/MUSE_SESSION). Section
+  // SUDUS_HARNESS, or a recognized harness env var (CLAUDECODE/CODEX_HOME/MUSE_SESSION). Section
   // 10 requires this to be a recorded `unavailable <class>` measurement, the same as any other
   // technical no-call, never an uncaught exception past measure(). A controlled, empty `env: {}`
   // is passed explicitly so this test does not depend on -- and cannot be fooled by -- whatever
@@ -1020,7 +1020,7 @@ describe('measure()', () => {
   // Egress exclusion runs before the jev/review fork (measureState is called once, ahead of the
   // `source === 'review'` pending return), so it is the one 'unavailable' outcome both sources can
   // reach -- 'oversize' cannot (sizeCheck only runs `if (source === 'jev')`, per section 10's own
-  // "Cairn does not separately cap [the review request's] size beyond the state it sends"), and a
+  // "Sudus does not separately cap [the review request's] size beyond the state it sends"), and a
   // transport failure/invalid answer/model mismatch cannot (review never calls a transport at all
   // from inside this function). Completes both-source coverage of the 'unavailable' branch.
   test('an excluded touched path is unavailable excluded for the review source too, with no call and no pending review return', async () => {
@@ -1048,7 +1048,7 @@ describe('measure() records session and launch on the intent', () => {
   });
   test('review: launch is the detected harness', async () => {
     const cwd = await repoWithCommitment(false);
-    await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const intent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
     assert.equal(intent.payload.session, 'sess-agent');
     assert.deepEqual(intent.payload.launch, { harness: 'claude_code', model: null, transport: null, boundary: 'unenforced' });
@@ -1061,7 +1061,7 @@ describe('measure() records session and launch on the intent', () => {
   });
 });
 
-// --- Task 6 (plan 16): completeReviewMeasurement -- cairn measure <slug> --file <path> ----------
+// --- Task 6 (plan 16): completeReviewMeasurement -- sudus measure <slug> --file <path> ----------
 // Section 9's report() refusal, mirrored for the review source's measurement completion: the
 // session that wrote the brief may not answer it, and a body model/transport that disagrees with
 // the intent's own recorded launch (when the launch pinned one) is refused the same way. Reuses
@@ -1091,7 +1091,7 @@ const reviewBody = (over = {}) => ({ model: 'claude-fable-5-1', session: 'sess-r
 describe('completeReviewMeasurement', () => {
   test('records the composite from the five levels, exactly like the jev path', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
     assert.equal(c.outcome, 'composite'); assert.ok(typeof c.composite === 'number');
     const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
@@ -1099,23 +1099,23 @@ describe('completeReviewMeasurement', () => {
   });
   test('refuses the session that started the brief', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody({ session: 'sess-agent' })), /session/);
   });
   test('refuses a model or transport that disagrees with the launch, when one was pinned', async () => {
     const cwd = await repoWithCommitment(false, { harness: { claude_code: { adversary_model: 'claude-fable-5-1', adversary_transport: 'remote' } } });
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody({ model: 'some-other-model' })), /model/);
   });
   test('a null-pinned launch (harness entry null or absent) accepts any model', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const c = await completeReviewMeasurement(cwd, r.slug, reviewBody({ model: 'anything' }));
     assert.equal(c.outcome, 'composite');
   });
   test('an invalid answer set is unavailable invalid, same as the jev path', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const bad = reviewBody(); delete bad.answers.surface;
     const c = await completeReviewMeasurement(cwd, r.slug, bad);
     assert.equal(c.outcome, 'unavailable'); assert.equal(c.suggested, null);
@@ -1129,7 +1129,7 @@ describe('completeReviewMeasurement', () => {
   // (the test immediately above), and must not write a second measurement.
   test('refuses re-submitting --file against an already-completed review intent, with a distinct message, and writes no second measurement', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const first = await completeReviewMeasurement(cwd, r.slug, reviewBody());
     assert.equal(first.outcome, 'composite');
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody()), (e) => {
@@ -1151,7 +1151,7 @@ describe('completeReviewMeasurement', () => {
   //    except for those three fields, plus that the call's answers/usage/raw made it to the log.
   test('the written measurement and call carry the same shape a jev completion would, only source/session/transport/model differ', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
     const log = await readLog(cwd);
     const call = log.findLast((x) => x.kind === 'evaluation-call');
@@ -1170,7 +1170,7 @@ describe('completeReviewMeasurement', () => {
   //    measurement schemas' nullable(str)/nullable(oneOf(...)) fields rejecting a raw `undefined`.
   test('a body missing model/session/transport entirely is unavailable invalid, not a thrown schema error', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     const c = await completeReviewMeasurement(cwd, r.slug, {});
     assert.equal(c.outcome, 'unavailable'); assert.equal(c.suggested, null);
     const call = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-call');
@@ -1183,7 +1183,7 @@ describe('completeReviewMeasurement', () => {
   // already uses, before any property of `body` is read.
   test('a null --file body refuses with a MeasurementError naming the defect, not a raw TypeError', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, null), (e) => {
       assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
       assert.match(e.message, /not a JSON object/);
@@ -1194,7 +1194,7 @@ describe('completeReviewMeasurement', () => {
   });
   test('an array --file body refuses with a MeasurementError naming the defect, not a raw TypeError', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, []), (e) => {
       assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
       assert.match(e.message, /not a JSON object/);
@@ -1211,7 +1211,7 @@ describe('completeReviewMeasurement', () => {
   //    matter what else landed in the log after it.
   test('an unrelated record appended after the brief does not block completion', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await appendRecord(cwd, 'item', 'auth-tokens', { kind: 'backlog', slug: 'idea-1', source: 'AUTH-003', body: 'an idea' });
     const c = await completeReviewMeasurement(cwd, r.slug, reviewBody());
     assert.equal(c.outcome, 'composite');
@@ -1225,7 +1225,7 @@ describe('completeReviewMeasurement', () => {
   // nothing (no orphaned evaluation-call/measurement trailing `done` in the log).
   test('completing a review measurement after done is refused, and writes nothing', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await measure(cwd, draft(), { session: 'sess-agent', env: { SUDUS_HARNESS: 'claude_code' } });
     await appendRecord(cwd, 'done', 'auth-tokens', { slug: 'auth-tokens', snapshot: await writeWorkspaceSnapshot(cwd) });
     await assert.rejects(completeReviewMeasurement(cwd, r.slug, reviewBody()), (e) => {
       assert.ok(e instanceof MeasurementError, `expected MeasurementError, got ${e}`);
@@ -1260,7 +1260,7 @@ describe('calibration', () => {
   // as answer()'s `slug` argument. Real answer() (lib/escalate.mjs) takes the commitment slug
   // there and resolves the open escalation for it internally via pickOpen(log, slug,
   // opts.escalation) -- passing a 40-hex escalation sha as `slug` matches no escalation's
-  // payload.slug ('auth-tokens', the commitment), reproduced verbatim as "cairn: no unanswered
+  // payload.slug ('auth-tokens', the commitment), reproduced verbatim as "sudus: no unanswered
   // escalation for <sha>" before this fix. Fixed to the commitment slug plus `escalation: sha` in
   // opts, the same targeted-answer shape tests/escalate.test.mjs's own passing calls use
   // (`answer(r.cwd, 'first', 'ok', '', { ...asDev, escalation: b })`). Also adds `confirm: async
@@ -1333,7 +1333,7 @@ describe('calibration', () => {
     assert.equal((await calibrate(cwd)).sample, 3);
     const { settings } = await loadSettings(cwd);
     settings.typesafeai.agent_ceiling = 0.4;
-    writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(settings, null, 2));
+    writeFileSync(join(cwd, '.sudus/settings.json'), JSON.stringify(settings, null, 2));
     assert.equal((await calibrate(cwd)).sample, 0);
   });
   test('floor and vetoed measurements never enter the denominator (suggested is null)', async () => {
@@ -1347,7 +1347,7 @@ describe('calibration', () => {
 });
 
 // --- Plan 16 Task 2: currentMeasurement -- missing, stale, or a different draft digest ---------
-// Section 5 (docs/spec/cairn-v2.md): "`cairn decide --consequential` refuses a draft whose
+// Section 5 (docs/spec/sudus-v2.md): "`sudus decide --consequential` refuses a draft whose
 // measurement is missing, stale, or built from a different draft digest." currentMeasurement is
 // that check, consumed by plan 16 tasks 3 (decide --consequential), 4 (escalate) and 6.
 //
@@ -1393,19 +1393,19 @@ describe('currentMeasurement', () => {
     await measure(cwd, draft(), { transport: transport([goodBody()]) });
     await measure(cwd, { ...draft(), because: 'a wholly different draft, also measured' }, { transport: transport([goodBody()]) });
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
-      (e) => e instanceof MeasurementError && e.message === 'cairn: the latest measurement is for a different draft; run cairn measure for this draft');
+      (e) => e instanceof MeasurementError && e.message === 'sudus: the latest measurement is for a different draft; run sudus measure for this draft');
   });
   // Fix round 1 (C1, the "not finished" half): this draft's own intent exists, but no measurement
   // names it yet -- a review source still pending (measure() returns before writing a
   // measurement). Distinct wording from "no intent at all" so the agent can tell "never measured"
   // from "measurement started but has not finished" (the review's own C1 finding: for a pending
-  // review draft, "run cairn measure again" is actively wrong guidance -- measure() already ran).
+  // review draft, "run sudus measure again" is actively wrong guidance -- measure() already ran).
   test('missing: this draft was measured but the measurement has not finished yet (review still pending)', async () => {
     const cwd = await repoWithCommitment(false);
     const pending = await measure(cwd, draft(), { env: { CLAUDECODE: '1' } });
     assert.equal(pending.pending, 'review');
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
-      (e) => e instanceof MeasurementError && e.message === 'cairn: the measurement for this draft has not finished yet; run cairn measure again once it has');
+      (e) => e instanceof MeasurementError && e.message === 'sudus: the measurement for this draft has not finished yet; run sudus measure again once it has');
   });
   test('stale: anything else appended to the log after the intent invalidates it', async () => {
     const cwd = await repoWithCommitment();
@@ -1415,7 +1415,7 @@ describe('currentMeasurement', () => {
   });
   // Controller Ruling 17 (binding): a decision is an ADR line (docs/decisions.jsonl), not a log
   // record -- appendDecision (lib/adr.mjs) writes straight to that file, never through
-  // appendRecord/refs/cairn/log, so no scan of readLog(cwd)'s output can ever see it. Proves
+  // appendRecord/refs/sudus/log, so no scan of readLog(cwd)'s output can ever see it. Proves
   // currentMeasurement catches this via the intent's own recorded adr_digest instead: measure,
   // then decide (no log record at all is appended), then currentMeasurement must still say stale.
   test('stale: a decision recorded since the draft was measured invalidates it, even with the log itself unchanged', async () => {
@@ -1423,7 +1423,7 @@ describe('currentMeasurement', () => {
     await measure(cwd, draft(), { transport: transport([goodBody()]) });
     await decide(cwd, { title: 'Use a map', rests_on: [], wrong_if: 'the map is slow', body: 'A map keeps lookups constant.' });
     await assert.rejects(currentMeasurement(cwd, normalizeDraft(draft())),
-      (e) => e instanceof MeasurementError && e.message === 'cairn: a decision has been recorded since this draft was measured; run cairn measure again');
+      (e) => e instanceof MeasurementError && e.message === 'sudus: a decision has been recorded since this draft was measured; run sudus measure again');
   });
   test('re-measuring after a stale hit produces a new current one', async () => {
     const cwd = await repoWithCommitment();

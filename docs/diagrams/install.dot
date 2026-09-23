@@ -5,22 +5,22 @@ digraph install {
   node  [shape=box, style=rounded, fontname="Helvetica", fontsize=11];
   edge  [fontname="Helvetica", fontsize=10];
 
-  start [shape=oval, label="Start: a harness\nwith no Cairn"];
+  start [shape=oval, label="Start: a harness\nwith no Sudus"];
   prereq [shape=diamond, label="node and git\navailable?"];
   missing [shape=oval, label="Stop: name the\nmissing prerequisite"];
   harness [shape=diamond, label="Which harness?"];
-  cc [label="Claude Code or Codex:\ninstall the Cairn plugin\n(hooks registered by the plugin)"];
-  muse [label="Muse:\ninstall the Cairn plugin\n(hooks registered by the plugin)"];
-  other [label="Any other agent:\ninstall the skills, then /install-cairn;\nregister hooks where supported"];
+  cc [label="Claude Code or Codex:\ninstall the Sudus plugin\n(hooks registered by the plugin)"];
+  muse [label="Muse:\ninstall the Sudus plugin\n(hooks registered by the plugin)"];
+  other [label="Any other agent:\ninstall the skills, then /install-sudus;\nregister hooks where supported"];
   nohooks [label="No hook system: instruction-only;\nthe working agreement is the enforcement"];
-  link [label="/install-cairn installs the shim bin/cairn.sh\nat ~/.local/bin/cairn, once; it runs the newest installed Cairn\n(no project remote is selected here)"];
+  link [label="/install-sudus installs the shim bin/sudus.sh\nat ~/.local/bin/sudus, once; it runs the newest installed Sudus\n(no project remote is selected here)"];
   path [shape=diamond, label="~/.local/bin on PATH?"];
   addpath [label="Tell the developer to add it;\nno hook edits the shell"];
-  help [shape=diamond, label="cairn --help prints\nthe command list?"];
+  help [shape=diamond, label="sudus --help prints\nthe command list?"];
   broken [shape=oval, label="Stop: name the failure\n(link target, PATH or node)"];
-  project [shape=diamond, label="Initialized Cairn project?"];
+  project [shape=diamond, label="Initialized Sudus project?"];
   wake [label="Session-start hook prints\nthe verdict and predicate"];
-  choose [label="Choose /new-project or /existing-project;\nthe chosen flow runs cairn init"];
+  choose [label="Choose /new-project or /existing-project;\nthe chosen flow runs sudus init"];
   done [shape=box, peripheries=2, label="Done: command and skills are available;\nhooks are registered where supported"];
 
   start -> prereq;

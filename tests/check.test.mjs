@@ -16,12 +16,12 @@ test('selectMechanism finds the one declaration naming the requirement', async (
 
 test('observeIdentity reads only declared names and records absence as null', async () => {
   const repo = await declared();
-  delete process.env.CAIRN_FIXTURE_ENV;
+  delete process.env.SUDUS_FIXTURE_ENV;
   const a = await observeIdentity(repo.cwd, DEFINITION.identity);
-  assert.deepEqual(a, { tools: { node: process.version }, env: { CAIRN_FIXTURE_ENV: null }, image: null });
-  process.env.CAIRN_FIXTURE_ENV = 'one';
+  assert.deepEqual(a, { tools: { node: process.version }, env: { SUDUS_FIXTURE_ENV: null }, image: null });
+  process.env.SUDUS_FIXTURE_ENV = 'one';
   const b = await observeIdentity(repo.cwd, DEFINITION.identity);
-  assert.equal(b.env.CAIRN_FIXTURE_ENV, 'one');
+  assert.equal(b.env.SUDUS_FIXTURE_ENV, 'one');
   assert.equal(Object.keys(b.env).length, 1);
   const c = await observeIdentity(repo.cwd, { tools: { missing: 'no-such-tool-xyz --version' }, env: [], image: 'img:1' });
   assert.deepEqual(c, { tools: { missing: null }, env: {}, image: 'img:1' });
@@ -66,7 +66,7 @@ test('check writes an input snapshot, an output file named by digest, and a rece
   assert.deepEqual(p.results.map((r) => [r.requirement, r.result]), [['DEMO-001', 'pass']]);
   assert.match(p.results[0].text_digest, /^sha256:/);
   const bytes = await readFile(join(repo.cwd, OUTPUT_DIR, p.output.slice(7)));
-  assert.equal(bytes.toString(), 'cairn: DEMO-001: pass\n');
+  assert.equal(bytes.toString(), 'sudus: DEMO-001: pass\n');
   assert.equal(p.output, sha256(bytes));
   assert.equal(await outputPresent(repo.cwd, rec), true);
   assert.equal(decodeRecord(await catCommit(repo.cwd, sha)).kind, 'receipt');
@@ -104,7 +104,7 @@ test('without per-requirement results the exit code decides; a killed command ra
 });
 
 test('per-requirement lines: any fail wins, undeclared identifiers are ignored', async () => {
-  const repo = await declared({ command: 'echo "cairn: DEMO-001: pass"; echo "cairn: DEMO-001: fail"; echo "cairn: DEMO-777: pass"' });
+  const repo = await declared({ command: 'echo "sudus: DEMO-001: pass"; echo "sudus: DEMO-001: fail"; echo "sudus: DEMO-777: pass"' });
   await check(repo.cwd, 'DEMO-001');
   const p = (await lastReceipt(repo.cwd)).payload;
   // Fix round 1 finding 8: DEMO-002 (Draft) is omitted, not recorded 'unverified'.
@@ -173,11 +173,11 @@ test('identity 3: the requirement text digest', async () => {
 
 test('identity 4: the observed declared execution identity', async () => {
   const repo = await declared();
-  delete process.env.CAIRN_FIXTURE_ENV;
+  delete process.env.SUDUS_FIXTURE_ENV;
   await check(repo.cwd, 'DEMO-001');
   const rec = await lastReceipt(repo.cwd);
-  process.env.CAIRN_FIXTURE_ENV = 'changed';
-  try { assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false); } finally { delete process.env.CAIRN_FIXTURE_ENV; }
+  process.env.SUDUS_FIXTURE_ENV = 'changed';
+  try { assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), false); } finally { delete process.env.SUDUS_FIXTURE_ENV; }
   assert.equal(await isCurrent(repo.cwd, rec, 'DEMO-001'), true);
 });
 
@@ -186,10 +186,10 @@ test('identity 5: a readable schema', async () => {
   await check(repo.cwd, 'DEMO-001');
   const rec = await lastReceipt(repo.cwd);
   const c = await catCommit(repo.cwd, rec.sha);
-  const trailers = c.trailers.map(([k, v]) => [k, k === 'Cairn-Schema' ? '2' : v]);
-  const head = await readRef(repo.cwd, 'refs/cairn/log');
+  const trailers = c.trailers.map(([k, v]) => [k, k === 'Sudus-Schema' ? '2' : v]);
+  const head = await readRef(repo.cwd, 'refs/sudus/log');
   const sha = await commitTree(repo.cwd, { tree: c.tree, parents: [head], subject: c.subject, body: c.body, trailers });
-  await updateRefCAS(repo.cwd, 'refs/cairn/log', sha, head);
+  await updateRefCAS(repo.cwd, 'refs/sudus/log', sha, head);
   assert.equal(await isCurrent(repo.cwd, { sha, payload: rec.payload }, 'DEMO-001'), false);
 });
 
@@ -274,18 +274,18 @@ test('finding 5: a command that prints more than the output cap is truncated, wi
   assert.equal(small.spawned, true);
   assert.equal(small.truncated, true);
   const text = small.out.toString('utf8');
-  assert.equal(text, 'a'.repeat(100) + 'cairn: output truncated at 100 bytes\n');
+  assert.equal(text, 'a'.repeat(100) + 'sudus: output truncated at 100 bytes\n');
   const untruncated = await runCommand(repo.cwd, 'printf abc', { cap: 100 });
   assert.deepEqual([untruncated.truncated, untruncated.out.toString()], [false, 'abc']);
 });
 
 test('finding 5: check truncates a command that exceeds the real 8 MiB cap and records the marker in the output file', async () => {
-  const command = "printf 'cairn: DEMO-001: pass\\n'; head -c 9000000 /dev/zero | tr '\\000' 'x'";
+  const command = "printf 'sudus: DEMO-001: pass\\n'; head -c 9000000 /dev/zero | tr '\\000' 'x'";
   const repo = await declared({ command });
   await check(repo.cwd, 'DEMO-001');
   const p = (await lastReceipt(repo.cwd)).payload;
   const bytes = await readFile(join(repo.cwd, OUTPUT_DIR, p.output.slice(7)));
-  const marker = `cairn: output truncated at ${OUTPUT_CAP} bytes\n`;
+  const marker = `sudus: output truncated at ${OUTPUT_CAP} bytes\n`;
   assert.equal(bytes.length, OUTPUT_CAP + marker.length);
   assert.equal(bytes.toString('utf8').slice(-marker.length), marker);
   // the line printed before the cap was hit is still matched correctly
@@ -310,13 +310,13 @@ test('finding 8: a Draft requirement is never digested into the receipt', async 
 });
 
 test('finding 10: a CRLF result line still matches after stripping the trailing CR', async () => {
-  const repo = await declared({ command: 'printf "cairn: DEMO-001: pass\\r\\n"' });
+  const repo = await declared({ command: 'printf "sudus: DEMO-001: pass\\r\\n"' });
   await check(repo.cwd, 'DEMO-001');
   const p = (await lastReceipt(repo.cwd)).payload;
   assert.equal(p.results[0].result, 'pass');
 });
 
-test('finding 11: an existing .cairn/output/.gitignore is not rewritten by check', async () => {
+test('finding 11: an existing .sudus/output/.gitignore is not rewritten by check', async () => {
   const repo = await declared();
   await repo.write(`${OUTPUT_DIR}/.gitignore`, 'custom\n');
   await check(repo.cwd, 'DEMO-001');

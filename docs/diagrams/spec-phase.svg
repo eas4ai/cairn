@@ -47,47 +47,47 @@
 <!-- lint -->
 <g id="node4" class="node">
 <title>lint</title>
-<path fill="none" stroke="black" d="M298.97,-834.49C298.97,-834.49 180.4,-819.51 180.4,-819.51 174.45,-818.75 174.45,-817.25 180.4,-816.49 180.4,-816.49 298.97,-801.51 298.97,-801.51 304.92,-800.75 316.83,-800.75 322.78,-801.51 322.78,-801.51 441.35,-816.49 441.35,-816.49 447.3,-817.25 447.3,-818.75 441.35,-819.51 441.35,-819.51 322.78,-834.49 322.78,-834.49 316.83,-835.25 304.92,-835.25 298.97,-834.49"/>
-<text xml:space="preserve" text-anchor="middle" x="310.88" y="-814.3" font-family="Helvetica,sans-Serif" font-size="11.00">cairn lint docs/spec clean?</text>
+<path fill="none" stroke="black" d="M301.96,-834.54C301.96,-834.54 178.78,-819.46 178.78,-819.46 172.82,-818.73 172.82,-817.27 178.78,-816.54 178.78,-816.54 301.96,-801.46 301.96,-801.46 307.92,-800.73 319.83,-800.73 325.79,-801.46 325.79,-801.46 448.97,-816.54 448.97,-816.54 454.93,-817.27 454.93,-818.73 448.97,-819.46 448.97,-819.46 325.79,-834.54 325.79,-834.54 319.83,-835.27 307.92,-835.27 301.96,-834.54"/>
+<text xml:space="preserve" text-anchor="middle" x="313.88" y="-814.3" font-family="Helvetica,sans-Serif" font-size="11.00">sudus lint docs/spec clean?</text>
 </g>
 <!-- review&#45;&gt;lint -->
 <g id="edge3" class="edge">
 <title>review&#45;&gt;lint</title>
-<path fill="none" stroke="black" d="M191.42,-872.65C216.77,-861.26 246.73,-847.81 270.3,-837.22"/>
-<polygon fill="black" stroke="black" points="271.58,-840.49 279.26,-833.2 268.71,-834.1 271.58,-840.49"/>
+<path fill="none" stroke="black" d="M192.33,-872.65C218.05,-861.3 248.41,-847.9 272.35,-837.33"/>
+<polygon fill="black" stroke="black" points="273.74,-840.54 281.48,-833.3 270.92,-834.14 273.74,-840.54"/>
 </g>
 <!-- lint&#45;&gt;falsifiers -->
 <g id="edge4" class="edge">
 <title>lint&#45;&gt;falsifiers</title>
-<path fill="none" stroke="black" d="M310.02,-836.15C308.28,-857.52 302.99,-894.51 286.88,-921.5 280.27,-932.57 270.64,-942.59 260.98,-950.92"/>
-<polygon fill="black" stroke="black" points="258.9,-948.1 253.35,-957.12 263.32,-953.53 258.9,-948.1"/>
-<text xml:space="preserve" text-anchor="middle" x="324.11" y="-894.12" font-family="Helvetica,sans-Serif" font-size="10.00">findings</text>
+<path fill="none" stroke="black" d="M312.42,-836.16C309.95,-857.54 303.47,-894.55 286.88,-921.5 280.06,-932.57 270.28,-942.64 260.54,-951.02"/>
+<polygon fill="black" stroke="black" points="258.42,-948.23 252.87,-957.25 262.84,-953.66 258.42,-948.23"/>
+<text xml:space="preserve" text-anchor="middle" x="325.32" y="-894.12" font-family="Helvetica,sans-Serif" font-size="10.00">findings</text>
 </g>
 <!-- present -->
 <g id="node5" class="node">
 <title>present</title>
-<path fill="none" stroke="black" d="M379.62,-751.25C379.62,-751.25 242.12,-751.25 242.12,-751.25 236.12,-751.25 230.12,-745.25 230.12,-739.25 230.12,-739.25 230.12,-727.25 230.12,-727.25 230.12,-721.25 236.12,-715.25 242.12,-715.25 242.12,-715.25 379.62,-715.25 379.62,-715.25 385.62,-715.25 391.62,-721.25 391.62,-727.25 391.62,-727.25 391.62,-739.25 391.62,-739.25 391.62,-745.25 385.62,-751.25 379.62,-751.25"/>
-<text xml:space="preserve" text-anchor="middle" x="310.88" y="-736.3" font-family="Helvetica,sans-Serif" font-size="11.00">Present by exception;</text>
-<text xml:space="preserve" text-anchor="middle" x="310.88" y="-722.8" font-family="Helvetica,sans-Serif" font-size="11.00">invite another explanation</text>
+<path fill="none" stroke="black" d="M382.62,-751.25C382.62,-751.25 245.12,-751.25 245.12,-751.25 239.12,-751.25 233.12,-745.25 233.12,-739.25 233.12,-739.25 233.12,-727.25 233.12,-727.25 233.12,-721.25 239.12,-715.25 245.12,-715.25 245.12,-715.25 382.62,-715.25 382.62,-715.25 388.62,-715.25 394.62,-721.25 394.62,-727.25 394.62,-727.25 394.62,-739.25 394.62,-739.25 394.62,-745.25 388.62,-751.25 382.62,-751.25"/>
+<text xml:space="preserve" text-anchor="middle" x="313.88" y="-736.3" font-family="Helvetica,sans-Serif" font-size="11.00">Present by exception;</text>
+<text xml:space="preserve" text-anchor="middle" x="313.88" y="-722.8" font-family="Helvetica,sans-Serif" font-size="11.00">invite another explanation</text>
 </g>
 <!-- lint&#45;&gt;present -->
 <g id="edge5" class="edge">
 <title>lint&#45;&gt;present</title>
-<path fill="none" stroke="black" d="M310.88,-799.85C310.88,-789.16 310.88,-775.14 310.88,-762.8"/>
-<polygon fill="black" stroke="black" points="314.38,-763.17 310.88,-753.17 307.38,-763.17 314.38,-763.17"/>
-<text xml:space="preserve" text-anchor="middle" x="324" y="-772.5" font-family="Helvetica,sans-Serif" font-size="10.00">clean</text>
+<path fill="none" stroke="black" d="M313.88,-799.85C313.88,-789.16 313.88,-775.14 313.88,-762.8"/>
+<polygon fill="black" stroke="black" points="317.38,-763.17 313.88,-753.17 310.38,-763.17 317.38,-763.17"/>
+<text xml:space="preserve" text-anchor="middle" x="327" y="-772.5" font-family="Helvetica,sans-Serif" font-size="10.00">clean</text>
 </g>
 <!-- outcome -->
 <g id="node6" class="node">
 <title>outcome</title>
-<path fill="none" stroke="black" d="M295.02,-676.4C295.02,-676.4 203.46,-662.1 203.46,-662.1 197.53,-661.18 197.53,-659.32 203.46,-658.4 203.46,-658.4 295.02,-644.1 295.02,-644.1 300.95,-643.18 312.8,-643.18 318.73,-644.1 318.73,-644.1 410.29,-658.4 410.29,-658.4 416.22,-659.32 416.22,-661.18 410.29,-662.1 410.29,-662.1 318.73,-676.4 318.73,-676.4 312.8,-677.32 300.95,-677.32 295.02,-676.4"/>
-<text xml:space="preserve" text-anchor="middle" x="306.88" y="-656.55" font-family="Helvetica,sans-Serif" font-size="11.00">Developer&#39;s answer?</text>
+<path fill="none" stroke="black" d="M296.02,-676.4C296.02,-676.4 204.46,-662.1 204.46,-662.1 198.53,-661.18 198.53,-659.32 204.46,-658.4 204.46,-658.4 296.02,-644.1 296.02,-644.1 301.95,-643.18 313.8,-643.18 319.73,-644.1 319.73,-644.1 411.29,-658.4 411.29,-658.4 417.22,-659.32 417.22,-661.18 411.29,-662.1 411.29,-662.1 319.73,-676.4 319.73,-676.4 313.8,-677.32 301.95,-677.32 296.02,-676.4"/>
+<text xml:space="preserve" text-anchor="middle" x="307.88" y="-656.55" font-family="Helvetica,sans-Serif" font-size="11.00">Developer&#39;s answer?</text>
 </g>
 <!-- present&#45;&gt;outcome -->
 <g id="edge6" class="edge">
 <title>present&#45;&gt;outcome</title>
-<path fill="none" stroke="black" d="M309.91,-715.06C309.47,-707.39 308.95,-698.14 308.47,-689.49"/>
-<polygon fill="black" stroke="black" points="311.98,-689.58 307.92,-679.79 304.99,-689.97 311.98,-689.58"/>
+<path fill="none" stroke="black" d="M312.42,-715.06C311.77,-707.39 310.99,-698.14 310.26,-689.49"/>
+<polygon fill="black" stroke="black" points="313.77,-689.46 309.44,-679.79 306.8,-690.05 313.77,-689.46"/>
 </g>
 <!-- explain -->
 <g id="node7" class="node">
@@ -98,9 +98,9 @@
 <!-- outcome&#45;&gt;explain -->
 <g id="edge7" class="edge">
 <title>outcome&#45;&gt;explain</title>
-<path fill="none" stroke="black" d="M339.54,-647.03C355.78,-640.68 375.57,-632.54 392.88,-624.25 408.52,-616.76 425.28,-607.69 439.82,-599.49"/>
-<polygon fill="black" stroke="black" points="441.22,-602.72 448.17,-594.72 437.75,-596.64 441.22,-602.72"/>
-<text xml:space="preserve" text-anchor="middle" x="428.21" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">asks</text>
+<path fill="none" stroke="black" d="M340.15,-646.99C356.19,-640.63 375.76,-632.49 392.88,-624.25 408.5,-616.73 425.27,-607.66 439.8,-599.45"/>
+<polygon fill="black" stroke="black" points="441.2,-602.68 448.16,-594.69 437.74,-596.6 441.2,-602.68"/>
+<text xml:space="preserve" text-anchor="middle" x="428.19" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">asks</text>
 </g>
 <!-- correct -->
 <g id="node8" class="node">
@@ -111,9 +111,9 @@
 <!-- outcome&#45;&gt;correct -->
 <g id="edge9" class="edge">
 <title>outcome&#45;&gt;correct</title>
-<path fill="none" stroke="black" d="M280.25,-646.14C254.49,-633.45 214.92,-613.96 184.19,-598.82"/>
-<polygon fill="black" stroke="black" points="186.01,-595.82 175.49,-594.54 182.92,-602.1 186.01,-595.82"/>
-<text xml:space="preserve" text-anchor="middle" x="252.43" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">corrects</text>
+<path fill="none" stroke="black" d="M281.1,-646.14C255.17,-633.45 215.37,-613.96 184.46,-598.82"/>
+<polygon fill="black" stroke="black" points="186.23,-595.79 175.71,-594.53 183.15,-602.08 186.23,-595.79"/>
+<text xml:space="preserve" text-anchor="middle" x="252.99" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">corrects</text>
 </g>
 <!-- agreed -->
 <g id="node9" class="node">
@@ -125,15 +125,15 @@
 <!-- outcome&#45;&gt;agreed -->
 <g id="edge11" class="edge">
 <title>outcome&#45;&gt;agreed</title>
-<path fill="none" stroke="black" d="M306.46,-642.1C306.2,-631.41 305.86,-617.39 305.57,-605.05"/>
-<polygon fill="black" stroke="black" points="309.07,-605.33 305.33,-595.42 302.08,-605.5 309.07,-605.33"/>
-<text xml:space="preserve" text-anchor="middle" x="347.24" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">confirms or rules</text>
+<path fill="none" stroke="black" d="M307.25,-642.1C306.87,-631.41 306.36,-617.39 305.91,-605.05"/>
+<polygon fill="black" stroke="black" points="309.42,-605.29 305.56,-595.42 302.43,-605.54 309.42,-605.29"/>
+<text xml:space="preserve" text-anchor="middle" x="347.8" y="-614.75" font-family="Helvetica,sans-Serif" font-size="10.00">confirms or rules</text>
 </g>
 <!-- explain&#45;&gt;present -->
 <g id="edge8" class="edge">
 <title>explain&#45;&gt;present</title>
-<path fill="none" stroke="black" d="M474.72,-593.8C468.58,-615.99 455.12,-654.44 430.88,-678.25 416.98,-691.9 399.03,-702.45 381.26,-710.45"/>
-<polygon fill="black" stroke="black" points="380.09,-707.14 372.25,-714.27 382.82,-713.59 380.09,-707.14"/>
+<path fill="none" stroke="black" d="M474.88,-593.77C468.95,-615.93 455.86,-654.35 431.88,-678.25 418.2,-691.88 400.46,-702.43 382.91,-710.44"/>
+<polygon fill="black" stroke="black" points="381.82,-707.1 374.02,-714.27 384.59,-713.53 381.82,-707.1"/>
 </g>
 <!-- correct&#45;&gt;review -->
 <g id="edge10" class="edge">
@@ -158,7 +158,7 @@
 <g id="node11" class="node">
 <title>declare</title>
 <path fill="none" stroke="black" d="M433.62,-447.5C433.62,-447.5 176.12,-447.5 176.12,-447.5 170.12,-447.5 164.12,-441.5 164.12,-435.5 164.12,-435.5 164.12,-423.5 164.12,-423.5 164.12,-417.5 170.12,-411.5 176.12,-411.5 176.12,-411.5 433.62,-411.5 433.62,-411.5 439.62,-411.5 445.62,-417.5 445.62,-423.5 445.62,-423.5 445.62,-435.5 445.62,-435.5 445.62,-441.5 439.62,-447.5 433.62,-447.5"/>
-<text xml:space="preserve" text-anchor="middle" x="304.88" y="-432.55" font-family="Helvetica,sans-Serif" font-size="11.00">cairn declare for this commitment only;</text>
+<text xml:space="preserve" text-anchor="middle" x="304.88" y="-432.55" font-family="Helvetica,sans-Serif" font-size="11.00">sudus declare for this commitment only;</text>
 <text xml:space="preserve" text-anchor="middle" x="304.88" y="-419.05" font-family="Helvetica,sans-Serif" font-size="11.00">each mechanism has a failing violating example</text>
 </g>
 <!-- commitment&#45;&gt;declare -->
@@ -185,7 +185,7 @@
 <title>authorize</title>
 <path fill="none" stroke="black" d="M474.12,-301.5C474.12,-301.5 135.62,-301.5 135.62,-301.5 129.62,-301.5 123.62,-295.5 123.62,-289.5 123.62,-289.5 123.62,-251.5 123.62,-251.5 123.62,-245.5 129.62,-239.5 135.62,-239.5 135.62,-239.5 474.12,-239.5 474.12,-239.5 480.12,-239.5 486.12,-245.5 486.12,-251.5 486.12,-251.5 486.12,-289.5 486.12,-289.5 486.12,-295.5 480.12,-301.5 474.12,-301.5"/>
 <text xml:space="preserve" text-anchor="middle" x="304.88" y="-287.05" font-family="Helvetica,sans-Serif" font-size="11.00">State what would be bound and ask; on ok</text>
-<text xml:space="preserve" text-anchor="middle" x="304.88" y="-273.55" font-family="Helvetica,sans-Serif" font-size="11.00">cairn authorize &#45;&#45;quote: one record binding the final spec,</text>
+<text xml:space="preserve" text-anchor="middle" x="304.88" y="-273.55" font-family="Helvetica,sans-Serif" font-size="11.00">sudus authorize &#45;&#45;quote: one record binding the final spec,</text>
 <text xml:space="preserve" text-anchor="middle" x="304.88" y="-260.05" font-family="Helvetica,sans-Serif" font-size="11.00">agreement and settings digests</text>
 <text xml:space="preserve" text-anchor="middle" x="304.88" y="-246.55" font-family="Helvetica,sans-Serif" font-size="11.00">(changes or a question: authorize instead | ask, binds nothing)</text>
 </g>
@@ -198,8 +198,8 @@
 <!-- startintent -->
 <g id="node14" class="node">
 <title>startintent</title>
-<path fill="none" stroke="black" d="M465.88,-202.5C465.88,-202.5 143.88,-202.5 143.88,-202.5 137.88,-202.5 131.88,-196.5 131.88,-190.5 131.88,-190.5 131.88,-178.5 131.88,-178.5 131.88,-172.5 137.88,-166.5 143.88,-166.5 143.88,-166.5 465.88,-166.5 465.88,-166.5 471.88,-166.5 477.88,-172.5 477.88,-178.5 477.88,-178.5 477.88,-190.5 477.88,-190.5 477.88,-196.5 471.88,-202.5 465.88,-202.5"/>
-<text xml:space="preserve" text-anchor="middle" x="304.88" y="-187.55" font-family="Helvetica,sans-Serif" font-size="11.00">cairn start: verify authorization and write command intent;</text>
+<path fill="none" stroke="black" d="M466.25,-202.5C466.25,-202.5 143.5,-202.5 143.5,-202.5 137.5,-202.5 131.5,-196.5 131.5,-190.5 131.5,-190.5 131.5,-178.5 131.5,-178.5 131.5,-172.5 137.5,-166.5 143.5,-166.5 143.5,-166.5 466.25,-166.5 466.25,-166.5 472.25,-166.5 478.25,-172.5 478.25,-178.5 478.25,-178.5 478.25,-190.5 478.25,-190.5 478.25,-196.5 472.25,-202.5 466.25,-202.5"/>
+<text xml:space="preserve" text-anchor="middle" x="304.88" y="-187.55" font-family="Helvetica,sans-Serif" font-size="11.00">sudus start: verify authorization and write command intent;</text>
 <text xml:space="preserve" text-anchor="middle" x="304.88" y="-174.05" font-family="Helvetica,sans-Serif" font-size="11.00">commit the prepared contract, agreement and mechanisms</text>
 </g>
 <!-- authorize&#45;&gt;startintent -->

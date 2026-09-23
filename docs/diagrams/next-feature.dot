@@ -6,7 +6,7 @@ digraph next_feature {
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /next-feature"];
-  isdone [shape=diamond, label="cairn wake says Done?"];
+  isdone [shape=diamond, label="sudus wake says Done?"];
   notdone [shape=oval, label="Stop: hand the verdict\nto the working agreement"];
   read [label="Read the spec set, finished roadmap section,\nConsequential queue, unpromoted next-feature items\nand backlog"];
   ask [label="One open question:\nwaiting items, a new feature, or both?"];

@@ -45,7 +45,7 @@ test('specDigest of a missing docs/spec is the empty array digest', async () => 
 });
 
 test('protectedDigests carries agreement null when AGENTS.md is absent', async () => {
-  const { cwd } = await repoWith({ '.cairn/settings.json': SETTINGS });
+  const { cwd } = await repoWith({ '.sudus/settings.json': SETTINGS });
   const d = await protectedDigests(cwd);
   assert.equal(d.agreement, null);
   assert.match(d.settings, /^sha256:[0-9a-f]{64}$/);
@@ -82,7 +82,7 @@ test('signed mode: a bad signature is refused, not recorded', async () => {
   const bad = async (bytes) => new Uint8Array(64);
   await assert.rejects(
     authenticateDeveloper(cwd, { signing_key: pem }, { purpose: 'authorize', subject: 's', sign: bad, nonce: 'n' }),
-    /^AuthError: cairn: the signature does not verify against signing_key/);
+    /^AuthError: sudus: the signature does not verify against signing_key/);
 });
 
 test('signingPayload is the canonical JSON of purpose, subject and nonce', () => {
@@ -97,21 +97,21 @@ test('attested: authenticateDeveloper records the quote, harness and Git author 
   const { cwd } = await repoWith({});
   const ev = await authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: 'yes, 30 days', nonce: 'n', env: {} });
   assert.deepEqual(ev, { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'yes, 30 days',
-    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } });
+    harness: 'none', author: { name: 'Sudus Test', email: 'test@example.invalid' } });
   assert.equal(verifyEvidence({ signing_key: null }, ev), true);
   assert.match(describeEvidence(ev), /evidence, not authentication/);
 });
 
-// harnessName (attested via authenticateDeveloper): env.CAIRN_HARNESS wins outright; otherwise the
+// harnessName (attested via authenticateDeveloper): env.SUDUS_HARNESS wins outright; otherwise the
 // first HARNESS_ENV hit; otherwise 'none'.
-test('attested: harness comes from CAIRN_HARNESS, else the first HARNESS_ENV hit, else none', async () => {
+test('attested: harness comes from SUDUS_HARNESS, else the first HARNESS_ENV hit, else none', async () => {
   const { cwd } = await repoWith({});
   const auth = (env) => authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: 'ok', nonce: 'n', env });
   assert.equal((await auth({ CLAUDECODE: '1' })).harness, 'claude_code');
   assert.equal((await auth({})).harness, 'none');
-  assert.equal((await auth({ CAIRN_HARNESS: 'muse' })).harness, 'muse');
-  // CAIRN_HARNESS wins even when a HARNESS_ENV variable is also present.
-  assert.equal((await auth({ CLAUDECODE: '1', CAIRN_HARNESS: 'muse' })).harness, 'muse');
+  assert.equal((await auth({ SUDUS_HARNESS: 'muse' })).harness, 'muse');
+  // SUDUS_HARNESS wins even when a HARNESS_ENV variable is also present.
+  assert.equal((await auth({ CLAUDECODE: '1', SUDUS_HARNESS: 'muse' })).harness, 'muse');
 });
 
 // A missing or blank quote refuses with the exact message every developer-only command shares.
@@ -119,15 +119,15 @@ test('attested: a missing or blank quote refuses with the exact --quote message'
   const { cwd } = await repoWith({});
   await assert.rejects(
     authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', nonce: 'n', env: {} }),
-    /^AuthError: cairn: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
+    /^AuthError: sudus: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
   await assert.rejects(
     authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'read', subject: 'D1', quote: '   ', nonce: 'n', env: {} }),
-    /^AuthError: cairn: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
+    /^AuthError: sudus: read needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
 });
 
 test('verifyEvidence refuses attested evidence when a signing key is set', () => {
   const ev = { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'ok',
-    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } };
+    harness: 'none', author: { name: 'Sudus Test', email: 'test@example.invalid' } };
   assert.equal(verifyEvidence({ signing_key: keyPair().pem }, ev), false);
 });
 
@@ -137,7 +137,7 @@ test('verifyEvidence refuses attested evidence when a signing key is set', () =>
 // explicit signing_key: null.
 test('verifyEvidence checks the expected purpose and subject, and refuses a settings object without signing_key', () => {
   const ev = { mode: 'attested', purpose: 'read', subject: 'D1', nonce: 'n', quote: 'ok',
-    harness: 'none', author: { name: 'Cairn Test', email: 'test@example.invalid' } };
+    harness: 'none', author: { name: 'Sudus Test', email: 'test@example.invalid' } };
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'D1' }), true);
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'authorize', subject: 'D1' }), false);
   assert.equal(verifyEvidence({ signing_key: null }, ev, { purpose: 'read', subject: 'other' }), false);
@@ -164,8 +164,8 @@ import { authorize, authorizations, latestProtected } from '../lib/auth.mjs';
 import { init } from '../lib/init.mjs';
 import { loadSettings } from '../lib/settings.mjs';
 
-const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
-// Settings are already on disk (BASE writes .cairn/settings.json before init() ever runs), so
+const BASE = { '.sudus/settings.json': SETTINGS, 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+// Settings are already on disk (BASE writes .sudus/settings.json before init() ever runs), so
 // this adopts them: --adopt <digest> is the flag that matters (lib/init.mjs's own comment on
 // init()).
 async function initialized(files = BASE) {
@@ -194,7 +194,7 @@ test('authorize writes one record binding the three digests with verified eviden
   assert.equal(rec.payload.evidence.mode, 'attested');
   assert.equal(rec.payload.evidence.quote, 'ok');
   assert.equal(rec.payload.evidence.subject, canonicalize({ spec: d.spec, agreement: d.agreement, settings: d.settings }));
-  assert.equal((await catCommit(cwd, sha)).subject, 'cairn: authorization protected');
+  assert.equal((await catCommit(cwd, sha)).subject, 'sudus: authorization protected');
   assert.deepEqual(decodeRecord(await catCommit(cwd, sha)).payload, rec.payload);
   assert.deepEqual(latestProtected(log), d);
   assert.equal(authorizations(log).length, 2);
@@ -202,12 +202,12 @@ test('authorize writes one record binding the three digests with verified eviden
 
 test('authorize refuses before init', async () => {
   const { cwd } = await repoWith(BASE);
-  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /^AuthError: cairn: run cairn init first/);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /^AuthError: sudus: run sudus init first/);
 });
 
 test('authorize refuses without AGENTS.md', async () => {
-  const cwd = await initialized({ '.cairn/settings.json': SETTINGS, 'docs/spec/overview.md': '# k\n' });
-  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /cairn: AGENTS.md is missing; authorize binds the working agreement/);
+  const cwd = await initialized({ '.sudus/settings.json': SETTINGS, 'docs/spec/overview.md': '# k\n' });
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /sudus: AGENTS.md is missing; authorize binds the working agreement/);
 });
 
 test('authorize refuses a missing quote and writes nothing', async () => {
@@ -220,7 +220,7 @@ test('authorize refuses a missing quote and writes nothing', async () => {
 import { isAuthorized, refuseUnauthorizedProtected, protectedClass } from '../lib/auth.mjs';
 
 test('protectedClass names the three developer-owned classes', () => {
-  assert.equal(protectedClass('.cairn/settings.json'), 'settings');
+  assert.equal(protectedClass('.sudus/settings.json'), 'settings');
   assert.equal(protectedClass('AGENTS.md'), 'agreement');
   assert.equal(protectedClass('docs/spec/a/b.md'), 'spec');
   assert.equal(protectedClass('docs/decisions.jsonl'), null);
@@ -244,7 +244,7 @@ test('a protected change is authorized only by a record naming its before and af
   const cwd = await initialized();
   const log0 = await readLog(cwd);
   const initDigest = log0[0].payload.settings_digest;
-  assert.equal(await isAuthorized(cwd, '.cairn/settings.json', null, initDigest), true);
+  assert.equal(await isAuthorized(cwd, '.sudus/settings.json', null, initDigest), true);
   const d1 = await protectedDigests(cwd);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d1.agreement), false);
   await authorize(cwd, { quote: 'ok', env: {} });
@@ -254,7 +254,7 @@ test('a protected change is authorized only by a record naming its before and af
   const d2 = await protectedDigests(cwd);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)),
-    /^AuthError: cairn: AGENTS.md changed to sha256:[0-9a-f]{64} without a developer authorization; ask the developer and record the answer with cairn authorize --quote <words>/);
+    /^AuthError: sudus: AGENTS.md changed to sha256:[0-9a-f]{64} without a developer authorization; ask the developer and record the answer with sudus authorize --quote <words>/);
   await authorize(cwd, { quote: 'ok', env: {} });
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), true);
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', null, d2.agreement), false, 'before digest must match the chain');
@@ -265,8 +265,8 @@ test('a settings change needs a new authorization naming the new digest', async 
   const cwd = await initialized();
   await authorize(cwd, { quote: 'ok', env: {} });
   const s = JSON.parse(SETTINGS); s.outside = ['README.md'];
-  writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(s));
-  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.cairn\/settings\.json changed to/);
+  writeFileSync(join(cwd, '.sudus/settings.json'), JSON.stringify(s));
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.sudus\/settings\.json changed to/);
   await authorize(cwd, { quote: 'ok', env: {} });
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
 });
@@ -282,7 +282,7 @@ test('the protected check re-verifies chain record evidence and refuses a forged
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
   const s = JSON.parse(SETTINGS); s.signing_key = pem;
-  const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+  const files = { '.sudus/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign2(null, bytes, privateKey));
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, sign });
@@ -300,7 +300,7 @@ test('the protected check re-verifies chain record evidence and refuses a forged
     decision: null, intent: null, results: [],
   });
   assert.equal(await isAuthorized(cwd, 'AGENTS.md', d1.agreement, d2.agreement), false);
-  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /AuthError: cairn: the latest authorization record/);
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /AuthError: sudus: the latest authorization record/);
 });
 
 // Fix round 2: the fix round 1 version of chainRecordVerifies trusted ANY record of kind 'init',
@@ -308,23 +308,23 @@ test('the protected check re-verifies chain record evidence and refuses a forged
 // bypassing init() and its authentication entirely; the init schema carries no evidence field at
 // all) stood in for a real authorization. Reproduced by the re-reviewer: with a signed-key project,
 // appending a forged 'init' record binding an attacker-chosen settings digest made
-// isAuthorized('.cairn/settings.json', before, after) return true. The one legitimate init record
-// is refs/cairn/log's first record and nothing else; a later one is a breach.
+// isAuthorized('.sudus/settings.json', before, after) return true. The one legitimate init record
+// is refs/sudus/log's first record and nothing else; a later one is a breach.
 test("the protected check trusts only the log's first record as the init record; a later one is a breach", async () => {
   const { generateKeyPairSync, sign: cryptoSign3 } = await import('node:crypto');
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
   const s = JSON.parse(SETTINGS); s.signing_key = pem;
-  const files = { '.cairn/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
+  const files = { '.sudus/settings.json': JSON.stringify(s), 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' };
   const { cwd } = await repoWith(files);
   const sign = async (bytes) => new Uint8Array(cryptoSign3(null, bytes, privateKey));
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, sign });
   const before = await protectedDigests(cwd);
   const forgedDigest = 'sha256:' + '1'.repeat(64);
   await appendRecord(cwd, 'init', 'project', { settings_digest: forgedDigest, authority_remote: null, auth_mode: 'unsigned-local' });
-  assert.equal(await isAuthorized(cwd, '.cairn/settings.json', before.settings, forgedDigest), false);
+  assert.equal(await isAuthorized(cwd, '.sudus/settings.json', before.settings, forgedDigest), false);
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)),
-    /^AuthError: cairn: [0-9a-f]{40} is a second record of kind init on refs\/cairn\/log/);
+    /^AuthError: sudus: [0-9a-f]{40} is a second record of kind init on refs\/sudus\/log/);
 });
 
 import { readDecision, runDecisionsRead } from '../lib/auth.mjs';
@@ -344,23 +344,23 @@ test('decisions --read writes a read record with developer evidence', async () =
 
 test('decisions --read refuses a malformed decision id and a missing quote', async () => {
   const cwd = await initialized();
-  await assert.rejects(readDecision(cwd, 'not-a-ulid', { quote: 'ok', env: {} }), /^AuthError: cairn: decision id must be a 26-character ULID/);
+  await assert.rejects(readDecision(cwd, 'not-a-ulid', { quote: 'ok', env: {} }), /^AuthError: sudus: decision id must be a 26-character ULID/);
   await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { env: {} }), /needs --quote/);
 });
 
-test('runDecisionsRead exits 1 with one cairn: line when the signature is missing in signed mode', async () => {
+test('runDecisionsRead exits 1 with one sudus: line when the signature is missing in signed mode', async () => {
   const { cwd } = await repoWith(BASE);
   const { generateKeyPairSync } = await import('node:crypto');
   const pem = generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' });
   const s = JSON.parse(SETTINGS); s.signing_key = pem;
-  writeFileSync(join(cwd, '.cairn/settings.json'), JSON.stringify(s));
+  writeFileSync(join(cwd, '.sudus/settings.json'), JSON.stringify(s));
   const err = []; const out = [];
   const io = { cwd, env: {}, stdout: (l) => out.push(l), stderr: (l) => err.push(l) };
   const code = await runDecisionsRead(['--read', '01J0000000000000000000ABCD'], io);
   assert.equal(code, 1);
   assert.equal(err.length, 1);
-  assert.match(err[0], /^cairn: signing_key is set; pass --signature or CAIRN_SIGNATURE/);
-  assert.match(out[0], /^cairn: sign this payload: \{"nonce":/);
+  assert.match(err[0], /^sudus: signing_key is set; pass --signature or SUDUS_SIGNATURE/);
+  assert.match(out[0], /^sudus: sign this payload: \{"nonce":/);
 });
 
 import { encodeRecord } from '../lib/records.mjs';
@@ -432,20 +432,20 @@ test('Fix round 1 finding 6: a rename inside a protected path is fully committed
   assert.equal((await git(['status', '--porcelain'], { cwd })).stdout, '', 'the rename is fully committed, nothing left dirty');
 });
 
-// Regression caught by tests/cli.test.mjs's existing 'cairn authorize: success ...' test after the
+// Regression caught by tests/cli.test.mjs's existing 'sudus authorize: success ...' test after the
 // first draft of the finding 6 fix: `git commit --only -- <path>` refuses a path git has never
-// tracked at all, and .cairn/settings.json is exactly that on a project's very first authorize --
+// tracked at all, and .sudus/settings.json is exactly that on a project's very first authorize --
 // init() writes it to disk but never commits it (repoWith's own fixture commit ran before init).
 test('Fix round 1 finding 6: the first authorize commits a never-before-tracked protected path', async () => {
   const { cwd } = await repoWith({ 'AGENTS.md': '# agreement\n', 'docs/spec/overview.md': '# keystone\n' });
   await init(cwd, { localOnly: true, attested: true, quote: 'ok', env: {} });
-  assert.equal((await git(['status', '--porcelain', '--', '.cairn/settings.json'], { cwd })).stdout.trim().slice(0, 2), '??',
-    '.cairn/settings.json is on disk but never git-added, the case that broke --only');
+  assert.equal((await git(['status', '--porcelain', '--', '.sudus/settings.json'], { cwd })).stdout.trim().slice(0, 2), '??',
+    '.sudus/settings.json is on disk but never git-added, the case that broke --only');
   const sha = await authorize(cwd, { quote: 'ok', env: {} });
   assert.ok(sha);
   assert.equal((await git(['status', '--porcelain'], { cwd })).stdout, '');
   const committed = (await git(['show', '--name-only', '--format=', 'HEAD'], { cwd })).stdout.trim().split('\n').filter(Boolean);
-  assert.deepEqual(committed, ['.cairn/settings.json']);
+  assert.deepEqual(committed, ['.sudus/settings.json']);
 });
 
 // authorize() with a real quote binds the three digests, and the stored evidence's own
@@ -460,7 +460,7 @@ test('authorize with a quote binds; describeEvidence of the record starts with a
 
 import { direction } from '../lib/auth.mjs';
 
-// Spec revision 6, "Direction": `cairn authorize instead|ask` writes a direction record instead of
+// Spec revision 6, "Direction": `sudus authorize instead|ask` writes a direction record instead of
 // binding the protected digests -- the developer's own words, with no nonce or subject to verify
 // later (nothing protected changes).
 test('direction writes a record with kind, target protected and the developer evidence fields', async () => {
@@ -471,14 +471,14 @@ test('direction writes a record with kind, target protected and the developer ev
   assert.equal(rec.target, 'protected');
   assert.deepEqual(rec.payload, {
     purpose: 'authorize', kind: 'instead', text: 'Ship the smaller version first.', harness: 'none',
-    author: { name: 'Cairn Test', email: 'test@example.invalid' },
+    author: { name: 'Sudus Test', email: 'test@example.invalid' },
   });
 });
 
 test('direction refuses a kind other than instead or ask', async () => {
   const cwd = await initialized();
   await assert.rejects(direction(cwd, { kind: 'ok', quote: 'x', env: {} }),
-    /^AuthError: cairn: authorize takes ok, instead or ask$/);
+    /^AuthError: sudus: authorize takes ok, instead or ask$/);
 });
 
 test('direction refuses a missing or blank quote', async () => {

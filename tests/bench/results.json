@@ -19,10 +19,10 @@
     "policy_digest": "sha256:aaf7d48bd25e10c4ec5f12759b99f011fb131d60e117c9254fd62722f8c1acc3",
     "started": "2026-09-20T06:58:06.267Z",
     "finished": "2026-09-20T06:58:38.353Z",
-    "cairn_head": "52df7a90d9f182c8cb741133b1d64db373a2de5c",
+    "sudus_head": "52df7a90d9f182c8cb741133b1d64db373a2de5c",
     "scenario_count": 24,
     "usable_count": 24,
-    "project_dir": "/home/shawn/workspace2/scratchpads/tmp/cairn-bench-DD1WNd"
+    "project_dir": "/home/shawn/workspace2/scratchpads/tmp/sudus-bench-DD1WNd"
   },
   "rows": [
     {
@@ -979,7 +979,7 @@
         "levels": [],
         "model": null,
         "outcome": "unavailable",
-        "reason": "unavailable excluded: protected .cairn/settings.json",
+        "reason": "unavailable excluded: protected .sudus/settings.json",
         "source": "jev",
         "suggested": null,
         "veto": null

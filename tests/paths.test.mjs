@@ -7,7 +7,7 @@ import { makeRepo } from './helpers/repo.mjs';
 import { validatePath, validateGlob, assertInside, PathError, RESERVED, PROTECTED, PROTECTED_EXCEPT, KERNEL_MANAGED, CREDENTIAL_PATTERNS } from '../lib/paths.mjs';
 
 test('validatePath accepts slash-separated relative UTF-8 paths', () => {
-  for (const p of ['a', 'src/a.js', '.github/w.yml', 'dir/\u00e9.md', '.cairn/settings.json']) assert.equal(validatePath(p), p);
+  for (const p of ['a', 'src/a.js', '.github/w.yml', 'dir/\u00e9.md', '.sudus/settings.json']) assert.equal(validatePath(p), p);
 });
 test('validatePath rejects absolute, .git root, empty components, dot components, NUL, backslash, bad Unicode', () => {
   const cases = { '/etc/x': /absolute/, '.git/config': /\.git/, 'a/.git/x': /\.git/, 'a//b': /empty component/, 'a/': /empty component/, '': /empty path/,
@@ -20,7 +20,7 @@ test('validateGlob allows * ? and whole-segment **, applies the path rules other
 });
 test('assertInside refuses a path that escapes after symlink resolution', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  const outside = await mkdtemp(join(tmpdir(), 'cairn-outside-'));
+  const outside = await mkdtemp(join(tmpdir(), 'sudus-outside-'));
   await writeFile(join(outside, 'secret'), 'x');
   await symlink(outside, join(repo.dir, 'vendor'));
   await mkdir(join(repo.dir, 'src'), { recursive: true });
@@ -31,10 +31,10 @@ test('assertInside refuses a path that escapes after symlink resolution', async 
   await assert.rejects(assertInside(repo.dir, 'vendor/not/yet/there'), /escapes/);
 });
 test('the reserved constants are kernel constants', () => {
-  assert.deepEqual(RESERVED, ['.cairn/**', 'docs/spec/**', 'docs/decisions.jsonl', 'AGENTS.md']);
-  assert.deepEqual(PROTECTED, ['.cairn/settings.json', 'docs/spec/**', 'AGENTS.md']);
+  assert.deepEqual(RESERVED, ['.sudus/**', 'docs/spec/**', 'docs/decisions.jsonl', 'AGENTS.md']);
+  assert.deepEqual(PROTECTED, ['.sudus/settings.json', 'docs/spec/**', 'AGENTS.md']);
   assert.deepEqual(PROTECTED_EXCEPT, ['docs/spec/roadmap.md']);
-  assert.deepEqual(KERNEL_MANAGED, ['.cairn/mechanisms', '.cairn/mechanisms/**', 'docs/decisions.jsonl']);
+  assert.deepEqual(KERNEL_MANAGED, ['.sudus/mechanisms', '.sudus/mechanisms/**', 'docs/decisions.jsonl']);
   assert.ok(CREDENTIAL_PATTERNS.includes('**/.env.*') && CREDENTIAL_PATTERNS.includes('**/id_ed25519'));
 });
 
@@ -52,10 +52,10 @@ import { classify } from '../lib/paths.mjs';
 
 test('classify applies the fixed precedence', () => {
   const s = { outside: ['README.md', '.github/**'], source: ['bin/**', 'src/**'], interfaces: ['src/api/**'], data: ['src/store/**', 'migrations/**'] };
-  const cases = { '.cairn/settings.json': 'protected', 'docs/spec/loop.md': 'protected', 'AGENTS.md': 'protected', 'docs/spec/roadmap.md': 'reserved', '.cairn/mechanisms': 'kernel-managed',
-    '.cairn/mechanisms/unit': 'kernel-managed', 'docs/decisions.jsonl': 'kernel-managed', '.cairn/output/abc': 'output', '.cairn/stray': 'reserved',
+  const cases = { '.sudus/settings.json': 'protected', 'docs/spec/loop.md': 'protected', 'AGENTS.md': 'protected', 'docs/spec/roadmap.md': 'reserved', '.sudus/mechanisms': 'kernel-managed',
+    '.sudus/mechanisms/unit': 'kernel-managed', 'docs/decisions.jsonl': 'kernel-managed', '.sudus/output/abc': 'output', '.sudus/stray': 'reserved',
     'README.md': 'outside', '.github/w/ci.yml': 'outside', 'src/store/db.js': 'data', 'migrations/1.sql': 'data', 'src/api/v1.js': 'interface',
-    'src/lib/x.js': 'source', 'bin/cairn.mjs': 'source', 'docs/guide.md': 'plain' };
+    'src/lib/x.js': 'source', 'bin/sudus.mjs': 'source', 'docs/guide.md': 'plain' };
   for (const [p, want] of Object.entries(cases)) assert.equal(classify(p, s), want, p);
   assert.throws(() => classify('../x', s), PathError);
 });

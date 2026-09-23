@@ -14,22 +14,22 @@ test('git returns stdout and throws GitError with stderr on failure', async (t) 
 });
 test('gitPath resolves below the Git directory', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  const p = await gitPath(repo.dir, 'cairn-check.lock');
-  assert.ok(isAbsolute(p) && p.endsWith('/.git/cairn-check.lock'));
+  const p = await gitPath(repo.dir, 'sudus-check.lock');
+  assert.ok(isAbsolute(p) && p.endsWith('/.git/sudus-check.lock'));
 });
 test('updateRefCAS creates, advances and refuses a stale old OID', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const a = await repo.commit('a'); const b = await repo.commit('b');
-  assert.equal(await readRef(repo.dir, 'refs/cairn/log'), null);
-  await updateRefCAS(repo.dir, 'refs/cairn/log', a, null);
-  assert.equal(await readRef(repo.dir, 'refs/cairn/log'), a);
-  await assert.rejects(updateRefCAS(repo.dir, 'refs/cairn/log', b, null), CasError);
-  await updateRefCAS(repo.dir, 'refs/cairn/log', b, a);
-  await assert.rejects(updateRefCAS(repo.dir, 'refs/cairn/log', a, a), CasError);
-  assert.equal(await readRef(repo.dir, 'refs/cairn/log'), b);
-  await assert.rejects(deleteRefCAS(repo.dir, 'refs/cairn/log', a), CasError);
-  await deleteRefCAS(repo.dir, 'refs/cairn/log', b);
-  assert.equal(await readRef(repo.dir, 'refs/cairn/log'), null);
+  assert.equal(await readRef(repo.dir, 'refs/sudus/log'), null);
+  await updateRefCAS(repo.dir, 'refs/sudus/log', a, null);
+  assert.equal(await readRef(repo.dir, 'refs/sudus/log'), a);
+  await assert.rejects(updateRefCAS(repo.dir, 'refs/sudus/log', b, null), CasError);
+  await updateRefCAS(repo.dir, 'refs/sudus/log', b, a);
+  await assert.rejects(updateRefCAS(repo.dir, 'refs/sudus/log', a, a), CasError);
+  assert.equal(await readRef(repo.dir, 'refs/sudus/log'), b);
+  await assert.rejects(deleteRefCAS(repo.dir, 'refs/sudus/log', a), CasError);
+  await deleteRefCAS(repo.dir, 'refs/sudus/log', b);
+  assert.equal(await readRef(repo.dir, 'refs/sudus/log'), null);
 });
 
 import { emptyTree, commitTree, catCommit } from '../lib/gitx.mjs';
@@ -39,10 +39,10 @@ test('commitTree and catCommit round-trip subject, body and trailers without int
   const tree = await emptyTree(repo.dir);
   assert.equal(tree, '4b825dc642cb6eb9a060e54bf8d69288fbee4904');
   const body = '{"a":"line\\nbreak","b":[1]}';
-  const sha = await commitTree(repo.dir, { tree, parents: [], subject: 'cairn: done slug', body, trailers: [['Cairn-Schema', '1'], ['Cairn-Digest', 'sha256:00']] });
+  const sha = await commitTree(repo.dir, { tree, parents: [], subject: 'sudus: done slug', body, trailers: [['Sudus-Schema', '1'], ['Sudus-Digest', 'sha256:00']] });
   const c = await catCommit(repo.dir, sha);
-  assert.deepEqual([c.tree, c.parents, c.subject, c.body], [tree, [], 'cairn: done slug', body]);
-  assert.deepEqual(c.trailers, [['Cairn-Schema', '1'], ['Cairn-Digest', 'sha256:00']]);
+  assert.deepEqual([c.tree, c.parents, c.subject, c.body], [tree, [], 'sudus: done slug', body]);
+  assert.deepEqual(c.trailers, [['Sudus-Schema', '1'], ['Sudus-Digest', 'sha256:00']]);
   assert.ok(Buffer.isBuffer(c.bodyBytes) && c.bodyBytes.toString() === body);
   const child = await commitTree(repo.dir, { tree, parents: [sha], subject: 'plain', body: 'no trailers here' });
   const d = await catCommit(repo.dir, child);
@@ -58,9 +58,9 @@ test('writeTreeFromPaths stores dirty bytes, modes and link text without touchin
   await repo.write('b/c.txt', 'new\n');
   await repo.write('run.sh', '#!/bin/sh\n', { mode: 0o755 });
   await repo.link('lnk', '../outside.pem');
-  await repo.write('.cairn/output/x', 'ignored\n');
+  await repo.write('.sudus/output/x', 'ignored\n');
   const before = await repo.git('ls-files', '--stage');
-  const tree = await writeTreeFromPaths(repo.dir, { paths: ['a.txt', 'b/c.txt', 'run.sh', 'lnk', '.cairn/output/x', 'gone.txt'], exclude: ['.git', '.cairn/output'] });
+  const tree = await writeTreeFromPaths(repo.dir, { paths: ['a.txt', 'b/c.txt', 'run.sh', 'lnk', '.sudus/output/x', 'gone.txt'], exclude: ['.git', '.sudus/output'] });
   const entries = await listTree(repo.dir, tree);
   assert.deepEqual(entries.map((e) => [e.path, e.mode]), [['a.txt', '100644'], ['b/c.txt', '100644'], ['lnk', '120000'], ['run.sh', '100755']]);
   const blob = entries.find((e) => e.path === 'a.txt').sha;

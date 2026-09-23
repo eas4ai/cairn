@@ -65,7 +65,7 @@ test('fix, outside and promote take the item slug wake prints as well as the sha
   const log = await readLog(repo.cwd);
   assert.equal(log.find((r) => r.kind === 'outside').payload.item, b);
   assert.equal(log.find((r) => r.kind === 'fix').payload.item, d);
-  await assert.rejects(fix(repo.cwd, 'nope'), /nope is not an item record or item slug; cairn show items lists them/);
+  await assert.rejects(fix(repo.cwd, 'nope'), /nope is not an item record or item slug; sudus show items lists them/);
 });
 test('fix refuses a backlog item, no open commitment, and a snapshot that changes protected contract', async () => {
   const repo = await project();
@@ -89,11 +89,11 @@ import { sha256 } from '../lib/canon.mjs';
 test('start freezes the roadmap section plus every Scope: every commitment Agreed block, at one workspace snapshot', async () => {
   const repo = await project();
   // Fix round 1 finding 12: strengthens the "start committed the contract bytes" check below.
-  // authorize()'s own dirty-path detection (lib/auth.mjs) covers only .cairn/settings.json under
-  // .cairn/**, not .cairn/mechanisms/**; a mechanism file left dirty by an agent's own cairn
+  // authorize()'s own dirty-path detection (lib/auth.mjs) covers only .sudus/settings.json under
+  // .sudus/**, not .sudus/mechanisms/**; a mechanism file left dirty by an agent's own sudus
   // declare (outside this plan's scope to build, but its output already lands here) must still be
-  // picked up by start's own broad '.cairn' commit path, not left uncommitted.
-  await repo.write('.cairn/mechanisms/greeter.json', '{"left":"dirty by the test, not by authorize"}');
+  // picked up by start's own broad '.sudus' commit path, not left uncommitted.
+  await repo.write('.sudus/mechanisms/greeter.json', '{"left":"dirty by the test, not by authorize"}');
   const calls = [];
   const sha = await start(repo.cwd, 'first', { installRefspecs: async (cwd, remote) => calls.push(remote) });
   const rec = await last(repo.cwd, 'start');
@@ -110,7 +110,7 @@ test('start freezes the roadmap section plus every Scope: every commitment Agree
   assert.equal((await readSnapshot(repo.cwd, rec.payload.snapshot, 'workspace')).kind, 'workspace');
   assert.equal(decodeRecord(await catCommit(repo.cwd, sha)).kind, 'start');
   assert.deepEqual(calls, ['origin']);
-  const status = (await git(['status', '--porcelain', '--', 'docs/spec', 'AGENTS.md', '.cairn'], { cwd: repo.cwd })).stdout;
+  const status = (await git(['status', '--porcelain', '--', 'docs/spec', 'AGENTS.md', '.sudus'], { cwd: repo.cwd })).stdout;
   assert.equal(status, '', 'start committed the contract bytes, including a mechanism file authorize never touches');
   assert.deepEqual(openCommitment(await readLog(repo.cwd)).open.sha, sha);
 });
@@ -185,7 +185,7 @@ test('done closes the open commitment at its final workspace snapshot', async ()
   assert.equal(openCommitment(await readLog(repo.cwd)).open, null);
   // Fix round 1 finding 4: start() no longer moves Current: outside a supersession (the
   // spec-phase-tail workflow, out of this plan's scope, is what is supposed to have already
-  // written Current: second before cairn start runs for a plain next commitment); write it here
+  // written Current: second before sudus start runs for a plain next commitment); write it here
   // to simulate that precondition rather than relying on start()'s own removed permissiveness.
   await repo.write('docs/spec/roadmap.md', roadmapWith('second'));
   await assert.doesNotReject(start(repo.cwd, 'second'));
@@ -213,7 +213,7 @@ test('fix records a defect against the last closed commitment\'s own requirement
   await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
   assert.equal((await wake(r.cwd)).action, 'fix');
   const other = await item(r.cwd, { kind: 'defect', slug: 'elsewhere', source: 'DEMO-002', body: 'x' }).catch(() => null);
-  if (other) await assert.rejects(fix(r.cwd, other), /open the next commitment with \/next-feature, then cairn fix/);
+  if (other) await assert.rejects(fix(r.cwd, other), /open the next commitment with \/next-feature, then sudus fix/);
   await fix(r.cwd, d);
   await r.passReq('DEMO-001');
   assert.notEqual((await wake(r.cwd)).action, 'fix');
@@ -432,8 +432,8 @@ for (const [name, path, change, cls] of [
   ['a data path', 'migrations/001.sql', (repo) => repo.write('migrations/001.sql', 'create table t;\n'), 'data'],
   ['frozen Agreed text', 'docs/spec/demo.md', appendNewline('docs/spec/demo.md'), 'protected'],
   ['the working agreement', 'AGENTS.md', appendNewline('AGENTS.md'), 'protected'],
-  ['protected settings', '.cairn/settings.json', appendNewline('.cairn/settings.json'), 'protected'],
-  ['another reserved path', '.cairn/notes.txt', (repo) => repo.write('.cairn/notes.txt', 'x\n'), 'reserved'],
+  ['protected settings', '.sudus/settings.json', appendNewline('.sudus/settings.json'), 'protected'],
+  ['another reserved path', '.sudus/notes.txt', (repo) => repo.write('.sudus/notes.txt', 'x\n'), 'reserved'],
 ]) {
   test(`realize stops on ${name} in the actual delta`, async () => {
     const repo = await project();
@@ -459,12 +459,12 @@ test('Fix round 1 finding 5: realize stops on a hand-edited mechanism file that 
   const repo = await project();
   await start(repo.cwd, 'first');
   const id = await decide(repo.cwd, buildDraft);
-  // A direct edit under .cairn/mechanisms/ that readMechanisms itself refuses (schema 1 missing):
+  // A direct edit under .sudus/mechanisms/ that readMechanisms itself refuses (schema 1 missing):
   // section 2 calls this a breach ("A direct edit ... is a breach"), so realize must never let it
   // through as if it were a normal, valid kernel-managed mutation.
-  await repo.write('.cairn/mechanisms/bad.json', '{}');
+  await repo.write('.sudus/mechanisms/bad.json', '{}');
   await assert.rejects(realize(repo.cwd, id, { subject: 'hand-edited mechanism' }),
-    (e) => e instanceof RealizationError && e.paths.some((p) => p.path === '.cairn/mechanisms/bad.json' && p.class === 'reserved'));
+    (e) => e instanceof RealizationError && e.paths.some((p) => p.path === '.sudus/mechanisms/bad.json' && p.class === 'reserved'));
   assert.equal((await readAdr(repo.cwd)).some((l) => l.kind === 'realized'), false);
 });
 
@@ -473,8 +473,8 @@ test('Fix round 2 finding 4: realize uses the shared, ledger-based kernelManaged
   await start(repo.cwd, 'first');
   const id = await decide(repo.cwd, buildDraft);
   const bytes = Buffer.from('{"schema":1}\n');
-  await repo.write('.cairn/mechanisms/greeter.json', bytes);
-  await recordManagedWrite(repo.cwd, '.cairn/mechanisms/greeter.json', bytes);
+  await repo.write('.sudus/mechanisms/greeter.json', bytes);
+  await recordManagedWrite(repo.cwd, '.sudus/mechanisms/greeter.json', bytes);
   await assert.doesNotReject(realize(repo.cwd, id, { subject: 'ledger-recorded mechanism write' }));
 });
 
@@ -482,7 +482,7 @@ test('a realization that touches a data path escalates with concern decision:<id
   const r = await loopRepo({ settings: { data: ['data/**'] } });
   const id = await r.decide();
   await r.write('data/rows.csv', 'a,b\n');
-  await assert.rejects(realize(r.cwd, id, { subject: 's' }), /touches data\/rows.csv \(data\); the decision is the developer's; escalation [0-9a-f]{40} written, their ok lets cairn realize proceed/);
+  await assert.rejects(realize(r.cwd, id, { subject: 's' }), /touches data\/rows.csv \(data\); the decision is the developer's; escalation [0-9a-f]{40} written, their ok lets sudus realize proceed/);
   const esc = (await r.log()).findLast((x) => x.kind === 'escalation');
   assert.equal(esc.payload.concerns, `decision:${id}`);
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
@@ -497,10 +497,10 @@ test('Fix round 1 finding 12: realize takes no durable snapshot when the stop ch
   await start(repo.cwd, 'first');
   const id = await decide(repo.cwd, { ...buildDraft, named_paths: ['src/greet.mjs'] });
   await repo.write('src/greet.mjs', 'export const greet = () => "hello";\n');
-  const before = await readRef(repo.cwd, 'refs/cairn/snapshots');
+  const before = await readRef(repo.cwd, 'refs/sudus/snapshots');
   await repo.write('AGENTS.md', (await readFile(join(repo.cwd, 'AGENTS.md'), 'utf8')) + '\n');
   await assert.rejects(realize(repo.cwd, id, { subject: 'stopped' }), RealizationError);
-  assert.equal(await readRef(repo.cwd, 'refs/cairn/snapshots'), before, 'no new snapshot commit was left behind by the stopped attempt');
+  assert.equal(await readRef(repo.cwd, 'refs/sudus/snapshots'), before, 'no new snapshot commit was left behind by the stopped attempt');
 });
 
 // Fix round 1
@@ -572,7 +572,7 @@ test('Fix round 1 finding 8: a non-domain file that happens to contain a Prefix:
   // must not make DEMO-001 resolve through a bogus second definition, and must not itself
   // register as an Agreed requirement source.
   await repo.write('docs/spec/overview.md', OVERVIEW + '\nPrefix: not a real domain header\n');
-  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun sudus wake.\n');
   await repo.commit('add a stray Prefix line to overview.md');
   await repo.authorize();
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'still-works', source: 'DEMO-001', body: 'x' });
@@ -586,8 +586,8 @@ test('Fix round 1 finding 9: a forged second init record surfaces as its own bre
   const settingsDigest = (await protectedDigests(repo.cwd)).settings;
   await appendRecord(repo.cwd, 'init', 'project', { settings_digest: settingsDigest, authority_remote: 'origin', auth_mode: 'unsigned-local' });
   const log = await readLog(repo.cwd);
-  await assert.rejects(currentAuthorization(repo.cwd, log), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
-  await assert.rejects(start(repo.cwd, 'first'), /is a second record of kind init on refs\/cairn\/log.*this is a breach/s);
+  await assert.rejects(currentAuthorization(repo.cwd, log), /is a second record of kind init on refs\/sudus\/log.*this is a breach/s);
+  await assert.rejects(start(repo.cwd, 'first'), /is a second record of kind init on refs\/sudus\/log.*this is a breach/s);
 });
 
 test('Fix round 2 finding 6: currentAuthorization classifies AuthError by its code, not by matching message text', async () => {

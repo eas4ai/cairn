@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdirSync, symlinkSync, lstatSync, chmodSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
-import { ROOT, throwawayRepo, fakeCairn, fingerprint, runHook, RESOLVABLE } from "./helpers/hookenv.mjs";
+import { ROOT, throwawayRepo, fakeSudus, fingerprint, runHook, RESOLVABLE } from "./helpers/hookenv.mjs";
 
 function env(dir, verdict) {
   const bin = join(dir, "fakebin");
-  fakeCairn(bin, { stdout: verdict });
+  fakeSudus(bin, { stdout: verdict });
   return { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") };
 }
 
@@ -21,81 +21,81 @@ test("session-start prints verdict, action, reason and predicate and exits 0", (
 test("session-start names a missing link and durable refs in one line", () => {
   const { dir } = throwawayRepo();
   const r = runHook("session-start.sh", { cwd: dir, env: { PATH: "/usr/bin:/bin", HOME: join(dir, "home") } });
-  const line = r.stdout.split("\n").find((l) => l.startsWith("cairn: missing"));
+  const line = r.stdout.split("\n").find((l) => l.startsWith("sudus: missing"));
   assert.ok(line, r.stdout);
-  for (const s of ["command link ~/.local/bin/cairn", "durable ref refs/cairn/log", "durable ref refs/cairn/snapshots"]) assert.ok(line.includes(s), line);
+  for (const s of ["command link ~/.local/bin/sudus", "durable ref refs/sudus/log", "durable ref refs/sudus/snapshots"]) assert.ok(line.includes(s), line);
   assert.equal(r.status, 0);
 });
 
-test("session-start uses the plugin's own copy and says so when the cairn found runs another version", () => {
+test("session-start uses the plugin's own copy and says so when the sudus found runs another version", () => {
   const { dir } = throwawayRepo();
   const bin = join(dir, "fakebin");
-  fakeCairn(bin, { stdout: "STALE VERDICT", version: "2.0.2" });
+  fakeSudus(bin, { stdout: "STALE VERDICT", version: "2.0.2" });
   const r = runHook("session-start.sh", { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
   assert.equal(r.status, 0);
-  assert.ok(r.stdout.includes("cairn: the cairn command found runs 2.0.2, this plugin is "), r.stdout);
+  assert.ok(r.stdout.includes("sudus: the sudus command found runs 2.0.2, this plugin is "), r.stdout);
   assert.ok(!r.stdout.includes("STALE VERDICT"), r.stdout);
 });
 
-test("session-start and turn use a cairn found that runs a newer version than this plugin, silently", () => {
+test("session-start and turn use a sudus found that runs a newer version than this plugin, silently", () => {
   for (const name of ["session-start.sh", "turn.sh"]) {
     const { dir } = throwawayRepo();
     const bin = join(dir, "fakebin");
-    fakeCairn(bin, { stdout: "NEWER VERDICT", version: "99.0.0" });
+    fakeSudus(bin, { stdout: "NEWER VERDICT", version: "99.0.0" });
     const r = runHook(name, { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
     assert.equal(r.status, 0);
     assert.ok(r.stdout.includes("NEWER VERDICT"), `${name}: ${r.stdout}`);
     assert.ok(!r.stdout.includes("using the plugin copy"), `${name}: ${r.stdout}`);
   }
 });
-test("session-start falls back to the plugin copy when the cairn found cannot say its version", () => {
+test("session-start falls back to the plugin copy when the sudus found cannot say its version", () => {
   const { dir } = throwawayRepo();
   const bin = join(dir, "fakebin");
   mkdirSync(bin, { recursive: true });
-  writeFileSync(join(bin, "cairn"), "#!/bin/sh\n[ \"$1\" = --version ] && exit 1\nprintf 'ANCIENT'\nexit 0\n"); chmodSync(join(bin, "cairn"), 0o755);
+  writeFileSync(join(bin, "sudus"), "#!/bin/sh\n[ \"$1\" = --version ] && exit 1\nprintf 'ANCIENT'\nexit 0\n"); chmodSync(join(bin, "sudus"), 0o755);
   const r = runHook("session-start.sh", { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
   assert.equal(r.status, 0);
   assert.ok(r.stdout.includes("runs an older version, this plugin is"), r.stdout);
   assert.ok(!r.stdout.includes("ANCIENT"), r.stdout);
 });
-// A fake plugin root: package.json with a version and a bin/cairn.mjs that prints a marker.
+// A fake plugin root: package.json with a version and a bin/sudus.mjs that prints a marker.
 function fakeRoot(dir, version, marker) {
   mkdirSync(join(dir, "bin"), { recursive: true });
   writeFileSync(join(dir, "package.json"), JSON.stringify({ version }));
-  writeFileSync(join(dir, "bin", "cairn.mjs"), `process.stdout.write(${JSON.stringify(marker)});\n`);
+  writeFileSync(join(dir, "bin", "sudus.mjs"), `process.stdout.write(${JSON.stringify(marker)});\n`);
   return dir;
 }
 const nodeDir = dirname(process.execPath);
 
-test("the shim runs the newest installed Cairn across the Claude Code and Codex caches, or says how to install", () => {
+test("the shim runs the newest installed Sudus across the Claude Code and Codex caches, or says how to install", () => {
   const { dir } = throwawayRepo();
-  const shim = join(dir, "shim"); writeFileSync(shim, readFileSync(join(ROOT, "bin", "cairn.sh"))); chmodSync(shim, 0o755);
+  const shim = join(dir, "shim"); writeFileSync(shim, readFileSync(join(ROOT, "bin", "sudus.sh"))); chmodSync(shim, 0o755);
   const run = () => spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin` } });
   const none = run();
-  assert.equal(none.status, 127); assert.ok(none.stderr.includes("run /install-cairn"), none.stderr);
-  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.0.2"), "2.0.2", "cache-2.0.2");
-  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.1.10"), "2.1.10", "cache-2.1.10");
-  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "cairn", "2.1.9"), "2.1.9", "cache-2.1.9");
+  assert.equal(none.status, 127); assert.ok(none.stderr.includes("run /install-sudus"), none.stderr);
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "sudus", "2.0.2"), "2.0.2", "cache-2.0.2");
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "sudus", "2.1.10"), "2.1.10", "cache-2.1.10");
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "sudus", "2.1.9"), "2.1.9", "cache-2.1.9");
   assert.equal(run().stdout, "cache-2.1.10", "newest by numeric version, not by string order");
-  fakeRoot(join(dir, ".codex", "plugins", "cache", "m", "cairn", "2.2.0"), "2.2.0", "codex-2.2.0");
+  fakeRoot(join(dir, ".codex", "plugins", "cache", "m", "sudus", "2.2.0"), "2.2.0", "codex-2.2.0");
   assert.equal(run().stdout, "codex-2.2.0", "the Codex cache is scanned too");
   const pinned = fakeRoot(join(dir, "pinned"), "1.0.0", "pinned");
-  assert.equal(spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, CAIRN_ROOT: pinned } }).stdout, "pinned", "CAIRN_ROOT wins");
+  assert.equal(spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, SUDUS_ROOT: pinned } }).stdout, "pinned", "SUDUS_ROOT wins");
 });
 
 test("session-start names a missing PATH entry when only the link exists", () => {
   const { dir } = throwawayRepo();
   const home = join(dir, "home");
-  fakeCairn(join(home, ".local", "bin"), { stdout: RESOLVABLE });
+  fakeSudus(join(home, ".local", "bin"), { stdout: RESOLVABLE });
   const r = runHook("session-start.sh", { cwd: dir, env: { PATH: "/usr/bin:/bin", HOME: home } });
-  assert.ok(r.stdout.includes("cairn: missing PATH entry ~/.local/bin"), r.stdout);
+  assert.ok(r.stdout.includes("sudus: missing PATH entry ~/.local/bin"), r.stdout);
   assert.ok(r.stdout.includes(RESOLVABLE));
 });
 
 test("session-start prints the exit-3 line verbatim and still exits 0", () => {
   const { dir } = throwawayRepo();
   const bin = join(dir, "fakebin");
-  fakeCairn(bin, { stdout: "cairn: not a Cairn project; run /new-project or /existing-project\n", exit: 3 });
+  fakeSudus(bin, { stdout: "sudus: not a Sudus project; run /new-project or /existing-project\n", exit: 3 });
   const r = runHook("session-start.sh", { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home") } });
   assert.equal(r.status, 0);
   assert.ok(r.stdout.includes("run /new-project or /existing-project"), r.stdout);
@@ -122,14 +122,14 @@ for (const name of ["session-start.sh", "turn.sh", "stop.sh"]) {
     for (let i = 0; i < 4; i++) runHook(name, { cwd: dir, env: env(dir, RESOLVABLE), stdin: JSON.stringify({ session_id: "s1" }) });
     assert.equal(fingerprint(gitDir), before);
   });
-  test(`${name} does not create a record: refs/cairn/* stay absent`, () => {
+  test(`${name} does not create a record: refs/sudus/* stay absent`, () => {
     const { dir, git } = throwawayRepo();
     runHook(name, { cwd: dir, env: env(dir, RESOLVABLE) });
-    assert.equal(git("for-each-ref", "refs/cairn").trim(), "");
+    assert.equal(git("for-each-ref", "refs/sudus").trim(), "");
   });
   test(`${name} does not edit a file: the worktree fingerprint is unchanged`, () => {
     const { dir } = throwawayRepo();
-    // Deviation from the plan text: env(dir, RESOLVABLE) writes the fake cairn binary under
+    // Deviation from the plan text: env(dir, RESOLVABLE) writes the fake sudus binary under
     // dir/fakebin, inside the same worktree this test fingerprints. The plan's own literal code
     // took the "before" fingerprint first and called env() only as an inline argument to
     // runHook(), so the fakebin directory it creates always landed after the snapshot and always

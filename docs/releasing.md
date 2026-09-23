@@ -1,4 +1,4 @@
-# Releasing Cairn
+# Releasing Sudus
 
 A release is one tagged commit. Every file a marketplace reads carries
 the same version, CHANGELOG.md says what changed, and the release tag
@@ -25,14 +25,14 @@ holds:
 - The working tree is dirty. Write the CHANGELOG.md entry first, then
   run the script; it commits that entry with the release, so a release
   costs one check and one review, not two.
-- `.cairn/settings.json` sets `attribution: forbidden` and a commit
+- `.sudus/settings.json` sets `attribution: forbidden` and a commit
   since the last release tag carries an AI attribution line: a
   `Co-Authored-By:` naming a known assistant, a `Generated with
   [Claude Code` marker, a `Claude-Session:` trailer, a
   `claude.ai/code/session` URL, or a `Signed-off-by:` at
   `noreply@anthropic.com`. Reword the offending commit before
   releasing.
-- The loop is not at Done: `cairn wake` does not report `Done`. A
+- The loop is not at Done: `sudus wake` does not report `Done`. A
   release is a complete commitment, never work in flight.
 
 When none of these holds, the script sets the new version in the five
@@ -51,8 +51,8 @@ Push the branch and the tag together:
 git push origin main vX.Y.Z
 ```
 
-Never push `refs/cairn/log` or `refs/cairn/snapshots` with plain
-`git push`; `cairn push` moves those two refs, atomically with the
+Never push `refs/sudus/log` or `refs/sudus/snapshots` with plain
+`git push`; `sudus push` moves those two refs, atomically with the
 branch where the remote allows it. A GitHub release is optional.
 
 A harness refreshes an installed plugin when the marketplace's version
@@ -61,7 +61,7 @@ under the same version reaches nobody who already installed it.
 
 ## Versions
 
-Cairn 2 is versioned 2.0.0 and above, under ordinary semantic
+Sudus 2 is versioned 2.0.0 and above, under ordinary semantic
 versioning:
 
 - **patch**: no verdict, record shape, or document meaning changes.
@@ -73,14 +73,14 @@ A receipt's freshness never depends on which kernel version wrote it.
 Freshness depends only on the input snapshot tree, the mechanism
 definition digest, the requirement text digest, the observed declared
 execution identity, and the record schema (section 2 of the
-specification). Upgrading Cairn itself does not, by itself, stale any
+specification). Upgrading Sudus itself does not, by itself, stale any
 evidence.
 
 ## Attribution and this repository's own release process
 
 The attribution check, the five-file version mirror, and this
-document belong to how this repository develops and releases Cairn.
-They are not part of the Cairn product specification: a project using
-Cairn to build something else follows its own release process, and
-only the `attribution` setting in `.cairn/settings.json` is something
-Cairn's kernel itself acts on, through `scripts/release.mjs`.
+document belong to how this repository develops and releases Sudus.
+They are not part of the Sudus product specification: a project using
+Sudus to build something else follows its own release process, and
+only the `attribution` setting in `.sudus/settings.json` is something
+Sudus's kernel itself acts on, through `scripts/release.mjs`.

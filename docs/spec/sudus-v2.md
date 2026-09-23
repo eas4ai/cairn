@@ -1,7 +1,7 @@
-# Cairn 2: feature specification
+# Sudus 2: feature specification
 
-Prefix: CAIRN
-Scope: the Cairn 2 kernel: its records, verdicts, commands, skills and evaluator
+Prefix: SUDUS
+Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
 Status: Draft, revision 6, 2026-09-21. Nothing here is Agreed until the
@@ -27,7 +27,7 @@ three developer decisions: one authorization command at start, command intents
 for the four multi-store commands only with a local cycle counter, and readable
 canonical JSON record bodies.
 
-This document says what Cairn 2 is, which processes it keeps, what each record
+This document says what Sudus 2 is, which processes it keeps, what each record
 is and where it lives, and what 1.x had that 2 does not. It is a feature
 specification: it names behaviors and the reader of each record, not requirement
 identifiers. The requirements, with falsifiers, are written from it in the next
@@ -40,13 +40,13 @@ text is normative.
 
 ## 1. Purpose
 
-Cairn keeps agent-led development tied to what the developer agreed to build.
-A coding agent from any vendor does the work; Cairn is the referee that reads
+Sudus keeps agent-led development tied to what the developer agreed to build.
+A coding agent from any vendor does the work; Sudus is the referee that reads
 the repository, records what was checked, decides what is still current, and
 names the next action. Belief that the code matches the agreement lives in the
 repository, not in a session, so a new session with no memory can continue.
 
-Cairn 2 keeps seven ideas from 1.x, and little else:
+Sudus 2 keeps seven ideas from 1.x, and little else:
 
 1. A requirement is Agreed only with an observable failure, its falsifier.
 2. Work happens one commitment at a time, named in the roadmap.
@@ -63,8 +63,8 @@ Cairn 2 keeps seven ideas from 1.x, and little else:
 7. Agreed text changes only by the developer's ruling. The agent stops for the
    developer only when the decision is theirs.
 
-Everything in Cairn 2 serves one of those seven. A behavior that serves none of
-them is not in Cairn 2. Where a model is consulted, code owns the invariants and
+Everything in Sudus 2 serves one of those seven. A behavior that serves none of
+them is not in Sudus 2. Where a model is consulted, code owns the invariants and
 the model owns only the judgment code cannot make. No model output changes who
 decides until code has established that the decision is inside the model's
 envelope.
@@ -75,34 +75,34 @@ The kernel's terms. A term in this list means this and nothing else.
 
 ### Paths and authority
 
-**Reserved paths.** The kernel, not settings, reserves `.cairn/**`,
+**Reserved paths.** The kernel, not settings, reserves `.sudus/**`,
 `docs/spec/**`, `docs/decisions.jsonl` and `AGENTS.md`. No `outside`, `source`,
 `interfaces` or `data` entry may match them, and no mechanism may declare them
 as an input. `network_exclude` may match them only to add an egress restriction.
 
 Reserved does not mean immutable. It separates two kinds of authority:
 
-- **Developer-owned protected paths** are `.cairn/settings.json`,
+- **Developer-owned protected paths** are `.sudus/settings.json`,
   `docs/spec/**` except `docs/spec/roadmap.md`, and `AGENTS.md`. The roadmap
   is edited by the kernel at start and promote, so it is bound structurally
   rather than by digest: lint passes, a section names only Agreed
   requirements, and the start record freezes the set. After project initialization, an accepted
   version of one needs a developer authorization that names its before and
   after digests. Between commitments an agent may prepare uncommitted Draft or
-  Observed spec proposals, but one `cairn authorize` at start must bind their
-  final digests, with the working agreement's and settings', and `cairn start`
+  Observed spec proposals, but one `sudus authorize` at start must bind their
+  final digests, with the working agreement's and settings', and `sudus start`
   refuses without that authorization. An active commitment's frozen Agreed
   requirement text is not amended in place; changing it requires closing or
   superseding that commitment and opening a new one.
-- **Kernel-managed paths** are `.cairn/mechanisms` and
+- **Kernel-managed paths** are `.sudus/mechanisms` and
   `docs/decisions.jsonl`. Only the command assigned to a schema-valid mutation
   may write them. That exact mutation is not a scope breach. A direct edit, an
   extra byte, deletion, reordering, or a write by another command is a breach.
-- `.cairn/output/` is kernel-written runtime output, ignored by Git. Any other
-  path under `.cairn/**` is refused unless this specification names it.
+- `.sudus/output/` is kernel-written runtime output, ignored by Git. Any other
+  path under `.sudus/**` is refused unless this specification names it.
 
-This split is a kernel invariant. Cairn's own valid bookkeeping cannot create a
-Cairn violation merely because it wrote bookkeeping.
+This split is a kernel invariant. Sudus's own valid bookkeeping cannot create a
+Sudus violation merely because it wrote bookkeeping.
 
 Every repository path in settings, mechanisms, records and evaluator drafts is
 a UTF-8, slash-separated Git path relative to the worktree. The kernel rejects
@@ -110,7 +110,7 @@ absolute paths, a `.git` root, empty components, `.`, `..`, NUL, backslash and
 a path that escapes after resolution. Globs match entry paths, never symlink
 targets. Only a
 requirement header's `Host paths:` field may name an absolute or home-relative
-path, and Cairn never copies that target into a snapshot or model request.
+path, and Sudus never copies that target into a snapshot or model request.
 
 ### The hand-written tree
 
@@ -130,7 +130,7 @@ observes it, and a `Status:` line. The block grammar is in section 4. A domain
 file whose header carries `Scope: every commitment` contributes its Agreed
 blocks to a commitment's set when that commitment starts. A header's `Host
 paths:` line declares absolute or home-relative paths the software's behavior
-depends on; Cairn reads the field and never scans block text for paths.
+depends on; Sudus reads the field and never scans block text for paths.
 
 **Status.** One of `Draft`, `Observed`, `Agreed <date>`, or `Retired <date>`.
 Observed text is derived from existing code and is never contract. Agreed means
@@ -142,12 +142,12 @@ are digested and checked. A commitment may name only Agreed requirements.
 record and closed by a done or superseded record. A commitment is not a Git
 commit and normally spans many. At most one is open.
 
-**Settings.** `.cairn/settings.json`, hand-written, tracked and the only
-configuration file. `cairn init` creates or adopts its first protected version
+**Settings.** `.sudus/settings.json`, hand-written, tracked and the only
+configuration file. `sudus init` creates or adopts its first protected version
 after the developer confirms it. Its fields are:
 
 - `schema`: the settings schema the kernel must understand.
-- `authority_remote`: the one remote to which the durable Cairn refs travel,
+- `authority_remote`: the one remote to which the durable Sudus refs travel,
   confirmed by the developer; `null` means the developer explicitly chose
   local-only operation. `origin` may be proposed but is never assumed.
 - `outside`: paths that are nobody's input and never a scope breach.
@@ -155,7 +155,7 @@ after the developer confirms it. Its fields are:
 - `interfaces`: paths whose change is a public-interface change.
 - `data`: paths whose change is a persisted-data change and therefore the
   developer's decision.
-- `network_exclude`: paths whose bytes Cairn must not place in an evaluator
+- `network_exclude`: paths whose bytes Sudus must not place in an evaluator
   request, adversary brief or adversary projection. It does not govern the
   project's ordinary Git remotes or the primary coding agent.
 - `signing_key`: the developer's public verification key, or `null`. With a
@@ -280,8 +280,8 @@ developer-authorized next-feature or supersession decision.
 
 ### Kernel-written state
 
-**Mechanism.** An entry in `.cairn/mechanisms`, written only by `cairn declare`
-and `cairn review mechanism`. It has two separately digested parts:
+**Mechanism.** An entry in `.sudus/mechanisms`, written only by `sudus declare`
+and `sudus review mechanism`. It has two separately digested parts:
 
 - The **definition**: command, working directory, `inputs`, `documents`,
   requirements, `results: per-requirement`, and a declared **execution
@@ -297,12 +297,12 @@ including installed tools, services, locale and host configuration, can change
 a mechanism without staling its receipt; therefore "current" is not a claim of
 hermetic execution.
 
-**Command output.** `.cairn/output/`, ignored by Git, with each file named by
+**Command output.** `.sudus/output/`, ignored by Git, with each file named by
 the digest in its receipt.
 
 ### Snapshots and refs
 
-**Snapshot.** A commit on `refs/cairn/snapshots` whose tree header is the tree
+**Snapshot.** A commit on `refs/sudus/snapshots` whose tree header is the tree
 it preserves and whose parent is the preceding snapshot commit. The commit
 payload names one of two kinds:
 
@@ -310,7 +310,7 @@ payload names one of two kinds:
   inputs as they exist in the working tree. Only receipts may name it.
 - A **workspace snapshot** contains the tracked files plus non-ignored
   untracked files in the repository working tree, excluding `.git/**` and
-  `.cairn/output/**`. Start, review, report, resolution, acceptance,
+  `.sudus/output/**`. Start, review, report, resolution, acceptance,
   realization, evaluation and done records must name this kind.
 
 Both kinds include dirty bytes without changing the index. The kind is checked
@@ -330,28 +330,28 @@ restore. The first-observed snapshot on an unresolved scope breach is not an
 allowed base. Later scope comparisons use the newest allowed workspace
 snapshot, never merely the newest snapshot commit.
 
-**Durable refs.** `refs/cairn/snapshots` and `refs/cairn/log`. The kernel alone
+**Durable refs.** `refs/sudus/snapshots` and `refs/sudus/log`. The kernel alone
 writes them, never rewrites them, and advances each with compare-and-swap: the
 expected old OID is required and a mismatch refuses the write. The log is a
 chain of record commits whose schema is in section 4. Records reference records
 by log SHA and code only by a kind-checked snapshot SHA.
 
-**Action lease.** `refs/cairn/in-progress`, local to the repository and never
-pushed. `cairn begin <action> <target>` creates it with compare-and-swap before
-the agent changes a declared input, and prints the sha it wrote; `cairn end`
+**Action lease.** `refs/sudus/in-progress`, local to the repository and never
+pushed. `sudus begin <action> <target>` creates it with compare-and-swap before
+the agent changes a declared input, and prints the sha it wrote; `sudus end`
 removes it with compare-and-swap after the action is committed, and refuses
 when a passed `--lease <sha>` does not name that printed sha, so a stale end
-from another session can never close this one's lease. `cairn end --abandon`
+from another session can never close this one's lease. `sudus end --abandon`
 removes it and records the action as explicitly abandoned rather than
-finished. `cairn begin --touch <path>`
+finished. `sudus begin --touch <path>`
 provisionally adds a path to the target's mechanism inputs for the life of the
-lease, so the declaration precedes the change; `cairn end` writes the addition
+lease, so the declaration precedes the change; `sudus end` writes the addition
 into the definition, which unbinds its review metadata as any definition change
 does, or drops it when the path is unchanged. It carries the action, target,
 workspace snapshot at start, timestamp and harness session when available.
 While it exists, its target's declared inputs are neither `record` nor `commit`
-findings. The separate check lock is `cairn-check.lock` below `git rev-parse
---git-path`; `cairn check` holds it only for the run, so a check can nest inside
+findings. The separate check lock is `sudus-check.lock` below `git rev-parse
+--git-path`; `sudus check` holds it only for the run, so a check can nest inside
 an implementation action.
 
 The action lease does not coordinate separate clones. Concurrent clones meet at
@@ -372,7 +372,7 @@ and readable schema equal those computed now.
 **Review.** The builder's claims at a workspace snapshot: what was examined,
 answers to the fixed questions in section 9, and findings.
 
-**Brief.** The record `cairn brief` writes for a review: the review it names,
+**Brief.** The record `sudus brief` writes for a review: the review it names,
 the projection and payload digests, the exclusion manifest digest, and the
 launch instruction (the detected harness and the adversary model, transport
 and projection boundary fixed for that harness).
@@ -396,10 +396,10 @@ prose without a choice widget: the problem, then the recommendation as `ok`,
 the cost if wrong and the alternative as `instead`, and discussion as `ask`,
 ending with `ok | instead | ask`. The developer answers in their own words. The agent records
 `ok`, `instead` or `ask`, quoting those words verbatim, with
-`cairn answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until
+`sudus answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until
 an agent reply. Developer-only commands use the authentication rule in
 Settings. Revised 2026-09-21: previously "The developer writes `ok`,
-`instead <text>` or `ask <text>` with `cairn answer`".
+`instead <text>` or `ask <text>` with `sudus answer`".
 
 **Developer evidence.** Every developer-only record carries evidence of the
 developer's decision. `signed` evidence is a signature over the purpose,
@@ -409,7 +409,7 @@ harness that carried the conversation (`claude_code`, `codex`, `muse` or
 `none`), and the Git author. Records written before revision 6 may carry
 `unsigned-local` evidence; the kernel reads them and never writes one again.
 
-**Direction.** The record `cairn authorize instead|ask --quote <words>`
+**Direction.** The record `sudus authorize instead|ask --quote <words>`
 writes when the developer asks for a change or a question before binding:
 the kind, the developer's words, the harness and the Git author. It binds
 nothing and wake ignores it; it keeps the developer's words in the log.
@@ -453,12 +453,12 @@ would change Agreed text or the working agreement and names what. A defect names
 an Agreed requirement the code violates. Outside, promotion and fix records
 later reference the item.
 
-**Scope breach.** A durable record of the first Cairn observation, while a
+**Scope breach.** A durable record of the first Sudus observation, while a
 commitment is open, that a path differs from the latest allowed workspace
 snapshot while no then-active mechanism declared it and `outside` did not list
 it. It names that snapshot and the declaration-set digest. A later declaration
 cannot clear it. Between commitments no breach is observed: the spec phase
-writes the next commitment's mechanisms, tests and declarations before `cairn
+writes the next commitment's mechanisms, tests and declarations before `sudus
 start`, and that start's snapshot is the next allowed base. (Revised
 2026-09-22: the gap used to be observed against the finished commitment's base,
 so every file the spec phase was told to create became a breach.)
@@ -488,10 +488,10 @@ supersession has no open range.
 ### ADR and other terms
 
 **ADR.** `docs/decisions.jsonl`, append-only and kernel-managed. Each line is
-one canonical JSON object written by `cairn decide`, `cairn escalate` when the
-floor or a measurement sends a Consequential draft to the developer, `cairn
-answer`, `cairn decisions --read`, `cairn
-realize`, `cairn supersede`, or `cairn promote`. Kinds are `decision`,
+one canonical JSON object written by `sudus decide`, `sudus escalate` when the
+floor or a measurement sends a Consequential draft to the developer, `sudus
+answer`, `sudus decisions --read`, `sudus
+realize`, `sudus supersede`, or `sudus promote`. Kinds are `decision`,
 `realized`, `superseded`, `answered` and `read`.
 A decision carries `by`, `rests_on`, `wrong_if`, `body`, the workspace
 snapshot from which realization will be measured, and the measurement it
@@ -520,7 +520,7 @@ Routine and Judged guidance, but they leave no record.
 `Waiting` prints an unanswered escalation's five fields. `Done` means a done
 record exists and no promotion waits. Wake is read-only. Outside a project, on
 missing durable refs, during a pending supersession, with an interrupted
-transaction, or with no commitment started (`cairn: no commitment started; run
+transaction, or with no commitment started (`sudus: no commitment started; run
 /new-project or /existing-project`), it prints one line naming the command or
 skill that continues and exits 3; none is a verdict.
 
@@ -560,18 +560,18 @@ Four entry flows, one shared tail and one work loop.
 
 `install.dot` begins with Node and Git; if either is missing it stops and names
 it. The developer installs the plugin for Claude Code, Codex or Muse, or uses
-the skills CLI and `/install-cairn`. Installation links
-`~/.local/bin/cairn`, registers hooks where the harness supports them, and
+the skills CLI and `/install-sudus`. Installation links
+`~/.local/bin/sudus`, registers hooks where the harness supports them, and
 lists the four skills. A harness without hooks is instruction-only.
 
 Installation is global and never asks for a project remote. It is complete when
-`cairn --help` prints. Inside an initialized project the session-start hook also
+`sudus --help` prints. Inside an initialized project the session-start hook also
 prints the current verdict; elsewhere it names `/new-project` or
 `/existing-project`.
 
 ### Project initialization
 
-New-project and existing-project run `cairn init` before they need settings,
+New-project and existing-project run `sudus init` before they need settings,
 mechanisms or refs. It initializes Git when the new-project directory has none;
 validates or creates settings; takes the developer's answers as flags:
 `--remote <name>` or `--local-only` for the authority, `--signing-key <path>`
@@ -607,13 +607,13 @@ status. The roadmap names the first commitment before the shared tail begins.
 
 ### Existing project
 
-`existing-project.dot` takes a codebase Cairn has not specified, one whose spec
+`existing-project.dot` takes a codebase Sudus has not specified, one whose spec
 has drifted, or a pending supersession to one prepared commitment. If wake says
 Done, it switches to next-feature. If a commitment is open and the request is
 outside it, the developer chooses either to finish it and capture the request,
 or to supersede it.
 
-Supersession is two-phase. `cairn supersede <successor-slug>` writes the
+Supersession is two-phase. `sudus supersede <successor-slug>` writes the
 developer-quoted Consequential decision and a superseded record that closes the
 old range with a transition ID and intended slug. It does not move `Current:`
 and cannot name a start that does not exist. Recon and specification then
@@ -621,11 +621,11 @@ prepare the successor. The successor's start names the superseded record and
 `Current:` moves in the same recoverable start transaction. An interrupted gap
 is a pending transition, not a second open commitment.
 
-A Cairn 1.x project (record directories under `.cairn/`, or
+A Sudus 1.x project (record directories under `.sudus/`, or
 `docs/commitments/`) is migrated before initialization, on the developer's ok:
-the 1.x record directories are removed, since Cairn 2 reads none of them and
+the 1.x record directories are removed, since Sudus 2 reads none of them and
 Git history keeps them; the specification is converted in place until
-`cairn lint docs/spec` is clean, with no requirement's words changed; each
+`sudus lint docs/spec` is clean, with no requirement's words changed; each
 1.x mechanism's command and inputs are kept in `docs/recon.md` for the tail's
 declare step; and after initialization each 1.x item file becomes one item
 record. Added 2026-09-22.
@@ -666,7 +666,7 @@ The flow then enters the shared tail.
 `spec-phase.dot` begins with Draft requirements and falsifiers. The agent
 proposes the falsifiers as one set and names each mechanism; self-reviews for
 contradictions, falsifiers that would miss their violation, and requirements no
-mechanism can check; runs `cairn lint docs/spec`; and presents by exception with
+mechanism can check; runs `sudus lint docs/spec`; and presents by exception with
 an invitation to ask for another explanation. The developer confirms, corrects,
 or rules that the recommendation stands. A deference decision quotes that
 ruling. Each confirmed block becomes `Status: Agreed <date>`.
@@ -677,16 +677,16 @@ example, and writes or updates the working agreement. The agent then states
 what would be bound: the specification, the working agreement and settings,
 each by digest, and what changed in them since the last authorization; asks
 the developer for ok, for changes, or for a question; and on ok runs
-`cairn authorize --quote <words>`, one command that binds the final digests of
+`sudus authorize --quote <words>`, one command that binds the final digests of
 the specification, the working agreement and settings in one authorization
 record. A request for changes or a question is recorded with
-`cairn authorize instead|ask --quote <words>` as a direction record, binds
+`sudus authorize instead|ask --quote <words>` as a direction record, binds
 nothing, and the agent acts on it and asks again. Revised 2026-09-21:
-previously "The developer then runs `cairn authorize`". `cairn start` stages a command intent, commits the prepared contract,
+previously "The developer then runs `sudus authorize`". `sudus start` stages a command intent, commits the prepared contract,
 agreement and mechanism bytes, and writes the workspace snapshot and start
 record as one recoverable transaction, including the frozen set and optional
 supersession link. It installs exact fetch and push
-refspecs for `refs/cairn/log` and `refs/cairn/snapshots` on the authority remote
+refspecs for `refs/sudus/log` and `refs/sudus/snapshots` on the authority remote
 only when one is configured. Wake names the first work-loop action.
 
 ### The work loop
@@ -697,7 +697,7 @@ snapshot or log record, then wakes again. An unanswered escalation is Waiting
 and the agent stops. A pending report or acceptance is the agent's wait and
 remains Resolvable.
 
-When the Done rule holds, wake names `done`. `cairn done` writes the done
+When the Done rule holds, wake names `done`. `sudus done` writes the done
 record. Terminal output is not durable state: the next invocation renders the
 unread queue. With a backlog item waiting, the next wake names `promote` rather
 than Done.
@@ -711,14 +711,14 @@ wrote.
 
 ### Canonical encoding
 
-Every log record is an empty commit with subject `cairn: <kind> <target>`. Kind
+Every log record is an empty commit with subject `sudus: <kind> <target>`. Kind
 and target are restricted ASCII tokens; arbitrary text and paths never appear
 in the subject. The commit body is the record: one UTF-8 RFC 8785 canonical
 JSON object, readable in `git log`. The commit has exactly two trailers:
 
 ```
-Cairn-Schema: 1
-Cairn-Digest: sha256:<hex of the body bytes>
+Sudus-Schema: 1
+Sudus-Digest: sha256:<hex of the body bytes>
 ```
 
 The trailers carry only the schema and the digest; content never lives in a
@@ -731,7 +731,7 @@ wrong field counts and out-of-range numbers. It never delegates content
 parsing to `git interpret-trailers`.
 
 The same rules apply to snapshot payloads. ADR lines are canonical JSON written
-directly as one line, with embedded newlines escaped. `cairn show` renders
+directly as one line, with embedded newlines escaped. `sudus show` renders
 records with their references resolved. The commit is the authority-bearing
 form.
 
@@ -773,7 +773,7 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 
 `docs/spec/roadmap.md` is exempt from scope breaches only outside an open
 commitment range: the developer and agent write its next section, and
-`cairn start` and `cairn promote` edit it, between commitments. Inside an
+`sudus start` and `sudus promote` edit it, between commitments. Inside an
 open range it is an undeclared change like any other.
 
 An evaluation's raw response is stored byte-for-byte inside its encoded payload;
@@ -791,8 +791,8 @@ One canonical JSON object per line in `docs/decisions.jsonl`:
 - `{"kind":"answered","id":<ulid>,"ts":...,"escalation":<sha>,"answer":<sha>}`
 - `{"kind":"read","id":<ulid>,"ts":...,"of":<id>,"record":<sha>}`
 
-`cairn decisions` renders the file. The queue is every decision without a later
-read line. `cairn decisions --read <id>` is a developer-only command. A line
+`sudus decisions` renders the file. The queue is every decision without a later
+read line. `sudus decisions --read <id>` is a developer-only command. A line
 written outside its assigned command, a duplicate ID, a noncanonical line, an
 unknown key, or a reference to a missing record is a breach.
 
@@ -806,25 +806,25 @@ is the identifier, obligation text and falsifier after the specified whitespace
 normalization. File headers before the first block carry `Prefix:`, optional
 `Scope: every commitment`, and optional `Host paths:`. Other prose is ignored.
 
-`cairn lint docs/spec` refuses broken order, duplicate or reused identifiers,
+`sudus lint docs/spec` refuses broken order, duplicate or reused identifiers,
 references to absent identifiers, missing falsifiers, an Agreed block without a
 mechanism, noncanonical status dates, and a spec map that
 does not match domain prefixes. That refusal is the falsifier for this grammar.
 
 The roadmap parser reads only `Current: <slug>` and, below the matching heading,
-`Requirements: <identifiers>`. The rest is prose. `cairn start` resolves the
+`Requirements: <identifiers>`. The rest is prose. `sudus start` resolves the
 whole set and digests it before writing anything.
 
 ### Commands and crash recovery
 
-`cairn begin` and `cairn end` manage the local action lease. `cairn check`
-writes receipts. `cairn review`, `brief`, `report`, `resolve` and `accept` write
-the review chain. `cairn escalate`, `answer` and `reply` write the decision
-chain. `cairn item`, `outside` and `fix` manage items. `cairn decide`, `realize`,
-`decisions --read` and `promote` manage the ADR. `cairn authorize` binds the
+`sudus begin` and `sudus end` manage the local action lease. `sudus check`
+writes receipts. `sudus review`, `brief`, `report`, `resolve` and `accept` write
+the review chain. `sudus escalate`, `answer` and `reply` write the decision
+chain. `sudus item`, `outside` and `fix` manage items. `sudus decide`, `realize`,
+`decisions --read` and `promote` manage the ADR. `sudus authorize` binds the
 protected digests in one record; a settings change is a new authorization
-naming the new digest; `cairn authorize instead|ask` writes one direction
-record and nothing else. `cairn start`, `done` and `supersede` bound commitments. Wake writes
+naming the new digest; `sudus authorize instead|ask` writes one direction
+record and nothing else. `sudus start`, `done` and `supersede` bound commitments. Wake writes
 nothing. No command edits a record.
 
 Four commands write to more than one store: `start`, `promote`, `supersede`
@@ -835,7 +835,7 @@ pre-identities below the Git directory, appends a command-intent, performs the
 ordered writes, and appends a terminal domain record naming that intent. Each
 step is idempotent on the transaction ID and expected old identity; atomic rename
 prevents partial files. Wake names `recover <transaction>` for a nonterminal
-intent before any ordinary action. `cairn promote`'s promotion record is one
+intent before any ordinary action. `sudus promote`'s promotion record is one
 of these ordered writes, a `plan.writes` log descriptor inside the same
 transaction that writes its `start` record, not that transaction's terminal
 record.
@@ -858,13 +858,13 @@ invocation can render the queue again.
 
 ### Travel with the code
 
-Only `refs/cairn/log` and `refs/cairn/snapshots` travel. When
-`authority_remote` is non-null, `cairn start` installs their exact fetch and
+Only `refs/sudus/log` and `refs/sudus/snapshots` travel. When
+`authority_remote` is non-null, `sudus start` installs their exact fetch and
 push refspecs on that remote only. The working
 agreement's push command atomically pushes the branch and both refs where the
 remote supports atomic push.
 
-Without remote atomicity, Cairn pushes snapshots first, log second and branch
+Without remote atomicity, Sudus pushes snapshots first, log second and branch
 last. A failure stops the sequence. Snapshots ahead of the log and a log ahead
 of the branch are safe and retried; the branch is never intentionally advanced
 without the records it needs. A bypassing ordinary Git push can still create a
@@ -875,8 +875,8 @@ push uses the expected remote OID as a lease.
 A clone without the durable refs exits 3 and names:
 
 ```
-git fetch <authority> 'refs/cairn/log:refs/cairn/log' \
-  'refs/cairn/snapshots:refs/cairn/snapshots'
+git fetch <authority> 'refs/sudus/log:refs/sudus/log' \
+  'refs/sudus/snapshots:refs/sudus/snapshots'
 ```
 
 Records from 1.x are not read.
@@ -912,9 +912,9 @@ predicate. The table is normative.
 
 A Consequential decision carries one more requirement this table does not
 list as a row, because wake never queues it as a next action the way it
-queues `declare` or `run`: before the agent writes the decision, `cairn
+queues `declare` or `run`: before the agent writes the decision, `sudus
 measure` runs on the exact draft and writes a current measurement record
-(section 2). `cairn decide --consequential` refuses a draft whose
+(section 2). `sudus decide --consequential` refuses a draft whose
 measurement is missing, stale, or built from a different draft digest.
 Waiting for a Consequential decision arises only two ways: the narrow floor
 in section 10 sends it to the developer before any call is made, or the
@@ -933,9 +933,9 @@ Consequential decision row was never in the action table to begin with.
 Before any state-changing command, the kernel compares the current workspace
 with the latest allowed workspace snapshot and the declarations active at that
 log head. If it observes an undeclared, non-outside changed path, it records a
-scope breach before doing the requested work. `cairn declare` performs this
+scope breach before doing the requested work. `sudus declare` performs this
 preflight before it can add an input. Thus a declaration legalizes only future
-changes. A path touched under a lease is declared from `cairn begin`, so
+changes. A path touched under a lease is declared from `sudus begin`, so
 implementing a requirement in a new file is not a breach and needs no
 developer disposition.
 
@@ -943,7 +943,7 @@ The breach survives rebases and squashes because it is a log fact tied to a
 workspace snapshot and declaration-set digest, not a claim about mutable
 first-parent chronology. It closes only when the developer approves keeping the
 captured bytes or a workspace snapshot restores the path to its allowed base.
-If a change is removed before Cairn ever observes it, no built work remains and
+If a change is removed before Sudus ever observes it, no built work remains and
 there is no breach to preserve.
 
 ### Precedence
@@ -982,7 +982,7 @@ Done requires all of the following:
   unrealized, or administrative-cycle escalation unresolved.
 
 Backlog items are not in the rule. When the rule holds, wake names `done`;
-`cairn done` writes the record. The next wake renders the queue or names one
+`sudus done` writes the record. The next wake renders the queue or names one
 promotion, so one commitment is open at a time.
 
 The report is written once at the candidate snapshot. Every later fix is a
@@ -1017,7 +1017,7 @@ draft to the agent, so its Waiting is as unanswerable as the floor's.
 Revised 2026-09-19: new. This states what section 5's own Waiting rule does
 in the one mode where nobody can end it, which the developer's stated reason
 for the evaluator redesign, "The reason I wanted this design was to be able
-to use Cairn in an autonomous benchmark," requires: a benchmark run cannot
+to use Sudus in an autonomous benchmark," requires: a benchmark run cannot
 sit at Waiting forever.
 
 Revised 2026-09-22: previously only the floor or a veto exited 4. An
@@ -1043,7 +1043,7 @@ developer's ok or instead answer restarts that count. These constants are in
 the kernel, not settings.
 
 Before committing a kernel-managed mutation, the kernel evaluates the
-post-state. If its specified bookkeeping alone would create a new Cairn
+post-state. If its specified bookkeeping alone would create a new Sudus
 violation of equal or higher precedence, it refuses the mutation, names the
 violation and its cause, and counts the refusal as one administrative
 occurrence of that action class and target toward the cycle bounds above; the
@@ -1062,7 +1062,7 @@ prints the verdict, action, reason and predicate. A skipped step is therefore in
 front of the model. The stop hook prints the same line and is only the fallback
 for a harness without a per-turn hook. The session-start hook prints the current
 state and, in one line, any missing command link, PATH entry or durable ref. It
-writes nothing: `cairn brief` reads the harness from its environment when it
+writes nothing: `sudus brief` reads the harness from its environment when it
 runs, or from `--harness <name>` naming a settings entry.
 
 No hook refuses a stop, counts refusals, creates a record, edits a file, commits,
@@ -1072,7 +1072,7 @@ agreement.
 
 ## 7. Requirements policy
 
-- A requirement describes something a Cairn user can observe: a verdict,
+- A requirement describes something a Sudus user can observe: a verdict,
   refusal, record or command output. Kernel internals are tests, not contract.
   The action predicates, precedence, Done rule and schemas replace most of the
   1.x loop requirements.
@@ -1100,9 +1100,9 @@ a revised requirement in a later commitment needs `review mechanism` before its
 evidence counts.
 
 A `documents` path must also be an input and must not lie below a `source` root;
-`cairn declare` refuses otherwise. Changes only to documents cost a check, not
+`sudus declare` refuses otherwise. Changes only to documents cost a check, not
 a mechanism review. A receipt remains current when its ignored output file is
-absent on a clone; the output digest lets Cairn report the absence.
+absent on a clone; the output digest lets Sudus report the absence.
 
 ### Scope and protected state
 
@@ -1166,9 +1166,9 @@ route, high or low, waives the realization check below.
 
 ### Escalation
 
-`cairn escalate` and `cairn decide --consequential` accept the same canonical
+`sudus escalate` and `sudus decide --consequential` accept the same canonical
 draft. Only a Consequential draft is measured; every other level uses the
-kernel level directly. `cairn measure` (section 5) runs first, from `jev`
+kernel level directly. `sudus measure` (section 5) runs first, from `jev`
 when `typesafeai.enabled` or otherwise the harness's review model (section
 10); when neither source can be reached the draft is `unavailable <class>`
 and routes to the developer like any other technical no-call. Otherwise the
@@ -1176,14 +1176,14 @@ agent reads the measurement, including its advisory `suggested: agent |
 developer`, and decides, except at the narrow floor or a veto, or when the
 agent itself chooses to escalate anyway; no other level is measured.
 
-The agent runs `cairn answer`, `cairn decisions --read` and `cairn authorize`
+The agent runs `sudus answer`, `sudus decisions --read` and `sudus authorize`
 only after the developer has answered in conversation, and never asks the
 developer to run a command. With a signing key their records must verify. In
 attested mode the developer's quoted words, the harness name and the Git
-author are evidence only; Cairn says so wherever it reports the decision.
+author are evidence only; Sudus says so wherever it reports the decision.
 With `developer: absent`, none of this paragraph's questions has anyone to
 answer it; section 5 states what the floor does instead. Revised
-2026-09-21: previously "The developer runs `cairn answer` and `cairn
+2026-09-21: previously "The developer runs `sudus answer` and `sudus
 decisions --read`; the agent never does", with a controlling-terminal
 confirmation as the unsigned evidence. The developer ruled that nobody is
 ever asked to run a command; the answer is given in conversation and the
@@ -1209,7 +1209,7 @@ roadmap change and successor start form one recoverable transaction, and the
 new roadmap section may name only Agreed requirements. A next-feature item waits
 for the developer. Defect items are fixed before promotion.
 
-Model-recommended capture is fallible. Cairn does not claim a passing mechanism
+Model-recommended capture is fallible. Sudus does not claim a passing mechanism
 proves a captured change unnecessary. The item remains visible, the frozen
 requirements remain binding, and the adversary can challenge the omission.
 
@@ -1219,7 +1219,7 @@ The builder answers the fixed questions and lists findings. The adversary
 attacks every answer and lists its own findings. Each finding is resolved or
 developer-disputed, and the adversary examines every post-report realization at
 the final tree. Receipts live on the log; ignored output lives in
-`.cairn/output/` and is addressed by digest.
+`.sudus/output/` and is addressed by digest.
 
 ## 9. Self-evaluation and one adversarial review
 
@@ -1245,12 +1245,12 @@ Each question is answered `observed` with a command, path or output, or
 
 ### Brief and projection
 
-When the review exists, wake names `report SLUG`. `cairn brief <slug>` writes a
+When the review exists, wake names `report SLUG`. `sudus brief <slug>` writes a
 brief record and renders the roadmap section, frozen requirements and
 falsifiers, mechanism definitions, builder claims and findings, interface
 obligations, exclusion manifest and brief digest.
 
-Before any remote adversary starts, Cairn creates an **adversary projection**:
+Before any remote adversary starts, Sudus creates an **adversary projection**:
 a materialized export of the reviewed workspace snapshot with every
 `network_exclude` path and built-in credential path omitted. It contains no
 `.git` directory, Git object store, host path, evaluator key, built-in credential
@@ -1266,14 +1266,14 @@ A remote adversary receives only the brief and projection. Where the harness
 can restrict the adversary's filesystem tools to that projection, the adapter
 does so and denies the original repository and host paths. Where it cannot,
 the brief names the projection as the only path the adversary may read and the
-report records `boundary: unenforced`; Cairn does not refuse the report, because
+report records `boundary: unenforced`; Sudus does not refuse the report, because
 no supported harness can confine a subagent and every configured adversary is
 remote. A local adversary still receives the projection by default; the
 developer may explicitly authorize broader local access. The report records the
 projection digest, transport and whether the boundary was enforced.
 
-This is a Cairn egress boundary, not an information-flow proof. It prevents
-Cairn from directly sending excluded file bytes. It cannot detect a secret a
+This is a Sudus egress boundary, not an information-flow proof. It prevents
+Sudus from directly sending excluded file bytes. It cannot detect a secret a
 person or primary coding agent copied into ordinary prose, and it does not
 govern normal Git pushes. The brief warns about that limitation.
 
@@ -1287,7 +1287,7 @@ input. For each Q4 it finds touched paths the claim omitted. For Q5 and Q6 it
 looks where the builder said not to. Every changed interface gets a caller-level
 attempt whether or not the builder raised it.
 
-`cairn report` refuses a report whose snapshot differs from the review, whose
+`sudus report` refuses a report whose snapshot differs from the review, whose
 brief or projection is stale, whose model or transport does not match the
 brief record's own launch instruction, or which leaves a required question or
 interface unattempted. The comparison reads the brief record, never the
@@ -1310,10 +1310,10 @@ unbounded stream of newly numbered findings.
 ### Model identity and limits of proof
 
 Settings name the exact adversary model each harness accepts and whether it is
-local or remote. `cairn brief` detects the harness adapter from its environment or `--harness`. `cairn
+local or remote. `sudus brief` detects the harness adapter from its environment or `--harness`. `sudus
 brief` passes the model string through; it never maps aliases. A null or unknown
 entry means any model and any transport, subject to the projection boundary;
-`cairn brief` prints this state explicitly, as `model: any` and `transport:
+`sudus brief` prints this state explicitly, as `model: any` and `transport:
 any`. The report records the actual model and transport. Where a harness
 reports session identity, the report refuses the session that wrote the review.
 
@@ -1349,7 +1349,7 @@ replaces the gate cascade with the composite scoring in
 benchmark), makes the agent's own judgment, checked by the measurement, the
 decision by default, and adds a second measurement source so the design still
 works with `typesafeai.enabled: false`, which is what the developer wants
-"to be able to use Cairn in an autonomous benchmark."
+"to be able to use Sudus in an autonomous benchmark."
 
 ### The narrow floor
 
@@ -1429,7 +1429,7 @@ answering the same five dimensions in the same shape:
   silent retry past that bound.
 - `review`: otherwise, the agent starts the harness's configured review
   model, the adversary model named in `settings.harness` for the running
-  harness, exactly as `cairn brief` starts the adversary: through the
+  harness, exactly as `sudus brief` starts the adversary: through the
   harness, with none of the agent's own conversation context, answering the
   same five dimensions in the same shape as `jev` would. The launch
   instruction and the resolved model are recorded the way a report already
@@ -1460,7 +1460,7 @@ model was asked to trust. If `A(D)` is incomplete, no call occurs (the
 narrow floor's technical case above).
 
 Revised 2026-09-20: previously the recommended option only. The committed
-live run through `cairn measure` (tests/bench/results.md) showed the losing
+live run through `sudus measure` (tests/bench/results.md) showed the losing
 options' text is what lets the model separate reach, contract and surface
 (22/24 against 16/24 before the change; an isolated in-tree experiment
 measuring this change alone scored 21/24), and the options are part of `D`,
@@ -1479,7 +1479,7 @@ may differ.
 question; the kernel enforces `request_cap_bytes`, estimates three bytes per
 token, and refuses above 75% of either limit before sending. The review
 source's request is the harness's own message; the no-policy-prose and
-named-field rules above still bind it, and Cairn does not separately cap its
+named-field rules above still bind it, and Sudus does not separately cap its
 size beyond the state it sends.
 
 Requests omit `network_exclude`, credential and host bytes, keys and command
@@ -1511,7 +1511,7 @@ developer as a destination once the floor or a veto names one (section 5).
 The policy digest covers model, schemas, questions, request construction,
 the narrow floor, the veto rule, `weights`, `agent_ceiling`,
 `confidence_floors`, caps and egress; a change to any of them resets
-calibration. `cairn calibrate` uses matching valid measurements labelled by
+calibration. `sudus calibrate` uses matching valid measurements labelled by
 the developer. Its denominator is labelled cases whose suggestion was
 `agent`; a false downgrade is one the developer labelled `developer`. The
 one-sided 95% exact binomial upper bound on the false-downgrade rate is a
@@ -1538,14 +1538,14 @@ requests at equal identity and policy digest; an `agent` suggestion or a
 `developer` suggestion treated as anything but advisory; an agent decision
 on a draft the narrow floor should have caught; an agent decision on a draft
 carrying a veto; a composite computed anywhere but code, from anything but
-the recorded dimension levels; a retried or invented ambiguous result; Cairn
+the recorded dimension levels; a retried or invented ambiguous result; Sudus
 egress of excluded bytes to either source; an accepted protected
 realization; or a calibration record whose denominator is not cases whose
 suggestion was `agent`.
 
 ## 11. Distribution
 
-Cairn ships as one plugin: the command, hooks, four skills (`install-cairn`,
+Sudus ships as one plugin: the command, hooks, four skills (`install-sudus`,
 `new-project`, `existing-project`, `next-feature`) and the optional evaluator
 module. Claude Code, Codex and Muse manifests share one version. The skills also
 install through the skills CLI. The runtime is Node and Git, with no build,
@@ -1556,15 +1556,15 @@ one file. The adversary is started through the current harness, subject to the
 projection boundary. Two durable refs travel to one confirmed authority remote;
 the action lease, transaction staging and cycle counter remain local.
 
-How this repository develops and releases Cairn, including its attribution
+How this repository develops and releases Sudus, including its attribution
 check and source-size norms, belongs in its own roadmap rather than this product
 specification.
 
 ## 12. Removed from 1.x
 
-- The record directories `.cairn/evidence`, `.cairn/reviews`,
-  `.cairn/escalations`, `.cairn/backlog`, `.cairn/next-iteration`,
-  `.cairn/stops`, `.cairn/queue`, `docs/decisions/`, `docs/commitments/` and
+- The record directories `.sudus/evidence`, `.sudus/reviews`,
+  `.sudus/escalations`, `.sudus/backlog`, `.sudus/next-iteration`,
+  `.sudus/stops`, `.sudus/queue`, `docs/decisions/`, `docs/commitments/` and
   `docs/audit`. Records are a log ref plus one ADR JSONL file.
 - The autonomy and former Jev modes that were Agreed but never built.
 - Stop-hook refusal, refusal counts, stop records and `explain`.
@@ -1602,7 +1602,7 @@ specification.
 2. Hooks prompt and never block or write.
 3. The kernel has two decision levels; guidance may describe four.
 4. `next-iteration` is renamed `next-feature`, including its item kind and flag.
-5. Cairn 1.x records are not read; migration happens at a v2 Done.
+5. Sudus 1.x records are not read; migration happens at a v2 Done.
 6. Command output is ignored local data; a receipt can be current without it.
 7. This repository develops v2 on its v2 branch and archives 1.x at cutover.
 8. One adversarial report per commitment, plus bounded cumulative acceptance;
@@ -1611,15 +1611,15 @@ specification.
 10. Verdicts are Resolvable, Waiting and Done; Waiting alone is the developer's
     turn.
 11. The developer answers in conversation and the agent records the answer
-    with `cairn answer`, `cairn decisions --read` and `cairn authorize`; a
+    with `sudus answer`, `sudus decisions --read` and `sudus authorize`; a
     quoted answer with the harness and Git author is evidence, not
     authentication.
 12. Global install makes the command link and hooks. Project initialization,
     not install, configures a repository.
 13. The spec-phase self-review is performed but not recorded.
-14. Non-decision records are commits on `refs/cairn/log`; decisions are
+14. Non-decision records are commits on `refs/sudus/log`; decisions are
     canonical lines in `docs/decisions.jsonl`.
-15. Code references are typed commits on `refs/cairn/snapshots`; the working
+15. Code references are typed commits on `refs/sudus/snapshots`; the working
     branch may be rebased, squashed or amended.
 16. The report is written once; resolutions and acceptances cover the cumulative
     post-report delta.
@@ -1627,12 +1627,12 @@ specification.
     a commitment.
 18. The optional Jev evaluator applies only at Consequential and may make an
     option-gate call and a separate owner call. (Superseded by 53.)
-19. `.cairn/settings.json` is the only settings file; the TypeSafe key is
+19. `.sudus/settings.json` is the only settings file; the TypeSafe key is
     `TYPESAFEAI_API_KEY` in the environment.
 20. The adversary model and transport are selected per harness and recorded.
 21. Backlog items do not block Done; the next wake promotes at most one.
 22. Wake is read-only. Start, done and other commands write state.
-23. `cairn escalate` writes the evaluation route it selected; evaluation is its
+23. `sudus escalate` writes the evaluation route it selected; evaluation is its
     own intent/call/result chain.
 24. Reading the queue is a developer-authenticated act.
 25. The working agreement is protected and changes between commitments or after
@@ -1654,7 +1654,7 @@ specification.
     external state weakens freshness.
 38. One authority remote is developer-confirmed; pushes are atomic when
     supported and safely ordered otherwise.
-39. `network_exclude` bounds Cairn's model egress, not all network activity.
+39. `network_exclude` bounds Sudus's model egress, not all network activity.
 40. Developer-owned protected paths and kernel-managed mutable paths are
     different authority classes.
 41. A superseded record names a transition and successor slug; the later start
@@ -1671,12 +1671,12 @@ specification.
     digest trailer; arbitrary strings never become trailers.
 47. Input and workspace snapshots are distinct kinds and record schemas accept
     only the kind they need.
-48. `cairn init` establishes settings, developer-auth mode and remote before a
+48. `sudus init` establishes settings, developer-auth mode and remote before a
     project enters the shared spec tail.
 49. An active commitment's frozen contract is not amended; a contract change
     requires finish or supersession.
 50. Administrative recurrence and acceptance rounds have fixed escalation
-    bounds counted locally, and valid Cairn bookkeeping may not generate its
+    bounds counted locally, and valid Sudus bookkeeping may not generate its
     own violation.
 51. Composite option scores, weights and code tiers are absent; raw gate answers
     are the only evaluator assistance shown. (Superseded by 56.)
@@ -1708,7 +1708,7 @@ specification.
     yields a `suggested: agent | developer` shown beside the five raw
     levels, only the floor and a veto force the developer, and the agent
     decides in every other case. Supersedes 51. The developer's reason:
-    "The reason I wanted this design was to be able to use Cairn in an
+    "The reason I wanted this design was to be able to use Sudus in an
     autonomous benchmark."
 
 ## 14. Next steps

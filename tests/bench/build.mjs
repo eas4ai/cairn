@@ -30,10 +30,10 @@ function domainFile(reqs) {
 
 export async function buildLedgerProject({ dir } = {}) {
   const project = SCENARIOS.project;
-  const cwd = dir ?? mkdtempSync(join(tmpdir(), 'cairn-bench-'));
+  const cwd = dir ?? mkdtempSync(join(tmpdir(), 'sudus-bench-'));
   sh(cwd, ['init', '-q', '-b', 'main']);
   sh(cwd, ['config', 'user.email', 'bench@example.invalid']);
-  sh(cwd, ['config', 'user.name', 'Cairn Bench']);
+  sh(cwd, ['config', 'user.name', 'Sudus Bench']);
   sh(cwd, ['config', 'commit.gpgsign', 'false']);
 
   const dims = { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 };
@@ -43,12 +43,12 @@ export async function buildLedgerProject({ dir } = {}) {
     typesafeai: { enabled: true, model: 'jev-1.13.0', weights: dims, agent_ceiling: 0.35, confidence_floors: { evidence: 0, reach: 0, contract: 0, surface: 0, ambiguity: 0 },
       min_calibration_agent_predictions: 60, request_cap_bytes: 48000 },
   };
-  write(cwd, '.cairn/settings.json', JSON.stringify(settings, null, 2) + '\n');
+  write(cwd, '.sudus/settings.json', JSON.stringify(settings, null, 2) + '\n');
   write(cwd, 'docs/spec/overview.md', `# Ledger\n\n${project.description}\n\n| File | Prefix |\n|---|---|\n| ledger.md | EXP |\n`);
   write(cwd, 'docs/spec/glossary.md', '# Glossary\n\n- ledger: this CLI.\n- category: a free-text label on an expense row.\n');
   write(cwd, 'docs/spec/roadmap.md', `Current: ${SLUG}\n\n## ${SLUG}\n\nRequirements: ${Object.keys(project.requirements).sort().join(' ')}\n\nDelivers the ledger CLI for a two-person bookkeeping shop.\n`);
   write(cwd, 'docs/spec/ledger.md', domainFile(project.requirements));
-  write(cwd, 'AGENTS.md', '# Working agreement\n\nThis is a benchmark fixture project. Run cairn wake.\n');
+  write(cwd, 'AGENTS.md', '# Working agreement\n\nThis is a benchmark fixture project. Run sudus wake.\n');
   write(cwd, 'README.md', `# ledger\n\n${project.description}\n`);
   for (const [p, text] of Object.entries(project.files)) write(cwd, p, text);
   sh(cwd, ['add', '-A']); sh(cwd, ['commit', '-q', '-m', 'Prepare the ledger project']);
@@ -63,7 +63,7 @@ export async function buildLedgerProject({ dir } = {}) {
 
   await authorize(cwd, { quote: 'ok', env: {} });
   const startSha = await start(cwd, SLUG);
-  const leaseSha = await begin(cwd, { action: 'implement', target: LEASE_TARGET, touch: ['src/ledger.mjs', 'tests/ledger.test.mjs'], env: { ...process.env, CAIRN_SESSION: 'bench' } });
+  const leaseSha = await begin(cwd, { action: 'implement', target: LEASE_TARGET, touch: ['src/ledger.mjs', 'tests/ledger.test.mjs'], env: { ...process.env, SUDUS_SESSION: 'bench' } });
 
   // A small, real, uncommitted edit on both touched paths, so the measurement's code.diff is not
   // empty -- the same edit the reference benchmark used (.superpowers/bench/build-project.mjs).

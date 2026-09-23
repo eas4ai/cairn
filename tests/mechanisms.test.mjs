@@ -11,7 +11,7 @@ import { project, declared, DEFINITION } from './helpers/mechanism-fixture.mjs';
 test('declare writes one canonical file with two separately digested parts', async () => {
   const repo = await project();
   const { definitionDigest: d } = await declare(repo.cwd, 'greeter', DEFINITION);
-  const text = await readFile(join(repo.cwd, '.cairn/mechanisms/greeter.json'), 'utf8');
+  const text = await readFile(join(repo.cwd, '.sudus/mechanisms/greeter.json'), 'utf8');
   const obj = JSON.parse(text);
   assert.equal(text, canonicalize(obj));
   assert.deepEqual(Object.keys(obj).sort(), ['definition', 'review', 'schema']);
@@ -25,9 +25,9 @@ test('declare writes one canonical file with two separately digested parts', asy
 });
 
 test('the definition records declared identity values verbatim and nothing else', async () => {
-  const repo = await declared({ identity: { tools: { node: 'node --version' }, env: ['CAIRN_FIXTURE_ENV'], image: 'ubuntu:24.04' } });
+  const repo = await declared({ identity: { tools: { node: 'node --version' }, env: ['SUDUS_FIXTURE_ENV'], image: 'ubuntu:24.04' } });
   const { greeter } = await readMechanisms(repo.cwd);
-  assert.deepEqual(greeter.definition.identity, { tools: { node: 'node --version' }, env: ['CAIRN_FIXTURE_ENV'], image: 'ubuntu:24.04' });
+  assert.deepEqual(greeter.definition.identity, { tools: { node: 'node --version' }, env: ['SUDUS_FIXTURE_ENV'], image: 'ubuntu:24.04' });
   assert.equal(JSON.stringify(greeter).includes(process.env.HOME), false);
 });
 
@@ -43,7 +43,7 @@ test('requirementDigest reads only Agreed blocks as checkable', async () => {
 for (const [name, overrides, message] of [
   ['a document that is not an input', { documents: ['other.md'] }, /must also be an input/],
   ['a document below a source root', { inputs: [...DEFINITION.inputs, 'bin/guide.md'], documents: ['bin/guide.md'] }, /below a source root/],
-  ['a reserved input', { inputs: [...DEFINITION.inputs, '.cairn/settings.json'] }, /reserved path/],
+  ['a reserved input', { inputs: [...DEFINITION.inputs, '.sudus/settings.json'] }, /reserved path/],
   ['an outside input', { inputs: [...DEFINITION.inputs, 'README.md'] }, /outside path/],
   ['an absolute input', { inputs: ['/etc/hosts'] }, /path/i],
   ['a secret-shaped env name', { identity: { tools: {}, env: ['API_KEY'], image: null } }, /secret-shaped/],
@@ -74,18 +74,18 @@ for (const [name, overrides, message] of [
 test('declare refuses a bad mechanism name and readMechanisms refuses a noncanonical file', async () => {
   const repo = await project();
   await assert.rejects(declare(repo.cwd, 'Greeter One', DEFINITION), /mechanism name/);
-  await repo.write('.cairn/mechanisms/bad.json', '{ "schema": 1 }\n');
+  await repo.write('.sudus/mechanisms/bad.json', '{ "schema": 1 }\n');
   await assert.rejects(readMechanisms(repo.cwd), /bad\.json/);
 });
 
 // Fix round 1 finding 9: readMechanisms shape-checks the definition, not just the top-level keys.
-// Fix round 2 finding 2: the message itself carries no "cairn: " prefix (lib/cli.mjs's main()
+// Fix round 2 finding 2: the message itself carries no "sudus: " prefix (lib/cli.mjs's main()
 // prepends one when a command lets this reach it unwrapped; a prefix here would double it).
-test('readMechanisms refuses a malformed definition shape, naming the file, with no inner cairn: prefix', async () => {
+test('readMechanisms refuses a malformed definition shape, naming the file, with no inner sudus: prefix', async () => {
   const repo = await project();
   const entry = { schema: 1, definition: {}, review: {} };
-  await repo.write('.cairn/mechanisms/broken.json', canonicalize(entry));
-  await assert.rejects(readMechanisms(repo.cwd), (e) => e instanceof MechanismError && !e.message.startsWith('cairn: ') && /broken\.json/.test(e.message));
+  await repo.write('.sudus/mechanisms/broken.json', canonicalize(entry));
+  await assert.rejects(readMechanisms(repo.cwd), (e) => e instanceof MechanismError && !e.message.startsWith('sudus: ') && /broken\.json/.test(e.message));
 });
 
 import { reviewMechanism, reviewBinds } from '../lib/mechanisms.mjs';
@@ -143,7 +143,7 @@ test('review mechanism refuses a pass receipt, an error receipt, another mechani
   const spec = await readFile(join(repo.cwd, 'docs/spec/demo.md'), 'utf8');
   await repo.write('docs/spec/demo.md', spec.replace('anything other than hello', 'anything else'));
   await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /text digest/);
-  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', '0'.repeat(40)), /not a record on refs\/cairn\/log/);
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', '0'.repeat(40)), /not a record on refs\/sudus\/log/);
 });
 
 import { begin, end, readLease, touchOutcome } from '../lib/lease.mjs';

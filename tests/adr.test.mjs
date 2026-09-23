@@ -155,7 +155,7 @@ import { acquireLock } from '../lib/tx.mjs';
 test('Fix round 2 finding 1: appendDecision takes the repository-local transaction lock, refusing while another transaction holds it', async () => {
   const repo = await project();
   const release = await acquireLock(repo.cwd, 'TXHELD');
-  await assert.rejects(decide(repo.cwd, draft), /holds cairn-tx\.lock/);
+  await assert.rejects(decide(repo.cwd, draft), /holds sudus-tx\.lock/);
   release();
   await assert.doesNotReject(decide(repo.cwd, draft));
 });

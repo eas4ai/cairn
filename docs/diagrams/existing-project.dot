@@ -6,18 +6,18 @@ digraph existing_project {
   edge  [fontname="Helvetica", fontsize=10];
 
   start [shape=oval, label="Start: /existing-project"];
-  state [shape=diamond, label="Cairn state?"];
+  state [shape=diamond, label="Sudus state?"];
   tonext [shape=oval, label="Done: switch to /next-feature;\nthis work is a later commitment"];
   fits [shape=diamond, label="Request belongs to the\nopen commitment?"];
   continue [shape=oval, label="Return to the work loop"];
   midway [shape=diamond, label="Commitment open:\ndeveloper chooses"];
   finish [shape=oval, label="Finish current commitment;\ncapture request as an item"];
-  supersede [label="cairn supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
+  supersede [label="sudus supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
   pending [label="Pending successor: resume the transition;\nthe later start points back to the superseded record"];
-  legacy [shape=diamond, label="Cairn 1.x records present?"];
-  migrate [label="Migrate: tell the developer, on ok remove the 1.x record\ndirectories (history keeps them); convert the spec in place\nuntil cairn lint docs/spec is clean, changing no requirement's words;\nkeep 1.x mechanism commands in docs/recon.md"];
-  init [label="Ask the developer: authority remote or local-only,\nsigned or attested; cairn init with the answers as flags"];
-  carry [label="Carry: one cairn item per 1.x item file;\nremove the item directories"];
+  legacy [shape=diamond, label="Sudus 1.x records present?"];
+  migrate [label="Migrate: tell the developer, on ok remove the 1.x record\ndirectories (history keeps them); convert the spec in place\nuntil sudus lint docs/spec is clean, changing no requirement's words;\nkeep 1.x mechanism commands in docs/recon.md"];
+  init [label="Ask the developer: authority remote or local-only,\nsigned or attested; sudus init with the answers as flags"];
+  carry [label="Carry: one sudus item per 1.x item file;\nremove the item directories"];
   hasspec [shape=diamond, label="docs/spec/overview.md exists?"];
   readspec [label="Path B: read glossary, keystone, domains,\nroadmap, decisions and items first"];
   recon [label="Recon before questions:\nmanifests, entry points, data, tests, CI, scripts,\nnon-spec docs and recent history"];

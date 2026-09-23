@@ -17,7 +17,7 @@ const domainFile = (reqs) => 'Prefix: DEMO\n\n' + reqs.map((r) =>
   `Mechanism: ${r.toLowerCase()}\nStatus: Agreed 2026-09-19\n`).join('\n');
 
 export const mechanismFor = (r) => ({
-  command: `node -e "process.stdout.write('cairn: ${r}: '+require('fs').readFileSync('flags/${r}','utf8').trim()+'\\n')"`,
+  command: `node -e "process.stdout.write('sudus: ${r}: '+require('fs').readFileSync('flags/${r}','utf8').trim()+'\\n')"`,
   inputs: ['src/demo.mjs', `flags/${r}`], documents: [], requirements: [r],
   results: 'per-requirement', identity: {},
 });
@@ -118,7 +118,7 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
     // and the 'decision' schema's closed key set includes `interfaces` (a list of any named
     // interface-classified paths), which the plan's payload omitted.
     decide: () => appendDecision(cwd, { kind: 'decision', level: 'Consequential', by: 'agent', title: 'Use a map', rests_on: [], wrong_if: 'lookups are rare', body: 'A map keeps lookups constant.', base_snap: startSnapshot, evaluation: null, interfaces: [] }, { command: 'decide' }),
-    runWake: () => spawnSync(process.execPath, [new URL('../../bin/cairn.mjs', import.meta.url).pathname, 'wake'], { cwd, encoding: 'utf8', env: { ...process.env, CAIRN_SESSION: 'test-session' } }),
+    runWake: () => spawnSync(process.execPath, [new URL('../../bin/sudus.mjs', import.meta.url).pathname, 'wake'], { cwd, encoding: 'utf8', env: { ...process.env, SUDUS_SESSION: 'test-session' } }),
   };
   return { cwd, slug, reqs, startSha, startSnapshot, write, remove, link, commit, log: () => readLog(cwd), add, snap, ...steps };
 }

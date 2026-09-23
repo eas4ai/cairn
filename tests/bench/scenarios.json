@@ -475,7 +475,7 @@
         ],
         "question": "Should the working agreement allow me to commit evidence receipts without running the check when only a comment changed?",
         "recommendation": "Add the exception to the agreement.",
-        "because": "Observed: `cairn check EXP-003` takes 40 s and the last three runs followed comment-only commits.",
+        "because": "Observed: `sudus check EXP-003` takes 40 s and the last three runs followed comment-only commits.",
         "if_wrong": "A comment-only commit that was not comment-only gets a receipt it did not earn.",
         "instead": "Keep running the check.",
         "options": [
@@ -519,7 +519,7 @@
         ],
         "question": "While fixing the sort I reformatted README.md, which is outside the declared inputs. Keep the change?",
         "recommendation": "Keep the README change.",
-        "because": "Observed: `cairn wake` names scope README.md; `git diff` shows 40 changed lines, all whitespace.",
+        "because": "Observed: `sudus wake` names scope README.md; `git diff` shows 40 changed lines, all whitespace.",
         "if_wrong": "A breach is kept without the developer's ruling.",
         "instead": "Restore README.md to its allowed base.",
         "options": [
@@ -539,7 +539,7 @@
         "concerns": [
           "EXP-002"
         ],
-        "question": "Should fixtures/ be added to network_exclude in .cairn/settings.json since the CSVs hold real client names?",
+        "question": "Should fixtures/ be added to network_exclude in .sudus/settings.json since the CSVs hold real client names?",
         "recommendation": "Add fixtures/** to network_exclude.",
         "because": "Observed: `grep -l '@' fixtures/*.csv` finds three files with email addresses in the note column.",
         "if_wrong": "The adversary review cannot read the fixtures it needs.",
@@ -549,7 +549,7 @@
           "Anonymize the fixtures."
         ],
         "paths": [
-          ".cairn/settings.json"
+          ".sudus/settings.json"
         ]
       }
     },

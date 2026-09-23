@@ -8,17 +8,17 @@ digraph spec_phase {
   start [shape=oval, label="Enter: initialized project; requirements Draft,\neach with a falsifier"];
   falsifiers [label="Propose falsifiers as one set;\nname the mechanism that observes each"];
   review [label="Self-review contradictions, ineffective falsifiers,\nand requirements no mechanism can check\n(done, not recorded)"];
-  lint [shape=diamond, label="cairn lint docs/spec clean?"];
+  lint [shape=diamond, label="sudus lint docs/spec clean?"];
   present [label="Present by exception;\ninvite another explanation"];
   outcome [shape=diamond, label="Developer's answer?"];
   explain [label="Explain another way"];
   correct [label="Apply corrections"];
   agreed [label="Confirm each block as Agreed,\nor record a deference decision"];
   commitment [label="Write roadmap section: Agreed requirements, delivery, done-when;\nmove Current: in the recoverable start transaction"];
-  declare [label="cairn declare for this commitment only;\neach mechanism has a failing violating example"];
+  declare [label="sudus declare for this commitment only;\neach mechanism has a failing violating example"];
   agreement [label="Prepare AGENTS.md from the template\nfor developer authorization"];
-  authorize [label="State what would be bound and ask; on ok\ncairn authorize --quote: one record binding the final spec,\nagreement and settings digests\n(changes or a question: authorize instead | ask, binds nothing)"];
-  startintent [label="cairn start: verify authorization and write command intent;\ncommit the prepared contract, agreement and mechanisms"];
+  authorize [label="State what would be bound and ask; on ok\nsudus authorize --quote: one record binding the final spec,\nagreement and settings digests\n(changes or a question: authorize instead | ask, binds nothing)"];
+  startintent [label="sudus start: verify authorization and write command intent;\ncommit the prepared contract, agreement and mechanisms"];
   startrec [label="Finish the start transaction: workspace snapshot plus frozen\nset and digests; include from_superseded when resuming;\ninstall exact refspecs when authority remote is configured"];
   done [shape=box, peripheries=2, label="Done: wake names the first work-loop action;\nConsequential decisions wait in the queue"];
 

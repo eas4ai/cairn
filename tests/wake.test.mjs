@@ -20,7 +20,7 @@ test('a command typed in a subdirectory runs at the repository top level, and a 
   const r = await loopRepo();
   const sub = join(r.cwd, 'src', 'deep'); await mkdir(sub, { recursive: true });
   // cmdWake prints to process.stdout itself, so wake runs as a child process here.
-  const spawnWake = (cwd) => spawnSync(process.execPath, [join(process.cwd(), 'bin/cairn.mjs'), 'wake'], { cwd, encoding: 'utf8' });
+  const spawnWake = (cwd) => spawnSync(process.execPath, [join(process.cwd(), 'bin/sudus.mjs'), 'wake'], { cwd, encoding: 'utf8' });
   const fromRoot = spawnWake(r.cwd), fromSub = spawnWake(sub);
   assert.equal(fromSub.stderr, ''); assert.equal(fromSub.stdout, fromRoot.stdout); assert.match(fromRoot.stdout, /action: run DEMO-001/);
   await writeFile(join(sub, 'def.json'), JSON.stringify(mechanismFor('DEMO-001')));
@@ -32,7 +32,7 @@ test('record names an untracked file under a declared input and says a build art
   await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src', 'flags/DEMO-001'] });
   await r.commit('declare src/ as an input');
   await r.write('src/__pycache__/demo.pyc', 'x');
-  const spawnWake = () => spawnSync(process.execPath, [join(process.cwd(), 'bin/cairn.mjs'), 'wake'], { cwd: r.cwd, encoding: 'utf8' }).stdout;
+  const spawnWake = () => spawnSync(process.execPath, [join(process.cwd(), 'bin/sudus.mjs'), 'wake'], { cwd: r.cwd, encoding: 'utf8' }).stdout;
   const w = spawnWake();
   assert.match(w, /action: record src\/__pycache__\/demo.pyc/); assert.match(w, /untracked file under a declared input.*gitignore/);
   await r.write('.gitignore', '__pycache__/\n');
@@ -45,8 +45,8 @@ import { begin, end } from '../lib/lease.mjs';
 import { preflight, dispose } from '../lib/scope.mjs';
 
 test('outside a project wake exits 3 naming the skills', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
-  assert.deepEqual(await wake(dir), { exit: 3, line: 'cairn: outside a project; run /new-project or /existing-project' });
+  const dir = await mkdtemp(join(tmpdir(), 'sudus-none-'));
+  assert.deepEqual(await wake(dir), { exit: 3, line: 'sudus: outside a project; run /new-project or /existing-project' });
 });
 
 // Deviation from the plan text: tests/helpers/repo.mjs's makeProject (plan 01/03) already
@@ -55,22 +55,22 @@ test('outside a project wake exits 3 naming the skills', async () => {
 // configured authority remote; the plan's literal test assumed the opposite default (no remote
 // until the test adds one) and would have failed its first assertion under the real fixture.
 // Split into two repositories instead: one built with authority_remote explicitly null (for the
-// 'run cairn init' line) and a plain loopRepo() (for the fetch-command line, which the fixture's
+// 'run sudus init' line) and a plain loopRepo() (for the fetch-command line, which the fixture's
 // own default remote already exercises without needing to configure anything by hand).
 test('missing durable refs print the exact fetch command from section 4, or name init without a remote', async () => {
   const r1 = await loopRepo({ settings: { authority_remote: null } });
-  await git(['update-ref', '-d', 'refs/cairn/log'], { cwd: r1.cwd });
+  await git(['update-ref', '-d', 'refs/sudus/log'], { cwd: r1.cwd });
   // Deviation from the plan text: plan 12's lib/travel.mjs (missingRefsLine) now supplies this
   // line, naming every missing durable ref rather than only the first one this loop's own scan
-  // happened to reach; its local-only wording is "cairn init  (durable refs ... are missing and no
+  // happened to reach; its local-only wording is "sudus init  (durable refs ... are missing and no
   // authority remote is configured)", not this file's earlier placeholder text.
-  assert.deepEqual(await wake(r1.cwd), { exit: 3, line: 'cairn init  (durable refs refs/cairn/log are missing and no authority remote is configured)' });
+  assert.deepEqual(await wake(r1.cwd), { exit: 3, line: 'sudus init  (durable refs refs/sudus/log are missing and no authority remote is configured)' });
 
   const r2 = await loopRepo();
-  await git(['update-ref', '-d', 'refs/cairn/log'], { cwd: r2.cwd });
+  await git(['update-ref', '-d', 'refs/sudus/log'], { cwd: r2.cwd });
   const v = await wake(r2.cwd);
   assert.equal(v.exit, 3);
-  assert.equal(v.line, "git fetch origin 'refs/cairn/log:refs/cairn/log' \\\n  'refs/cairn/snapshots:refs/cairn/snapshots'");
+  assert.equal(v.line, "git fetch origin 'refs/sudus/log:refs/sudus/log' \\\n  'refs/sudus/snapshots:refs/sudus/snapshots'");
   assert.equal(FETCH_LINE('origin'), v.line);
 });
 
@@ -84,16 +84,16 @@ test('a pending supersession and an interrupted transaction are not verdicts', a
   const r = await loopRepo();
   await r.add('command-intent', 'tx01', {
     tx: 'tx01', command: 'start', identity: {},
-    pre: { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: null, files: {} },
+    pre: { refs: { 'refs/sudus/log': null, 'refs/sudus/snapshots': null }, head: null, files: {} },
     writes: [],
   });
-  assert.deepEqual(await wake(r.cwd), { exit: 3, line: 'cairn recover tx01' });
+  assert.deepEqual(await wake(r.cwd), { exit: 3, line: 'sudus recover tx01' });
   const r2 = await loopRepo();
   await r2.add('superseded', r2.slug, {
     slug: r2.slug, start: r2.startSha, decision: ulid(), transition: ulid(), successor: 'second', carried: [],
     intent: null, results: [],
   });
-  assert.deepEqual(await wake(r2.cwd), { exit: 3, line: 'cairn: pending supersession to second; run /existing-project' });
+  assert.deepEqual(await wake(r2.cwd), { exit: 3, line: 'sudus: pending supersession to second; run /existing-project' });
 });
 
 test('the precedence order is the one section 5 states', () => {
@@ -119,9 +119,9 @@ async function looseObjectCount(gitDir) {
   return count;
 }
 
-// Task 22 registers `cairn wake` in lib/cli.mjs; until then r.runWake() exits 1 with "unknown
+// Task 22 registers `sudus wake` in lib/cli.mjs; until then r.runWake() exits 1 with "unknown
 // command wake" and this test's second assertion fails as the plan's own text anticipates
-// ("Expected: PASS once task 22 registers cairn wake; until then the runWake line fails with exit
+// ("Expected: PASS once task 22 registers sudus wake; until then the runWake line fails with exit
 // 1. Keep the test; it passes from task 22 on."). Committed here regardless, per that instruction.
 //
 // Fix round 1, item 2: the fixture above (a stray, undeclared file with no receipt at all) never
@@ -177,9 +177,9 @@ test('an unreadable hand-written input names repair first', async () => {
 
 test('a stale lease is reconciled before scope', async () => {
   const r = await loopRepo();
-  process.env.CAIRN_SESSION = 'test-session';               // begin (plan 04) records this as the lease's session
+  process.env.SUDUS_SESSION = 'test-session';               // begin (plan 04) records this as the lease's session
   await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] });
-  delete process.env.CAIRN_SESSION;
+  delete process.env.SUDUS_SESSION;
   await r.write('src/stray.mjs', 'x\n');
   const other = await wake(r.cwd, { session: 'other-session' });
   assert.deepEqual([other.action, other.target], ['reconcile', 'implement DEMO-001']);
@@ -253,7 +253,7 @@ test('an escalation without a final answer is Waiting with the five fields verba
 // `intent` (a ref-typed field, lib/records.mjs) cannot be an arbitrary well-formed sha the way
 // `draft_digest` (a digest-typed field, never cross-checked) can: wake()'s own read path runs
 // lib/travel.mjs's validateAfterFetch before verdictOf, which walks every ref-typed field of every
-// record and names a `cairn push` repair for one that names no record actually in the log (section
+// record and names a `sudus push` repair for one that names no record actually in the log (section
 // 4, "After fetch, wake validates all cross-references"). It does not check the referenced
 // record's *kind*, only that some record with that sha exists, so `r.startSha` (always present,
 // any loopRepo() fixture) stands in for it without needing a real evaluation-intent record.
@@ -285,7 +285,7 @@ test('developer: absent exits 4 on any unanswered escalation, since no one can a
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting'); assert.equal(v.exit, 4);
 });
-test('a fourth distinct failing attempt is refused by cairn check until an escalation concerns the requirement', async () => {
+test('a fourth distinct failing attempt is refused by sudus check until an escalation concerns the requirement', async () => {
   const r = await loopRepo();
   for (let i = 1; i <= 3; i++) { await r.write('src/demo.mjs', `console.log(${i});\n`); await r.commit(`attempt ${i}`); await check(r.cwd, 'DEMO-001'); }
   assert.deepEqual([(await wake(r.cwd)).action, (await wake(r.cwd)).target], ['escalate', 'DEMO-001']);
@@ -620,7 +620,7 @@ test('an unrealized Consequential decision is build until a realized line names 
 
 // Fix round 1, item 5: doneRule's bullet 4 used to select every non-'decision' ADR line (a 'read'
 // line included) as closing a Consequential decision, and separately never checked
-// level === 'Consequential' at all. A 'read' line (`cairn decisions --read`, a developer
+// level === 'Consequential' at all. A 'read' line (`sudus decisions --read`, a developer
 // acknowledgment, not a realization) must not close it; a 'realized' line must.
 test('a read line does not close a Consequential decision for the Done rule, but a realized line does', async () => {
   const r = await loopRepo();
@@ -714,11 +714,11 @@ test('a closed range with a backlog item names promote; without one the verdict 
   assert.equal((await wake(r.cwd)).verdict, 'Done');   // a next-feature item waits for the developer
 });
 
-// Fix round 1, item 7: the Waiting render no longer appends an `answer: cairn answer ...` line
+// Fix round 1, item 7: the Waiting render no longer appends an `answer: sudus answer ...` line
 // (section 6 names verdict, action or party, one reason line and the predicate; Waiting's own
 // five fields never claimed an answer line too). Checked here against the exact stdout bytes, not
 // just a slice, so a stray extra line would fail this test.
-test('cairn wake prints verdict, action or party, one reason line and the predicate; Waiting adds the five fields', async () => {
+test('sudus wake prints verdict, action or party, one reason line and the predicate; Waiting adds the five fields', async () => {
   const r = await loopRepo();
   let out = r.runWake();
   assert.equal(out.status, 0);
@@ -731,10 +731,10 @@ test('cairn wake prints verdict, action or party, one reason line and the predic
     'question: Q?', 'recommendation: R', 'because: B', 'if wrong: W', 'instead: I',
     `predicate: ${PREDICATES.waiting}`, '',
   ].join('\n'));
-  const dir = await mkdtemp(join(tmpdir(), 'cairn-none-'));
-  const none = spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, 'wake'], { cwd: dir, encoding: 'utf8' });
+  const dir = await mkdtemp(join(tmpdir(), 'sudus-none-'));
+  const none = spawnSync(process.execPath, [new URL('../bin/sudus.mjs', import.meta.url).pathname, 'wake'], { cwd: dir, encoding: 'utf8' });
   assert.equal(none.status, 3);
-  assert.equal(none.stdout, 'cairn: outside a project; run /new-project or /existing-project\n');
+  assert.equal(none.stdout, 'sudus: outside a project; run /new-project or /existing-project\n');
 });
 
 // Fix round 1, item 11(b), pulled forward as a dependency of item 3: under wake's own cascading
@@ -756,11 +756,11 @@ test('the report and accept predicates do not crash when asked about a state wit
 
 // Fix round 1, item 8: a fifth exit-3 case beyond section 2's four. makeProject() (plan 01/03)
 // initializes settings, the init record and both durable refs but writes no start record at all --
-// exactly the pending-initialization state between `cairn init` and the spec-phase tail's
-// `cairn start`. The existing-project skill is what resumes it.
+// exactly the pending-initialization state between `sudus init` and the spec-phase tail's
+// `sudus start`. The existing-project skill is what resumes it.
 test('a project with durable refs but no start record at all names the pending-initialization skill', async () => {
   const { cwd } = await makeProject();
-  assert.deepEqual(await wake(cwd), { exit: 3, line: 'cairn: no commitment started; run /new-project or /existing-project' });
+  assert.deepEqual(await wake(cwd), { exit: 3, line: 'sudus: no commitment started; run /new-project or /existing-project' });
 });
 
 // Fix round 1, item 11(a): nothing bound the predicates array's own registration order to ORDER
@@ -777,10 +777,10 @@ test("the predicates array is registered in exactly ORDER's precedence, aside fr
 test('a corrupted action lease is a repair refusal, not a crash', async () => {
   const r = await loopRepo();
   await begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [] });
-  const leaseSha = await readRef(r.cwd, 'refs/cairn/in-progress');
+  const leaseSha = await readRef(r.cwd, 'refs/sudus/in-progress');
   const { tree } = await catCommit(r.cwd, leaseSha);
-  const badSha = await commitTree(r.cwd, { tree, parents: [], subject: 'cairn: lease implement DEMO-001', body: 'not json', trailers: [] });
-  await updateRefCAS(r.cwd, 'refs/cairn/in-progress', badSha, leaseSha);
+  const badSha = await commitTree(r.cwd, { tree, parents: [], subject: 'sudus: lease implement DEMO-001', body: 'not json', trailers: [] });
+  await updateRefCAS(r.cwd, 'refs/sudus/in-progress', badSha, leaseSha);
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Resolvable');
   assert.equal(v.action, 'repair');
@@ -789,7 +789,7 @@ test('a corrupted action lease is a repair refusal, not a crash', async () => {
 // Fix round 2, finding 1: a declared input directory that expands to a '__proto__' path used to
 // make lib/gitx.mjs's treeShaFromEntries compute a wrong, permanently-mismatched tree sha (or
 // silently drop the entry), so isCurrent never found the receipt current again and wake named
-// `run DEMO-001` forever, with no way for `cairn check` to clear it. '__proto__' and 'constructor'
+// `run DEMO-001` forever, with no way for `sudus check` to clear it. '__proto__' and 'constructor'
 // are ordinary path components to Git; declaring the whole 'src' directory (rather than the exact
 // file) as the input is what makes resolveInputPaths actually walk into the awkward subdirectory.
 test('a declared input directory containing a __proto__ path component is current after passing, not stuck on run', async () => {

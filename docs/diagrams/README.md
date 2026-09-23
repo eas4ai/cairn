@@ -1,9 +1,9 @@
 # Process digraphs
 
 Six Graphviz digraphs, one per process, each from start to done. They
-are part of the Cairn 2 feature specification in docs/spec/cairn-v2.md.
+are part of the Sudus 2 feature specification in docs/spec/sudus-v2.md.
 
-- install.dot: from a harness with no Cairn to the command, hooks and skills.
+- install.dot: from a harness with no Sudus to the command, hooks and skills.
 - spec-phase.dot: the tail the three entry flows share, from drafted requirements to the first action.
 - new-project.dot: from an empty directory to an Agreed first commitment.
 - existing-project.dot: from an unspecified or drifted codebase, or a pending supersession, to one prepared commitment.

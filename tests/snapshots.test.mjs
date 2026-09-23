@@ -25,10 +25,10 @@ test('globToRegExp: ** spans segments, * and ? stay inside one', () => {
   assert.ok(m('config/*.secret.*', 'config/db.secret.json') && !m('config/*.secret.*', 'config/x/db.secret.json'));
   assert.ok(m('a/**/b', 'a/b') && m('a/**/b', 'a/x/y/b') && m('*.pem', 'k.pem') && !m('*.pem', 'd/k.pem'));
 });
-test('a workspace snapshot holds tracked dirty bytes and untracked files, not .git or .cairn/output, and leaves the index alone', async (t) => {
+test('a workspace snapshot holds tracked dirty bytes and untracked files, not .git or .sudus/output, and leaves the index alone', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  await repo.write('a.txt', 'clean\n'); await repo.write('.gitignore', 'ignored.log\n.cairn/output/\n'); await repo.commit('base');
-  await repo.write('a.txt', 'dirty\n'); await repo.write('new.txt', 'new\n'); await repo.write('ignored.log', 'x'); await repo.write('.cairn/output/o', 'x');
+  await repo.write('a.txt', 'clean\n'); await repo.write('.gitignore', 'ignored.log\n.sudus/output/\n'); await repo.commit('base');
+  await repo.write('a.txt', 'dirty\n'); await repo.write('new.txt', 'new\n'); await repo.write('ignored.log', 'x'); await repo.write('.sudus/output/o', 'x');
   const before = await repo.git('ls-files', '--stage');
   const sha = await writeWorkspaceSnapshot(repo.dir);
   assert.deepEqual(await paths(repo, sha, 'workspace'), ['.gitignore', 'a.txt', 'new.txt']);
@@ -51,10 +51,10 @@ test('the kind is checked at every reference', async (t) => {
 test('readSnapshot checks the same integrity envelope as decodeRecord: digest mismatch and noncanonical JSON are both refused', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const goodBody = '{"kind":"workspace"}';
-  const badDigest = await rawSnapshotCommit(repo, 'cairn: snapshot workspace', goodBody, [['Cairn-Schema', '1'], ['Cairn-Digest', sha256('other')]]);
+  const badDigest = await rawSnapshotCommit(repo, 'sudus: snapshot workspace', goodBody, [['Sudus-Schema', '1'], ['Sudus-Digest', sha256('other')]]);
   await assert.rejects(readSnapshot(repo.dir, badDigest, 'workspace'), (e) => e instanceof SnapshotError && /digest/.test(e.message));
   const nonCanonBody = '{"kind": "workspace"}';
-  const nonCanon = await rawSnapshotCommit(repo, 'cairn: snapshot workspace', nonCanonBody, [['Cairn-Schema', '1'], ['Cairn-Digest', sha256(nonCanonBody)]]);
+  const nonCanon = await rawSnapshotCommit(repo, 'sudus: snapshot workspace', nonCanonBody, [['Sudus-Schema', '1'], ['Sudus-Digest', sha256(nonCanonBody)]]);
   await assert.rejects(readSnapshot(repo.dir, nonCanon, 'workspace'), (e) => e instanceof SnapshotError && /noncanonical/.test(e.message));
 });
 test('a snapshot refuses untracked credential paths and network_exclude matches, by entry path only', async (t) => {
@@ -146,12 +146,12 @@ import { PathError } from '../lib/paths.mjs';
 test('snapshots refuse untracked paths matched by settings network_exclude', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const settings = { schema: 1, authority_remote: null, outside: [], source: [], interfaces: [], data: [], network_exclude: ['fixtures/private/**'], signing_key: null, attribution: 'forbidden', developer: 'present', harness: {}, typesafeai: { enabled: false, model: null, weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35, confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } };
-  await repo.write('.cairn/settings.json', JSON.stringify(settings)); await repo.write('a.txt', 'a'); await repo.commit('base');
+  await repo.write('.sudus/settings.json', JSON.stringify(settings)); await repo.write('a.txt', 'a'); await repo.commit('base');
   await repo.write('fixtures/private/k.json', '{}');
   await assert.rejects(writeWorkspaceSnapshot(repo.dir), /fixtures\/private\/k.json \(matches fixtures\/private\/\*\*\)/);
   await assert.rejects(writeInput(repo.dir, { mechanism: 'm', inputs: ['fixtures'] }), /fixtures\/private\/k.json/);
   assert.match(await writeWorkspaceSnapshot(repo.dir, { exclude: [] }), /^[0-9a-f]{40}$/);
-  await repo.write('.cairn/settings.json', '{"schema":2}');
+  await repo.write('.sudus/settings.json', '{"schema":2}');
   await assert.rejects(writeWorkspaceSnapshot(repo.dir), SettingsError);
 });
 // Carried from plan 01's review: writeInputSnapshot passes inputs straight into `git ls-files` as

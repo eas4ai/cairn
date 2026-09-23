@@ -14,7 +14,7 @@
 <g id="node1" class="node">
 <title>wake</title>
 <ellipse fill="none" stroke="black" cx="251.02" cy="-1023.04" rx="251.02" ry="34.29"/>
-<text xml:space="preserve" text-anchor="middle" x="251.02" y="-1032.84" font-family="Helvetica,sans-Serif" font-size="11.00">cairn wake is read&#45;only:</text>
+<text xml:space="preserve" text-anchor="middle" x="251.02" y="-1032.84" font-family="Helvetica,sans-Serif" font-size="11.00">sudus wake is read&#45;only:</text>
 <text xml:space="preserve" text-anchor="middle" x="251.02" y="-1019.34" font-family="Helvetica,sans-Serif" font-size="11.00">print verdict, action or party, reason and predicate</text>
 <text xml:space="preserve" text-anchor="middle" x="251.02" y="-1005.84" font-family="Helvetica,sans-Serif" font-size="11.00">(missing refs, pending transition or recovery: one line, exit 3)</text>
 </g>
@@ -36,7 +36,7 @@
 <path fill="none" stroke="black" d="M754.77,-654.88C754.77,-654.88 407.27,-654.88 407.27,-654.88 401.27,-654.88 395.27,-648.88 395.27,-642.88 395.27,-642.88 395.27,-604.88 395.27,-604.88 395.27,-598.88 401.27,-592.88 407.27,-592.88 407.27,-592.88 754.77,-592.88 754.77,-592.88 760.77,-592.88 766.77,-598.88 766.77,-604.88 766.77,-604.88 766.77,-642.88 766.77,-642.88 766.77,-648.88 760.77,-654.88 754.77,-654.88"/>
 <text xml:space="preserve" text-anchor="middle" x="581.02" y="-640.42" font-family="Helvetica,sans-Serif" font-size="11.00">Waiting: print the escalation&#39;s five fields verbatim;</text>
 <text xml:space="preserve" text-anchor="middle" x="581.02" y="-626.92" font-family="Helvetica,sans-Serif" font-size="11.00">the agent adds nothing to the work, asks the developer in prose</text>
-<text xml:space="preserve" text-anchor="middle" x="581.02" y="-613.42" font-family="Helvetica,sans-Serif" font-size="11.00">and records their answer with cairn answer</text>
+<text xml:space="preserve" text-anchor="middle" x="581.02" y="-613.42" font-family="Helvetica,sans-Serif" font-size="11.00">and records their answer with sudus answer</text>
 <text xml:space="preserve" text-anchor="middle" x="581.02" y="-599.92" font-family="Helvetica,sans-Serif" font-size="11.00">(developer: absent: same print, exit 4)</text>
 </g>
 <!-- verdict&#45;&gt;waiting -->
@@ -95,7 +95,7 @@
 <title>answer</title>
 <path fill="none" stroke="black" d="M602.02,-340C602.02,-340 226.02,-340 226.02,-340 220.02,-340 214.02,-334 214.02,-328 214.02,-328 214.02,-303.5 214.02,-303.5 214.02,-297.5 220.02,-291.5 226.02,-291.5 226.02,-291.5 602.02,-291.5 602.02,-291.5 608.02,-291.5 614.02,-297.5 614.02,-303.5 614.02,-303.5 614.02,-328 614.02,-328 614.02,-334 608.02,-340 602.02,-340"/>
 <text xml:space="preserve" text-anchor="middle" x="414.02" y="-325.55" font-family="Helvetica,sans-Serif" font-size="11.00">The agent asks the developer in conversation and records the words:</text>
-<text xml:space="preserve" text-anchor="middle" x="414.02" y="-312.05" font-family="Helvetica,sans-Serif" font-size="11.00">cairn answer ok | instead | ask &#45;&#45;quote;</text>
+<text xml:space="preserve" text-anchor="middle" x="414.02" y="-312.05" font-family="Helvetica,sans-Serif" font-size="11.00">sudus answer ok | instead | ask &#45;&#45;quote;</text>
 <text xml:space="preserve" text-anchor="middle" x="414.02" y="-298.55" font-family="Helvetica,sans-Serif" font-size="11.00">signed when a key exists, attested otherwise</text>
 </g>
 <!-- waiting&#45;&gt;answer -->
@@ -119,21 +119,21 @@
 <!-- cannot -->
 <g id="node8" class="node">
 <title>cannot</title>
-<path fill="none" stroke="black" d="M1308.07,-146.38C1308.07,-146.38 1139.34,-130.62 1139.34,-130.62 1133.37,-130.06 1133.37,-128.94 1139.34,-128.38 1139.34,-128.38 1308.07,-112.62 1308.07,-112.62 1314.05,-112.06 1326,-112.06 1331.97,-112.62 1331.97,-112.62 1500.7,-128.38 1500.7,-128.38 1506.68,-128.94 1506.68,-130.06 1500.7,-130.62 1500.7,-130.62 1331.97,-146.38 1331.97,-146.38 1326,-146.94 1314.05,-146.94 1308.07,-146.38"/>
-<text xml:space="preserve" text-anchor="middle" x="1320.02" y="-125.8" font-family="Helvetica,sans-Serif" font-size="11.00">Cannot act, or cycle bound reached?</text>
+<path fill="none" stroke="black" d="M1309.07,-146.38C1309.07,-146.38 1140.34,-130.62 1140.34,-130.62 1134.37,-130.06 1134.37,-128.94 1140.34,-128.38 1140.34,-128.38 1309.07,-112.62 1309.07,-112.62 1315.05,-112.06 1327,-112.06 1332.97,-112.62 1332.97,-112.62 1501.7,-128.38 1501.7,-128.38 1507.68,-128.94 1507.68,-130.06 1501.7,-130.62 1501.7,-130.62 1332.97,-146.38 1332.97,-146.38 1327,-146.94 1315.05,-146.94 1309.07,-146.38"/>
+<text xml:space="preserve" text-anchor="middle" x="1321.02" y="-125.8" font-family="Helvetica,sans-Serif" font-size="11.00">Cannot act, or cycle bound reached?</text>
 </g>
 <!-- act&#45;&gt;cannot -->
 <g id="edge9" class="edge">
 <title>act&#45;&gt;cannot</title>
-<path fill="none" stroke="black" d="M1252.47,-605.64C1262.83,-532.82 1303.04,-249.93 1315.99,-158.89"/>
-<polygon fill="black" stroke="black" points="1319.44,-159.49 1317.38,-149.09 1312.51,-158.5 1319.44,-159.49"/>
+<path fill="none" stroke="black" d="M1252.51,-605.64C1263.01,-532.82 1303.8,-249.93 1316.93,-158.89"/>
+<polygon fill="black" stroke="black" points="1320.38,-159.49 1318.34,-149.09 1313.45,-158.49 1320.38,-159.49"/>
 </g>
 <!-- measure -->
 <g id="node10" class="node">
 <title>measure</title>
 <path fill="none" stroke="black" d="M1177.77,-340C1177.77,-340 812.27,-340 812.27,-340 806.27,-340 800.27,-334 800.27,-328 800.27,-328 800.27,-303.5 800.27,-303.5 800.27,-297.5 806.27,-291.5 812.27,-291.5 812.27,-291.5 1177.77,-291.5 1177.77,-291.5 1183.77,-291.5 1189.77,-297.5 1189.77,-303.5 1189.77,-303.5 1189.77,-328 1189.77,-328 1189.77,-334 1183.77,-340 1177.77,-340"/>
 <text xml:space="preserve" text-anchor="middle" x="995.02" y="-325.55" font-family="Helvetica,sans-Serif" font-size="11.00">Consequential decision while acting:</text>
-<text xml:space="preserve" text-anchor="middle" x="995.02" y="-312.05" font-family="Helvetica,sans-Serif" font-size="11.00">cairn measure the draft first</text>
+<text xml:space="preserve" text-anchor="middle" x="995.02" y="-312.05" font-family="Helvetica,sans-Serif" font-size="11.00">sudus measure the draft first</text>
 <text xml:space="preserve" text-anchor="middle" x="995.02" y="-298.55" font-family="Helvetica,sans-Serif" font-size="11.00">(five Score levels, composite, veto, suggested: advice, not a route)</text>
 </g>
 <!-- act&#45;&gt;measure -->
@@ -227,7 +227,7 @@
 <polygon fill="none" stroke="black" points="1462.27,-422 1462.27,-443.25 1578.77,-443.25 1578.77,-422 1462.27,-422"/>
 <text xml:space="preserve" text-anchor="start" x="1467.27" y="-429.7" font-family="Helvetica,sans-Serif" font-size="9.00">done SLUG</text>
 <polygon fill="none" stroke="black" points="1578.77,-422 1578.77,-443.25 2047.77,-443.25 2047.77,-422 1578.77,-422"/>
-<text xml:space="preserve" text-anchor="start" x="1583.77" y="-429.7" font-family="Helvetica,sans-Serif" font-size="9.00">Done rule holds; cairn done writes the final record</text>
+<text xml:space="preserve" text-anchor="start" x="1583.77" y="-429.7" font-family="Helvetica,sans-Serif" font-size="9.00">Done rule holds; sudus done writes the final record</text>
 <polygon fill="none" stroke="black" points="1462.27,-400.75 1462.27,-422 1578.77,-422 1578.77,-400.75 1462.27,-400.75"/>
 <text xml:space="preserve" text-anchor="start" x="1467.27" y="-408.45" font-family="Helvetica,sans-Serif" font-size="9.00">promote</text>
 <polygon fill="none" stroke="black" points="1578.77,-400.75 1578.77,-422 2047.77,-422 2047.77,-400.75 1578.77,-400.75"/>
@@ -241,36 +241,36 @@
 <!-- escalate -->
 <g id="node9" class="node">
 <title>escalate</title>
-<path fill="none" stroke="black" d="M845.27,-48.5C845.27,-48.5 536.77,-48.5 536.77,-48.5 530.77,-48.5 524.77,-42.5 524.77,-36.5 524.77,-36.5 524.77,-12 524.77,-12 524.77,-6 530.77,0 536.77,0 536.77,0 845.27,0 845.27,0 851.27,0 857.27,-6 857.27,-12 857.27,-12 857.27,-36.5 857.27,-36.5 857.27,-42.5 851.27,-48.5 845.27,-48.5"/>
-<text xml:space="preserve" text-anchor="middle" x="691.02" y="-34.05" font-family="Helvetica,sans-Serif" font-size="11.00">Write one evidence&#45;backed escalation;</text>
-<text xml:space="preserve" text-anchor="middle" x="691.02" y="-20.55" font-family="Helvetica,sans-Serif" font-size="11.00">cycle guard: fourth same&#45;target or 28th admin transition,</text>
-<text xml:space="preserve" text-anchor="middle" x="691.02" y="-7.05" font-family="Helvetica,sans-Serif" font-size="11.00">or third unsuccessful recovery</text>
+<path fill="none" stroke="black" d="M843.27,-48.5C843.27,-48.5 534.77,-48.5 534.77,-48.5 528.77,-48.5 522.77,-42.5 522.77,-36.5 522.77,-36.5 522.77,-12 522.77,-12 522.77,-6 528.77,0 534.77,0 534.77,0 843.27,0 843.27,0 849.27,0 855.27,-6 855.27,-12 855.27,-12 855.27,-36.5 855.27,-36.5 855.27,-42.5 849.27,-48.5 843.27,-48.5"/>
+<text xml:space="preserve" text-anchor="middle" x="689.02" y="-34.05" font-family="Helvetica,sans-Serif" font-size="11.00">Write one evidence&#45;backed escalation;</text>
+<text xml:space="preserve" text-anchor="middle" x="689.02" y="-20.55" font-family="Helvetica,sans-Serif" font-size="11.00">cycle guard: fourth same&#45;target or 28th admin transition,</text>
+<text xml:space="preserve" text-anchor="middle" x="689.02" y="-7.05" font-family="Helvetica,sans-Serif" font-size="11.00">or third unsuccessful recovery</text>
 </g>
 <!-- cannot&#45;&gt;escalate -->
 <g id="edge11" class="edge">
 <title>cannot&#45;&gt;escalate</title>
-<path fill="none" stroke="black" d="M1284.3,-114.42C1248.6,-100.96 1191.86,-81.16 1141.02,-70.5 1052.4,-51.91 952.3,-40.88 869.05,-34.38"/>
-<polygon fill="black" stroke="black" points="869.43,-30.9 859.19,-33.63 868.9,-37.88 869.43,-30.9"/>
-<text xml:space="preserve" text-anchor="middle" x="1236.44" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">cannot or bounded</text>
+<path fill="none" stroke="black" d="M1285.09,-114.42C1249.19,-100.96 1192.13,-81.17 1141.02,-70.5 1051.71,-51.86 950.82,-40.83 867.05,-34.33"/>
+<polygon fill="black" stroke="black" points="867.36,-30.84 857.12,-33.58 866.83,-37.82 867.36,-30.84"/>
+<text xml:space="preserve" text-anchor="middle" x="1236.71" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">cannot or bounded</text>
 </g>
 <!-- trace -->
 <g id="node13" class="node">
 <title>trace</title>
-<path fill="none" stroke="black" d="M1468.65,-42.25C1468.65,-42.25 1171.4,-42.25 1171.4,-42.25 1165.4,-42.25 1159.4,-36.25 1159.4,-30.25 1159.4,-30.25 1159.4,-18.25 1159.4,-18.25 1159.4,-12.25 1165.4,-6.25 1171.4,-6.25 1171.4,-6.25 1468.65,-6.25 1468.65,-6.25 1474.65,-6.25 1480.65,-12.25 1480.65,-18.25 1480.65,-18.25 1480.65,-30.25 1480.65,-30.25 1480.65,-36.25 1474.65,-42.25 1468.65,-42.25"/>
-<text xml:space="preserve" text-anchor="middle" x="1320.02" y="-27.3" font-family="Helvetica,sans-Serif" font-size="11.00">Leave the required trace:</text>
-<text xml:space="preserve" text-anchor="middle" x="1320.02" y="-13.8" font-family="Helvetica,sans-Serif" font-size="11.00">branch commit, typed snapshot or canonical log record</text>
+<path fill="none" stroke="black" d="M1469.65,-42.25C1469.65,-42.25 1172.4,-42.25 1172.4,-42.25 1166.4,-42.25 1160.4,-36.25 1160.4,-30.25 1160.4,-30.25 1160.4,-18.25 1160.4,-18.25 1160.4,-12.25 1166.4,-6.25 1172.4,-6.25 1172.4,-6.25 1469.65,-6.25 1469.65,-6.25 1475.65,-6.25 1481.65,-12.25 1481.65,-18.25 1481.65,-18.25 1481.65,-30.25 1481.65,-30.25 1481.65,-36.25 1475.65,-42.25 1469.65,-42.25"/>
+<text xml:space="preserve" text-anchor="middle" x="1321.02" y="-27.3" font-family="Helvetica,sans-Serif" font-size="11.00">Leave the required trace:</text>
+<text xml:space="preserve" text-anchor="middle" x="1321.02" y="-13.8" font-family="Helvetica,sans-Serif" font-size="11.00">branch commit, typed snapshot or canonical log record</text>
 </g>
 <!-- cannot&#45;&gt;trace -->
 <g id="edge10" class="edge">
 <title>cannot&#45;&gt;trace</title>
-<path fill="none" stroke="black" d="M1320.02,-111.45C1320.02,-95.85 1320.02,-72.46 1320.02,-53.98"/>
-<polygon fill="black" stroke="black" points="1323.52,-54.18 1320.02,-44.18 1316.52,-54.18 1323.52,-54.18"/>
-<text xml:space="preserve" text-anchor="middle" x="1337.65" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">can act</text>
+<path fill="none" stroke="black" d="M1321.02,-111.45C1321.02,-95.85 1321.02,-72.46 1321.02,-53.98"/>
+<polygon fill="black" stroke="black" points="1324.52,-54.18 1321.02,-44.18 1317.52,-54.18 1324.52,-54.18"/>
+<text xml:space="preserve" text-anchor="middle" x="1338.65" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">can act</text>
 </g>
 <!-- escalate&#45;&gt;wake -->
 <g id="edge13" class="edge">
 <title>escalate&#45;&gt;wake</title>
-<path fill="none" stroke="black" d="M524.54,-34.5C324.09,-47.92 14.02,-77 14.02,-128.5 14.02,-926.75 14.02,-926.75 14.02,-926.75 14.02,-951.95 60.75,-973.56 112.7,-989.8"/>
+<path fill="none" stroke="black" d="M522.6,-34.57C322.73,-48.06 14.02,-77.19 14.02,-128.5 14.02,-926.75 14.02,-926.75 14.02,-926.75 14.02,-951.95 60.75,-973.56 112.7,-989.8"/>
 <polygon fill="black" stroke="black" points="111.47,-993.09 122.06,-992.64 113.5,-986.39 111.47,-993.09"/>
 </g>
 <!-- gate -->
@@ -288,15 +288,15 @@
 <!-- gate&#45;&gt;escalate -->
 <g id="edge16" class="edge">
 <title>gate&#45;&gt;escalate</title>
-<path fill="none" stroke="black" d="M895.17,-222.12C816.56,-213.14 677.96,-192.19 647.77,-153.75 625.7,-125.64 645.02,-85.67 664.4,-57.8"/>
-<polygon fill="black" stroke="black" points="666.98,-60.21 670.03,-50.07 661.32,-56.1 666.98,-60.21"/>
-<text xml:space="preserve" text-anchor="middle" x="719.4" y="-126.38" font-family="Helvetica,sans-Serif" font-size="10.00">yes: escalate &#45;&#45;consequential</text>
+<path fill="none" stroke="black" d="M894.99,-222.15C816.12,-213.21 677.07,-192.3 646.77,-153.75 624.83,-125.84 643.54,-86.08 662.54,-58.2"/>
+<polygon fill="black" stroke="black" points="665.36,-60.28 668.32,-50.11 659.66,-56.21 665.36,-60.28"/>
+<text xml:space="preserve" text-anchor="middle" x="718.4" y="-126.38" font-family="Helvetica,sans-Serif" font-size="10.00">yes: escalate &#45;&#45;consequential</text>
 </g>
 <!-- decide -->
 <g id="node12" class="node">
 <title>decide</title>
-<path fill="none" stroke="black" d="M1079.15,-153.75C1079.15,-153.75 820.9,-153.75 820.9,-153.75 814.9,-153.75 808.9,-147.75 808.9,-141.75 808.9,-141.75 808.9,-117.25 808.9,-117.25 808.9,-111.25 814.9,-105.25 820.9,-105.25 820.9,-105.25 1079.15,-105.25 1079.15,-105.25 1085.15,-105.25 1091.15,-111.25 1091.15,-117.25 1091.15,-117.25 1091.15,-141.75 1091.15,-141.75 1091.15,-147.75 1085.15,-153.75 1079.15,-153.75"/>
-<text xml:space="preserve" text-anchor="middle" x="950.02" y="-139.3" font-family="Helvetica,sans-Serif" font-size="11.00">The agent decides: cairn decide &#45;&#45;consequential</text>
+<path fill="none" stroke="black" d="M1080.27,-153.75C1080.27,-153.75 819.77,-153.75 819.77,-153.75 813.77,-153.75 807.77,-147.75 807.77,-141.75 807.77,-141.75 807.77,-117.25 807.77,-117.25 807.77,-111.25 813.77,-105.25 819.77,-105.25 819.77,-105.25 1080.27,-105.25 1080.27,-105.25 1086.27,-105.25 1092.27,-111.25 1092.27,-117.25 1092.27,-117.25 1092.27,-141.75 1092.27,-141.75 1092.27,-147.75 1086.27,-153.75 1080.27,-153.75"/>
+<text xml:space="preserve" text-anchor="middle" x="950.02" y="-139.3" font-family="Helvetica,sans-Serif" font-size="11.00">The agent decides: sudus decide &#45;&#45;consequential</text>
 <text xml:space="preserve" text-anchor="middle" x="950.02" y="-125.8" font-family="Helvetica,sans-Serif" font-size="11.00">(composite outcome, whatever the suggestion),</text>
 <text xml:space="preserve" text-anchor="middle" x="950.02" y="-112.3" font-family="Helvetica,sans-Serif" font-size="11.00">or escalates anyway</text>
 </g>
@@ -310,21 +310,21 @@
 <!-- decide&#45;&gt;escalate -->
 <g id="edge19" class="edge">
 <title>decide&#45;&gt;escalate</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M886.31,-104.81C868.23,-97.97 848.56,-90.41 830.52,-83.25 806.53,-73.72 780.36,-62.95 757.25,-53.29"/>
-<polygon fill="black" stroke="black" points="758.83,-50.16 748.25,-49.53 756.13,-56.62 758.83,-50.16"/>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M886.64,-104.86C868.48,-97.99 848.68,-90.41 830.52,-83.25 806.21,-73.67 779.68,-62.88 756.22,-53.23"/>
+<polygon fill="black" stroke="black" points="757.66,-50.04 747.08,-49.46 754.99,-56.51 757.66,-50.04"/>
 <text xml:space="preserve" text-anchor="middle" x="871.77" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">escalate anyway</text>
 </g>
 <!-- decide&#45;&gt;trace -->
 <g id="edge18" class="edge">
 <title>decide&#45;&gt;trace</title>
-<path fill="none" stroke="black" d="M952.11,-104.81C954.45,-92.73 959.34,-78.86 969.52,-70.5 997.38,-47.63 1073.47,-36.22 1147.66,-30.57"/>
-<polygon fill="black" stroke="black" points="1147.84,-34.07 1157.56,-29.86 1147.33,-27.09 1147.84,-34.07"/>
+<path fill="none" stroke="black" d="M952.11,-104.81C954.45,-92.73 959.34,-78.86 969.52,-70.5 997.51,-47.53 1074.08,-36.11 1148.63,-30.49"/>
+<polygon fill="black" stroke="black" points="1148.85,-33.98 1158.57,-29.77 1148.35,-27 1148.85,-33.98"/>
 <text xml:space="preserve" text-anchor="middle" x="1052.77" y="-73.75" font-family="Helvetica,sans-Serif" font-size="10.00">decision names the measurement</text>
 </g>
 <!-- trace&#45;&gt;wake -->
 <g id="edge12" class="edge">
 <title>trace&#45;&gt;wake</title>
-<path fill="none" stroke="black" d="M1481.05,-30.39C1712.32,-39.95 2111.02,-65.57 2111.02,-128.5 2111.02,-926.75 2111.02,-926.75 2111.02,-926.75 2111.02,-1005.76 1026.34,-1019.67 513.61,-1021.83"/>
+<path fill="none" stroke="black" d="M1481.84,-30.41C1712.83,-40 2111.02,-65.65 2111.02,-128.5 2111.02,-926.75 2111.02,-926.75 2111.02,-926.75 2111.02,-1005.76 1026.34,-1019.67 513.61,-1021.83"/>
 <polygon fill="black" stroke="black" points="513.85,-1018.33 503.87,-1021.87 513.88,-1025.33 513.85,-1018.33"/>
 </g>
 </g>

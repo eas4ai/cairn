@@ -24,18 +24,18 @@ test('the four multi-store commands are the only transactional ones', () => {
 test('the lock is a repository-local file below the git path and refuses a live holder', async () => {
   const { cwd } = await repoWith({});
   const release = await acquireLock(cwd, 'TX1');
-  const lock = await gitPath(cwd, 'cairn-tx.lock');
+  const lock = await gitPath(cwd, 'sudus-tx.lock');
   assert.equal(readFileSync(lock, 'utf8'), `${process.pid} TX1`);
-  await assert.rejects(acquireLock(cwd, 'TX2'), /^TxError: cairn: transaction TX1 holds cairn-tx.lock \(pid \d+ alive\); wait or run cairn recover TX1/);
+  await assert.rejects(acquireLock(cwd, 'TX2'), /^TxError: sudus: transaction TX1 holds sudus-tx.lock \(pid \d+ alive\); wait or run sudus recover TX1/);
   release();
   assert.equal(existsSync(lock), false);
 });
 
 test('a lock whose holder is dead is removed and retaken', async () => {
   const { cwd } = await repoWith({});
-  writeFileSync(await gitPath(cwd, 'cairn-tx.lock'), '999999999 TXDEAD');
+  writeFileSync(await gitPath(cwd, 'sudus-tx.lock'), '999999999 TXDEAD');
   const release = await acquireLock(cwd, 'TX3');
-  assert.equal(readFileSync(await gitPath(cwd, 'cairn-tx.lock'), 'utf8'), `${process.pid} TX3`);
+  assert.equal(readFileSync(await gitPath(cwd, 'sudus-tx.lock'), 'utf8'), `${process.pid} TX3`);
   release();
 });
 
@@ -43,9 +43,9 @@ test('stage writes plan, pre-identities and exact bytes by rename, never a parti
   const { cwd } = await repoWith({});
   const plan = { identity: { a: 1 }, writes: [{ store: 'file', path: 'docs/x.md', bytes: Buffer.from('hello\n') }, { store: 'snapshot' }],
     terminal: { kind: 'authorization', target: 'protected', payload: { k: 1 } } };
-  const pre = { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: 'a'.repeat(40), files: { 'docs/x.md': null } };
+  const pre = { refs: { 'refs/sudus/log': null, 'refs/sudus/snapshots': null }, head: 'a'.repeat(40), files: { 'docs/x.md': null } };
   const dir = await stage(cwd, 'TX4', plan, pre);
-  assert.equal(dir, await gitPath(cwd, 'cairn-tx/TX4'));
+  assert.equal(dir, await gitPath(cwd, 'sudus-tx/TX4'));
   assert.deepEqual(readdirSync(dir).sort(), ['bytes', 'plan.json', 'pre.json']);
   assert.equal(readFileSync(join(dir, 'bytes/0'), 'utf8'), 'hello\n');
   const s = await readStaging(cwd, 'TX4');
@@ -72,7 +72,7 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
     weights: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 }, agent_ceiling: 0.35,
     confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
     min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } });
-const BASE = { '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n' };
+const BASE = { '.sudus/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n' };
 async function initialized() {
   const { cwd } = await repoWith(BASE);
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
@@ -82,15 +82,15 @@ const filePlan = (bytes = 'v2\n') => ({ identity: { i: 1 },
   writes: [{ store: 'file', path: 'docs/spec/overview.md', bytes: Buffer.from(bytes) },
     { store: 'branch', paths: ['docs/spec/overview.md'], message: 'Authorize the specification' },
     { store: 'snapshot' },
-    { store: 'log', kind: 'read', target: '01J0000000000000000000ABCD', payload: { decision: '01J0000000000000000000ABCD', evidence: { mode: 'unsigned-local', purpose: 'read', subject: 'x', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true } } }],
+    { store: 'log', kind: 'read', target: '01J0000000000000000000ABCD', payload: { decision: '01J0000000000000000000ABCD', evidence: { mode: 'unsigned-local', purpose: 'read', subject: 'x', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true } } }],
   terminal: { kind: 'authorization', target: 'protected', payload: {} } });
 
 test('preIdentities records every touched store before anything is written', async () => {
   const cwd = await initialized();
   const pre = await preIdentities(cwd, filePlan());
   assert.equal(pre.head, (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim());
-  assert.equal(pre.refs['refs/cairn/log'], await readRef(cwd, 'refs/cairn/log'));
-  assert.equal(pre.refs['refs/cairn/snapshots'], await readRef(cwd, 'refs/cairn/snapshots'));
+  assert.equal(pre.refs['refs/sudus/log'], await readRef(cwd, 'refs/sudus/log'));
+  assert.equal(pre.refs['refs/sudus/snapshots'], await readRef(cwd, 'refs/sudus/snapshots'));
   assert.deepEqual(pre.files, { 'docs/spec/overview.md': sha256('# k\n') });
 });
 
@@ -117,8 +117,8 @@ test('applyWrites performs the ordered writes once and is idempotent when run ag
   const head = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
   assert.equal(results[1], head);
   assert.equal((await catCommit(cwd, head)).subject, 'Authorize the specification');
-  assert.equal(results[2], await readRef(cwd, 'refs/cairn/snapshots'));
-  assert.equal(results[3], await readRef(cwd, 'refs/cairn/log'));
+  assert.equal(results[2], await readRef(cwd, 'refs/sudus/snapshots'));
+  assert.equal(results[3], await readRef(cwd, 'refs/sudus/log'));
   const again = await applyWrites(cwd, await readStaging(cwd, 'TX5'));
   assert.deepEqual(again, results);
   assert.equal((await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim(), head, 'no second commit');
@@ -132,7 +132,7 @@ test('a store showing neither the pre nor the planned identity is a conflict nam
   await stage(cwd, 'TX6', plan, pre);
   writeFileSync(join(cwd, 'docs/spec/overview.md'), 'someone else\n');
   await assert.rejects(applyWrites(cwd, await readStaging(cwd, 'TX6')),
-    new RegExp(`^TxConflict: cairn: transaction TX6 cannot complete: docs/spec/overview.md is ${sha256('someone else\n')}, expected ${sha256('# k\n')} or ${sha256('v2\n')}; restore it to ${sha256('# k\n')} then run cairn recover TX6`));
+    new RegExp(`^TxConflict: sudus: transaction TX6 cannot complete: docs/spec/overview.md is ${sha256('someone else\n')}, expected ${sha256('# k\n')} or ${sha256('v2\n')}; restore it to ${sha256('# k\n')} then run sudus recover TX6`));
 });
 
 import { withTransaction } from '../lib/tx.mjs';
@@ -141,9 +141,9 @@ test('withTransaction refuses every command that is not one of the four', async 
   const cwd = await initialized();
   for (const command of ['check', 'begin', 'review', 'escalate', 'done', 'declare']) {
     await assert.rejects(withTransaction(cwd, { command, plan: filePlan() }, async () => ({})),
-      new RegExp(`^TxError: cairn: ${command} writes one store and needs no transaction`));
+      new RegExp(`^TxError: sudus: ${command} writes one store and needs no transaction`));
   }
-  assert.equal(existsSync(await gitPath(cwd, 'cairn-tx.lock')), false);
+  assert.equal(existsSync(await gitPath(cwd, 'sudus-tx.lock')), false);
 });
 
 // Deviation from the plan text: the plan's own comment says the authorization schema "is closed"
@@ -159,9 +159,9 @@ test('withTransaction appends intent, performs the writes, appends the terminal 
   const plan = filePlan();
   const logBefore = (await readLog(cwd)).length;
   const r = await withTransaction(cwd, { command: 'authorize', plan }, async ({ results }) => {
-    assert.equal(results[2], await readRef(cwd, 'refs/cairn/snapshots'), 'results reaches fn');
+    assert.equal(results[2], await readRef(cwd, 'refs/sudus/snapshots'), 'results reaches fn');
     return { spec_digest: sha256('v2\n'), agreement_digest: sha256('# a\n'), settings_digest: 'sha256:' + '0'.repeat(64),
-       evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+       evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true },
        decision: null };
   });
   const log = await readLog(cwd);
@@ -177,8 +177,8 @@ test('withTransaction appends intent, performs the writes, appends the terminal 
   assert.equal(intent.payload.writes[0].digest, sha256('v2\n'));
   assert.equal(log.at(-1).payload.intent, r.intentSha);
   assert.equal(log.at(-1).sha, r.terminalSha);
-  assert.equal(existsSync(await gitPath(cwd, `cairn-tx/${r.tx}`)), false);
-  assert.equal(existsSync(await gitPath(cwd, 'cairn-tx.lock')), false);
+  assert.equal(existsSync(await gitPath(cwd, `sudus-tx/${r.tx}`)), false);
+  assert.equal(existsSync(await gitPath(cwd, 'sudus-tx.lock')), false);
 });
 
 import { recover, pendingTransaction, stagingDir } from '../lib/tx.mjs';
@@ -192,7 +192,7 @@ async function crashAfterIntent(cwd, plan, tx = 'TXCRASH') {
   return intentSha;
 }
 const terminalPlan = () => { const p = filePlan(); p.terminal.payload = { spec_digest: sha256('v2\n'), agreement_digest: sha256('# a\n'), settings_digest: 'sha256:' + '0'.repeat(64),
-  evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true }, decision: null }; return p; };
+  evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true }, decision: null }; return p; };
 
 test('an intent with no writes and no effect is aborted with restored pre-identities', async () => {
   const cwd = await initialized();
@@ -234,7 +234,7 @@ test('an intent followed by an append-only write completes forward and never rew
   const cwd = await initialized();
   const intentSha = await crashAfterIntent(cwd, terminalPlan());
   const s = await readStaging(cwd, 'TXCRASH');
-  const logHeadAfterIntent = await readRef(cwd, 'refs/cairn/log');
+  const logHeadAfterIntent = await readRef(cwd, 'refs/sudus/log');
   await applyWrites(cwd, s); // all four writes landed, the terminal record did not
   const r = await recover(cwd, 'TXCRASH');
   assert.equal(r.completed, 'forward');
@@ -259,7 +259,7 @@ test('a conflicting writer blocks forward completion: the intent is preserved an
   await git(['commit', '-q', '-am', 'Unrelated commit by another writer'], { cwd });
   const r = await recover(cwd, 'TXCRASH');
   assert.equal(r.completed, 'blocked');
-  assert.match(r.repair, /^cairn: transaction TXCRASH cannot complete: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40} or a commit "Authorize the specification" on [0-9a-f]{40}; restore it to [0-9a-f]{40} then run cairn recover TXCRASH$/);
+  assert.match(r.repair, /^sudus: transaction TXCRASH cannot complete: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40} or a commit "Authorize the specification" on [0-9a-f]{40}; restore it to [0-9a-f]{40} then run sudus recover TXCRASH$/);
   assert.equal(readFileSync(join(await stagingDir(cwd, 'TXCRASH'), 'repair'), 'utf8'), r.repair);
   const log = await readLog(cwd);
   assert.equal((await pendingTransaction(cwd, log)).sha, intentSha);
@@ -291,7 +291,7 @@ test('recoverPredicate names the pending transaction and is null once it has a t
   assert.equal(await recoverPredicate(cwd, await readLog(cwd)), null);
 });
 
-test('cairn recover prints the result and exits 3 with the repair line when blocked', async () => {
+test('sudus recover prints the result and exits 3 with the repair line when blocked', async () => {
   const cwd = await initialized();
   await crashAfterIntent(cwd, terminalPlan(), 'TXB');
   writeFileSync(join(cwd, 'docs/spec/overview.md'), 'v2\n');
@@ -300,7 +300,7 @@ test('cairn recover prints the result and exits 3 with the repair line when bloc
   const code = await runRecover(['TXB'], { cwd, stdout: (l) => out.push(l), stderr: (l) => err.push(l) });
   assert.equal(code, 3);
   assert.equal(out.length, 1);
-  assert.match(out[0], /^cairn: transaction TXB cannot complete/);
+  assert.match(out[0], /^sudus: transaction TXB cannot complete/);
   assert.equal(err.length, 0);
 });
 
@@ -315,14 +315,14 @@ test('Fix round 1 finding 13: stage refuses a planned file write whose path esca
   assert.equal(existsSync(join(cwd, '..', 'escape.md')), false, 'nothing was written outside the worktree');
 });
 
-test('Fix round 1 finding 10: an unparseable cairn-tx.lock is treated as held, never silently removed', async () => {
+test('Fix round 1 finding 10: an unparseable sudus-tx.lock is treated as held, never silently removed', async () => {
   const { cwd } = await repoWith({});
-  const lock = await gitPath(cwd, 'cairn-tx.lock');
+  const lock = await gitPath(cwd, 'sudus-tx.lock');
   writeFileSync(lock, 'not-a-pid');
-  await assert.rejects(acquireLock(cwd, 'TX7'), /^TxError: cairn: cairn-tx.lock is unreadable/);
+  await assert.rejects(acquireLock(cwd, 'TX7'), /^TxError: sudus: sudus-tx.lock is unreadable/);
   assert.equal(readFileSync(lock, 'utf8'), 'not-a-pid', 'the unreadable lock file is left in place, not deleted');
   writeFileSync(lock, '0 TXZERO');
-  await assert.rejects(acquireLock(cwd, 'TX8'), /^TxError: cairn: cairn-tx.lock is unreadable/);
+  await assert.rejects(acquireLock(cwd, 'TX8'), /^TxError: sudus: sudus-tx.lock is unreadable/);
 });
 
 test('Fix round 1 finding 6: applyWrites\' branch commit never sweeps an unrelated staged file into the write', async () => {
@@ -345,7 +345,7 @@ test('Fix round 1 finding 4: every planned write kind carries a digest in the in
   const plan = filePlan();
   const r = await withTransaction(cwd, { command: 'authorize', plan }, async () => ({
     spec_digest: sha256('v2\n'), agreement_digest: sha256('# a\n'), settings_digest: 'sha256:' + '0'.repeat(64),
-    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true },
     decision: null,
   }));
   const log = await readLog(cwd);
@@ -360,10 +360,10 @@ test('Fix round 1 finding 1: a crash after the snapshot ref advances but before 
   const pre = await preIdentities(cwd, plan);
   await stage(cwd, 'TXSNAP', plan, pre);
   await writeWorkspaceSnapshot(cwd); // simulates the snapshot write landing, then the process dying before markDone
-  const before = await readRef(cwd, 'refs/cairn/snapshots');
+  const before = await readRef(cwd, 'refs/sudus/snapshots');
   const results = await applyWrites(cwd, await readStaging(cwd, 'TXSNAP'));
   assert.equal(results[2], before, 'the already-landed snapshot commit is adopted, not duplicated');
-  assert.equal(await readRef(cwd, 'refs/cairn/snapshots'), before, 'no second snapshot commit was created');
+  assert.equal(await readRef(cwd, 'refs/sudus/snapshots'), before, 'no second snapshot commit was created');
 });
 
 test('Fix round 1 finding 2: an aborted transaction\'s restored names the log\'s real current identity, not the stale pre-capture', async () => {
@@ -373,11 +373,11 @@ test('Fix round 1 finding 2: an aborted transaction\'s restored names the log\'s
   assert.equal(r.completed, 'abort');
   const log = await readLog(cwd);
   const abort = log.at(-1).payload;
-  const logEntry = abort.restored.find((e) => e.store === 'refs/cairn/log');
+  const logEntry = abort.restored.find((e) => e.store === 'refs/sudus/log');
   // restored was read under the lock, one step before the abort record itself was appended (which
-  // advances refs/cairn/log again); at that moment the ref's real value was the intent's own sha.
+  // advances refs/sudus/log again); at that moment the ref's real value was the intent's own sha.
   assert.equal(logEntry.identity, log.at(-2).sha);
-  assert.notEqual(logEntry.identity, log.at(-2).payload.pre.refs['refs/cairn/log'],
+  assert.notEqual(logEntry.identity, log.at(-2).payload.pre.refs['refs/sudus/log'],
     'the log ref can never truthfully equal its stale pre-capture again: the intent record itself already advanced it');
 });
 
@@ -428,7 +428,7 @@ test('Fix round 1 finding 8: promotion and superseded round-trip intent and resu
 
 test('Fix round 1 finding 9: a planned write missing its digest is refused by the closed writeEntry schema', async () => {
   const badWrites = [{ store: 'branch', paths: ['a'], message: 'm' }]; // no digest
-  const pre = { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: null, files: {} };
+  const pre = { refs: { 'refs/sudus/log': null, 'refs/sudus/snapshots': null }, head: null, files: {} };
   assert.throws(() => encodeRecord('command-intent', 'TXBAD', { tx: 'TXBAD', command: 'authorize', identity: {}, pre, writes: badWrites }),
     (e) => e.reasons.some((r) => /missing digest/.test(r)));
 });
@@ -445,7 +445,7 @@ test('Fix round 1 finding 12: an unrelated later record is not counted as this t
   writeAtomic(join(await stagingDir(cwd, 'TXUNRELATED'), 'intent'), intentSha);
   // An unrelated command appends its own record after our intent; it must not look like our effect.
   await appendRecord(cwd, 'read', '01J0000000000000000000ABCE',
-    { decision: '01J0000000000000000000ABCE', evidence: { mode: 'unsigned-local', purpose: 'read', subject: 'y', nonce: 'n2', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true } });
+    { decision: '01J0000000000000000000ABCE', evidence: { mode: 'unsigned-local', purpose: 'read', subject: 'y', nonce: 'n2', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true } });
   const log = await readLog(cwd);
   const intent = log.find((r) => r.sha === intentSha);
   const s = await readStaging(cwd, 'TXUNRELATED'); s.intentSha = intentSha;
@@ -478,13 +478,13 @@ test('Fix round 1 finding 12: recover itself selects the newest command-intent f
 test('Fix round 1 finding 7: withTransaction crashed after each write recovers to an identical final state, every store written exactly once', async () => {
   for (let n = 0; n < 4; n++) {
     const cwd = await initialized();
-    const snapshotsBefore = await readRef(cwd, 'refs/cairn/snapshots');
+    const snapshotsBefore = await readRef(cwd, 'refs/sudus/snapshots');
     const headBefore = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
     const logCountBefore = (await readLog(cwd)).length;
 
     await assert.rejects(
       withTransaction(cwd, { command: 'authorize', plan: terminalPlan(), failAfterWrite: n }, null),
-      new RegExp(`^TxError: cairn: simulated crash after write ${n} \\(test only\\)`));
+      new RegExp(`^TxError: sudus: simulated crash after write ${n} \\(test only\\)`));
 
     const log = await readLog(cwd);
     const intent = log.findLast((r) => r.kind === 'command-intent');
@@ -499,7 +499,7 @@ test('Fix round 1 finding 7: withTransaction crashed after each write recovers t
     assert.equal(readFileSync(join(cwd, 'docs/spec/overview.md'), 'utf8'), 'v2\n', `write ${n}: file content`);
     assert.equal((await readLog(cwd)).filter((x) => x.kind === 'read').length, 1, `write ${n}: exactly one log write`);
     assert.equal((await readLog(cwd)).length, logCountBefore + 3, `write ${n}: exactly command-intent, read, authorization added`);
-    const snapshotsAfter = await readRef(cwd, 'refs/cairn/snapshots');
+    const snapshotsAfter = await readRef(cwd, 'refs/sudus/snapshots');
     assert.notEqual(snapshotsAfter, snapshotsBefore, `write ${n}: the snapshot ref advanced`);
     assert.equal((await catCommit(cwd, snapshotsAfter)).parents[0], snapshotsBefore, `write ${n}: by exactly one commit, not two`);
     const headAfter = (await git(['rev-parse', 'HEAD'], { cwd })).stdout.trim();
@@ -520,7 +520,7 @@ test('Fix round 2 finding 1: recover on a completed-but-drifted transaction name
   await git(['commit', '-q', '--allow-empty', '-m', 'rewritten history'], { cwd });
   const result = await recover(cwd, r.tx);
   assert.equal(result.completed, 'blocked');
-  assert.match(result.repair, new RegExp(`^cairn: transaction ${r.tx} completed, but drifted: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40}`));
+  assert.match(result.repair, new RegExp(`^sudus: transaction ${r.tx} completed, but drifted: HEAD is [0-9a-f]{40}, expected [0-9a-f]{40}`));
   assert.equal(/staging for transaction/.test(result.repair), false, 'never the missing-staging text for a transaction that actually completed');
   assert.match(result.repair, /restore each store to its recorded identity, or accept the change and continue$/);
 });
@@ -530,17 +530,17 @@ test('Fix round 2 finding 2: a branch write with empty paths is refused at stage
   const plan = { identity: {}, writes: [{ store: 'branch', paths: [], message: 'nothing' }],
     terminal: { kind: 'authorization', target: 'protected', payload: {} } };
   const pre = await preIdentities(cwd, plan);
-  await assert.rejects(stage(cwd, 'TXEMPTY', plan, pre), /^TxError: cairn: a branch write needs at least one path/);
+  await assert.rejects(stage(cwd, 'TXEMPTY', plan, pre), /^TxError: sudus: a branch write needs at least one path/);
 });
 
 test('Fix round 2 finding 4: a fabricated sha in a recorded result does not throw a raw GitError; it counts as drift', async () => {
   const cwd = await initialized();
   const intentSha = await appendRecord(cwd, 'command-intent', 'TXFAKE', { tx: 'TXFAKE', command: 'authorize', identity: {},
-    pre: { refs: { 'refs/cairn/log': null, 'refs/cairn/snapshots': null }, head: null, files: {} }, writes: [] });
+    pre: { refs: { 'refs/sudus/log': null, 'refs/sudus/snapshots': null }, head: null, files: {} }, writes: [] });
   const fake = 'f'.repeat(40); // a well-formed but nonexistent sha
   await appendRecord(cwd, 'authorization', 'protected', {
     spec_digest: sha256('x\n'), agreement_digest: sha256('y\n'), settings_digest: 'sha256:' + '0'.repeat(64),
-    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+    evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true },
     decision: null, intent: intentSha, results: [{ store: 'HEAD', identity: fake }],
   });
   const p = await pendingTransaction(cwd, await readLog(cwd));
@@ -549,12 +549,12 @@ test('Fix round 2 finding 4: a fabricated sha in a recorded result does not thro
 
 test('Fix round 2 finding 5: a lock path that keeps disappearing and reappearing is bounded, not an infinite retry', async () => {
   const { cwd } = await repoWith({});
-  const lock = await gitPath(cwd, 'cairn-tx.lock');
+  const lock = await gitPath(cwd, 'sudus-tx.lock');
   // A dangling symlink deterministically reproduces the EEXIST-then-ENOENT race: POSIX open()
   // with O_CREAT|O_EXCL on a path that is a symlink fails EEXIST regardless of the target, and a
   // read through it fails ENOENT since the target never exists. No real concurrency needed.
   symlinkSync(join(cwd, 'nonexistent-lock-target'), lock);
-  await assert.rejects(acquireLock(cwd, 'TXBOUND'), /^TxError: cairn: cairn-tx.lock keeps disappearing and reappearing; remove it by hand and retry/);
+  await assert.rejects(acquireLock(cwd, 'TXBOUND'), /^TxError: sudus: sudus-tx.lock keeps disappearing and reappearing; remove it by hand and retry/);
 });
 
 import { writeInputSnapshot } from '../lib/snapshots.mjs';
@@ -564,12 +564,12 @@ test('Fix round 2 finding 6: snapshot adoption verifies the candidate is a genui
   const plan = terminalPlan();
   const pre = await preIdentities(cwd, plan);
   await stage(cwd, 'TXBADSNAP', plan, pre);
-  // Simulate a concurrent, unrelated writer landing on refs/cairn/snapshots with the exact parent
+  // Simulate a concurrent, unrelated writer landing on refs/sudus/snapshots with the exact parent
   // this transaction expects, but the wrong kind (an input snapshot, not the workspace snapshot
   // this write plans) -- the old code adopted any commit sharing that parent.
   await writeInputSnapshot(cwd, { mechanism: 'm', inputs: ['docs/spec/overview.md'] });
   await assert.rejects(applyWrites(cwd, await readStaging(cwd, 'TXBADSNAP')),
-    new RegExp(`^TxConflict: cairn: transaction TXBADSNAP cannot complete: refs/cairn/snapshots is [0-9a-f]{40}, expected [0-9a-f]{40} or a new snapshot commit`));
+    new RegExp(`^TxConflict: sudus: transaction TXBADSNAP cannot complete: refs/sudus/snapshots is [0-9a-f]{40}, expected [0-9a-f]{40} or a new snapshot commit`));
 });
 
 // Fix round 2 finding 1 (Important). A 'file' write overwrites its path with staged, pre-computed
@@ -601,7 +601,7 @@ test('Fix round 2 finding 1: crash after an append write, then recover, leaves t
     terminal: {
       kind: 'authorization', target: 'protected', payload: {
         spec_digest: 'sha256:' + '0'.repeat(64), agreement_digest: 'sha256:' + '0'.repeat(64), settings_digest: 'sha256:' + '0'.repeat(64),
-        evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Cairn Test', email: 'test@example.invalid' }, confirmed: true },
+        evidence: { mode: 'unsigned-local', purpose: 'authorize', subject: 's', nonce: 'n', author: { name: 'Sudus Test', email: 'test@example.invalid' }, confirmed: true },
         decision: null,
       },
     } };
@@ -624,6 +624,6 @@ test("Fix round 2 finding 1: an append write records the resulting bytes in lib/
   // own tests exercise it end to end (a realize() that accepts a ledger-recorded kernel-managed
   // write). Here, at the tx.mjs level, it is enough to confirm applyWrites' 'append' branch wrote
   // the expected line to the ledger file itself.
-  const ledger = readFileSync(await gitPath(cwd, 'cairn-managed'), 'utf8');
+  const ledger = readFileSync(await gitPath(cwd, 'sudus-managed'), 'utf8');
   assert.match(ledger, /^docs\/decisions\.jsonl\tsha256:[0-9a-f]{64}$/m);
 });

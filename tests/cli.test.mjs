@@ -20,7 +20,7 @@ import { b64url, canonicalize } from '../lib/canon.mjs';
 const run = async (argv, cwd, extra = {}) => { let out = '', err = ''; const code = await main(argv, { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } }, ...extra }); return { code, out, err }; };
 
 function extractPayload(out) {
-  const m = /^cairn: sign this payload: (.+)$/m.exec(out);
+  const m = /^sudus: sign this payload: (.+)$/m.exec(out);
   if (!m) throw new Error(`no payload line in: ${JSON.stringify(out)}`);
   return m[1];
 }
@@ -38,26 +38,26 @@ async function signedProject(t) {
   return { cwd: repo.dir, repo, privateKey, pem };
 }
 
-test('--help exits 0 and lists commands; an unknown command exits 1 with one cairn: line', async (t) => {
+test('--help exits 0 and lists commands; an unknown command exits 1 with one sudus: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const help = await run(['--help'], repo.dir);
-  assert.equal(help.code, 0); assert.match(help.out, /cairn show <sha>/);
+  assert.equal(help.code, 0); assert.match(help.out, /sudus show <sha>/);
   const bad = await run(['bogus'], repo.dir);
-  assert.equal(bad.code, 1); assert.match(bad.err, /^cairn: unknown command bogus/); assert.equal(bad.err.split('\n').length, 2);
+  assert.equal(bad.code, 1); assert.match(bad.err, /^sudus: unknown command bogus/); assert.equal(bad.err.split('\n').length, 2);
 });
 test('<command> --help prints that command\'s usage line and runs nothing, for push above all', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  // No .cairn/settings.json here: a push that ran would refuse on settings with exit 1.
+  // No .sudus/settings.json here: a push that ran would refuse on settings with exit 1.
   const push = await run(['push', '--help'], repo.dir);
-  assert.equal(push.code, 0); assert.equal(push.out, 'usage: cairn push\n'); assert.equal(push.err, '');
+  assert.equal(push.code, 0); assert.equal(push.out, 'usage: sudus push\n'); assert.equal(push.err, '');
   const short = await run(['answer', '-h'], repo.dir);
-  assert.equal(short.code, 0); assert.match(short.out, /^usage: cairn answer /); assert.equal(short.err, '');
+  assert.equal(short.code, 0); assert.match(short.out, /^usage: sudus answer /); assert.equal(short.err, '');
   // A later --help is the command's own input: backlog records it as text instead of printing help.
   const later = await run(['backlog', 'push', '--help', 'pushes'], repo.dir);
-  assert.notEqual(later.out, 'usage: cairn backlog <text>\n');
+  assert.notEqual(later.out, 'usage: sudus backlog <text>\n');
 });
 // Fix round 1 item 3 (Minor, review-1.md finding 3): this used to compare against cli.mjs's own
-// placeholder "<authority>" line, which disagreed with what `cairn wake` prints for the identical
+// placeholder "<authority>" line, which disagreed with what `sudus wake` prints for the identical
 // missing-refs, no-configured-remote condition and was not itself a runnable command.
 // requireRefs now calls the same lib/travel.mjs missingRefsLine wake itself uses, so this
 // computes its expectation the same way rather than hard-coding a second copy of the text.
@@ -75,7 +75,7 @@ test('show exits 3 and names the fetch when the durable refs are missing', async
   const repo = await makeRepo(); t.after(repo.remove);
   const expected = await missingRefsLine(repo.dir);
   const r = await run(['show', 'a'.repeat(40)], repo.dir);
-  assert.equal(r.code, 3); assert.equal(r.out, `cairn: durable refs missing; run: ${expected}\n`);
+  assert.equal(r.code, 3); assert.equal(r.out, `sudus: durable refs missing; run: ${expected}\n`);
 });
 test('show renders a record with its references resolved and kind-checked', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
@@ -87,19 +87,19 @@ test('show renders a record with its references resolved and kind-checked', asyn
   const done = await appendRecord(repo.dir, 'done', 'hooks', { slug: 'hooks', snapshot: ws });
   const r = await run(['show', done], repo.dir);
   assert.equal(r.code, 0);
-  assert.match(r.out, /^cairn: done hooks\n/); assert.match(r.out, /"slug": "hooks"/); assert.match(r.out, new RegExp(`done.snapshot: workspace snapshot ${ws}, tree [0-9a-f]{40}`));
+  assert.match(r.out, /^sudus: done hooks\n/); assert.match(r.out, /"slug": "hooks"/); assert.match(r.out, new RegExp(`done.snapshot: workspace snapshot ${ws}, tree [0-9a-f]{40}`));
   const inp = await writeInputSnapshot(repo.dir, { mechanism: 'm', inputs: ['a.txt'] });
   const wrong = await appendRecord(repo.dir, 'fix', 'x', { item: start, snapshot: inp });
   const w = await run(['show', wrong], repo.dir);
-  assert.equal(w.code, 1); assert.match(w.err, /^cairn: expected a workspace snapshot/);
+  assert.equal(w.code, 1); assert.match(w.err, /^sudus: expected a workspace snapshot/);
   const plain = await run(['show', await repo.readRef('HEAD')], repo.dir);
-  assert.equal(plain.code, 1); assert.match(plain.err, /^cairn: not a record subject/);
+  assert.equal(plain.code, 1); assert.match(plain.err, /^sudus: not a record subject/);
 });
-test('bin/cairn.mjs runs', async () => {
-  const { stdout } = await promisify(execFile)(process.execPath, ['bin/cairn.mjs', '--help']);
-  assert.match(stdout, /usage: cairn/);
+test('bin/sudus.mjs runs', async () => {
+  const { stdout } = await promisify(execFile)(process.execPath, ['bin/sudus.mjs', '--help']);
+  assert.match(stdout, /usage: sudus/);
 });
-test('cairn lint docs/spec prints findings and exits 1, exits 0 when clean, refuses other paths', async (t) => {
+test('sudus lint docs/spec prints findings and exits 1, exits 0 when clean, refuses other paths', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('docs/spec/overview.md', '| File | Prefix |\n|---|---|\n| a.md | A |\n');
   await repo.write('docs/spec/roadmap.md', 'Current: x\n\n## x\n\nRequirements: A-001\n');
@@ -110,29 +110,29 @@ test('cairn lint docs/spec prints findings and exits 1, exits 0 when clean, refu
   const dirty = await run(['lint', 'docs/spec'], repo.dir);
   assert.equal(dirty.code, 1);
   assert.match(dirty.out, /^docs\/spec\/a.md:3: A-001: missing Falsifier:/m);
-  assert.match(dirty.err, /^cairn: lint found \d+ problems\n$/);
+  assert.match(dirty.err, /^sudus: lint found \d+ problems\n$/);
   const other = await run(['lint', 'docs'], repo.dir);
-  assert.equal(other.code, 1); assert.match(other.err, /^cairn: lint takes docs\/spec/);
+  assert.equal(other.code, 1); assert.match(other.err, /^sudus: lint takes docs\/spec/);
 });
 
 // Fix round 1, item 5: the typed CLI surface (runInit, runAuthorize, runDecisionsRead, cliSigner's
-// supplied-signature branch, and main()'s dispatch) was untested. These drive cairn init, cairn
-// authorize and cairn decisions --read through main() with injected io, covering the success and
-// refusal path for each. Spec revision 6: cairn init takes the developer's answers as flags on
+// supplied-signature branch, and main()'s dispatch) was untested. These drive sudus init, sudus
+// authorize and sudus decisions --read through main() with injected io, covering the success and
+// refusal path for each. Spec revision 6: sudus init takes the developer's answers as flags on
 // argv (no more injected confirm callbacks), so the flags themselves go straight on argv here.
-test('cairn init: success prints the evidence description; refusal is one cairn: line', async (t) => {
+test('sudus init: success prints the evidence description; refusal is one sudus: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const ok = await run(['init', '--local-only', '--attested', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
-  assert.match(ok.out, /^cairn: initialized; init record [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+  assert.match(ok.out, /^sudus: initialized; init record [0-9a-f]{40} \(attested: "ok" through none by Sudus Test <test@example\.invalid>; evidence, not authentication\)\n$/);
 
   const repo2 = await makeRepo(); t.after(repo2.remove);
   const refused = await run(['init', '--remote', 'upstream', '--attested', '--quote', 'ok'], repo2.dir, { env: {} });
   assert.equal(refused.code, 1);
-  assert.equal(refused.err, 'cairn: authority_remote upstream is not a configured remote\n');
+  assert.equal(refused.err, 'sudus: authority_remote upstream is not a configured remote\n');
 });
 
-test('cairn authorize: success prints the evidence description; refusal is one cairn: line', async (t) => {
+test('sudus authorize: success prints the evidence description; refusal is one sudus: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('AGENTS.md', '# agreement\n');
   await repo.write('docs/spec/overview.md', '# keystone\n');
@@ -140,7 +140,7 @@ test('cairn authorize: success prints the evidence description; refusal is one c
   await init(repo.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const ok = await run(['authorize', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
-  assert.match(ok.out, /^cairn: authorization [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+  assert.match(ok.out, /^sudus: authorization [0-9a-f]{40} \(attested: "ok" through none by Sudus Test <test@example\.invalid>; evidence, not authentication\)\n$/);
 
   const repo2 = await makeRepo(); t.after(repo2.remove);
   await repo2.write('docs/spec/overview.md', '# keystone\n');
@@ -148,27 +148,27 @@ test('cairn authorize: success prints the evidence description; refusal is one c
   await init(repo2.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const refused = await run(['authorize', '--quote', 'ok'], repo2.dir, { env: {} });
   assert.equal(refused.code, 1);
-  assert.equal(refused.err, 'cairn: AGENTS.md is missing; authorize binds the working agreement\n');
+  assert.equal(refused.err, 'sudus: AGENTS.md is missing; authorize binds the working agreement\n');
 });
 
-test('cairn decisions --read: success prints the evidence description; refusal is one cairn: line', async (t) => {
+test('sudus decisions --read: success prints the evidence description; refusal is one sudus: line', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   await init(repo.dir, { localOnly: true, attested: true, quote: 'ok', env: {} });
   const ok = await run(['decisions', '--read', '01J0000000000000000000ABCD', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(ok.code, 0);
-  assert.match(ok.out, /^cairn: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(attested: "ok" through none by Cairn Test <test@example\.invalid>; evidence, not authentication\)\n$/);
+  assert.match(ok.out, /^sudus: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(attested: "ok" through none by Sudus Test <test@example\.invalid>; evidence, not authentication\)\n$/);
 
   const refused = await run(['decisions', '--read', 'not-a-ulid', '--quote', 'ok'], repo.dir, { env: {} });
   assert.equal(refused.code, 1);
-  assert.equal(refused.err, 'cairn: decision id must be a 26-character ULID\n');
+  assert.equal(refused.err, 'sudus: decision id must be a 26-character ULID\n');
 });
 
-// Fix round 1, item 10: decisionsCommand's own Refusal used to start with the word "cairn" itself,
-// and main()'s catch block always prepends its own "cairn: ", printing a doubled-up line.
-// Fix round 2 finding 2: bare `cairn decisions` used to always refuse ("decisions needs --read
-// <id>"); it now renders the file (section 4: "cairn decisions renders the file"), one canonical
+// Fix round 1, item 10: decisionsCommand's own Refusal used to start with the word "sudus" itself,
+// and main()'s catch block always prepends its own "sudus: ", printing a doubled-up line.
+// Fix round 2 finding 2: bare `sudus decisions` used to always refuse ("decisions needs --read
+// <id>"); it now renders the file (section 4: "sudus decisions renders the file"), one canonical
 // JSON line per ADR line, empty when there is no ADR file yet.
-test('cairn decisions without --read renders the file, empty when there is none yet', async (t) => {
+test('sudus decisions without --read renders the file, empty when there is none yet', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const r = await run(['decisions'], repo.dir);
   assert.equal(r.code, 0);
@@ -181,7 +181,7 @@ test('cairn decisions without --read renders the file, empty when there is none 
 // signed, and could never succeed. These drive the full two-invocation signed flow for each of the
 // three commands with a real Ed25519 key pair and assert it now succeeds, and that a signature
 // produced over one nonce's payload is refused when presented against a different --nonce.
-test('cairn init: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+test('sudus init: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
   const { generateKeyPairSync, sign: cryptoSign } = await import('node:crypto');
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
@@ -189,7 +189,7 @@ test('cairn init: the full two-step signed flow succeeds; a signature over a dif
   // The signing key lives outside the repository, not written into its working tree: a *.pem
   // path under the project itself is a sensitive path lib/snapshots.mjs's own workspace snapshot
   // refuses to capture untracked.
-  const keyPath = join(mkdtempSync(join(tmpdir(), 'cairn-key-')), 'dev.pem');
+  const keyPath = join(mkdtempSync(join(tmpdir(), 'sudus-key-')), 'dev.pem');
   writeFileSync(keyPath, pem);
 
   const repo = await makeRepo(); t.after(repo.remove);
@@ -207,7 +207,7 @@ test('cairn init: the full two-step signed flow succeeds; a signature over a dif
   const digest = (await loadSettings(repo.dir)).digest;
   const run2 = await run([...argv, '--adopt', digest, '--nonce', nonce, '--signature', signature], repo.dir, { env: {} });
   assert.equal(run2.code, 0);
-  assert.match(run2.out, /^cairn: initialized; init record [0-9a-f]{40} \(signed by the developer key\)\n$/);
+  assert.match(run2.out, /^sudus: initialized; init record [0-9a-f]{40} \(signed by the developer key\)\n$/);
 
   const repo2 = await makeRepo(); t.after(repo2.remove);
   const argv2 = ['init', '--local-only', '--signing-key', keyPath];
@@ -218,10 +218,10 @@ test('cairn init: the full two-step signed flow succeeds; a signature over a dif
   const bad2 = await run([...argv2, '--adopt', digest2, '--nonce', 'a-different-nonce', '--signature', badSignature], repo2.dir, { env: {} });
   assert.equal(bad2.code, 1);
   assert.match(bad2.err, /does not verify against signing_key/);
-  assert.equal(await repo2.readRef('refs/cairn/log'), null);
+  assert.equal(await repo2.readRef('refs/sudus/log'), null);
 });
 
-test('cairn authorize: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+test('sudus authorize: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
   const { cwd, repo, privateKey } = await signedProject(t);
   const { sign: cryptoSign } = await import('node:crypto');
   const run1 = await run(['authorize'], cwd);
@@ -231,7 +231,7 @@ test('cairn authorize: the full two-step signed flow succeeds; a signature over 
   const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
   const run2 = await run(['authorize', '--nonce', nonce, '--signature', signature], cwd);
   assert.equal(run2.code, 0);
-  assert.match(run2.out, /^cairn: authorization [0-9a-f]{40} \(signed by the developer key\)\n$/);
+  assert.match(run2.out, /^sudus: authorization [0-9a-f]{40} \(signed by the developer key\)\n$/);
 
   await repo.write('AGENTS.md', '# changed\n'); await repo.commit('change');
   const bad1 = await run(['authorize'], cwd);
@@ -242,7 +242,7 @@ test('cairn authorize: the full two-step signed flow succeeds; a signature over 
   assert.match(bad2.err, /does not verify against signing_key/);
 });
 
-test('cairn decisions --read: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+test('sudus decisions --read: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
   const { cwd, privateKey } = await signedProject(t);
   const { sign: cryptoSign } = await import('node:crypto');
   const run1 = await run(['decisions', '--read', '01J0000000000000000000ABCD'], cwd);
@@ -252,7 +252,7 @@ test('cairn decisions --read: the full two-step signed flow succeeds; a signatur
   const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
   const run2 = await run(['decisions', '--read', '01J0000000000000000000ABCD', '--nonce', nonce, '--signature', signature], cwd);
   assert.equal(run2.code, 0);
-  assert.match(run2.out, /^cairn: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(signed by the developer key\)\n$/);
+  assert.match(run2.out, /^sudus: read 01J0000000000000000000ABCD recorded as [0-9a-f]{40} \(signed by the developer key\)\n$/);
 
   const bad1 = await run(['decisions', '--read', '01J0000000000000000000WXYZ'], cwd);
   const badPayload = extractPayload(bad1.out);
@@ -263,16 +263,16 @@ test('cairn decisions --read: the full two-step signed flow succeeds; a signatur
 });
 
 // Fix round 1 finding 2 (Critical): applyTouch's write-back used to be a module-level onEnd side
-// effect lib/cli.mjs never triggered, because it never imported lib/mechanisms.mjs -- so `cairn
+// effect lib/cli.mjs never triggered, because it never imported lib/mechanisms.mjs -- so `sudus
 // end` never actually wrote a changed --touch path into the mechanism definition in the shipped
-// binary. This drives `cairn begin --touch`, a real file change, and `cairn end` entirely through
-// main(), the same path bin/cairn.mjs uses, and checks the definition on disk afterward.
+// binary. This drives `sudus begin --touch`, a real file change, and `sudus end` entirely through
+// main(), the same path bin/sudus.mjs uses, and checks the definition on disk afterward.
 import { declared as mechanismDeclared, project as mechanismProject, DEFINITION as MECHANISM_DEFINITION } from './helpers/mechanism-fixture.mjs';
 import { readMechanisms } from '../lib/mechanisms.mjs';
 import { writeFile } from 'node:fs/promises';
 
-// Fix round 1 item 6 addendum: `cairn declare` and `cairn check` were never wired into main()'s
-// argv dispatch by any plan (confirmed: neither appeared in `cairn --help`), though both were
+// Fix round 1 item 6 addendum: `sudus declare` and `sudus check` were never wired into main()'s
+// argv dispatch by any plan (confirmed: neither appeared in `sudus --help`), though both were
 // fully built and tested at the library level (lib/mechanisms.mjs's declare, lib/check.mjs's
 // check). Covers a successful declare, a refused declare (a glob metacharacter in inputs, which
 // normalizeDefinition already refuses), a check that records a receipt, and a check refusal.
@@ -287,7 +287,7 @@ import { writeFile } from 'node:fs/promises';
 // 'record'/'commit' predicates, never by check() or this command. Substituted with check's actual,
 // tested refusal path (a requirement that is not Agreed) rather than fabricating behavior that
 // does not exist.
-test('cairn declare writes a mechanism definition from a --file; a glob in inputs is refused', async (t) => {
+test('sudus declare writes a mechanism definition from a --file; a glob in inputs is refused', async (t) => {
   const repo = await mechanismProject();
   t.after(repo.cleanup);
   const file = join(repo.cwd, 'greeter.json');
@@ -302,28 +302,28 @@ test('cairn declare writes a mechanism definition from a --file; a glob in input
   await writeFile(badFile, JSON.stringify({ ...MECHANISM_DEFINITION, inputs: ['src/*.mjs'] }));
   const bad = await run(['declare', 'other', '--file', badFile], repo.cwd);
   assert.equal(bad.code, 1);
-  assert.match(bad.err, /^cairn: glob metacharacter in path "src\/\*\.mjs"/);
+  assert.match(bad.err, /^sudus: glob metacharacter in path "src\/\*\.mjs"/);
 });
-test('cairn --version prints the package version', async () => {
+test('sudus --version prints the package version', async () => {
   const { readFile } = await import('node:fs/promises');
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   const r = await run(['--version'], process.cwd());
   assert.equal(r.code, 0);
   assert.equal(r.out, `${pkg.version}\n`);
 });
-test('cairn check says which output line it saw when a per-requirement result is unverified', async (t) => {
+test('sudus check says which output line it saw when a per-requirement result is unverified', async (t) => {
   const repo = await mechanismProject();
   t.after(repo.cleanup);
   const file = join(repo.cwd, 'loose.json');
-  await writeFile(file, JSON.stringify({ ...MECHANISM_DEFINITION, command: 'printf "cairn: DEMO-001 pass\\n"', results: 'per-requirement' }));
+  await writeFile(file, JSON.stringify({ ...MECHANISM_DEFINITION, command: 'printf "sudus: DEMO-001 pass\\n"', results: 'per-requirement' }));
   const d = await run(['declare', 'loose', '--file', file], repo.cwd);
   assert.equal(d.code, 0, d.err);
   const r = await run(['check', 'DEMO-001'], repo.cwd);
   assert.equal(r.code, 0, r.err);
-  assert.match(r.err, /^cairn: DEMO-001 is unverified: no output line is exactly "cairn: DEMO-001: pass" or "cairn: DEMO-001: fail"; saw "cairn: DEMO-001 pass"\n$/);
+  assert.match(r.err, /^sudus: DEMO-001 is unverified: no output line is exactly "sudus: DEMO-001: pass" or "sudus: DEMO-001: fail"; saw "sudus: DEMO-001 pass"\n$/);
 });
 
-test('cairn check writes a receipt; a non-Agreed requirement is refused', async (t) => {
+test('sudus check writes a receipt; a non-Agreed requirement is refused', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const r = await run(['check', 'DEMO-001'], repo.cwd);
@@ -336,17 +336,17 @@ test('cairn check writes a receipt; a non-Agreed requirement is refused', async 
 
   const bad = await run(['check', 'DEMO-002'], repo.cwd);
   assert.equal(bad.code, 1);
-  assert.match(bad.err, /^cairn: DEMO-002 is not Agreed; only Agreed requirements are checked\n$/);
+  assert.match(bad.err, /^sudus: DEMO-002 is not Agreed; only Agreed requirements are checked\n$/);
 });
 
-test('cairn end writes a --touch path that is a directory once a file exists below it, and drops it when nothing was written', async (t) => {
+test('sudus end writes a --touch path that is a directory once a file exists below it, and drops it when nothing was written', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   assert.equal((await run(['begin', 'implement', 'DEMO-001', '--touch', 'helpers'], repo.cwd)).code, 0);
   await repo.write('helpers/a.mjs', 'export const a = 1;\n');
   const ended = await run(['end'], repo.cwd);
   assert.equal(ended.code, 0);
-  assert.match(ended.out, /^cairn: lease ended\n$/, ended.out + ended.err);
+  assert.match(ended.out, /^sudus: lease ended\n$/, ended.out + ended.err);
   assert.ok((await readMechanisms(repo.cwd)).greeter.definition.inputs.includes('helpers'));
   assert.equal((await run(['begin', 'implement', 'DEMO-001', '--touch', 'empty-dir'], repo.cwd)).code, 0);
   const dropped = await run(['end'], repo.cwd);
@@ -354,7 +354,7 @@ test('cairn end writes a --touch path that is a directory once a file exists bel
   assert.equal((await readMechanisms(repo.cwd)).greeter.definition.inputs.includes('empty-dir'), false, 'an untouched directory is not declared');
 });
 
-test('cairn end writes a changed --touch path into the mechanism definition (finding 2)', async (t) => {
+test('sudus end writes a changed --touch path into the mechanism definition (finding 2)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
@@ -364,16 +364,16 @@ test('cairn end writes a changed --touch path into the mechanism definition (fin
   assert.equal(before.includes('helper.mjs'), false);
   const endResult = await run(['end'], repo.cwd);
   assert.equal(endResult.code, 0);
-  assert.match(endResult.out, /^cairn: lease ended\n$/);
+  assert.match(endResult.out, /^sudus: lease ended\n$/);
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
 });
 
-// Review-1 fix, item 4: `cairn end --abandon` must release the lease (so wake's reconcile
+// Review-1 fix, item 4: `sudus end --abandon` must release the lease (so wake's reconcile
 // predicate is satisfied, lib/lease.test.mjs covers that) but must not also claim the touched path
-// as a real mechanism-definition change the way a plain `cairn end` does above -- that claim is
+// as a real mechanism-definition change the way a plain `sudus end` does above -- that claim is
 // exactly the "effect" abandoning is supposed to withhold.
-test('cairn end --abandon releases the lease and claims no mechanism-definition effect (review-1 item 4)', async (t) => {
+test('sudus end --abandon releases the lease and claims no mechanism-definition effect (review-1 item 4)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
@@ -382,16 +382,16 @@ test('cairn end --abandon releases the lease and claims no mechanism-definition 
   const before = (await readMechanisms(repo.cwd)).greeter.definition.inputs;
   const endResult = await run(['end', '--abandon'], repo.cwd);
   assert.equal(endResult.code, 0);
-  assert.equal(endResult.out, 'cairn: lease abandoned\ncairn: touch helper.mjs not written: action abandoned\n');
+  assert.equal(endResult.out, 'sudus: lease abandoned\nsudus: touch helper.mjs not written: action abandoned\n');
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, before, 'abandon claims no effect on the mechanism definition');
 });
 
 // Review-2 fix (Minor, new finding on the round-1 re-review): reproduced end to end through
-// main(), the same path bin/cairn.mjs uses. Actor A's lease is released, actor B begins a
-// different one, and A's stale `cairn end --lease <its own sha>` is refused and names B's lease --
-// B's lease is left exactly as it was (still ending normally afterward with a bare `cairn end`).
-test('cairn end --lease <sha> refuses a stale caller and leaves the newer actors lease untouched (review-2 new finding)', async (t) => {
+// main(), the same path bin/sudus.mjs uses. Actor A's lease is released, actor B begins a
+// different one, and A's stale `sudus end --lease <its own sha>` is refused and names B's lease --
+// B's lease is left exactly as it was (still ending normally afterward with a bare `sudus end`).
+test('sudus end --lease <sha> refuses a stale caller and leaves the newer actors lease untouched (review-2 new finding)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const beginA = await run(['begin', 'implement', 'DEMO-001'], repo.cwd);
@@ -403,23 +403,23 @@ test('cairn end --lease <sha> refuses a stale caller and leaves the newer actors
   assert.equal((await run(['begin', 'run', 'DEMO-002'], repo.cwd)).code, 0); // B begins
   const staleEnd = await run(['end', '--lease', shaA], repo.cwd);
   assert.equal(staleEnd.code, 1);
-  assert.match(staleEnd.err, /^cairn: action lease [0-9a-f]{40} is now run DEMO-002 \(session none\), not the lease [0-9a-f]{40} this end expected; run cairn end --lease [0-9a-f]{40}, or cairn end --abandon\n$/);
+  assert.match(staleEnd.err, /^sudus: action lease [0-9a-f]{40} is now run DEMO-002 \(session none\), not the lease [0-9a-f]{40} this end expected; run sudus end --lease [0-9a-f]{40}, or sudus end --abandon\n$/);
 
-  // B's lease is untouched: a bare `cairn end` (no --lease) still finds and ends it normally.
+  // B's lease is untouched: a bare `sudus end` (no --lease) still finds and ends it normally.
   const normalEnd = await run(['end'], repo.cwd);
   assert.equal(normalEnd.code, 0);
-  assert.equal(normalEnd.out, 'cairn: lease ended\n');
+  assert.equal(normalEnd.out, 'sudus: lease ended\n');
 });
 
-test('cairn end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
+test('sudus end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   await run(['begin', 'implement', 'DEMO-999', '--touch', 'helper.mjs'], repo.cwd);
   await repo.write('helper.mjs', 'export const x = 1;\n');
   const endResult = await run(['end'], repo.cwd);
   assert.equal(endResult.code, 0);
-  assert.match(endResult.out, /cairn: lease ended/);
-  assert.match(endResult.out, /cairn: touch helper\.mjs not written: no mechanism declares DEMO-999/);
+  assert.match(endResult.out, /sudus: lease ended/);
+  assert.match(endResult.out, /sudus: touch helper\.mjs not written: no mechanism declares DEMO-999/);
 });
 
 // Fix round 2 finding 1a (Important): checkTouch used to apply a narrower rule set than
@@ -427,19 +427,19 @@ test('cairn end reports an unclaimable --touch path instead of throwing, and sti
 // per the fixture's own settings.outside: ['README.md'], and a glob-shaped path) was accepted at
 // begin, creating a lease with nothing that could ever be written into a definition. Reproduced
 // exactly as the reviewer found it: `begin implement DEMO-001 --touch README.md` used to succeed.
-test('cairn begin --touch refuses an outside path or a glob metacharacter before creating a lease (finding 1a)', async (t) => {
+test('sudus begin --touch refuses an outside path or a glob metacharacter before creating a lease (finding 1a)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const outsideResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'README.md'], repo.cwd);
   assert.equal(outsideResult.code, 1);
-  assert.equal(outsideResult.err, 'cairn: --touch README.md is an outside path and cannot be a mechanism input\n');
+  assert.equal(outsideResult.err, 'sudus: --touch README.md is an outside path and cannot be a mechanism input\n');
   const globResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'src/*.mjs'], repo.cwd);
   assert.equal(globResult.code, 1);
-  assert.equal(globResult.err, 'cairn: --touch src/*.mjs has a glob metacharacter and cannot be a mechanism input\n');
-  // Neither refusal left a lease behind for `cairn end` to find.
+  assert.equal(globResult.err, 'sudus: --touch src/*.mjs has a glob metacharacter and cannot be a mechanism input\n');
+  // Neither refusal left a lease behind for `sudus end` to find.
   const endResult = await run(['end'], repo.cwd);
   assert.equal(endResult.code, 1);
-  assert.equal(endResult.err, 'cairn: no action lease to end\n');
+  assert.equal(endResult.err, 'sudus: no action lease to end\n');
 });
 
 // Fix round 2 findings 1b and 2 (Important, Minor): applyTouch's own declare() call, or the
@@ -447,35 +447,35 @@ test('cairn begin --touch refuses an outside path or a glob metacharacter before
 // mechanism file is corrupted (readMechanisms' own shape refusal, finding 9) between begin and
 // end. Before this fix that reached main()'s catch, split the already-written "lease ended" line
 // from an exit-1 refusal. It is now reported as an unclaimed touch and the command exits 0. The
-// exact printed line also demonstrates finding 2: a single "cairn:" prefix, not doubled by main().
-test('cairn end reports an unclaimed touch, with no doubled cairn: prefix, for a mechanism file corrupted after begin (findings 1b, 2)', async (t) => {
+// exact printed line also demonstrates finding 2: a single "sudus:" prefix, not doubled by main().
+test('sudus end reports an unclaimed touch, with no doubled sudus: prefix, for a mechanism file corrupted after begin (findings 1b, 2)', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
   const beginResult = await run(['begin', 'implement', 'DEMO-001', '--touch', 'helper.mjs'], repo.cwd);
   assert.equal(beginResult.code, 0);
   await repo.write('helper.mjs', 'export const x = 1;\n');
-  await repo.write('.cairn/mechanisms/greeter.json', canonicalize({ schema: 1, definition: {}, review: {} }));
+  await repo.write('.sudus/mechanisms/greeter.json', canonicalize({ schema: 1, definition: {}, review: {} }));
   const endResult = await run(['end'], repo.cwd);
   assert.equal(endResult.code, 0, 'the lease removal and its report are never split by the write-back failure');
   assert.equal(endResult.out,
-    'cairn: lease ended\ncairn: touch helper.mjs not written: .cairn/mechanisms/greeter.json is not a valid mechanism entry (kernel-managed path breach)\n');
+    'sudus: lease ended\nsudus: touch helper.mjs not written: .sudus/mechanisms/greeter.json is not a valid mechanism entry (kernel-managed path breach)\n');
 });
 
 // Fix round 2 finding 2 (Important): lib/cli.mjs never imported lib/commitment.mjs, so start,
 // done, supersede, promote, item, outside, fix and lib/adr.mjs's decide/realize were unreachable
 // from the binary -- every one of them existed only as a library function no command ever called.
-// Wired here: `cairn start <slug>`, `cairn done <slug>`, `cairn supersede <successor> --quote
-// <text>`, `cairn promote <item-sha>`, `cairn item --backlog|--next-feature|--defect --slug <s>
-// --from <REQ or contract> --body <text>`, `cairn outside <item-sha> --reason <text>`, `cairn fix
-// <item-sha>`, `cairn decide --consequential --title ... --rests-on ... --wrong-if ... --body
-// ...`, `cairn realize <decision-id> --subject <text>`, and bare `cairn decisions` (tested above).
+// Wired here: `sudus start <slug>`, `sudus done <slug>`, `sudus supersede <successor> --quote
+// <text>`, `sudus promote <item-sha>`, `sudus item --backlog|--next-feature|--defect --slug <s>
+// --from <REQ or contract> --body <text>`, `sudus outside <item-sha> --reason <text>`, `sudus fix
+// <item-sha>`, `sudus decide --consequential --title ... --rests-on ... --wrong-if ... --body
+// ...`, `sudus realize <decision-id> --subject <text>`, and bare `sudus decisions` (tested above).
 import { project } from './helpers/commitment-fixture.mjs';
 import { loopRepo } from './helpers/loop.mjs';
 import { done } from '../lib/commitment.mjs';
 import { readLog } from '../lib/records.mjs';
 import { readAdr } from '../lib/adr.mjs';
 
-test('cairn start prints one line and writes a start record reachable only through main()', async (t) => {
+test('sudus start prints one line and writes a start record reachable only through main()', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   const r = await run(['start', 'first'], repo.cwd);
@@ -484,13 +484,13 @@ test('cairn start prints one line and writes a start record reachable only throu
   assert.equal(r.out, `start ${rec.sha} first\n`);
   const bad = await run(['start', 'nowhere'], repo.cwd);
   assert.equal(bad.code, 1);
-  assert.match(bad.err, /^cairn: commitment first is open/);
+  assert.match(bad.err, /^sudus: commitment first is open/);
 });
 
-test('cairn done prints one line and closes the open commitment once wake names done; before that it refuses with what wake names', async (t) => {
+test('sudus done prints one line and closes the open commitment once wake names done; before that it refuses with what wake names', async (t) => {
   const repo = await loopRepo();
   const early = await run(['done', 'first'], repo.cwd);
-  assert.equal(early.code, 1); assert.match(early.err, /^cairn: first is not at Done; wake names run DEMO-001: /);
+  assert.equal(early.code, 1); assert.match(early.err, /^sudus: first is not at Done; wake names run DEMO-001: /);
   await repo.passReq('DEMO-001'); await repo.review(); await repo.report();
   const r = await run(['done', 'first'], repo.cwd);
   assert.equal(r.code, 0, r.err);
@@ -498,10 +498,10 @@ test('cairn done prints one line and closes the open commitment once wake names 
   assert.equal(r.out, `done ${rec.sha} first\n`);
   const missingSlug = await run(['done'], repo.cwd);
   assert.equal(missingSlug.code, 1);
-  assert.equal(missingSlug.err, 'cairn: done needs a slug\n');
+  assert.equal(missingSlug.err, 'sudus: done needs a slug\n');
 });
 
-test('cairn item prints one line and records a backlog item; refuses with no kind flag', async (t) => {
+test('sudus item prints one line and records a backlog item; refuses with no kind flag', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   const r = await run(['item', '--backlog', '--slug', 'greet-twice', '--from', 'DEMO-001', '--body', 'Greet twice.'], repo.cwd);
@@ -511,10 +511,10 @@ test('cairn item prints one line and records a backlog item; refuses with no kin
   assert.deepEqual(rec.payload, { kind: 'backlog', slug: 'greet-twice', source: 'DEMO-001', body: 'Greet twice.' });
   const noKind = await run(['item', '--slug', 'x', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
   assert.equal(noKind.code, 1);
-  assert.equal(noKind.err, 'cairn: item needs one of --backlog, --next-feature or --defect\n');
+  assert.equal(noKind.err, 'sudus: item needs one of --backlog, --next-feature or --defect\n');
 });
 
-test('cairn promote prints one line and opens the successor commitment, after done', async (t) => {
+test('sudus promote prints one line and opens the successor commitment, after done', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   await run(['start', 'first'], repo.cwd);
@@ -528,7 +528,7 @@ test('cairn promote prints one line and opens the successor commitment, after do
   assert.equal(rec.payload.slug, 'second');
 });
 
-test('cairn outside and cairn fix each print one line', async (t) => {
+test('sudus outside and sudus fix each print one line', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   const backlog = await run(['item', '--backlog', '--slug', 'greet-twice', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
@@ -547,7 +547,7 @@ test('cairn outside and cairn fix each print one line', async (t) => {
   assert.equal(fixResult.out, `fix ${fixRec.sha} ${d}\n`);
 });
 
-test('cairn decide and cairn realize each print one line', async (t) => {
+test('sudus decide and sudus realize each print one line', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   await run(['start', 'first'], repo.cwd);
@@ -564,10 +564,10 @@ test('cairn decide and cairn realize each print one line', async (t) => {
   assert.equal(missing.code, 1);
   // Plan 16, Task 4: decideCommand's refusal now also names the work-loop draft shape's flags,
   // since --commitment is the other route a missing --title can mean.
-  assert.equal(missing.err, 'cairn: decide needs --title, --rests-on, --wrong-if and --body (or the work-loop draft shape: --commitment, --concern, --question, --recommendation, --because, --if-wrong, --instead)\n');
+  assert.equal(missing.err, 'sudus: decide needs --title, --rests-on, --wrong-if and --body (or the work-loop draft shape: --commitment, --concern, --question, --recommendation, --because, --if-wrong, --instead)\n');
 });
 
-test('cairn supersede prints one line and closes the open commitment without moving Current:', async (t) => {
+test('sudus supersede prints one line and closes the open commitment without moving Current:', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   await run(['start', 'first'], repo.cwd);
@@ -580,17 +580,17 @@ test('cairn supersede prints one line and closes the open commitment without mov
 test('--help lists the newly wired commands', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   const help = await run(['--help'], repo.dir);
-  for (const line of ['cairn start <slug>', 'cairn done <slug>', 'cairn promote <item-sha>', 'cairn item --backlog']) {
+  for (const line of ['sudus start <slug>', 'sudus done <slug>', 'sudus promote <item-sha>', 'sudus item --backlog']) {
     assert.match(help.out, new RegExp(line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 
 // Fix round 1 finding 1 (Critical, plan 09 review): answerCommand passed only
 // { confirm: ctx.confirm ?? ttyConfirm } to cliAnswer, never building cliSigner(argv, io) or
-// reading cliNonce(argv), so in a signed-key project `cairn answer` always refused with
-// "signing_key is set; pass --signature or CAIRN_SIGNATURE" and no escalation could ever be
+// reading cliNonce(argv), so in a signed-key project `sudus answer` always refused with
+// "signing_key is set; pass --signature or SUDUS_SIGNATURE" and no escalation could ever be
 // answered. signedCommitmentRepo builds on signedProject's real-key init, adding the domain
-// spec/roadmap/authorize/start steps a signed cairn answer test needs (signedProject alone has
+// spec/roadmap/authorize/start steps a signed sudus answer test needs (signedProject alone has
 // no open commitment to escalate against).
 import { OVERVIEW, DEMO, CORE, ROADMAP } from './helpers/commitment-fixture.mjs';
 import { authorize } from '../lib/auth.mjs';
@@ -603,7 +603,7 @@ async function signedCommitmentRepo(t) {
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
   const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
   const repo = await makeRepo(); t.after(repo.remove);
-  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun sudus wake.\n');
   await repo.write('docs/spec/overview.md', OVERVIEW);
   await repo.write('docs/spec/glossary.md', '# Glossary\n\ngreeter: the program.\n');
   await repo.write('docs/spec/demo.md', DEMO);
@@ -623,7 +623,7 @@ const escalationDraft = (over = {}) => ({
   options: [], named_paths: [], cited_decisions: [], ...over,
 });
 
-test('cairn answer: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
+test('sudus answer: the full two-step signed flow succeeds; a signature over a different nonce is refused', async (t) => {
   const { cwd, privateKey } = await signedCommitmentRepo(t);
   const { sign: cryptoSign } = await import('node:crypto');
   await escalate(cwd, escalationDraft());
@@ -634,7 +634,7 @@ test('cairn answer: the full two-step signed flow succeeds; a signature over a d
   const signature = b64url(cryptoSign(null, Buffer.from(payload), privateKey));
   const run2 = await run(['answer', 'first', 'ok', '--quote', 'ok', '--nonce', nonce, '--signature', signature], cwd);
   assert.equal(run2.code, 0);
-  assert.match(run2.out, /^cairn: answer first [0-9a-f]{40}\n$/);
+  assert.match(run2.out, /^sudus: answer first [0-9a-f]{40}\n$/);
   const rec = (await readLog(cwd)).filter((x) => x.kind === 'answer').at(-1);
   assert.equal(rec.payload.evidence.mode, 'signed');
 
@@ -647,32 +647,32 @@ test('cairn answer: the full two-step signed flow succeeds; a signature over a d
   assert.match(bad2.err, /does not verify against signing_key/);
 });
 
-// Fix round 1 item 5 (Minor, review-1.md finding 5): `cairn push` (lib/cli.mjs, plan 12 commit
+// Fix round 1 item 5 (Minor, review-1.md finding 5): `sudus push` (lib/cli.mjs, plan 12 commit
 // 594168bc) had no CLI-dispatch test, only library-level coverage of push() itself in
 // tests/travel.test.mjs. Manually confirmed correct end to end in the implementer's own report;
 // this exercises the same success and refusal paths through main()'s real argv dispatch.
 import { makeProject } from './helpers/repo.mjs';
 
-test('cairn push exits 0 with one line; a refusal exits 1 with a cairn: line', async (t) => {
+test('sudus push exits 0 with one line; a refusal exits 1 with a sudus: line', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   const r = await run(['push'], repo.cwd);
   assert.equal(r.code, 0);
-  assert.equal(r.out, 'cairn: pushed refs/cairn/snapshots, refs/cairn/log, refs/heads/main to origin (atomic)\n');
+  assert.equal(r.out, 'sudus: pushed refs/sudus/snapshots, refs/sudus/log, refs/heads/main to origin (atomic)\n');
 
   const local = await makeProject({ settings: { authority_remote: null } });
   const bad = await run(['push'], local.cwd);
   assert.equal(bad.code, 1);
-  assert.equal(bad.err, 'cairn: no authority remote; the durable refs stay local\n');
+  assert.equal(bad.err, 'sudus: no authority remote; the durable refs stay local\n');
 });
 
 // Kernel fix round (plan 14 fixture, defect 1, ruling A): section 4's after-fetch
 // cross-reference validation is no longer run on wake's ordinary path (see lib/wake.mjs's wake()
-// and its own comment); this is the other of its two real call sites -- cairn show
+// and its own comment); this is the other of its two real call sites -- sudus show
 // (requireRefs), which is exactly the command an operator reaches for to inspect a record's own
 // cross-references. A dangling reference is now named with a clean repair line instead of a raw
 // failure from resolving the missing object.
-test('cairn show refuses naming the repair when a cross-reference is dangling', async (t) => {
+test('sudus show refuses naming the repair when a cross-reference is dangling', async (t) => {
   const repo = await project();
   t.after(repo.cleanup);
   await appendRecord(repo.dir, 'escalation', 'first', {
@@ -680,10 +680,10 @@ test('cairn show refuses naming the repair when a cross-reference is dangling', 
   });
   const r = await run(['show', 'a'.repeat(40)], repo.cwd);
   assert.equal(r.code, 3);
-  assert.match(r.out, /^cairn: a cross-reference is unresolved; run: cairn push/);
+  assert.match(r.out, /^sudus: a cross-reference is unresolved; run: sudus push/);
 });
 
-// --- Plan 16, Task 4: cairn escalate --consequential and cairn decide --consequential ---------
+// --- Plan 16, Task 4: sudus escalate --consequential and sudus decide --consequential ---------
 // (CLI dispatch). Both flows need a current measurement (escalate: any outcome; decide: composite
 // only), so these fixtures mirror tests/escalate.test.mjs's own repoWithCommitment/mdraft (here
 // named draft(), since this file has no earlier top-level `draft` to collide with)/transport/
@@ -775,7 +775,7 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     const cwd = await repoWithCommitment();
     const m = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
     const r = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
-    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: escalate/);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /sudus: escalate/);
     const sha = r.out.trim().split(' ').at(-1);
     const esc = (await readLog(cwd)).find((x) => x.sha === sha);
     assert.equal(esc.kind, 'escalation');
@@ -790,7 +790,7 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     const cwd = await repoWithCommitment();
     const m = await measure(cwd, draft(), { transport: transport([scoreBody()]) });
     const r = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
-    assert.equal(r.code, 0, r.err); assert.match(r.out, /cairn: decide/);
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /sudus: decide/);
     const id = r.out.trim().split(' ').at(-1);
     const line = (await readAdr(cwd)).find((l) => l.id === id);
     assert.equal(line.kind, 'decision');
@@ -817,10 +817,10 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     const cwd = await repoWithCommitment();
     const escRefused = await run(['escalate', '--consequential', ...draftArgs(draft())], cwd);
     assert.equal(escRefused.code, 1);
-    assert.equal(escRefused.err, 'cairn: no measurement for this exact draft; run cairn measure first\n');
+    assert.equal(escRefused.err, 'sudus: no measurement for this exact draft; run sudus measure first\n');
     const decRefused = await run(['decide', '--consequential', ...draftArgs(draft())], cwd);
     assert.equal(decRefused.code, 1);
-    assert.equal(decRefused.err, 'cairn: no measurement for this exact draft; run cairn measure first\n');
+    assert.equal(decRefused.err, 'sudus: no measurement for this exact draft; run sudus measure first\n');
   });
   // Fix round 1, Minor #3: a main()-level check that `decide --consequential --commitment` on a
   // floor (or veto) measurement is refused with decideConsequential's own "routes to the
@@ -837,11 +837,11 @@ describe('escalate --consequential and decide --consequential (CLI dispatch)', (
     assert.equal(m.outcome, 'floor');
     const r = await run(['decide', '--consequential', ...draftArgs(floorDraft)], cwd);
     assert.equal(r.code, 1);
-    assert.equal(r.err, `cairn: measurement ${m.measurementSha} routes to the developer (floor); cairn escalate --consequential instead of deciding\n`);
+    assert.equal(r.err, `sudus: measurement ${m.measurementSha} routes to the developer (floor); sudus escalate --consequential instead of deciding\n`);
   });
 });
 
-// --- Plan 16, Task 5: cairn measure (CLI dispatch) ---------------------------------------------
+// --- Plan 16, Task 5: sudus measure (CLI dispatch) ---------------------------------------------
 import { renderMeasureBrief, buildScoreQuestions } from '../lib/evaluate.mjs';
 import { readFile, readdir } from 'node:fs/promises';
 
@@ -855,7 +855,7 @@ import { readFile, readdir } from 'node:fs/promises';
 // typesafeai.model the calling fixture configured (measure()'s own model-mismatch check compares
 // the transport's returned model against the request's).
 function fakeTransportPath(body) {
-  const dir = mkdtempSync(join(tmpdir(), 'cairn-transport-'));
+  const dir = mkdtempSync(join(tmpdir(), 'sudus-transport-'));
   const file = join(dir, 'transport.mjs');
   writeFileSync(file, `export default async function (request) {\n  return { status: 200, body: ${JSON.stringify(body)}, model: request.model };\n}\n`);
   return file;
@@ -879,9 +879,9 @@ describe('the measure brief and the CLI', () => {
     const questions = buildScoreQuestions(0);
     for (const d of ['evidence', 'reach', 'contract', 'surface', 'ambiguity']) assert.ok(text.includes(questions[d].instructions), d);
     for (const d of ['reach', 'contract', 'surface']) assert.match(questions[d].instructions, /Compare it against the alternatives in `state\.options`\./);
-    assert.match(text, /cairn measure .* --file/);
+    assert.match(text, /sudus measure .* --file/);
   });
-  test('cairn measure (jev source) completes synchronously and prints the outcome', async () => {
+  test('sudus measure (jev source) completes synchronously and prints the outcome', async () => {
     const cwd = await repoWithCommitment();
     const r = await run(['measure', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
     assert.equal(r.code, 0, r.err);
@@ -894,16 +894,16 @@ describe('the measure brief and the CLI', () => {
     // Fix round 1 (Important I3, review of commit c9a69370): every field the spec's "Record and
     // calibration" names is printed, not just outcome/levels/composite/veto -- suggested and the
     // reason line, and the measurement's own SHA verbatim (not only implied by a wildcard).
-    assert.ok(r.out.includes(`cairn: measure auth-tokens ${m.sha} composite suggested:agent`), r.out);
+    assert.ok(r.out.includes(`sudus: measure auth-tokens ${m.sha} composite suggested:agent`), r.out);
     assert.match(r.out, /levels:.*evidence=/);
     assert.ok(r.out.includes(`composite: ${m.payload.composite}`), r.out);
     assert.match(r.out, /veto: none/);
     assert.ok(r.out.includes(`reason: ${m.payload.reason}`), r.out);
   });
-  test('cairn measure --brief (review source) writes the intent and prints a launch block', async () => {
+  test('sudus measure --brief (review source) writes the intent and prints a launch block', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
-    assert.equal(r.code, 0, r.err); assert.match(r.out, /start:.*fresh reviewer/); assert.match(r.out, /cairn measure auth-tokens .* --file/);
+    const r = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
+    assert.equal(r.code, 0, r.err); assert.match(r.out, /start:.*fresh reviewer/); assert.match(r.out, /sudus measure auth-tokens .* --file/);
     // Written records: an evaluation-intent naming the review source and the detected harness --
     // no measurement yet (the review source finishes only through Task 6's --file completion).
     const log = await readLog(cwd);
@@ -916,15 +916,15 @@ describe('the measure brief and the CLI', () => {
     const written = await readFile(briefPath, 'utf8');
     assert.match(written, /# Measurement brief/);
     assert.match(written, /## Score five dimensions, 0 to 4 each/);
-    assert.match(written, /cairn measure <slug> --file <path>/);
+    assert.match(written, /sudus measure <slug> --file <path>/);
   });
-  // Fix (Important I3, final-review.md): cairn measure never exposed a --harness <name> override,
-  // unlike cairn brief, which section 10 says the review source mirrors exactly. `splitFlag`
+  // Fix (Important I3, final-review.md): sudus measure never exposed a --harness <name> override,
+  // unlike sudus brief, which section 10 says the review source mirrors exactly. `splitFlag`
   // already listed '--harness' in its takesValue set (lib/cli.mjs), but measureCommand never read
-  // one off argv -- dead code. env carries none of CAIRN_HARNESS/CLAUDECODE/CODEX_HOME/
+  // one off argv -- dead code. env carries none of SUDUS_HARNESS/CLAUDECODE/CODEX_HOME/
   // MUSE_SESSION, so only the flag itself could have selected the harness below (auto-detection
   // would otherwise throw the C1 no-harness refusal exercised above).
-  test('cairn measure --brief --harness <name> selects the named harness in the recorded launch', async () => {
+  test('sudus measure --brief --harness <name> selects the named harness in the recorded launch', async () => {
     const cwd = await repoWithCommitment(false);
     const r = await run(['measure', '--brief', '--harness', 'codex', ...draftFlags(draft())], cwd, { env: {} });
     assert.equal(r.code, 0, r.err);
@@ -934,20 +934,20 @@ describe('the measure brief and the CLI', () => {
     assert.deepEqual(intent.payload.launch, { harness: 'codex', model: null, transport: null, boundary: 'unenforced' });
     assert.match(r.out, /harness: codex/);
   });
-  test('cairn measure without --brief on a review-source project refuses', async () => {
+  test('sudus measure without --brief on a review-source project refuses', async () => {
     const cwd = await repoWithCommitment(false);
-    const r = await run(['measure', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await run(['measure', ...draftFlags(draft())], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
     assert.equal(r.code, 1); assert.match(r.err, /--brief/);
   });
   // Fix (Critical C1, final-review.md): the same no-harness-detected scenario, driven through the
   // real CLI (main()) rather than measure() directly -- a controlled, empty env (no --harness, no
-  // CAIRN_HARNESS, none of CLAUDECODE/CODEX_HOME/MUSE_SESSION) so this never depends on the real
+  // SUDUS_HARNESS, none of CLAUDECODE/CODEX_HOME/MUSE_SESSION) so this never depends on the real
   // process environment. A clean non-zero exit naming the recorded outcome, not a crash.
-  test('cairn measure --brief with no harness detectable in env exits non-zero with the recorded unavailable measurement, not a crash', async () => {
+  test('sudus measure --brief with no harness detectable in env exits non-zero with the recorded unavailable measurement, not a crash', async () => {
     const cwd = await repoWithCommitment(false);
     const r = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: {} });
     assert.equal(r.code, 1);
-    assert.match(r.err, /^cairn: /); assert.match(r.err, /--brief/); assert.match(r.err, /unavailable no-harness/);
+    assert.match(r.err, /^sudus: /); assert.match(r.err, /--brief/); assert.match(r.err, /unavailable no-harness/);
     const log = await readLog(cwd);
     const m = log.findLast((x) => x.kind === 'measurement');
     assert.equal(m.payload.outcome, 'unavailable'); assert.equal(m.payload.reason, 'unavailable no-harness');
@@ -955,25 +955,25 @@ describe('the measure brief and the CLI', () => {
     const intent = log.findLast((x) => x.kind === 'evaluation-intent');
     assert.equal(intent.payload.launch, null);
   });
-  test('cairn measure --brief on a jev-source project refuses: there is nothing to brief', async () => {
+  test('sudus measure --brief on a jev-source project refuses: there is nothing to brief', async () => {
     const cwd = await repoWithCommitment();
     const r = await run(['measure', '--brief', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
     assert.equal(r.code, 1); assert.match(r.err, /--brief/);
   });
   // Fix round 1 (Critical C1, review of commit c9a69370): 'measure' is now in lib/scope.mjs's
-  // STATE_CHANGING set beside calibrate/escalate/decide, so cairn measure runs the same scope
+  // STATE_CHANGING set beside calibrate/escalate/decide, so sudus measure runs the same scope
   // preflight its peers do -- before this fix it silently skipped it. Mirrors
   // tests/scope.test.mjs's "an untracked credential-shaped file refuses cleanly instead of
   // crashing the preflight" (an ordinary undeclared file enters preflight's delta loop; a
   // credential-shaped untracked file anywhere in the workspace then refuses the snapshot), but
-  // driven through the real cairn measure via main(), not a direct preflight() call.
-  test('cairn measure is refused the same way its peers are when the preflight refuses', async () => {
+  // driven through the real sudus measure via main(), not a direct preflight() call.
+  test('sudus measure is refused the same way its peers are when the preflight refuses', async () => {
     const cwd = await repoWithCommitment();
     await writeFile(join(cwd, 'stray.mjs'), 'x\n');
     await writeFile(join(cwd, 'leaked.pem'), '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n');
     const r = await run(['measure', '--transport-module', fakeTransportPath(scoreBody()), ...draftFlags(draft())], cwd);
     assert.equal(r.code, 1);
-    assert.match(r.err, /^cairn: /); assert.match(r.err, /looks like a credential/); assert.match(r.err, /leaked\.pem/);
+    assert.match(r.err, /^sudus: /); assert.match(r.err, /looks like a credential/); assert.match(r.err, /leaked\.pem/);
     // The preflight refusal happens before measureCommand ever runs: no evaluation-intent and no
     // measurement were written.
     const log = await readLog(cwd);
@@ -986,7 +986,7 @@ describe('the measure brief and the CLI', () => {
     const badPath = join(cwd, 'does-not-exist.mjs');
     const r = await run(['measure', '--transport-module', badPath, ...draftFlags(draft())], cwd);
     assert.equal(r.code, 1);
-    assert.match(r.err, /^cairn: /);
+    assert.match(r.err, /^sudus: /);
     assert.ok(r.err.includes(badPath), r.err);
   });
   test('a malformed draft (missing --recommendation) is refused with a non-zero exit', async () => {
@@ -1002,25 +1002,25 @@ describe('the measure brief and the CLI', () => {
   // itself already excludes it (EgressError, an earlier task), so --brief has a finished
   // 'unavailable excluded' measurement, not a pending one, and now names the excluded path in its
   // own refusal (see lib/cli.mjs's --brief-has-nothing-to-show message, fix round 1).
-  test('cairn measure --brief refuses before any brief is rendered for a credential-pattern path, naming the excluded path', async () => {
+  test('sudus measure --brief refuses before any brief is rendered for a credential-pattern path, naming the excluded path', async () => {
     const cwd = await repoWithCommitment(false);
     const credDraft = draft({ named_paths: ['secret/.env'] });
-    const r = await run(['measure', '--brief', ...draftFlags(credDraft)], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+    const r = await run(['measure', '--brief', ...draftFlags(credDraft)], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
     assert.equal(r.code, 1);
     assert.match(r.err, /--brief/); assert.match(r.err, /credential secret\/\.env/);
     const log = await readLog(cwd);
     const m = log.findLast((x) => x.kind === 'measurement');
     assert.equal(m.payload.outcome, 'unavailable');
-    const entries = await readdir(join(cwd, '.cairn/output')).catch(() => []);
+    const entries = await readdir(join(cwd, '.sudus/output')).catch(() => []);
     assert.equal(entries.some((f) => f.startsWith('measure-')), false);
   });
 
   // Fix round 1 (task-6-review.md, Important 1): plan 16 Task 6's own report ran this exact round
-  // trip only as an uncommitted, unreproducible manual smoke test against bin/cairn.mjs. This is
-  // that script, as a real automated test: `cairn measure --brief` (writing the pending review
+  // trip only as an uncommitted, unreproducible manual smoke test against bin/sudus.mjs. This is
+  // that script, as a real automated test: `sudus measure --brief` (writing the pending review
   // intent, the launch block and the brief file), then a fresh reviewer's answers file (a
   // different session than the brief-writer's, the real Score answer shape with no `type` field),
-  // then `cairn measure <slug> --file <path>` completing it -- all driven through main() itself,
+  // then `sudus measure <slug> --file <path>` completing it -- all driven through main() itself,
   // asserting exit 0 both times, the printed lines, and the written call/measurement records.
   //
   // Real Score answer shape (session, transport, model, usage, answers keyed by the five
@@ -1043,28 +1043,28 @@ describe('the measure brief and the CLI', () => {
     });
   }
   // measureCommand's own non-file branch reads the brief-writer's session from
-  // `process.env.CAIRN_SESSION` directly (lib/cli.mjs), not from the run() helper's injected
-  // `env` (that override only reaches detectHarness, for CAIRN_HARNESS) -- set and restored around
+  // `process.env.SUDUS_SESSION` directly (lib/cli.mjs), not from the run() helper's injected
+  // `env` (that override only reaches detectHarness, for SUDUS_HARNESS) -- set and restored around
   // each test that needs a real, non-null brief-writer session to prove "a different session" is
   // actually different, not merely non-null vs. null.
-  async function withCairnSession(session, fn) {
-    const prev = process.env.CAIRN_SESSION;
-    process.env.CAIRN_SESSION = session;
+  async function withSudusSession(session, fn) {
+    const prev = process.env.SUDUS_SESSION;
+    process.env.SUDUS_SESSION = session;
     try { return await fn(); } finally {
-      if (prev === undefined) delete process.env.CAIRN_SESSION; else process.env.CAIRN_SESSION = prev;
+      if (prev === undefined) delete process.env.SUDUS_SESSION; else process.env.SUDUS_SESSION = prev;
     }
   }
 
-  test('cairn measure --brief then cairn measure <slug> --file <path> completes the review measurement end to end through main()', async () => {
-    await withCairnSession('sess-agent-cli', async () => {
+  test('sudus measure --brief then sudus measure <slug> --file <path> completes the review measurement end to end through main()', async () => {
+    await withSudusSession('sess-agent-cli', async () => {
       const cwd = await repoWithCommitment(false);
-      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
       assert.equal(briefRun.code, 0, briefRun.err);
-      assert.match(briefRun.out, /cairn measure auth-tokens .* --file/);
+      assert.match(briefRun.out, /sudus measure auth-tokens .* --file/);
       const briefIntent = (await readLog(cwd)).findLast((x) => x.kind === 'evaluation-intent');
       assert.equal(briefIntent.payload.session, 'sess-agent-cli');
 
-      const answersPath = join(cwd, '.cairn/output', 'answers.json');
+      const answersPath = join(cwd, '.sudus/output', 'answers.json');
       await writeFile(answersPath, reviewAnswers());
 
       const fileRun = await run(['measure', 'auth-tokens', '--file', answersPath], cwd);
@@ -1073,7 +1073,7 @@ describe('the measure brief and the CLI', () => {
       const log = await readLog(cwd);
       const call = log.findLast((x) => x.kind === 'evaluation-call');
       const m = log.findLast((x) => x.kind === 'measurement');
-      assert.ok(fileRun.out.includes(`cairn: measure auth-tokens ${m.sha} composite`), fileRun.out);
+      assert.ok(fileRun.out.includes(`sudus: measure auth-tokens ${m.sha} composite`), fileRun.out);
       assert.equal(call.payload.source, 'review');
       assert.equal(call.payload.session, 'sess-fresh-reviewer');
       assert.equal(call.payload.transport, 'remote');
@@ -1088,12 +1088,12 @@ describe('the measure brief and the CLI', () => {
   // already completed must be refused non-zero, with wording naming that condition, distinct from
   // the never-had-one message (lib/evaluate.mjs's completeReviewMeasurement, fixed alongside this
   // test), and must not write a second call or measurement.
-  test('re-submitting cairn measure <slug> --file <path> against an already-completed review intent refuses distinctly and writes nothing new', async () => {
-    await withCairnSession('sess-agent-cli-2', async () => {
+  test('re-submitting sudus measure <slug> --file <path> against an already-completed review intent refuses distinctly and writes nothing new', async () => {
+    await withSudusSession('sess-agent-cli-2', async () => {
       const cwd = await repoWithCommitment(false);
-      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { CAIRN_HARNESS: 'claude_code' } });
+      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
       assert.equal(briefRun.code, 0, briefRun.err);
-      const answersPath = join(cwd, '.cairn/output', 'answers.json');
+      const answersPath = join(cwd, '.sudus/output', 'answers.json');
       await writeFile(answersPath, reviewAnswers({ session: 'sess-fresh-reviewer-2' }));
 
       const first = await run(['measure', 'auth-tokens', '--file', answersPath], cwd);

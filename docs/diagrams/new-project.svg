@@ -48,7 +48,7 @@
 <path fill="none" stroke="black" d="M596,-749.5C596,-749.5 326.5,-749.5 326.5,-749.5 320.5,-749.5 314.5,-743.5 314.5,-737.5 314.5,-737.5 314.5,-713 314.5,-713 314.5,-707 320.5,-701 326.5,-701 326.5,-701 596,-701 596,-701 602,-701 608,-707 608,-713 608,-713 608,-737.5 608,-737.5 608,-743.5 602,-749.5 596,-749.5"/>
 <text xml:space="preserve" text-anchor="middle" x="461.25" y="-735.05" font-family="Helvetica,sans-Serif" font-size="11.00">Initialize Git if needed; ask the developer:</text>
 <text xml:space="preserve" text-anchor="middle" x="461.25" y="-721.55" font-family="Helvetica,sans-Serif" font-size="11.00">authority remote or local&#45;only, signed or attested;</text>
-<text xml:space="preserve" text-anchor="middle" x="461.25" y="-708.05" font-family="Helvetica,sans-Serif" font-size="11.00">cairn init with the answers as flags</text>
+<text xml:space="preserve" text-anchor="middle" x="461.25" y="-708.05" font-family="Helvetica,sans-Serif" font-size="11.00">sudus init with the answers as flags</text>
 </g>
 <!-- exists&#45;&gt;init -->
 <g id="edge3" class="edge">

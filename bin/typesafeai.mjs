@@ -1,5 +1,5 @@
 // bin/typesafeai.mjs
-// The only file in Cairn that performs network I/O. It never stores or logs the key.
+// The only file in Sudus that performs network I/O. It never stores or logs the key.
 export const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 
 // Retry policy mirrors typesafe-sdk-js v0.6.0 (src/retry.ts): retry 408, 429 and every

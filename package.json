@@ -1,10 +1,10 @@
 {
-  "name": "cairn",
+  "name": "sudus",
   "version": "2.2.2",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "bin": { "cairn": "bin/cairn.mjs" },
+  "bin": { "sudus": "bin/sudus.mjs" },
   "scripts": { "test": "node --test tests/*.test.mjs tests/bench/*.test.mjs", "bench": "node tests/bench/harness.mjs" },
   "engines": { "node": ">=24" },
   "files": ["bin/", "lib/", "hooks/", "skills/", "scripts/release.mjs", "README.md"]

@@ -21,7 +21,7 @@ test('the counter lives below the Git directory, counts by class and target, and
   assert.deepEqual(last, { sameTarget: 3, total: 3, bound: null });
   assert.deepEqual(await bump(r.cwd, 'commit', 'src/a.mjs'), { sameTarget: 1, total: 4, bound: null });
   assert.deepEqual(await bump(r.cwd, 'record', 'src/a.mjs'), { sameTarget: 4, total: 5, bound: 'sameTarget' });
-  const file = await gitPath(r.cwd, 'cairn-cycle.json');
+  const file = await gitPath(r.cwd, 'sudus-cycle.json');
   assert.ok((await stat(file)).isFile());
   assert.ok(!file.startsWith(r.cwd + '/src'));
   assert.equal((await git(['for-each-ref'], { cwd: r.cwd })).stdout, refsBefore);
@@ -118,8 +118,8 @@ test('disposing a scope breach alone is not semantic progress', async () => {
 });
 
 // Deviation from the plan text: lib/mechanisms.mjs (plan 05, already committed) stores one JSON
-// entry per mechanism at '.cairn/mechanisms/<name>.json', not a single '.cairn/mechanisms' file;
-// readFile(join(cwd, '.cairn/mechanisms')) on that real directory throws EISDIR. Both the guarded
+// entry per mechanism at '.sudus/mechanisms/<name>.json', not a single '.sudus/mechanisms' file;
+// readFile(join(cwd, '.sudus/mechanisms')) on that real directory throws EISDIR. Both the guarded
 // path and the good-bytes read below use the real per-mechanism file loopRepo's own declare()
 // wrote (demo-001.json, since loopRepo declares 'DEMO-001' under mechanism name 'demo-001').
 //
@@ -130,7 +130,7 @@ test('disposing a scope breach alone is not semantic progress', async () => {
 // precedence check through the real functions instead.
 test('a kernel-managed write with corrupted or noncanonical bytes is refused, and the first refusal writes no escalation', async () => {
   const r = await loopRepo();
-  const mechPath = '.cairn/mechanisms/demo-001.json';
+  const mechPath = '.sudus/mechanisms/demo-001.json';
   const good = await readFile(join(r.cwd, mechPath));
   await guardKernelWrite(r.cwd, mechPath, good, { action: 'declare' });
   await assert.rejects(guardKernelWrite(r.cwd, mechPath, Buffer.concat([good, Buffer.from(' ')]), { action: 'declare' }), LivenessError);
@@ -152,7 +152,7 @@ test('a refused write counts toward the same-target bound: the fourth refusal wr
   await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /cycle escalation written/.test(e.message));
   const esc = await cycle();
   assert.equal(esc.length, 1);
-  assert.match(esc[0].payload.question, /declare \.cairn\/mechanisms\/demo-001\.json was refused 4 times: it would create a record violation \(src\/util\.mjs/);
+  assert.match(esc[0].payload.question, /declare \.sudus\/mechanisms\/demo-001\.json was refused 4 times: it would create a record violation \(src\/util\.mjs/);
   // the open Waiting does not hide the violation: the same write is still refused, and no second escalation is written
   await assert.rejects(declare(r.cwd, 'demo-001', widened), (e) => e instanceof LivenessError && /record violation/.test(e.message));
   assert.equal((await cycle()).length, 1, 'one escalation per cycle');
@@ -176,7 +176,7 @@ test('declare is refused when its new input would legalize a pre-existing undecl
   const esc = (await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle');
   assert.equal(esc.length, 0, 'a first refusal writes no escalation');
   // the refused declare wrote nothing: the mechanism definition still has its original inputs
-  const before = JSON.parse(await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8'));
+  const before = JSON.parse(await readFile(join(r.cwd, '.sudus/mechanisms/demo-001.json'), 'utf8'));
   assert.deepEqual(before.definition.inputs, ['flags/DEMO-001', 'src/demo.mjs']);
   // a normal re-declare (same definition, nothing newly dirty-and-declared) is allowed
   await declare(r.cwd, 'demo-001', mechanismFor('DEMO-001'));
@@ -189,7 +189,7 @@ test('declare is refused when its new input would legalize a pre-existing undecl
 test('a corrupted cycle counter file is a refusal, not a silent reset to empty', async () => {
   const r = await loopRepo();
   await bump(r.cwd, 'record', 'src/a.mjs');
-  const file = await gitPath(r.cwd, 'cairn-cycle.json');
+  const file = await gitPath(r.cwd, 'sudus-cycle.json');
   await writeFile(file, 'not json');
   await assert.rejects(readCounter(r.cwd), /is corrupt/);
 });
@@ -202,10 +202,10 @@ test('withLoop settles after a state-changing command and leaves wake pure', asy
   assert.deepEqual(c.last, { action: 'run', target: 'DEMO-001' });
 });
 
-// Fix round 2 finding 15 (plan 09 re-review): the counter's temp file (<gitdir>/cairn-cycle.json.tmp)
+// Fix round 2 finding 15 (plan 09 re-review): the counter's temp file (<gitdir>/sudus-cycle.json.tmp)
 // was a fixed name, so two concurrent state-changing commands racing to settle() at the same
 // moment could each write their own record, print success, and still exit 1 on an unrelated
-// "ENOENT: no such file or directory, rename '.../cairn-cycle.json.tmp' -> '.../cairn-cycle.json'"
+// "ENOENT: no such file or directory, rename '.../sudus-cycle.json.tmp' -> '.../sudus-cycle.json'"
 // -- whichever renamed second found its own .tmp already gone. Reproduced with the reviewer's own
 // method: 8 concurrent main(['escalate', ...]) calls. main(), for a state-changing command, always
 // calls settle() after the command runs (lib/cli.mjs's withLoop), win or lose the escalation's own
@@ -223,5 +223,5 @@ test('8 concurrent state-changing commands never collide on the cycle counter te
       .then((code) => ({ code, out, err }));
   };
   const results = await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(run));
-  for (const res of results) assert.equal(/ENOENT.*cairn-cycle\.json\.tmp/.test(res.err), false, res.err);
+  for (const res of results) assert.equal(/ENOENT.*sudus-cycle\.json\.tmp/.test(res.err), false, res.err);
 });

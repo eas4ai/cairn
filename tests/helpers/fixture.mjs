@@ -13,10 +13,10 @@ import { answer } from "../../lib/escalate.mjs";
 import { supersede } from "../../lib/commitment.mjs";
 
 export const ROOT = resolve(new URL("../..", import.meta.url).pathname);
-export const KERNEL = join(ROOT, "bin/cairn.mjs");
+export const KERNEL = join(ROOT, "bin/sudus.mjs");
 
 // Section 5's own table is normative and does carry backticks around `resolve`, `Current:` and
-// `ask` in the accept/promote/reply rows (docs/spec/cairn-v2.md, confirmed by direct reading).
+// `ask` in the accept/promote/reply rows (docs/spec/sudus-v2.md, confirmed by direct reading).
 // lib/wake.mjs's real PREDICATES strings for exactly those three actions used to print the same
 // words without the backticks (a kernel defect found by this fixture and recorded in the plan 14
 // report, with the spec-vs-implementation comparison as its own isolated test below; fixed in the
@@ -48,7 +48,7 @@ export const PREDICATE = {
   reply: "a reply record names the open `ask` escalation",
 };
 
-// docs/spec/cairn-v2.md section 5's exact table text for the three rows where it differs from
+// docs/spec/sudus-v2.md section 5's exact table text for the three rows where it differs from
 // lib/wake.mjs's real PREDICATES strings (backticks around `resolve`, `Current:` and `ask`).
 export const SPEC_PREDICATE = {
   accept: "an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action",
@@ -71,14 +71,14 @@ export const SPEC = {
 };
 
 export const MECH_TEST = `import { add } from "../src/add.mjs";
-const say = (id, ok) => process.stdout.write("cairn: " + id + ": " + (ok ? "pass" : "fail") + "\\n");
+const say = (id, ok) => process.stdout.write("sudus: " + id + ": " + (ok ? "pass" : "fail") + "\\n");
 let sum = false, refuses = false;
 try { sum = add(2, 3) === 5; } catch {}
 try { add("2", 3); } catch (e) { refuses = e instanceof TypeError; }
 say("REQ-001", sum); say("REQ-002", refuses);
 `;
 
-// The mechanism definition JSON `cairn declare tests --file <path>` reads (lib/cli.mjs's
+// The mechanism definition JSON `sudus declare tests --file <path>` reads (lib/cli.mjs's
 // declareCommand); the CLI names no argument syntax for the individual fields (deviation
 // recorded in the plan 14 report: plan text assumed --command/--input/--requirement/--results/
 // --identity flags that lib/cli.mjs never registers; declare instead takes one JSON file, the
@@ -96,22 +96,22 @@ export const MECH_DEFINITION = {
 };
 
 export function buildProject({ settings = SETTINGS } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), "cairn-fixture-"));
-  const remote = mkdtempSync(join(tmpdir(), "cairn-remote-"));
+  const dir = mkdtempSync(join(tmpdir(), "sudus-fixture-"));
+  const remote = mkdtempSync(join(tmpdir(), "sudus-remote-"));
   const sh = (cwd, cmd, args, opts = {}) => spawnSync(cmd, args, { cwd, encoding: "utf8", ...opts });
   const git = (...a) => { const r = sh(dir, "/usr/bin/git", a); assert.equal(r.status, 0, `git ${a.join(" ")}: ${r.stderr}`); return r.stdout; };
   spawnSync("/usr/bin/git", ["init", "-q", "--bare", remote]);
   git("init", "-q", "-b", "main"); git("config", "user.email", "dev@example.invalid"); git("config", "user.name", "dev");
   git("remote", "add", "origin", remote);
   for (const [p, text] of Object.entries(SPEC)) { mkdirSync(join(dir, p, ".."), { recursive: true }); writeFileSync(join(dir, p), text); }
-  mkdirSync(join(dir, ".cairn")); writeFileSync(join(dir, ".cairn/settings.json"), JSON.stringify(settings, null, 2) + "\n");
+  mkdirSync(join(dir, ".sudus")); writeFileSync(join(dir, ".sudus/settings.json"), JSON.stringify(settings, null, 2) + "\n");
   mkdirSync(join(dir, "tests")); writeFileSync(join(dir, "tests/req.test.mjs"), MECH_TEST);
   mkdirSync(join(dir, "src")); writeFileSync(join(dir, "src/add.mjs"), "export function add() { return undefined; }\n");
-  writeFileSync(join(dir, "README.md"), "adder\n"); writeFileSync(join(dir, ".gitignore"), ".cairn/output/\n");
+  writeFileSync(join(dir, "README.md"), "adder\n"); writeFileSync(join(dir, ".gitignore"), ".sudus/output/\n");
   git("add", "-A"); git("commit", "-q", "-m", "Prepare the fixture project");
-  const cairn = (args, { stdin, env, expectExit = 0 } = {}) => {
+  const sudus = (args, { stdin, env, expectExit = 0 } = {}) => {
     const r = sh(dir, process.execPath, [KERNEL, ...args], { input: stdin, env: { ...process.env, ...env } });
-    assert.equal(r.status, expectExit, `cairn ${args.join(" ")} exited ${r.status}: ${r.stderr}${r.stdout}`);
+    assert.equal(r.status, expectExit, `sudus ${args.join(" ")} exited ${r.status}: ${r.stderr}${r.stdout}`);
     return r;
   };
   const wakeIs = async (verdict, action, target) => {
@@ -123,7 +123,7 @@ export function buildProject({ settings = SETTINGS } = {}) {
   };
   const kinds = async () => (await readLog(dir)).map((r) => r.kind);
   // supersede is developer-only, exactly like authorize/answer: run as a raw child process (via
-  // p.cairn) with no injected --quote, lib/cli.mjs's supersedeCommand refuses "needs --quote"
+  // p.sudus) with no injected --quote, lib/cli.mjs's supersedeCommand refuses "needs --quote"
   // with none -- called through the lib directly here, the same pattern already used for
   // init/authorize/answer. Spec revision 6: the developer's quoted words (--quote) are both the
   // record's own text and, in attested mode (no signing_key here), the developer evidence itself.
@@ -144,20 +144,20 @@ export function buildProject({ settings = SETTINGS } = {}) {
   // even when it is removed again right after the command that reads it. outFile keeps every such
   // scratch file in a directory outside the project entirely, matching how the brief's own
   // projection directory (lib/review.mjs's brief()) already lives outside the repository.
-  const scratchDir = mkdtempSync(join(tmpdir(), "cairn-fixture-files-"));
+  const scratchDir = mkdtempSync(join(tmpdir(), "sudus-fixture-files-"));
   const outFile = (name, obj) => { const p = join(scratchDir, name); writeFileSync(p, JSON.stringify(obj)); return p; };
-  return { dir, remote, git, cairn, wakeIs, kinds, developer, write, commit, outFile, readLog: () => readLog(dir), remove: (p) => rmSync(join(dir, p), { force: true }) };
+  return { dir, remote, git, sudus, wakeIs, kinds, developer, write, commit, outFile, readLog: () => readLog(dir), remove: (p) => rmSync(join(dir, p), { force: true }) };
 }
 
-// `cairn <command> --help` prints the same usage line `usage()` in lib/cli.mjs lists for the
+// `sudus <command> --help` prints the same usage line `usage()` in lib/cli.mjs lists for the
 // command (since 2.1.6); assertFlags reads the global help text once and checks each flag is a
 // substring of that command's own line, which is that line without a spawn per command.
 export function assertFlags(cmd, flags) {
   const help = spawnSync(process.execPath, [KERNEL, "--help"], { encoding: "utf8" }).stdout;
   const name = cmd.split(" ")[0];
-  const line = help.split("\n").find((l) => l.trim().startsWith(`cairn ${name} `) || l.trim() === `cairn ${name}`);
-  assert.ok(line, `cairn --help does not list a usage line for ${name}`);
-  for (const f of flags) assert.ok(line.includes(f), `cairn ${name} usage line does not list ${f}: ${line}`);
+  const line = help.split("\n").find((l) => l.trim().startsWith(`sudus ${name} `) || l.trim() === `sudus ${name}`);
+  assert.ok(line, `sudus --help does not list a usage line for ${name}`);
+  for (const f of flags) assert.ok(line.includes(f), `sudus ${name} usage line does not list ${f}: ${line}`);
 }
 
 export const REPORT_FLAGS = ["--file"];

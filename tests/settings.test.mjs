@@ -31,7 +31,7 @@ test('refuses an outside path overlapping source, interfaces, data, a reserved p
 test('refuses a reserved path under source, interfaces or data', () => {
   refuses((s) => { s.source.push('docs/**'); }, /source docs\/\*\* overlaps reserved/);
   refuses((s) => { s.interfaces.push('AGENTS.md'); }, /interfaces AGENTS.md overlaps reserved/);
-  refuses((s) => { s.data.push('.cairn/**'); }, /data .cairn\/\*\* overlaps reserved/);
+  refuses((s) => { s.data.push('.sudus/**'); }, /data .sudus\/\*\* overlaps reserved/);
 });
 test('refuses a documents path below source', () => refuses(() => {}, /documents src\/README.md lies below source/, { mechanisms: [{ inputs: ['src/README.md'], documents: ['src/README.md'] }] }));
 test('S3: a source root nested under a documents directory is accepted, only the reverse is refused', () => {
@@ -74,10 +74,10 @@ test('overlaps follows glob-vs-glob language intersection, not literal-stem cont
 import { matchGlob } from '../lib/paths.mjs';
 
 test('S1: a wildcard-leading glob overlapping a reserved path is caught, not just stem containment', () => {
-  assert.ok(matchGlob('**/*.json', '.cairn/settings.json'));
-  assert.ok(overlaps('**/*.json', '.cairn/**'));
+  assert.ok(matchGlob('**/*.json', '.sudus/settings.json'));
+  assert.ok(overlaps('**/*.json', '.sudus/**'));
   assert.ok(overlaps('**/spec/**', 'docs/spec/**'));
-  refuses((s) => { s.outside.push('**/*.json'); }, /outside \*\*\/\*\.json overlaps reserved \.cairn\/\*\*/);
+  refuses((s) => { s.outside.push('**/*.json'); }, /outside \*\*\/\*\.json overlaps reserved \.sudus\/\*\*/);
   refuses((s) => { s.outside.push('**/spec/**'); }, /outside \*\*\/spec\/\*\* overlaps reserved docs\/spec\/\*\*/);
 });
 
@@ -151,18 +151,18 @@ import { makeRepo } from './helpers/repo.mjs';
 import { loadSettings, SettingsError } from '../lib/settings.mjs';
 import { sha256, canonicalize } from '../lib/canon.mjs';
 
-test('loadSettings reads .cairn/settings.json, checks remotes, and digests the canonical form', async (t) => {
+test('loadSettings reads .sudus/settings.json, checks remotes, and digests the canonical form', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  await assert.rejects(loadSettings(repo.dir), /no .cairn\/settings.json/);
-  await repo.write('.cairn/settings.json', JSON.stringify(GOOD, null, 2) + '\n');
+  await assert.rejects(loadSettings(repo.dir), /no .sudus\/settings.json/);
+  await repo.write('.sudus/settings.json', JSON.stringify(GOOD, null, 2) + '\n');
   await assert.rejects(loadSettings(repo.dir), (e) => e instanceof SettingsError && e.reasons.some((r) => /not a configured remote/.test(r)));
   await repo.git('remote', 'add', 'origin', '/nonexistent/origin.git');
   const a = await loadSettings(repo.dir);
   assert.deepEqual(a.settings, GOOD);
   assert.equal(a.digest, sha256(canonicalize(GOOD)));
-  await repo.write('.cairn/settings.json', JSON.stringify(GOOD));
+  await repo.write('.sudus/settings.json', JSON.stringify(GOOD));
   assert.equal((await loadSettings(repo.dir)).digest, a.digest);
-  await repo.write('.cairn/settings.json', '{ not json');
+  await repo.write('.sudus/settings.json', '{ not json');
   await assert.rejects(loadSettings(repo.dir), /not valid JSON/);
 });
 
@@ -171,8 +171,8 @@ import { join as pathJoin } from 'node:path';
 
 test('Q6: loadSettings reports a non-ENOENT read error with its code and the relative path', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
-  await mkdir(pathJoin(repo.dir, '.cairn/settings.json'), { recursive: true });
+  await mkdir(pathJoin(repo.dir, '.sudus/settings.json'), { recursive: true });
   await assert.rejects(loadSettings(repo.dir), (e) => e instanceof SettingsError
-    && e.reasons.some((r) => r.includes('EISDIR') && r.includes('.cairn/settings.json'))
-    && !e.reasons.some((r) => /run cairn init/.test(r)));
+    && e.reasons.some((r) => r.includes('EISDIR') && r.includes('.sudus/settings.json'))
+    && !e.reasons.some((r) => /run sudus init/.test(r)));
 });

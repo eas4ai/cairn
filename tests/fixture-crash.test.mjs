@@ -33,7 +33,7 @@ async function prepared() {
   await p.developer.init();
   p.write("docs/spec/add.md", readFileSync(join(p.dir, "docs/spec/add.md"), "utf8").replaceAll("Status: Draft", "Status: Agreed 2026-09-19"));
   p.commit("Agree");
-  p.cairn(["declare", "tests", "--file", p.outFile("mech-tests.json", MECH_DEFINITION)]);
+  p.sudus(["declare", "tests", "--file", p.outFile("mech-tests.json", MECH_DEFINITION)]);
   p.commit("Declare");
   p.write("AGENTS.md", "# Working agreement\n"); p.commit("Agreement");
   await p.developer.authorize();
@@ -41,8 +41,8 @@ async function prepared() {
 }
 
 for (const [name, cfg, expectForward] of [
-  ["A: killed at the start record after the snapshot ref advanced", { killRef: "refs/cairn/log", killAt: 2 }, true],
-  ["B: killed at the snapshot ref right after the intent", { killRef: "refs/cairn/snapshots", killAt: 1 }, false],
+  ["A: killed at the start record after the snapshot ref advanced", { killRef: "refs/sudus/log", killAt: 2 }, true],
+  ["B: killed at the snapshot ref right after the intent", { killRef: "refs/sudus/snapshots", killAt: 1 }, false],
 ]) {
   test(`crash ${name}: recover completes and wake resumes`, async () => {
     const p = await prepared();
@@ -59,29 +59,29 @@ for (const [name, cfg, expectForward] of [
     assert.equal(w.exit, 3);
     // Kernel fix round (plan 14 fixture, defect 1): this used to assert the defect directly (same
     // root cause as tests/fixture.test.mjs's isolated "wake demands a nonsensical push" test,
-    // recorded in the plan 14 report) -- the crash always happens during `cairn start`, before its
+    // recorded in the plan 14 report) -- the crash always happens during `sudus start`, before its
     // terminal 'start' record lands, so the roadmap's Current: line still names a commitment with
     // no matching start record, and lib/travel.mjs's validateAfterFetch (called unconditionally
     // inside wake() on every ordinary call) read that as a dangling reference and masked the real
-    // "cairn recover <tx>" guidance behind a nonsensical "cairn push" line. Fixed two ways: wake()
+    // "sudus recover <tx>" guidance behind a nonsensical "sudus push" line. Fixed two ways: wake()
     // no longer calls validateAfterFetch on its ordinary path, and validateAfterFetch itself no
     // longer reads a Current: line with no start record anywhere in the log (the ordinary
     // spec-phase state) as dangling. wake() now correctly names the pending recovery.
-    assert.equal(w.line, `cairn recover ${intent.target}`);
+    assert.equal(w.line, `sudus recover ${intent.target}`);
     const out = await recover(p.dir, intent.target);
     const kinds = (await p.kinds());
     if (expectForward) {
       assert.equal(out.completed, "forward");
       assert.deepEqual(kinds.slice(-2), ["command-intent", "start"]);
       await p.wakeIs("Resolvable", "run", "REQ-001");
-      assert.ok(await readRef(p.dir, "refs/cairn/snapshots"));
+      assert.ok(await readRef(p.dir, "refs/sudus/snapshots"));
     } else {
       assert.ok(["forward", "abort"].includes(out.completed));
       assert.deepEqual(kinds.slice(-2), out.completed === "forward" ? ["command-intent", "start"] : ["command-intent", "command-abort"]);
       if (out.completed === "abort") {
         const w2 = await wake(p.dir);
         assert.equal(w2.exit, 3); assert.match(w2.line, /start fixture/);
-        p.cairn(["start", "fixture"]);
+        p.sudus(["start", "fixture"]);
         await p.wakeIs("Resolvable", "run", "REQ-001");
       }
     }

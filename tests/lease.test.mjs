@@ -31,14 +31,14 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
     confidence_floors: { evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 },
     min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } });
 async function initialized() {
-  const { cwd } = await repoWith({ '.cairn/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n' });
+  const { cwd } = await repoWith({ '.sudus/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n' });
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
   return cwd;
 }
 
 test('begin creates the lease with the action, target, start snapshot, timestamp, session and touch list', async () => {
   const cwd = await initialized();
-  const sha = await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/new.mjs'], env: { CAIRN_SESSION: 'sess-1' } });
+  const sha = await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src/new.mjs'], env: { SUDUS_SESSION: 'sess-1' } });
   assert.equal(await readRef(cwd, LEASE_REF), sha);
   const lease = await readLease(cwd);
   assert.equal(lease.action, 'implement');
@@ -49,31 +49,31 @@ test('begin creates the lease with the action, target, start snapshot, timestamp
   const snap = await readSnapshot(cwd, lease.snapshot, 'workspace');
   assert.equal(snap.kind, 'workspace');
   const c = await catCommit(cwd, sha);
-  assert.equal(c.subject, 'cairn: lease implement CORE-001');
+  assert.equal(c.subject, 'sudus: lease implement CORE-001');
   assert.deepEqual(c.parents, []);
   assert.equal(c.tree, snap.tree);
-  assert.equal(existsSync(join(cwd, '.cairn/in-progress')), false, 'no shared slot file');
+  assert.equal(existsSync(join(cwd, '.sudus/in-progress')), false, 'no shared slot file');
 });
 
 test('begin refuses when a lease exists and names reconcile', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
   await assert.rejects(begin(cwd, { action: 'run', target: 'CORE-002', env: {} }),
-    /^LeaseError: cairn: action lease held: implement CORE-001; run cairn end when it is finished, or cairn end --abandon/);
+    /^LeaseError: sudus: action lease held: implement CORE-001; run sudus end when it is finished, or sudus end --abandon/);
 });
 
 test('begin refuses an unknown action and a touch path that is reserved, protected, invalid or output', async () => {
   const cwd = await initialized();
-  await assert.rejects(begin(cwd, { action: 'dance', target: 'X', env: {} }), /^LeaseError: cairn: unknown action dance/);
-  for (const p of ['docs/spec/x.md', 'AGENTS.md', '.cairn/mechanisms', '.cairn/output/o', '../x', 'a\\b']) {
-    await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: [p], env: {} }), /cairn: --touch/);
+  await assert.rejects(begin(cwd, { action: 'dance', target: 'X', env: {} }), /^LeaseError: sudus: unknown action dance/);
+  for (const p of ['docs/spec/x.md', 'AGENTS.md', '.sudus/mechanisms', '.sudus/output/o', '../x', 'a\\b']) {
+    await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: [p], env: {} }), /sudus: --touch/);
   }
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });
 
 // Fix round 2 finding 1a (Important): checkTouch used to apply a narrower rule set than
-// normalizeDefinition's, so `cairn begin --touch` accepted an outside or glob-shaped path that
-// applyTouch's own declare() call would refuse later, at `cairn end`, with the lease already
+// normalizeDefinition's, so `sudus begin --touch` accepted an outside or glob-shaped path that
+// applyTouch's own declare() call would refuse later, at `sudus end`, with the lease already
 // created and nothing left to retry against. Reproduced: begin implement REQ --touch README.md
 // with README.md in settings.outside used to succeed. checkTouch now applies the same rules.
 test('begin refuses a --touch path that is gitignored: it can never be a mechanism input', async (t) => {
@@ -83,18 +83,18 @@ test('begin refuses a --touch path that is gitignored: it can never be a mechani
 });
 test('begin refuses a --touch path that is outside or names a glob metacharacter (finding 1a)', async (t) => {
   const settings = { ...JSON.parse(SETTINGS), outside: ['README.md'] };
-  const { cwd } = await repoWith({ '.cairn/settings.json': JSON.stringify(settings), 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n', 'README.md': 'r\n' });
+  const { cwd } = await repoWith({ '.sudus/settings.json': JSON.stringify(settings), 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n', 'README.md': 'r\n' });
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
   await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['README.md'], env: {} }),
-    /^LeaseError: cairn: --touch README\.md is an outside path and cannot be a mechanism input/);
+    /^LeaseError: sudus: --touch README\.md is an outside path and cannot be a mechanism input/);
   await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: ['src/*.mjs'], env: {} }),
-    /^LeaseError: cairn: --touch src\/\*\.mjs has a glob metacharacter and cannot be a mechanism input/);
+    /^LeaseError: sudus: --touch src\/\*\.mjs has a glob metacharacter and cannot be a mechanism input/);
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });
 
-test('readLease ignores a stray .cairn/in-progress file: the shared slot is gone', async () => {
+test('readLease ignores a stray .sudus/in-progress file: the shared slot is gone', async () => {
   const cwd = await initialized();
-  writeFileSync(join(cwd, '.cairn/in-progress'), 'action: implement\ntarget: X\n');
+  writeFileSync(join(cwd, '.sudus/in-progress'), 'action: implement\ntarget: X\n');
   assert.equal(await readLease(cwd), null);
 });
 
@@ -140,7 +140,7 @@ test('end records abandoned: false; end({abandon: true}) records abandoned: true
 });
 
 // Review-2 fix (Minor, new finding on the round-1 re-review): end() and end({abandon}) re-read
-// refs/cairn/in-progress and acted on whatever lease was live, with no check that it was the lease
+// refs/sudus/in-progress and acted on whatever lease was live, with no check that it was the lease
 // the caller itself began -- reproduced here exactly as the reviewer found it: actor A's lease is
 // released, actor B begins a different one, and a stale end "by A" (no identity check) used to end
 // B's DEMO-002/CORE-002 lease instead. The ruling was explicit: no ownership check (a fresh
@@ -148,12 +148,12 @@ test('end records abandoned: false; end({abandon: true}) records abandoned: true
 // caller that supplies the sha of the lease it itself began.
 test('a stale expected lease is refused and names the newer lease, by sha (review-2 new finding, case 1)', async () => {
   const cwd = await initialized();
-  const shaA = await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  const shaA = await begin(cwd, { action: 'implement', target: 'CORE-001', env: { SUDUS_SESSION: 's1' } });
   await end(cwd); // A's own lease is released
-  await begin(cwd, { action: 'run', target: 'CORE-002', env: { CAIRN_SESSION: 's2' } });
+  await begin(cwd, { action: 'run', target: 'CORE-002', env: { SUDUS_SESSION: 's2' } });
   await assert.rejects(
     end(cwd, { expect: shaA }),
-    /^LeaseError: cairn: action lease [0-9a-f]{40} is now run CORE-002 \(session s2\), not the lease [0-9a-f]{40} this end expected; run cairn end --lease [0-9a-f]{40}, or cairn end --abandon$/,
+    /^LeaseError: sudus: action lease [0-9a-f]{40} is now run CORE-002 \(session s2\), not the lease [0-9a-f]{40} this end expected; run sudus end --lease [0-9a-f]{40}, or sudus end --abandon$/,
   );
   // B's lease is untouched by A's stale, refused attempt.
   const live = await readLease(cwd);
@@ -169,7 +169,7 @@ test('a stale expected lease is refused and names the newer lease, by sha (revie
 // and proceeds exactly as before.
 test('reconcile from a fresh session with no expected lease still ends a dead actors lease (review-2 new finding, case 2)', async () => {
   const cwd = await initialized();
-  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { SUDUS_SESSION: 's1' } });
   const lease = await readLease(cwd);
   assert.equal(lease.session, 's1', 'the fresh session (s2, below) began nothing itself and differs from this');
   const abandoned = await end(cwd, { abandon: true }); // no `expect`: a fresh session's reconcile
@@ -207,13 +207,13 @@ test('a touched path whose bytes equal the start snapshot is unchanged; a modifi
 // re-run every hook, repeating side effects like the mechanism definition write).
 test('end without a lease is refused; a failing hook is reported but the lease stays removed', async () => {
   const cwd = await initialized();
-  await assert.rejects(end(cwd), /^LeaseError: cairn: no action lease to end/);
+  await assert.rejects(end(cwd), /^LeaseError: sudus: no action lease to end/);
   await begin(cwd, { action: 'run', target: 'CORE-001', env: {} });
   const off = onEnd(async () => { throw new Error('declare failed'); });
   await assert.rejects(end(cwd), /declare failed/);
   off();
   assert.equal(await readRef(cwd, LEASE_REF), null, 'the ref was already removed before the hook ran, so it is not resurrected by the hook throwing');
-  await assert.rejects(end(cwd), /^LeaseError: cairn: no action lease to end/, 'a retry finds no lease left to end, not a second run of the hooks');
+  await assert.rejects(end(cwd), /^LeaseError: sudus: no action lease to end/, 'a retry finds no lease left to end, not a second run of the hooks');
 });
 
 test('covers: a lease covers its target inputs and its touch list', async () => {
@@ -229,7 +229,7 @@ import { readFileSync } from 'node:fs';
 test('the check lock is held only for the run and nests inside an action lease', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
-  const lock = await gitPath(cwd, 'cairn-check.lock');
+  const lock = await gitPath(cwd, 'sudus-check.lock');
   const out = await withCheckLock(cwd, async () => { assert.equal(readFileSync(lock, 'utf8'), String(process.pid)); return 'ran'; });
   assert.equal(out, 'ran');
   assert.equal(existsSync(lock), false);
@@ -239,9 +239,9 @@ test('the check lock is held only for the run and nests inside an action lease',
 
 test('a live check holder refuses a second run; a dead holder is cleared', async () => {
   const cwd = await initialized();
-  const lock = await gitPath(cwd, 'cairn-check.lock');
+  const lock = await gitPath(cwd, 'sudus-check.lock');
   await withCheckLock(cwd, async () => {
-    await assert.rejects(withCheckLock(cwd, async () => {}), new RegExp(`^LeaseError: cairn: cairn-check.lock held by pid ${process.pid}; wait for that check`));
+    await assert.rejects(withCheckLock(cwd, async () => {}), new RegExp(`^LeaseError: sudus: sudus-check.lock held by pid ${process.pid}; wait for that check`));
   });
   writeFileSync(lock, '999999999');
   assert.equal(await withCheckLock(cwd, async () => 1), 1);
@@ -255,16 +255,16 @@ import { tmpdir } from 'node:os';
 
 test('a lease from another session is stale and wake would name reconcile; the same session is not', async () => {
   const cwd = await initialized();
-  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { SUDUS_SESSION: 's1' } });
   const lease = await readLease(cwd);
-  assert.equal(isStale(lease, { CAIRN_SESSION: 's1' }), false);
-  assert.equal(isStale(lease, { CAIRN_SESSION: 's2' }), true);
+  assert.equal(isStale(lease, { SUDUS_SESSION: 's1' }), false);
+  assert.equal(isStale(lease, { SUDUS_SESSION: 's2' }), true);
   assert.equal(isStale(lease, {}), false, 'a session-less wake cannot tell and does not nag');
-  assert.deepEqual(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }),
+  assert.deepEqual(await reconcilePredicate(cwd, { SUDUS_SESSION: 's2' }),
     { action: 'reconcile', target: 'implement CORE-001', reason: 'action lease from session s1 is stale in session s2' });
-  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's1' }), null);
+  assert.equal(await reconcilePredicate(cwd, { SUDUS_SESSION: 's1' }), null);
   await end(cwd);
-  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }), null);
+  assert.equal(await reconcilePredicate(cwd, { SUDUS_SESSION: 's2' }), null);
 });
 
 // Review-1 fix, item 4's own test: begin, then end --abandon, then wake's reconcile predicate is
@@ -275,57 +275,57 @@ test('a lease from another session is stale and wake would name reconcile; the s
 // recorded in the terminal commit instead (the test above this one).
 test('a stale lease can be reconciled by abandoning it: reconcile is satisfied once it is gone', async () => {
   const cwd = await initialized();
-  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { CAIRN_SESSION: 's1' } });
-  assert.deepEqual(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }),
+  await begin(cwd, { action: 'implement', target: 'CORE-001', env: { SUDUS_SESSION: 's1' } });
+  assert.deepEqual(await reconcilePredicate(cwd, { SUDUS_SESSION: 's2' }),
     { action: 'reconcile', target: 'implement CORE-001', reason: 'action lease from session s1 is stale in session s2' });
   const abandoned = await end(cwd, { abandon: true });
   assert.equal(abandoned.abandoned, true);
-  assert.equal(await reconcilePredicate(cwd, { CAIRN_SESSION: 's2' }), null);
+  assert.equal(await reconcilePredicate(cwd, { SUDUS_SESSION: 's2' }), null);
 });
 
 test('the lease does not coordinate separate clones and never travels with the durable refs', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
-  const clone = mkdtempSync(join(tmpdir(), 'cairn-clone-'));
+  const clone = mkdtempSync(join(tmpdir(), 'sudus-clone-'));
   await git(['clone', '-q', cwd, clone], { cwd });
-  await git(['fetch', '-q', 'origin', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots'], { cwd: clone });
+  await git(['fetch', '-q', 'origin', 'refs/sudus/log:refs/sudus/log', 'refs/sudus/snapshots:refs/sudus/snapshots'], { cwd: clone });
   assert.equal(await readRef(clone, LEASE_REF), null);
   await begin(clone, { action: 'run', target: 'CORE-002', env: {} }); // independent of the first clone's lease
   assert.equal((await readLease(clone)).target, 'CORE-002');
   assert.equal((await readLease(cwd)).target, 'CORE-001');
 });
 
-test('cairn begin and cairn end parse their arguments and refuse with one cairn: line', async () => {
+test('sudus begin and sudus end parse their arguments and refuse with one sudus: line', async () => {
   const cwd = await initialized();
   const err = []; const out = [];
   const io = { cwd, env: {}, stdout: (l) => out.push(l), stderr: (l) => err.push(l) };
   assert.equal(await runBegin(['implement', 'CORE-001', '--touch', 'src/new.mjs', '--touch', 'src/b.mjs'], io), 0);
   assert.deepEqual((await readLease(cwd)).touch, ['src/new.mjs', 'src/b.mjs']);
   assert.equal(await runBegin(['implement', 'CORE-001'], io), 1);
-  assert.match(err.at(-1), /^cairn: action lease held/);
+  assert.match(err.at(-1), /^sudus: action lease held/);
   assert.equal(await runEnd([], io), 0);
   assert.equal(await runEnd([], io), 1);
-  assert.equal(err.at(-1), 'cairn: no action lease to end');
+  assert.equal(err.at(-1), 'sudus: no action lease to end');
   assert.equal(await runBegin(['implement'], io), 1);
-  assert.equal(err.at(-1), 'cairn: usage: cairn begin <action> <target> [--touch <path>]...');
+  assert.equal(err.at(-1), 'sudus: usage: sudus begin <action> <target> [--touch <path>]...');
 });
 
 // --- Fix round 1 ---
 
-test('Fix round 1 finding 10: an unparseable cairn-check.lock is treated as held, never silently removed', async () => {
+test('Fix round 1 finding 10: an unparseable sudus-check.lock is treated as held, never silently removed', async () => {
   const cwd = await initialized();
-  const lock = await gitPath(cwd, 'cairn-check.lock');
+  const lock = await gitPath(cwd, 'sudus-check.lock');
   writeFileSync(lock, 'not-a-pid');
-  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: cairn: cairn-check.lock is unreadable/);
+  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: sudus: sudus-check.lock is unreadable/);
   assert.equal(readFileSync(lock, 'utf8'), 'not-a-pid', 'the unreadable lock file is left in place, not deleted');
   writeFileSync(lock, '0');
-  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: cairn: cairn-check.lock is unreadable/);
+  await assert.rejects(withCheckLock(cwd, async () => {}), /^LeaseError: sudus: sudus-check.lock is unreadable/);
 });
 
-test('Fix round 1 finding 5: a lease ref that changed under cairn end is a CAS mismatch reported as LeaseError, not a raw GitError', async () => {
+test('Fix round 1 finding 5: a lease ref that changed under sudus end is a CAS mismatch reported as LeaseError, not a raw GitError', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
-  // Two concurrent `cairn end` calls on the same lease: git's own ref locking lets exactly one
+  // Two concurrent `sudus end` calls on the same lease: git's own ref locking lets exactly one
   // delete succeed; the other's deleteRefCAS(cwd, LEASE_REF, sha) sees a real CAS mismatch (the ref
   // it read is no longer current), and lib/lease.mjs's end() must convert that into the friendly
   // LeaseError rather than let deleteRefCAS's raw CasError (or, before the fix, the git() wrapper's
@@ -336,6 +336,6 @@ test('Fix round 1 finding 5: a lease ref that changed under cairn end is a CAS m
   assert.equal(fulfilled.length, 1, 'exactly one of the two concurrent end() calls removes the ref');
   assert.equal(rejected.length, 1, 'the other observes the CAS mismatch');
   assert.equal(rejected[0].reason.name, 'LeaseError');
-  assert.match(rejected[0].reason.message, /^cairn: action lease changed under cairn end; run cairn wake and follow it/);
+  assert.match(rejected[0].reason.message, /^sudus: action lease changed under sudus end; run sudus wake and follow it/);
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });

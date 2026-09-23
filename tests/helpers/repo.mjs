@@ -7,10 +7,10 @@ const run = promisify(execFile);
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null', HOME: tmpdir() };
 
 export async function makeRepo() {
-  const dir = await mkdtemp(join(tmpdir(), 'cairn-test-'));
+  const dir = await mkdtemp(join(tmpdir(), 'sudus-test-'));
   const git = async (...args) => (await run('git', args, { cwd: dir, env: ENV })).stdout.trim();
   await git('init', '-q', '-b', 'main');
-  await git('config', 'user.name', 'Cairn Test');
+  await git('config', 'user.name', 'Sudus Test');
   await git('config', 'user.email', 'test@example.invalid');
   await git('config', 'commit.gpgsign', 'false');
   const write = async (path, content, { mode } = {}) => {
@@ -49,18 +49,18 @@ const DEFAULT_PROJECT_FILES = { 'AGENTS.md': '# Working agreement\n', 'docs/spec
 
 export async function makeProject({ settings = {}, files = {} } = {}) {
   const repo = await makeRepo();
-  const remote = await mkdtemp(join(tmpdir(), 'cairn-remote-'));
+  const remote = await mkdtemp(join(tmpdir(), 'sudus-remote-'));
   await run('git', ['init', '-q', '--bare', remote]);
   await repo.git('remote', 'add', 'origin', remote);
   const merged = { ...DEFAULT_SETTINGS('origin', null), ...settings };
-  await repo.write('.cairn/settings.json', JSON.stringify(merged, null, 2) + '\n');
+  await repo.write('.sudus/settings.json', JSON.stringify(merged, null, 2) + '\n');
   for (const [path, content] of Object.entries({ ...DEFAULT_PROJECT_FILES, ...files })) await repo.write(path, content);
   await repo.commit('fixture');
   // Settings are already on disk (merged just above, so callers can override any field the
   // init() flags don't reach, such as outside/typesafeai), so this is an "adopt existing
   // settings" call: --adopt <digest> is the one flag that actually matters here (lib/init.mjs's
   // own comment on init() -- remote/attested go unused once a correct --adopt is given, but are
-  // passed anyway to match a real `cairn init --remote <name> --attested --quote <words>`
+  // passed anyway to match a real `sudus init --remote <name> --attested --quote <words>`
   // invocation's shape).
   const { digest } = await loadSettings(repo.dir);
   await init(repo.dir, { remote: 'origin', attested: true, adopt: digest, quote: 'ok', env: {} });

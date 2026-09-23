@@ -1,9 +1,9 @@
 {
-  "name": "cairn",
-  "interface": { "displayName": "Cairn" },
+  "name": "sudus",
+  "interface": { "displayName": "Sudus" },
   "plugins": [
     {
-      "name": "cairn",
+      "name": "sudus",
       "source": { "source": "local", "path": "./" }
     }
   ]

@@ -16,18 +16,18 @@ const DOT_KEYWORDS = new Set(["graph", "node", "edge"]);
 export const nodeIds = (dot) => [...readFileSync(join(ROOT, "docs/diagrams", dot), "utf8").matchAll(/^\s*([a-z][a-z_]*)\s*\[/gm)].map((m) => m[1]).filter((id) => !DOT_KEYWORDS.has(id));
 export const skill = (name) => readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");
 const AGENTS_TEMPLATE = () => readFileSync(join(ROOT, "skills/new-project/templates/AGENTS.md"), "utf8");
-const help = spawnSync(process.execPath, [join(ROOT, "bin/cairn.mjs"), "--help"], { encoding: "utf8" }).stdout;
+const help = spawnSync(process.execPath, [join(ROOT, "bin/sudus.mjs"), "--help"], { encoding: "utf8" }).stdout;
 
-// Round 1 fix, items 1-3: the plan's own cairnCommands() only ever checked that the bare command
-// word appeared somewhere in --help, never the flags after it -- so `cairn decide --consequential
-// --quote "..."` (--quote belongs only to supersede, not decide), `cairn outside <item> "<why...>"`
-// (a bare positional where the real command needs --reason <text>) and `cairn review SLUG` (missing
+// Round 1 fix, items 1-3: the plan's own sudusCommands() only ever checked that the bare command
+// word appeared somewhere in --help, never the flags after it -- so `sudus decide --consequential
+// --quote "..."` (--quote belongs only to supersede, not decide), `sudus outside <item> "<why...>"`
+// (a bare positional where the real command needs --reason <text>) and `sudus review SLUG` (missing
 // the --file <path> the real command requires) all read as plausible without ever being run. Fixed
 // review-1 finding 1-3 lines in skills/*/SKILL.md and templates/AGENTS.md, and, while sweeping
-// every other `cairn ` invocation in those same files, found and fixed one more: `cairn item
+// every other `sudus ` invocation in those same files, found and fixed one more: `sudus item
 // --next-feature --changes <REQ>` -- itemCommand (lib/cli.mjs) never reads a --changes flag at all.
 //
-// parseCommandFlags(helpText) reads --help's own usage lines (the same text `cairn --help` prints,
+// parseCommandFlags(helpText) reads --help's own usage lines (the same text `sudus --help` prints,
 // not a hand-copied list) into { command name -> Set of every --flag token that command's usage
 // line names }, so a skill or template invocation can be checked against the flags the CLI itself
 // actually documents, not a snapshot that drifts from lib/cli.mjs. "review <slug> --file <path> |
@@ -50,7 +50,7 @@ const help = spawnSync(process.execPath, [join(ROOT, "bin/cairn.mjs"), "--help"]
 function parseCommandFlags(helpText) {
   const map = new Map();
   for (const raw of helpText.split("\n")) {
-    const m = raw.match(/^\s*cairn (.+)$/);
+    const m = raw.match(/^\s*sudus (.+)$/);
     if (!m) continue;
     for (const part of m[1].split(" | ")) {
       const words = part.trim().split(/\s+/);
@@ -75,27 +75,27 @@ const COMMAND_FLAGS = parseCommandFlags(help);
 // COMMAND_FLAGS gains that key and the exception for it drops on its own, with no edit needed here.
 const NOT_YET_WIRED = new Set(["declare", "check"].filter((w) => !COMMAND_FLAGS.has(w)));
 
-// Checks every `cairn ...` backtick invocation in text: the subcommand (or "review mechanism")
+// Checks every `sudus ...` backtick invocation in text: the subcommand (or "review mechanism")
 // must be a real command --help lists (skip declare/check while NOT_YET_WIRED), and every --flag
 // token used in the invocation must be one that command's own --help usage line names. This is a
 // flag-validity check (a flag either belongs to the command or it doesn't), not a
-// required-flag-presence check: a short reference like `cairn decide --consequential` or `cairn
+// required-flag-presence check: a short reference like `sudus decide --consequential` or `sudus
 // item --backlog` (a real flag, just not the whole invocation) is legitimate prose naming which
 // command/mode handles something, and is not flagged merely for being short. An invented flag
 // (--quote on decide) or a command absent from --help (typo'd or never wired) always fails.
 export function checkInvocations(text, label) {
-  for (const inv of [...text.matchAll(/`cairn ([^`]*)`/g)].map((m) => m[1])) {
+  for (const inv of [...text.matchAll(/`sudus ([^`]*)`/g)].map((m) => m[1])) {
     const words = inv.trim().split(/\s+/);
-    if (!/^[a-z][a-z-]*$/.test(words[0])) continue; // e.g. "cairn --help"
+    if (!/^[a-z][a-z-]*$/.test(words[0])) continue; // e.g. "sudus --help"
     const mech = words[0] === "review" && words[1] === "mechanism";
     const name = mech ? "review mechanism" : words[0];
     if (NOT_YET_WIRED.has(name)) continue;
-    assert.ok(COMMAND_FLAGS.has(name), `${label} names cairn ${name}, absent from --help`);
+    assert.ok(COMMAND_FLAGS.has(name), `${label} names sudus ${name}, absent from --help`);
     const validFlags = COMMAND_FLAGS.get(name);
     for (const w of mech ? words.slice(2) : words.slice(1)) {
       if (!w.startsWith("--")) continue;
       const flag = w.replace(/[^a-z-]+$/, "");
-      assert.ok(validFlags.has(flag), `${label} uses cairn ${name} ${flag}, not a real flag of it (real flags: ${[...validFlags].join(", ") || "none"})`);
+      assert.ok(validFlags.has(flag), `${label} uses sudus ${name} ${flag}, not a real flag of it (real flags: ${[...validFlags].join(", ") || "none"})`);
     }
   }
 }
@@ -110,10 +110,10 @@ export function checkSkill(name, dots) {
 }
 
 test("--help prints", () => assert.ok(help.length > 0));
-test("install-cairn follows install.dot and names only real commands", () => checkSkill("install-cairn", ["install.dot"]));
-test("install-cairn never asks for a project remote", () => {
-  const t = skill("install-cairn");
-  assert.ok(!/authority_remote|project remote|git remote add/.test(t)); assert.ok(t.includes("~/.local/bin/cairn"));
+test("install-sudus follows install.dot and names only real commands", () => checkSkill("install-sudus", ["install.dot"]));
+test("install-sudus never asks for a project remote", () => {
+  const t = skill("install-sudus");
+  assert.ok(!/authority_remote|project remote|git remote add/.test(t)); assert.ok(t.includes("~/.local/bin/sudus"));
 });
 
 export const tail = (name) => { const t = skill(name), i = t.indexOf("## Spec-phase tail"); assert.ok(i >= 0, name); return t.slice(i); };
@@ -127,36 +127,36 @@ test("the AGENTS.md template states a move for every verdict and action", () => 
   const t = AGENTS_TEMPLATE();
   for (const v of ["Resolvable", "Waiting", "Done"]) assert.ok(new RegExp("^- " + v + ":", "m").test(t), v);
   for (const a of ["repair PATH", "recover TRANSACTION", "reconcile ACTION", "scope PATH", "fix ITEM", "record PATH", "commit PATH", "declare REQ", "run REQ", "implement REQ", "escalate REQ", "review mechanism REQ", "capture ITEM", "review SLUG", "report SLUG", "resolve SLUG N", "accept SLUG", "build DECISION", "done SLUG", "promote", "reply SLUG"]) assert.ok(t.includes("`" + a + "`"), a);
-  assert.ok(t.includes("`cairn push`"));
+  assert.ok(t.includes("`sudus push`"));
   for (const gone of ["explain", "present", "reword", "next-iteration", "refus"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });
 test("the AGENTS.md template covers the measure step for a Consequential decision", () => {
   const t = AGENTS_TEMPLATE();
-  assert.ok(t.includes("`cairn measure`"), "names the command");
+  assert.ok(t.includes("`sudus measure`"), "names the command");
   assert.ok(/suggested/.test(t), "mentions reading the suggestion");
-  assert.ok(t.includes("`cairn decide --consequential"), "still names the decide command");
-  assert.ok(t.includes("`cairn escalate --consequential"), "names the new escalate flag");
+  assert.ok(t.includes("`sudus decide --consequential"), "still names the decide command");
+  assert.ok(t.includes("`sudus escalate --consequential"), "names the new escalate flag");
   assert.ok(/advi[cs]/.test(t) || /information, not consent/.test(t), "says the suggestion is advice, not a route");
   assert.ok(/floor/.test(t) && /veto/.test(t), "names the floor and the veto");
   assert.ok(/bypass your judgment/.test(t), "says the floor and veto bypass the agent's judgment");
-  assert.ok(/`cairn decide --consequential` rejects either one/.test(t), "says decide rejects a floor or veto measurement");
+  assert.ok(/`sudus decide --consequential` rejects either one/.test(t), "says decide rejects a floor or veto measurement");
   for (const gone of ["shadow", "route mode", "capture the recommended option"]) assert.ok(!t.includes(gone), gone);
   assert.ok(!/[^\x00-\x7f]/.test(t));
 });
-test("every cairn invocation in the AGENTS.md template is a real command with real flags", () => checkInvocations(AGENTS_TEMPLATE(), "templates/AGENTS.md"));
+test("every sudus invocation in the AGENTS.md template is a real command with real flags", () => checkInvocations(AGENTS_TEMPLATE(), "templates/AGENTS.md"));
 
 test("existing-project follows existing-project.dot and spec-phase.dot", () => checkSkill("existing-project", ["existing-project.dot", "spec-phase.dot"]));
 test("existing-project carries the same spec-phase tail as new-project", () => assert.equal(tail("existing-project"), tail("new-project")));
 test("existing-project migrates a 1.x project before init and carries its items after", () => {
   const t = skill("existing-project");
-  for (const s of [".cairn/evidence", ".cairn/reviews", ".cairn/escalations", "docs/commitments", "cairn lint docs/spec", "changing no requirement's words", "cairn item --backlog"]) assert.ok(t.includes(s), s);
+  for (const s of [".sudus/evidence", ".sudus/reviews", ".sudus/escalations", "docs/commitments", "sudus lint docs/spec", "changing no requirement's words", "sudus item --backlog"]) assert.ok(t.includes(s), s);
   assert.ok(t.indexOf("### `migrate`") < t.indexOf("### `init`") && t.indexOf("### `init`") < t.indexOf("### `carry`"));
 });
 
 test("existing-project names supersession as two phases", () => {
   const t = skill("existing-project");
-  assert.ok(t.includes("`cairn supersede ")); assert.ok(/does not move `Current:`/.test(t)); assert.ok(/points back to the superseded record/.test(t));
+  assert.ok(t.includes("`sudus supersede ")); assert.ok(/does not move `Current:`/.test(t)); assert.ok(/points back to the superseded record/.test(t));
 });
 
 test("next-feature follows next-feature.dot and spec-phase.dot", () => checkSkill("next-feature", ["next-feature.dot", "spec-phase.dot"]));

@@ -94,7 +94,7 @@ test('protectedDigests changes with the bytes of each protected file', async () 
   assert.equal(a.settings, b.settings);
 });
 
-test('an ADR line appended by cairn decide is a valid kernel-managed mutation; a hand edit is not', async () => {
+test('an ADR line appended by sudus decide is a valid kernel-managed mutation; a hand edit is not', async () => {
   const r = await loopRepo();
   const { tree } = await readSnapshot(r.cwd, r.startSnapshot, 'workspace');
   await appendDecision(r.cwd, decisionLine(r), { command: 'decide' });
@@ -107,17 +107,17 @@ test('an ADR line appended by cairn decide is a valid kernel-managed mutation; a
   assert.equal(await kernelManagedValid(r.cwd, 'docs/decisions.jsonl', tree), false);
 });
 
-// Deviation from the plan text: on this branch, .cairn/mechanisms (lib/mechanisms.mjs's
+// Deviation from the plan text: on this branch, .sudus/mechanisms (lib/mechanisms.mjs's
 // MECHANISMS_DIR) is a directory of one canonical-JSON file per mechanism name
-// (.cairn/mechanisms/<name>.json), not a single file; loopRepo declares 'demo-001' for DEMO-001,
-// so the concrete kernel-managed path under test is .cairn/mechanisms/demo-001.json.
+// (.sudus/mechanisms/<name>.json), not a single file; loopRepo declares 'demo-001' for DEMO-001,
+// so the concrete kernel-managed path under test is .sudus/mechanisms/demo-001.json.
 test('an extra byte in a mechanism entry is not a valid mutation', async () => {
   const r = await loopRepo();
   const { tree } = await readSnapshot(r.cwd, r.startSnapshot, 'workspace');
-  assert.equal(await kernelManagedValid(r.cwd, '.cairn/mechanisms/demo-001.json', tree), true);
-  const text = await readFile(join(r.cwd, '.cairn/mechanisms/demo-001.json'), 'utf8');
-  await r.write('.cairn/mechanisms/demo-001.json', text + ' ');
-  assert.equal(await kernelManagedValid(r.cwd, '.cairn/mechanisms/demo-001.json', tree), false);
+  assert.equal(await kernelManagedValid(r.cwd, '.sudus/mechanisms/demo-001.json', tree), true);
+  const text = await readFile(join(r.cwd, '.sudus/mechanisms/demo-001.json'), 'utf8');
+  await r.write('.sudus/mechanisms/demo-001.json', text + ' ');
+  assert.equal(await kernelManagedValid(r.cwd, '.sudus/mechanisms/demo-001.json', tree), false);
 });
 
 import { preflight, openBreaches } from '../lib/scope.mjs';
@@ -158,7 +158,7 @@ test('a second preflight does not record the same observation twice', async () =
   assert.equal(openBreaches(await r.log()).length, 1);
 });
 
-test('a change removed before Cairn observes it leaves no breach', async () => {
+test('a change removed before Sudus observes it leaves no breach', async () => {
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   await r.remove('src/stray.mjs');
@@ -188,7 +188,7 @@ test('a protected path changed during a commitment without an authorization is a
 
 // Fix round 1 item 1 (Critical): the plan's own authorization test built a hand-crafted record
 // from protectedDigests()'s own output, so it could never catch protectedDigests disagreeing with
-// what a real `cairn authorize` writes -- exactly the bug the reviewer reproduced (scope.mjs had
+// what a real `sudus authorize` writes -- exactly the bug the reviewer reproduced (scope.mjs had
 // its own reimplementation, hashing docs/spec/** with Array.sort and settings.json's raw bytes,
 // while lib/auth.mjs's real specDigest excludes PROTECTED_EXCEPT and sorts with Buffer.compare, so
 // authorize()'s own digests never matched what preflight computed and an authorized protected
@@ -202,7 +202,7 @@ test('an authorize()-produced authorization record exempts the same protected ch
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
 });
 
-test('cairn authorize itself and the gap between commitments exempt protected paths', async () => {
+test('sudus authorize itself and the gap between commitments exempt protected paths', async () => {
   const r = await loopRepo();
   await r.write('docs/spec/demo.md', (await readFile(join(r.cwd, 'docs/spec/demo.md'), 'utf8')) + '\n[DEMO-002] The demo exits zero.\nFalsifier: the exit code is not zero.\nMechanism: demo-002\nStatus: Draft\n');
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'authorize' }), []);
@@ -217,10 +217,10 @@ test('between commitments a new mechanism file is not a breach, a kernel-managed
   await r.write('tests/next.test.mjs', 'export const t = 1;\n'); await r.commit('the next commitment\'s test, before its start');
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'declare' }), []);
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
-  const mech = join(r.cwd, '.cairn/mechanisms/demo-001.json');
+  const mech = join(r.cwd, '.sudus/mechanisms/demo-001.json');
   const entry = JSON.parse(await readFile(mech, 'utf8'));
   entry.definition.inputs = [...entry.definition.inputs, 'src/util.mjs'].sort();
-  await r.write('.cairn/mechanisms/demo-001.json', canonicalize(entry));
+  await r.write('.sudus/mechanisms/demo-001.json', canonicalize(entry));
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
   assert.ok(b, 'a hand-edited mechanism file is a breach even between commitments');
   // a gap breach recorded by an earlier version: the next start closes it
@@ -239,10 +239,10 @@ test('the assigned command\'s exact mutation of a kernel-managed path is exempt'
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
 });
 
-// Deviation from the plan text: targets .cairn/mechanisms/demo-001.json, the actual file
+// Deviation from the plan text: targets .sudus/mechanisms/demo-001.json, the actual file
 // loopRepo's default DEMO-001 mechanism writes (see Task 4's directory-layout note), not the bare
-// directory path '.cairn/mechanisms'.
-// Fix round 2 item 2 note: this test used to also corrupt .cairn/mechanisms/demo-001.json and
+// directory path '.sudus/mechanisms'.
+// Fix round 2 item 2 note: this test used to also corrupt .sudus/mechanisms/demo-001.json and
 // expect a second breach for it; a corrupted mechanism file now refuses the whole preflight
 // instead (see the dedicated refusal test below), so only the decisions.jsonl half remains here.
 test('an invalid hand-written line in a kernel-managed path is a breach that outside cannot exempt', async () => {
@@ -253,11 +253,11 @@ test('an invalid hand-written line in a kernel-managed path is a breach that out
   assert.equal(shas.length, 1);
 });
 
-test('an unnamed path under .cairn is a breach', async () => {
+test('an unnamed path under .sudus is a breach', async () => {
   const r = await loopRepo();
-  await r.write('.cairn/notes.txt', 'scratch\n');
+  await r.write('.sudus/notes.txt', 'scratch\n');
   await preflight(r.cwd, await r.log(), { command: 'check' });
-  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['.cairn/notes.txt']);
+  assert.deepEqual(openBreaches(await r.log()).map((b) => b.path), ['.sudus/notes.txt']);
 });
 
 import { allowedBase } from '../lib/snapshots.mjs';
@@ -288,7 +288,7 @@ test('keep is refused without an escalation answered ok, and closes the breach w
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
-  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns breach:${b}`);
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `sudus: keep needs an escalation answered ok that concerns breach:${b}`);
   const esc = await escalate(r, b);
   await answer(r, esc, 'ask');
   await assert.rejects(dispose(r.cwd, b, 'keep'), ScopeError);
@@ -314,14 +314,14 @@ test('a kept path is not observed again while another breach is still open, and 
   assert.equal((await r.log()).find((x) => x.sha === again[0]).payload.path, 'src/stray1.mjs');
 });
 
-test('keep accepts the escalation cairn escalate itself writes, with the breach:<sha> token the parser accepts', async () => {
+test('keep accepts the escalation sudus escalate itself writes, with the breach:<sha> token the parser accepts', async () => {
   const { escalate: escalateDraft, answer: answerDraft } = await import('../lib/escalate.mjs');
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
   const draft = { commitment: r.slug, concerns: [`breach:${b}`], question: 'Keep src/stray.mjs?', recommendation: 'keep', because: 'it is the helper the fix needs', if_wrong: 'delete it', instead: 'restore', options: [], named_paths: [], cited_decisions: [] };
   const esc = await escalateDraft(r.cwd, draft);
-  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `cairn: keep needs an escalation answered ok that concerns breach:${b}`);
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message === `sudus: keep needs an escalation answered ok that concerns breach:${b}`);
   const ans = await answerDraft(r.cwd, r.slug, 'ok', { quote: 'keep it', env: {} });
   const s = await dispose(r.cwd, b, 'keep');
   const rec = (await r.log()).find((x) => x.sha === s);
@@ -341,12 +341,12 @@ test('restore is refused while the path differs from its allowed base', async ()
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
-  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `cairn: src/stray.mjs still differs from its allowed base ${r.startSnapshot}`);
+  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `sudus: src/stray.mjs still differs from its allowed base ${r.startSnapshot}`);
   await r.remove('src/stray.mjs');
   const s = await dispose(r.cwd, b, 'restore');
   const rec = (await r.log()).find((x) => x.sha === s);
   assert.deepEqual([rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['restore', null, null]);
-  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `cairn: scope-breach ${b} already has a disposition`);
+  await assert.rejects(dispose(r.cwd, b, 'restore'), (e) => e.message === `sudus: scope-breach ${b} already has a disposition`);
 });
 
 import { runWithPreflight, STATE_CHANGING } from '../lib/scope.mjs';
@@ -393,7 +393,7 @@ test('a breach is a log fact: squashing the branch does not clear it', async () 
 // Fix round 1 finding 3 (plan 09 review): 'dispute' added alongside 'escalate', 'answer' and
 // 'reply' -- dispute() (lib/escalate.mjs) calls the same escalate() they do and writes the same
 // 'escalation' record kind, so section 5's "before any state-changing command" scope preflight
-// applies to it identically. Before this fix, `cairn dispute` wrote an escalation record with no
+// applies to it identically. Before this fix, `sudus dispute` wrote an escalation record with no
 // preflight scope check and no cycle-counter settle.
 test('runWithPreflight invokes the preflight for every state-changing command and skips it for a reader', async () => {
   for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'dispute', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
@@ -411,17 +411,17 @@ test('runWithPreflight invokes the preflight for every state-changing command an
 });
 
 import { spawnSync } from 'node:child_process';
-const cairn = (cwd, ...args) => spawnSync(process.execPath, [new URL('../bin/cairn.mjs', import.meta.url).pathname, ...args], { cwd, encoding: 'utf8' });
+const sudus = (cwd, ...args) => spawnSync(process.execPath, [new URL('../bin/sudus.mjs', import.meta.url).pathname, ...args], { cwd, encoding: 'utf8' });
 
-test('cairn scope <breach> restore writes the disposition and refuses a wrong one on stderr', async () => {
+test('sudus scope <breach> restore writes the disposition and refuses a wrong one on stderr', async () => {
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
   const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
-  const bad = cairn(r.cwd, 'scope', b, 'keep');
+  const bad = sudus(r.cwd, 'scope', b, 'keep');
   assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /^cairn: keep needs an escalation answered ok/);
+  assert.match(bad.stderr, /^sudus: keep needs an escalation answered ok/);
   await r.remove('src/stray.mjs');
-  const ok = cairn(r.cwd, 'scope', b, 'restore');
+  const ok = sudus(r.cwd, 'scope', b, 'restore');
   assert.equal(ok.status, 0);
   assert.equal(openBreaches(await r.log()).length, 0);
 });
@@ -429,7 +429,7 @@ test('cairn scope <breach> restore writes the disposition and refuses a wrong on
 test('a state-changing command records the breach before its own work', async () => {
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');
-  const out = cairn(r.cwd, 'begin', 'implement', 'DEMO-001');
+  const out = sudus(r.cwd, 'begin', 'implement', 'DEMO-001');
   assert.equal(out.status, 0);
   assert.deepEqual(openBreaches(await r.log()).map((x) => x.path), ['src/stray.mjs']);
 });
@@ -442,7 +442,7 @@ import { canonicalize } from '../lib/canon.mjs';
 // parsing cleanly. It must not, since it never went through declare()'s managed-write ledger.
 test('a canonical, schema-valid hand edit of a mechanism entry is still a breach', async () => {
   const r = await loopRepo();
-  const path = '.cairn/mechanisms/demo-001.json';
+  const path = '.sudus/mechanisms/demo-001.json';
   const entry = JSON.parse(await readFile(join(r.cwd, path), 'utf8'));
   entry.definition.inputs = [...entry.definition.inputs, 'src/util.mjs'].sort();
   await r.write(path, canonicalize(entry));
@@ -481,12 +481,12 @@ test('deleting a protected file is a breach, not a crash', async () => {
   assert.equal(openBreaches(await r.log())[0].path, 'AGENTS.md');
 });
 
-// Item 3: a missing or unreadable .cairn/settings.json leaves classify() with nothing to compare
-// against; this is a clean cairn: refusal, never a raw error out of preflight.
+// Item 3: a missing or unreadable .sudus/settings.json leaves classify() with nothing to compare
+// against; this is a clean sudus: refusal, never a raw error out of preflight.
 test('a missing settings.json refuses cleanly instead of crashing the preflight', async () => {
   const r = await loopRepo();
-  await r.remove('.cairn/settings.json');
-  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }), (e) => e instanceof ScopeError && e.message.startsWith('cairn: '));
+  await r.remove('.sudus/settings.json');
+  await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }), (e) => e instanceof ScopeError && e.message.startsWith('sudus: '));
 });
 
 // Item 4 (fix round 1) superseded by fix round 2 item 2: an unreadable mechanism file no longer
@@ -495,12 +495,12 @@ test('a missing settings.json refuses cleanly instead of crashing the preflight'
 // changed one.
 test('an unreadable mechanism file refuses the preflight while it is itself the changed path', async () => {
   const r = await loopRepo();
-  const path = '.cairn/mechanisms/demo-001.json';
+  const path = '.sudus/mechanisms/demo-001.json';
   await r.write(path, (await readFile(join(r.cwd, path), 'utf8')) + ' ');   // extra byte: breaks parseStrict
   await r.write('src/demo.mjs', 'console.log("hi");\n');                   // declared by the corrupted mechanism
   await r.write('src/stray.mjs', 'x\n');                                   // plainly undeclared
   await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
-    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && e.message.includes(path) && /repair/.test(e.message));
+    (e) => e instanceof ScopeError && e.message.startsWith('sudus: ') && e.message.includes(path) && /repair/.test(e.message));
   assert.equal(openBreaches(await r.log()).length, 0);
 });
 
@@ -513,7 +513,7 @@ test('an unreadable mechanism file refuses the preflight while it is itself the 
 // before it ever looks at workspaceDelta.
 test('an unreadable mechanism file refuses the preflight even once it is part of the allowed base', async () => {
   const r = await loopRepo();
-  const path = '.cairn/mechanisms/demo-001.json';
+  const path = '.sudus/mechanisms/demo-001.json';
   await r.write(path, (await readFile(join(r.cwd, path), 'utf8')) + ' ');
   // Accept the corrupted bytes into the allowed base directly (appendRecord), since preflight()
   // and dispose() would themselves now refuse on this corrupted directory.
@@ -523,7 +523,7 @@ test('an unreadable mechanism file refuses the preflight even once it is part of
   await r.write('src/stray.mjs', 'x\n');
   await r.write('AGENTS.md', '# Agreement\n\nchanged\n');
   await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
-    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && e.message.includes(path) && /repair/.test(e.message));
+    (e) => e instanceof ScopeError && e.message.startsWith('sudus: ') && e.message.includes(path) && /repair/.test(e.message));
   assert.equal(openBreaches(await r.log()).length, 0);
 });
 
@@ -550,7 +550,7 @@ test('an untracked credential-shaped file refuses cleanly instead of crashing th
   await r.write('src/stray.mjs', 'x\n');
   await r.write('leaked.pem', '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n');
   await assert.rejects(preflight(r.cwd, await r.log(), { command: 'check' }),
-    (e) => e instanceof ScopeError && e.message.startsWith('cairn: ') && /looks like a credential/.test(e.message) && /leaked\.pem/.test(e.message));
+    (e) => e instanceof ScopeError && e.message.startsWith('sudus: ') && /looks like a credential/.test(e.message) && /leaked\.pem/.test(e.message));
   assert.equal(openBreaches(await r.log()).length, 0);
 });
 
@@ -645,6 +645,6 @@ test('the managed-write ledger keys entries with a tab so a path containing a sp
   await recordManagedWrite(r.cwd, path, bytes);
   assert.equal(await managedWriteDigest(r.cwd, path), sha256(bytes));
   assert.equal(await managedWriteDigest(r.cwd, 'a'), null);   // a space-keyed reader would have matched this
-  const raw = await readFile(await gitPath(r.cwd, 'cairn-managed'), 'utf8');
+  const raw = await readFile(await gitPath(r.cwd, 'sudus-managed'), 'utf8');
   assert.match(raw, /(^|\n)a path with spaces\.json\tsha256:[0-9a-f]{64}\n/);
 });

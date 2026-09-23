@@ -25,9 +25,9 @@ import { init, DEFAULT_SETTINGS } from '../lib/init.mjs';
 const fresh = (over = {}) => ({ localOnly: true, attested: true, quote: 'ok', env: {}, ...over });
 
 test('init on a plain directory initializes Git, writes settings, init record and ref roots', async (t) => {
-  const cwd = mkdtempSync(join(tmpdir(), 'cairn-init-'));
+  const cwd = mkdtempSync(join(tmpdir(), 'sudus-init-'));
   const saved = { ...process.env };
-  Object.assign(process.env, { GIT_AUTHOR_NAME: 'Cairn Test', GIT_AUTHOR_EMAIL: 'test@example.invalid' });
+  Object.assign(process.env, { GIT_AUTHOR_NAME: 'Sudus Test', GIT_AUTHOR_EMAIL: 'test@example.invalid' });
   t.after(() => { delete process.env.GIT_AUTHOR_NAME; delete process.env.GIT_AUTHOR_EMAIL; Object.assign(process.env, saved); rmSync(cwd, { recursive: true, force: true }); });
   const r = await init(cwd, fresh());
   assert.equal(r.created, true);
@@ -39,8 +39,8 @@ test('init on a plain directory initializes Git, writes settings, init record an
   assert.equal(log.length, 1);
   assert.equal(log[0].kind, 'init');
   assert.deepEqual(log[0].payload, { settings_digest: digest, authority_remote: null, auth_mode: 'attested' });
-  assert.ok(await readRef(cwd, 'refs/cairn/log'));
-  assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
+  assert.ok(await readRef(cwd, 'refs/sudus/log'));
+  assert.ok(await readRef(cwd, 'refs/sudus/snapshots'));
 });
 
 test('existing settings and refs at the same digest is idempotent; no flags are needed', async () => {
@@ -57,26 +57,26 @@ test('existing settings and refs at the same digest is idempotent; no flags are 
 test('creating settings needs exactly one of --remote or --local-only', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(init(cwd, fresh({ localOnly: false })),
-    /^InitError: cairn: init needs --remote <name> or --local-only$/);
+    /^InitError: sudus: init needs --remote <name> or --local-only$/);
   await assert.rejects(init(cwd, fresh({ remote: 'origin' })),
-    /^InitError: cairn: init needs --remote <name> or --local-only$/);
-  assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
+    /^InitError: sudus: init needs --remote <name> or --local-only$/);
+  assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
 });
 
 test('creating settings needs exactly one of --signing-key or --attested', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(init(cwd, fresh({ attested: false })),
-    /^InitError: cairn: init needs --signing-key <path> or --attested$/);
+    /^InitError: sudus: init needs --signing-key <path> or --attested$/);
   await assert.rejects(init(cwd, fresh({ signingKeyPem: 'not a real key' })),
-    /^InitError: cairn: init needs --signing-key <path> or --attested$/);
-  assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
+    /^InitError: sudus: init needs --signing-key <path> or --attested$/);
+  assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
 });
 
 test('a --remote that is not a configured remote refuses as today', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(init(cwd, fresh({ localOnly: false, remote: 'upstream' })),
-    /^InitError: cairn: authority_remote upstream is not a configured remote/);
-  assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
+    /^InitError: sudus: authority_remote upstream is not a configured remote/);
+  assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
 });
 
 test('init writes the named remote as authority_remote', async () => {
@@ -100,19 +100,19 @@ test('init with --signing-key records auth_mode signed', async () => {
 test('attested mode without a quote refuses', async () => {
   const { cwd } = await repoWith({});
   await assert.rejects(init(cwd, fresh({ quote: undefined })),
-    /^AuthError: cairn: init needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
-  assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
+    /^AuthError: sudus: init needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
+  assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
 });
 
 test('existing settings without refs need --adopt matching the loaded settings digest', async () => {
   const s = JSON.stringify(DEFAULT_SETTINGS(null, null));
-  const { cwd } = await repoWith({ '.cairn/settings.json': s });
+  const { cwd } = await repoWith({ '.sudus/settings.json': s });
   const digest = (await loadSettings(cwd)).digest;
   await assert.rejects(init(cwd, { quote: 'ok', env: {} }),
-    new RegExp(`^InitError: cairn: init needs --adopt <digest> to adopt existing settings at ${digest}$`));
+    new RegExp(`^InitError: sudus: init needs --adopt <digest> to adopt existing settings at ${digest}$`));
   await assert.rejects(init(cwd, { adopt: 'sha256:' + '0'.repeat(64), quote: 'ok', env: {} }),
-    /^InitError: cairn: init needs --adopt <digest> to adopt existing settings at sha256:/);
-  assert.equal(await readRef(cwd, 'refs/cairn/log'), null);
+    /^InitError: sudus: init needs --adopt <digest> to adopt existing settings at sha256:/);
+  assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
   const r = await init(cwd, { adopt: digest, quote: 'ok', env: {} });
   assert.equal(r.created, true);
   assert.equal((await readLog(cwd))[0].payload.auth_mode, 'attested');
@@ -120,11 +120,11 @@ test('existing settings without refs need --adopt matching the loaded settings d
 
 test('existing settings refuse --remote, --local-only, --signing-key or --attested', async () => {
   const s = JSON.stringify(DEFAULT_SETTINGS(null, null));
-  const { cwd } = await repoWith({ '.cairn/settings.json': s });
+  const { cwd } = await repoWith({ '.sudus/settings.json': s });
   await assert.rejects(init(cwd, fresh({ localOnly: false })),
-    /^InitError: cairn: settings exist; --remote, --local-only, --signing-key and --attested apply only when creating them$/);
+    /^InitError: sudus: settings exist; --remote, --local-only, --signing-key and --attested apply only when creating them$/);
   await assert.rejects(init(cwd, { attested: true, quote: 'ok', env: {} }),
-    /^InitError: cairn: settings exist; --remote, --local-only, --signing-key and --attested apply only when creating them$/);
+    /^InitError: sudus: settings exist; --remote, --local-only, --signing-key and --attested apply only when creating them$/);
   // A correct --adopt alongside those same flags is not refused: they simply go unused once the
   // digest on disk is the one being adopted (the same flags a real two-invocation signed flow
   // re-sends on its second call, after the first call's own write already put settings.json on
@@ -138,34 +138,34 @@ test('refs without settings refuse and name repair', async () => {
   const { cwd } = await repoWith({});
   await init(cwd, fresh());
   const digest = (await loadSettings(cwd)).digest;
-  rmSync(join(cwd, '.cairn/settings.json'));
+  rmSync(join(cwd, '.sudus/settings.json'));
   await assert.rejects(init(cwd, fresh()),
-    new RegExp(`cairn: refs/cairn/log exists but .cairn/settings.json is missing; restore the file whose digest is ${digest} \\(git checkout -- .cairn/settings.json\\) or write a new one and ask the developer and record the answer with cairn authorize --quote <words>`));
+    new RegExp(`sudus: refs/sudus/log exists but .sudus/settings.json is missing; restore the file whose digest is ${digest} \\(git checkout -- .sudus/settings.json\\) or write a new one and ask the developer and record the answer with sudus authorize --quote <words>`));
 });
 
 test('init refuses invalid settings and lists every refusal', async () => {
   const bad = JSON.stringify({ schema: 1, unknown_field: 1 });
-  const { cwd } = await repoWith({ '.cairn/settings.json': bad });
+  const { cwd } = await repoWith({ '.sudus/settings.json': bad });
   await assert.rejects(init(cwd, { quote: 'ok', env: {} }), /unknown_field/);
 });
 
 // Fix round 1, item 3: the idempotent early return (created: false) used to skip the snapshot-root
-// creation entirely, so a re-run of init could not repair a lost refs/cairn/snapshots.
+// creation entirely, so a re-run of init could not repair a lost refs/sudus/snapshots.
 test('a re-run of init repairs a missing snapshot root even on the idempotent path', async () => {
   const { cwd } = await repoWith({});
   const a = await init(cwd, fresh());
-  assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
-  await git(['update-ref', '-d', 'refs/cairn/snapshots'], { cwd });
-  assert.equal(await readRef(cwd, 'refs/cairn/snapshots'), null);
+  assert.ok(await readRef(cwd, 'refs/sudus/snapshots'));
+  await git(['update-ref', '-d', 'refs/sudus/snapshots'], { cwd });
+  assert.equal(await readRef(cwd, 'refs/sudus/snapshots'), null);
   const b = await init(cwd, {});
   assert.equal(b.created, false);
   assert.equal(a.sha, b.sha);
-  assert.ok(await readRef(cwd, 'refs/cairn/snapshots'));
+  assert.ok(await readRef(cwd, 'refs/sudus/snapshots'));
 });
 
 // Fix round 1, item 4: previously the candidate settings object was written to disk first and
 // validated only afterward by loadSettings, so a developer whose --signing-key pointed at a
-// private key got that key written into .cairn/settings.json before the refusal. Validate in
+// private key got that key written into .sudus/settings.json before the refusal. Validate in
 // memory first.
 test('init validates a signing key before writing settings; a private key is refused and nothing is written', async () => {
   const { cwd } = await repoWith({});
@@ -173,18 +173,18 @@ test('init validates a signing key before writing settings; a private key is ref
   const { privateKey } = generateKeyPairSync('ed25519');
   const pem = privateKey.export({ type: 'pkcs8', format: 'pem' });
   await assert.rejects(init(cwd, fresh({ attested: false, signingKeyPem: pem })), /signing_key must be a public key/);
-  assert.equal(existsSync(join(cwd, '.cairn/settings.json')), false);
+  assert.equal(existsSync(join(cwd, '.sudus/settings.json')), false);
 });
 
-// Fix round 1, item 9: refs/cairn/log can exist with no record of kind 'init' in it (a corrupted or
-// non-Cairn log); reading rec.payload without checking rec exists threw a raw TypeError instead of
-// a cairn: refusal naming the repair.
+// Fix round 1, item 9: refs/sudus/log can exist with no record of kind 'init' in it (a corrupted or
+// non-Sudus log); reading rec.payload without checking rec exists threw a raw TypeError instead of
+// a sudus: refusal naming the repair.
 test('a log ref with no init record refuses cleanly instead of crashing', async () => {
   const { cwd } = await repoWith({});
   await appendRecord(cwd, 'read', '01J0000000000000000000ABCD', { decision: '01J0000000000000000000ABCD',
     evidence: { mode: 'unsigned-local', purpose: 'read', subject: '01J0000000000000000000ABCD', nonce: 'n',
       author: { name: 'x', email: 'y' }, confirmed: true } });
-  await assert.rejects(init(cwd, fresh()), /^InitError: cairn: refs\/cairn\/log exists but has no init record/);
+  await assert.rejects(init(cwd, fresh()), /^InitError: sudus: refs\/sudus\/log exists but has no init record/);
 });
 
 // Fix round 2: the fix round 1 findInitRecord searched the whole log with .find(), which happened
@@ -200,5 +200,5 @@ test("a forged init record later in the log does not stand in for the missing fi
     evidence: { mode: 'unsigned-local', purpose: 'read', subject: '01J0000000000000000000ABCD', nonce: 'n',
       author: { name: 'x', email: 'y' }, confirmed: true } });
   await appendRecord(cwd, 'init', 'project', { settings_digest: 'sha256:' + '2'.repeat(64), authority_remote: null, auth_mode: 'unsigned-local' });
-  await assert.rejects(init(cwd, fresh()), /^InitError: cairn: refs\/cairn\/log exists but has no init record/);
+  await assert.rejects(init(cwd, fresh()), /^InitError: sudus: refs\/sudus\/log exists but has no init record/);
 });

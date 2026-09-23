@@ -66,7 +66,7 @@ export async function project(settings = {}) {
   await repo.write('docs/spec/demo.md', DEMO);
   await repo.write('docs/spec/core.md', CORE);
   await repo.write('docs/spec/roadmap.md', ROADMAP);
-  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun sudus wake.\n');
   await repo.write('src/main.mjs', 'console.log("hello");\n');
   await repo.commit('Add the demo specification');
   await repo.authorize();

@@ -7,7 +7,7 @@ import { join, resolve } from "node:path";
 export const ROOT = resolve(new URL("../..", import.meta.url).pathname);
 
 export function throwawayRepo() {
-  const dir = mkdtempSync(join(tmpdir(), "cairn-hook-"));
+  const dir = mkdtempSync(join(tmpdir(), "sudus-hook-"));
   const git = (...args) => {
     const r = spawnSync("git", args, { cwd: dir, encoding: "utf8" });
     if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
@@ -18,10 +18,10 @@ export function throwawayRepo() {
   return { dir, git };
 }
 
-export function fakeCairn(binDir, { stdout, exit = 0, version = null }) {
+export function fakeSudus(binDir, { stdout, exit = 0, version = null }) {
   mkdirSync(binDir, { recursive: true });
-  const p = join(binDir, "cairn");
-  // The hooks compare `cairn --version` with the plugin's own package.json version and fall back
+  const p = join(binDir, "sudus");
+  // The hooks compare `sudus --version` with the plugin's own package.json version and fall back
   // to the plugin's copy on a mismatch; the fake answers with the real version so it is used.
   version = version ?? JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
   writeFileSync(p, `#!/bin/sh\n[ "$1" = "--version" ] && { printf '%s\\n' '${version}'; exit 0; }\nprintf '%s' '${stdout.replace(/'/g, "'\\''")}'\nexit ${exit}\n`);

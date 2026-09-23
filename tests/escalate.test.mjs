@@ -67,8 +67,8 @@ test('escalate writes an escalation record targeted at the commitment with the f
   const r = await loopRepo();
   const sha = await escalate(r.cwd, draft());
   const commit = await catCommit(r.cwd, sha);
-  assert.equal(commit.subject, 'cairn: escalation first');
-  assert.deepEqual(commit.trailers.map(([k]) => k), ['Cairn-Schema', 'Cairn-Digest']);
+  assert.equal(commit.subject, 'sudus: escalation first');
+  assert.deepEqual(commit.trailers.map(([k]) => k), ['Sudus-Schema', 'Sudus-Digest']);
   const rec = decodeRecord(commit);
   assert.deepEqual(rec.payload, {
     slug: 'first', question: draft().question, recommendation: draft().recommendation, because: draft().because,
@@ -114,7 +114,7 @@ import { decideConsequential, escalateConsequential } from '../lib/escalate.mjs'
 // ever consulted; only the final assertion (a bare decide with no evaluation succeeding) no longer
 // holds and is replaced by the new required refusal. Coverage for the successful,
 // measurement-backed path is the 'decideConsequential requires a measurement' describe block below.
-test('cairn decide --consequential still refuses a malformed draft or an out-of-set concern before ever consulting a measurement; a draft with no measurement at all is refused too', async () => {
+test('sudus decide --consequential still refuses a malformed draft or an out-of-set concern before ever consulting a measurement; a draft with no measurement at all is refused too', async () => {
   const r = await loopRepo();
   await assert.rejects(decideConsequential(r.cwd, draft({ because: '' })), DraftError);
   await assert.rejects(decideConsequential(r.cwd, draft({ concerns: ['ZZZ-999'] })), /not in the frozen set/);
@@ -147,7 +147,7 @@ async function signedCommitmentRepo() {
   const pem = publicKey.export({ type: 'spki', format: 'pem' });
   const sign = async (bytes) => new Uint8Array(cryptoSign(null, bytes, privateKey));
   const repo = await makeRepo();
-  await repo.write('AGENTS.md', '# Working agreement\n\nRun cairn wake.\n');
+  await repo.write('AGENTS.md', '# Working agreement\n\nRun sudus wake.\n');
   await repo.write('docs/spec/overview.md', OVERVIEW);
   await repo.write('docs/spec/glossary.md', '# Glossary\n\ngreeter: the program.\n');
   await repo.write('docs/spec/demo.md', DEMO);
@@ -180,7 +180,7 @@ test('answer refuses before writing anything when the ADR file is unreadable (fi
 
 // Fix round 1 finding 2: a crash between the two writes -- the log record lands, the ADR line
 // does not -- is simulated directly (appendRecord bypasses answer()'s own ADR step, the same way
-// a real crash would leave the process dead between the two calls). The NEXT cairn answer for
+// a real crash would leave the process dead between the two calls). The NEXT sudus answer for
 // the same slug completes the missing line instead of refusing "no unanswered escalation"; it
 // returns the existing answer's sha rather than writing a duplicate one. A third call, once the
 // line exists, refuses normally: there is nothing left to answer or repair.
@@ -188,7 +188,7 @@ test('answer refuses before writing anything when the ADR file is unreadable (fi
 // completed answer's sha as if it were a success for THIS call, silently dropping the
 // developer's own kind/text. Now it completes the dangling line, then refuses the new answer
 // with a message naming the completed sha, so nothing is lost silently.
-test('a crash between the log record and the ADR line is completed by the next cairn answer for the same slug, which then refuses so nothing is lost (finding 2, finding 13)', async () => {
+test('a crash between the log record and the ADR line is completed by the next sudus answer for the same slug, which then refuses so nothing is lost (finding 2, finding 13)', async () => {
   const r = await loopRepo();
   const esc = await escalate(r.cwd, draft());
   const evidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
@@ -197,7 +197,7 @@ test('a crash between the log record and the ADR line is completed by the next c
   assert.equal(escalationState(await r.log(), esc).status, 'answered');
   await assert.rejects(
     answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Fourteen days instead.' }),
-    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+    new RegExp(`sudus: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   // No new answer record: the developer's own "instead" text for this call was never recorded.
   assert.deepEqual((await r.log()).filter((x) => x.kind === 'answer').map((x) => x.sha), [danglingSha]);
@@ -219,7 +219,7 @@ test('a dangling answer is completed even while another escalation is open; the 
   assert.deepEqual(unanswered(await r.log()).map((u) => u.sha), [b]);
   await assert.rejects(
     answer(r.cwd, 'first', 'instead', { ...asDev, quote: 'Do X instead.' }),
-    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+    new RegExp(`sudus: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   // B is still open: the "instead" text was not silently applied to it.
   assert.deepEqual(unanswered(await r.log()).map((u) => u.sha), [b]);
@@ -239,11 +239,11 @@ test('the dangling-answer completion path authenticates before writing the ADR l
   const esc = await escalate(cwd, draft());
   const danglingEvidence = { mode: 'unsigned-local', purpose: 'answer', subject: esc, nonce: 'n', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
   const danglingSha = await appendRecord(cwd, 'answer', 'first', { escalation: esc, kind: 'ok', text: '', owner: null, evidence: danglingEvidence });
-  await assert.rejects(answer(cwd, 'first', 'ok', {}), /cairn: /);
+  await assert.rejects(answer(cwd, 'first', 'ok', {}), /sudus: /);
   assert.equal((await readAdr(cwd)).some((l) => l.kind === 'answered'), false);
   await assert.rejects(
     answer(cwd, 'first', 'ok', { sign }),
-    new RegExp(`cairn: completed the dangling answer ${danglingSha} for first; run the command again$`),
+    new RegExp(`sudus: completed the dangling answer ${danglingSha} for first; run the command again$`),
   );
   const line = (await readAdr(cwd)).find((l) => l.kind === 'answered');
   assert.deepEqual([line.escalation, line.answer], [esc, danglingSha]);
@@ -252,8 +252,8 @@ test('the dangling-answer completion path authenticates before writing the ADR l
 test('answer refuses without developer evidence: no quote, or a blank quote', async () => {
   const r = await loopRepo();
   const sha = await escalate(r.cwd, draft());
-  await assert.rejects(answer(r.cwd, 'first', 'ok'), /cairn: /);
-  await assert.rejects(answer(r.cwd, 'first', 'ok', { quote: '  ', env: {} }), /cairn: /);
+  await assert.rejects(answer(r.cwd, 'first', 'ok'), /sudus: /);
+  await assert.rejects(answer(r.cwd, 'first', 'ok', { quote: '  ', env: {} }), /sudus: /);
   assert.equal(escalationState(await r.log(), sha).status, 'open');
 });
 
@@ -311,7 +311,7 @@ test('describeEvidence (lib/auth.mjs) reads a real stored answer record: atteste
   const esc = await escalate(r.cwd, draft());
   const sha = await answer(r.cwd, 'first', 'ok', asDev);
   const rec = decodeRecord(await catCommit(r.cwd, sha));
-  assert.equal(describeEvidence(rec.payload.evidence), 'attested: "ok" through none by Cairn Test <test@example.invalid>; evidence, not authentication');
+  assert.equal(describeEvidence(rec.payload.evidence), 'attested: "ok" through none by Sudus Test <test@example.invalid>; evidence, not authentication');
 });
 
 // Fix round 1 finding 7 (plan 09 review): answer() now re-checks its evidence with
@@ -407,11 +407,11 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { wake, render } from '../lib/wake.mjs';
 const run = promisify(execFile);
-const BIN = fileURLToPath(new URL('../bin/cairn.mjs', import.meta.url));
+const BIN = fileURLToPath(new URL('../bin/sudus.mjs', import.meta.url));
 
 // Courtesy update, not one of the plan 09 review's 12 items: another (already-committed) fix
 // round on lib/wake.mjs, "Fix round 1 item 7: Waiting's render drops the answer line section 6
-// does not name, tested byte for byte", removed the trailing `answer: cairn answer ...` line from
+// does not name, tested byte for byte", removed the trailing `answer: sudus answer ...` line from
 // render()'s Waiting output (section 6's own contract is verdict, action or party, one reason
 // line and the predicate; that line named a command the five fields never claimed to include).
 // The five-fields-verbatim assertion below this plan actually owns is unaffected and still holds
@@ -449,18 +449,18 @@ test('escalate, answer, reply and dispute commands print one line and use exit c
   const r = await loopRepo();
   const e = await cliEscalate(r.cwd, argv);
   assert.equal(e.code, 0);
-  assert.match(e.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+  assert.match(e.out, /^sudus: escalation first [0-9a-f]{40}\n$/);
   const bad = await cliAnswer(r.cwd, ['first', 'ok'], { env: {} });
   assert.equal(bad.code, 1);
-  assert.match(bad.out, /^cairn: .*\n$/);
+  assert.match(bad.out, /^sudus: .*\n$/);
   const ask = await cliAnswer(r.cwd, ['first', 'ask', '--quote', 'Why?'], { env: {} });
-  assert.match(ask.out, /^cairn: answer first [0-9a-f]{40}\n$/);
+  assert.match(ask.out, /^sudus: answer first [0-9a-f]{40}\n$/);
   const rp = await cliReply(r.cwd, ['first', 'Because.']);
-  assert.match(rp.out, /^cairn: reply first [0-9a-f]{40}\n$/);
+  assert.match(rp.out, /^sudus: reply first [0-9a-f]{40}\n$/);
   await cliAnswer(r.cwd, ['first', 'ok', '--quote', 'ok'], { env: {} });
   const rev = await r.review([{ n: 1, text: 'x' }]);
   const d = await cliDispute(r.cwd, ['--commitment', 'first', '--record', rev, '--n', '1', '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it']);
-  assert.match(d.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+  assert.match(d.out, /^sudus: escalation first [0-9a-f]{40}\n$/);
 });
 
 // Fix round 1 finding 10 (plan 09 review): cliDispute coerced --n with bare Number() and let a
@@ -468,30 +468,30 @@ test('escalate, answer, reply and dispute commands print one line and use exit c
 // record ("concern token finding:<sha>#NaN needs a log SHA") instead of the actual problem: --n
 // itself. Reproduced exactly as the review found it (no --n, --n 0, --n abc); each now refuses
 // with a message naming the finding number, before dispute() or escalate() ever runs.
-test('cairn dispute refuses a missing, non-integer or non-positive --n with a message naming the finding number', async () => {
+test('sudus dispute refuses a missing, non-integer or non-positive --n with a message naming the finding number', async () => {
   const r = await loopRepo();
   const rev = await r.review([{ n: 1, text: 'x' }]);
   const base = ['--commitment', 'first', '--record', rev, '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it'];
   const noN = await cliDispute(r.cwd, base);
   assert.equal(noN.code, 1);
-  assert.match(noN.out, /^cairn: --n must be a positive integer naming the finding number/);
+  assert.match(noN.out, /^sudus: --n must be a positive integer naming the finding number/);
   const zero = await cliDispute(r.cwd, [...base, '--n', '0']);
   assert.equal(zero.code, 1);
-  assert.match(zero.out, /^cairn: --n must be a positive integer naming the finding number/);
+  assert.match(zero.out, /^sudus: --n must be a positive integer naming the finding number/);
   const notANumber = await cliDispute(r.cwd, [...base, '--n', 'abc']);
   assert.equal(notANumber.code, 1);
-  assert.match(notANumber.out, /^cairn: --n must be a positive integer naming the finding number/);
+  assert.match(notANumber.out, /^sudus: --n must be a positive integer naming the finding number/);
 });
 
-// Fix round 1 finding 12 (plan 09 review, new): a CAS refusal on refs/cairn/log (two writers
+// Fix round 1 finding 12 (plan 09 review, new): a CAS refusal on refs/sudus/log (two writers
 // racing to extend the same log) used to reach the CLI as a bare
-// "cairn: refusing refs/cairn/log: expected <sha>" with no guidance and no automatic retry. Six
+// "sudus: refusing refs/sudus/log: expected <sha>" with no guidance and no automatic retry. Six
 // cliEscalate calls race concurrently from the same starting log state, sharing one --concern so
 // checkConcerns has nothing else to refuse on; git's ref CAS guarantees at least one of six
 // simultaneous writers to the same ref from the same expected old value loses. Every loser's
 // message now ends with "; run the command again" (one line, no automatic retry); every winner's
 // escalation record is still written normally.
-test('a CAS refusal on refs/cairn/log from escalate, answer, reply or dispute ends its message with "; run the command again" (finding 12)', async () => {
+test('a CAS refusal on refs/sudus/log from escalate, answer, reply or dispute ends its message with "; run the command again" (finding 12)', async () => {
   const r = await loopRepo();
   const argvFor = (i) => ['--commitment', 'first', '--concern', 'DEMO-001', '--question', `Racer ${i}?`,
     '--recommendation', 'R', '--because', 'B', '--if-wrong', 'W', '--instead', 'I'];
@@ -500,8 +500,8 @@ test('a CAS refusal on refs/cairn/log from escalate, answer, reply or dispute en
   const losers = results.filter((x) => x.code === 1);
   assert.ok(winners.length >= 1, 'at least one racer wrote its escalation');
   assert.ok(losers.length >= 1, 'at least one racer lost the CAS race');
-  for (const loser of losers) assert.match(loser.out, /^cairn: refusing refs\/cairn\/log: expected [0-9a-f]{40}; run the command again\n$/);
-  for (const winner of winners) assert.match(winner.out, /^cairn: escalation first [0-9a-f]{40}\n$/);
+  for (const loser of losers) assert.match(loser.out, /^sudus: refusing refs\/sudus\/log: expected [0-9a-f]{40}; run the command again\n$/);
+  for (const winner of winners) assert.match(winner.out, /^sudus: escalation first [0-9a-f]{40}\n$/);
 });
 
 // --- Task 3 (plan 16): decideConsequential requires a current, composite-outcome measurement ---
@@ -669,7 +669,7 @@ describe('decideConsequential requires a measurement', () => {
     await measure(cwd, mdraft(), { transport: transport([scoreBody()]) });
     await measure(cwd, mdraft({ because: 'a wholly different draft, also measured' }), { transport: transport([scoreBody()]) });
     await assert.rejects(decideConsequential(cwd, mdraft()),
-      (e) => e.message === 'cairn: the latest measurement is for a different draft; run cairn measure for this draft');
+      (e) => e.message === 'sudus: the latest measurement is for a different draft; run sudus measure for this draft');
   });
 });
 

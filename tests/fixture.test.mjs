@@ -12,7 +12,7 @@ test("the CLI registers every flag the fixture uses", () => {
   // Deviation from the plan text, recorded in the plan 14 report: lib/cli.mjs's real command
   // table (Task 1's own reading of it) uses different flag spellings than the plan guessed for
   // three commands, and has no per-command `--help` at all (assertFlags reads the one global
-  // `cairn --help` usage line per command instead; see tests/helpers/fixture.mjs).
+  // `sudus --help` usage line per command instead; see tests/helpers/fixture.mjs).
   //   declare: the real command is `declare <name> --file <path>` (one JSON file), not five
   //     separate --command/--input/--requirement/--results/--identity flags.
   //   escalate: the real commitment flag is --commitment (not --slug) and the concern flag is
@@ -34,17 +34,17 @@ test("the CLI registers every flag the fixture uses", () => {
 // Kernel defect found by this fixture (recorded in full, with reproduction, in the plan 14
 // report): lib/travel.mjs's validateAfterFetch runs on every wake() call, not only after a real
 // fetch, and one of its cross-reference checks compares docs/spec/roadmap.md's Current: line
-// against the log for a matching 'start' record. Between `cairn init` and the project's first
-// `cairn start` -- the ordinary, expected state of any project still in its spec-authoring phase,
+// against the log for a matching 'start' record. Between `sudus init` and the project's first
+// `sudus start` -- the ordinary, expected state of any project still in its spec-authoring phase,
 // including this fixture's own roadmap.md, which is written with "Current: fixture" from the
 // start -- no such 'start' record exists yet, so this reads as a missing cross-reference and wake
-// prints a nonsensical repair ("cairn push (in the clone that wrote the start record for
+// prints a nonsensical repair ("sudus push (in the clone that wrote the start record for
 // fixture)") instead of naming the real next step. No clone and no push can fix this; the only
-// real next step is to finish the spec tail and run `cairn start`. This blocks `cairn wake` (and
+// real next step is to finish the spec tail and run `sudus start`. This blocks `sudus wake` (and
 // the session-start hook, which calls it) for the entire spec-authoring window of every project,
 // not just this fixture's. Not fixed here (lib/travel.mjs is off limits to this plan); left
 // failing here as its own isolated test so it does not block the rest of the fixture, which never
-// calls wake() again until after `cairn start` has actually run.
+// calls wake() again until after `sudus start` has actually run.
 //
 // Fixed by the kernel fix round named in the plan 14 report's own follow-up: wake() no longer
 // calls validateAfterFetch on its ordinary path (lib/wake.mjs), and validateAfterFetch itself no
@@ -62,7 +62,7 @@ test("kernel defect: wake demands a nonsensical push before the roadmap's Curren
 
 // Kernel defect found by this fixture (minor; recorded in the plan 14 report), fixed in the
 // kernel fix round named in that report's own follow-up: section 5's own predicate table
-// (docs/spec/cairn-v2.md) carries backticks around `resolve`, `Current:` and `ask` in the
+// (docs/spec/sudus-v2.md) carries backticks around `resolve`, `Current:` and `ask` in the
 // accept/promote/reply rows; lib/wake.mjs's real PREDICATES strings for exactly those three
 // actions used to print the same words with the backticks stripped. Restored verbatim; this test
 // now confirms the two agree instead of demonstrating their drift.
@@ -74,12 +74,12 @@ test("kernel defect: three predicate strings drop the spec's own backticks", () 
 
 // Task 2: the spec tail -- init, declare, fail receipt, mechanism review, authorize, start.
 export async function tail(p) {
-  // Before cairn init: the fixture's own buildProject has already run `git init` and written
-  // .cairn/settings.json with authority_remote "origin" pointing at the bare remote (Task 1's own
-  // Interfaces note: "the fixture writes .cairn/settings.json first, so init validates it and
+  // Before sudus init: the fixture's own buildProject has already run `git init` and written
+  // .sudus/settings.json with authority_remote "origin" pointing at the bare remote (Task 1's own
+  // Interfaces note: "the fixture writes .sudus/settings.json first, so init validates it and
   // takes origin from confirmRemote"). Deviation from the plan text, recorded as a kernel defect
   // in the plan 14 report ("Kernel defects found by the fixture", item 1): with a Git repository,
-  // a configured remote and a pre-written settings.json already on disk but no `cairn init` yet
+  // a configured remote and a pre-written settings.json already on disk but no `sudus init` yet
   // run, wake() does not say "outside a project; run /new-project or /existing-project" (the
   // plan's own assumption); lib/travel.mjs's missingRefsLine cannot distinguish "never
   // initialized" from "an existing project's fresh clone" once a remote is configured, so it
@@ -87,22 +87,22 @@ export async function tail(p) {
   // remote (reproduced separately; see the report).
   const w0 = await wake(p.dir);
   assert.equal(w0.exit, 3);
-  assert.match(w0.line, /^git fetch origin 'refs\/cairn\/log:refs\/cairn\/log'/);
-  // Carried item (c): cairn show and cairn wake print the missing-refs line with different
+  assert.match(w0.line, /^git fetch origin 'refs\/sudus\/log:refs\/sudus\/log'/);
+  // Carried item (c): sudus show and sudus wake print the missing-refs line with different
   // framing. lib/cli.mjs's requireRefs (used by `show`) wraps lib/travel.mjs's missingRefsLine in
   // "durable refs missing; run: <command>" and reports it as a NoVerdict (exit 3, on stdout,
-  // prefixed "cairn: "); lib/wake.mjs's wake() returns the exact same missingRefsLine text bare,
+  // prefixed "sudus: "); lib/wake.mjs's wake() returns the exact same missingRefsLine text bare,
   // with no prefix or wrapper, as its own `line`. Confirmed: same underlying condition, two
   // different printed sentences.
-  const showOut = p.cairn(["show", "a".repeat(40)], { expectExit: 3 });
-  assert.equal(showOut.stdout.trim(), `cairn: durable refs missing; run: ${w0.line}`);
+  const showOut = p.sudus(["show", "a".repeat(40)], { expectExit: 3 });
+  assert.equal(showOut.stdout.trim(), `sudus: durable refs missing; run: ${w0.line}`);
   await p.developer.init();
   assert.deepEqual(await p.kinds(), ["init"]);
   // Deviation from the plan text, NOT re-checked here: the plan expected wake() to print
   // "run /new-project or /existing-project" at this exact point (durable refs present, no
   // commitment started yet). It does carry that message in general (lib/wake.mjs's own
   // 'supersession' predicate, when no start record exists at all) -- but this fixture's own
-  // roadmap.md already names "Current: fixture" from project setup, before any `cairn start`
+  // roadmap.md already names "Current: fixture" from project setup, before any `sudus start`
   // has run, and that alone makes wake() return something else entirely: see the kernel defect
   // "wake demands a nonsensical push before the roadmap's Current: commitment ever starts",
   // demonstrated as its own isolated test below and in the plan 14 report. Asserting the plan's
@@ -112,35 +112,35 @@ export async function tail(p) {
   // Agree the blocks (the developer confirmed them at the gate; the file edit is the agent's).
   p.write("docs/spec/add.md", readFileSync(join(p.dir, "docs/spec/add.md"), "utf8").replaceAll("Status: Draft", "Status: Agreed 2026-09-19"));
   p.commit("Agree the two requirements");
-  const lintOut = p.cairn(["lint", "docs/spec"]);
-  assert.equal(lintOut.stdout, ""); // Deviation: a clean lint prints nothing, not "cairn: lint: clean" (lib/cli.mjs's lintCommand only ever prints findings).
+  const lintOut = p.sudus(["lint", "docs/spec"]);
+  assert.equal(lintOut.stdout, ""); // Deviation: a clean lint prints nothing, not "sudus: lint: clean" (lib/cli.mjs's lintCommand only ever prints findings).
 
-  p.cairn(["declare", "tests", "--file", p.outFile("mech-tests.json", MECH_DEFINITION)]);
+  p.sudus(["declare", "tests", "--file", p.outFile("mech-tests.json", MECH_DEFINITION)]);
   p.commit("Declare the tests mechanism");
-  const checkOut = p.cairn(["check", "REQ-001"]);
+  const checkOut = p.sudus(["check", "REQ-001"]);
   // Deviation: the real check command prints "check <sha> <REQ>\n" (lib/cli.mjs's checkCommand),
-  // not "cairn: receipt <sha> REQ-001: fail REQ-002: fail" -- the mechanism's own per-requirement
-  // pass/fail lines are captured into the receipt's payload, never echoed to cairn check's stdout.
+  // not "sudus: receipt <sha> REQ-001: fail REQ-002: fail" -- the mechanism's own per-requirement
+  // pass/fail lines are captured into the receipt's payload, never echoed to sudus check's stdout.
   assert.match(checkOut.stdout, /^check [0-9a-f]{40} REQ-001\n$/);
   const receipt = checkOut.stdout.trim().split(" ")[1];
   assert.deepEqual(await p.kinds(), ["init", "receipt"]);
   const receiptPayload = (await p.readLog()).at(-1).payload;
   assert.deepEqual(receiptPayload.results.map((r) => [r.requirement, r.result]), [["REQ-001", "fail"], ["REQ-002", "fail"]]);
 
-  p.cairn(["review", "mechanism", "REQ-001", receipt]);
-  p.cairn(["review", "mechanism", "REQ-002", receipt]);
+  p.sudus(["review", "mechanism", "REQ-001", receipt]);
+  p.sudus(["review", "mechanism", "REQ-002", receipt]);
   p.commit("Bind the mechanism review to the fail receipt");
   p.write("AGENTS.md", readFileSync(join(ROOT, "skills/new-project/templates/AGENTS.md"), "utf8"));   // plan 13's template is the working agreement
   p.commit("Add the working agreement");
-  p.cairn(["start", "fixture"], { expectExit: 1 });   // refused: no authorization
+  p.sudus(["start", "fixture"], { expectExit: 1 });   // refused: no authorization
   await p.developer.authorize();
   // Deviation: authorize() itself runs as a transaction (lib/auth.mjs), so it writes a
   // command-intent record before its own authorization record -- the plan assumed authorize
   // wrote no command-intent at all.
   assert.deepEqual(await p.kinds(), ["init", "receipt", "command-intent", "authorization"]);
-  p.cairn(["start", "fixture"]);
+  p.sudus(["start", "fixture"]);
   assert.deepEqual(await p.kinds(), ["init", "receipt", "command-intent", "authorization", "command-intent", "start"]);
-  assert.equal(p.git("config", "--get-all", "remote.origin.fetch").includes("refs/cairn/log:refs/cairn/log"), true);
+  assert.equal(p.git("config", "--get-all", "remote.origin.fetch").includes("refs/sudus/log:refs/sudus/log"), true);
   await p.wakeIs("Resolvable", "implement", "REQ-001");
 }
 
@@ -156,33 +156,33 @@ const sha = (out, kind) => new RegExp(`^${kind} ([0-9a-f]{40})`, "m").exec(out)[
 export async function work(p) {
   // implement REQ-001 under a lease; both requirements pass on one receipt (ADD_OK's typeof
   // check already satisfies REQ-002's stated falsifier too).
-  p.cairn(["begin", "implement", "REQ-001"]);
+  p.sudus(["begin", "implement", "REQ-001"]);
   p.write("src/add.mjs", ADD_OK); p.commit("Implement add");
-  p.cairn(["end"]);
-  p.cairn(["check", "REQ-001"]);
+  p.sudus(["end"]);
+  p.sudus(["check", "REQ-001"]);
   assert.equal((await p.kinds()).at(-1), "receipt");
   await p.wakeIs("Resolvable", "review", "fixture");
 
   // A backlog item from the commitment's own requirement needs an outside record.
-  const item = sha(p.cairn(["item", "--backlog", "--slug", "fixture-2", "--from", "REQ-002", "--body", "Report which argument was not a number."]).stdout, "item");
+  const item = sha(p.sudus(["item", "--backlog", "--slug", "fixture-2", "--from", "REQ-002", "--body", "Report which argument was not a number."]).stdout, "item");
   await p.wakeIs("Resolvable", "capture", "fixture-2");
   // Deviation: outside's real usage is `outside <item-sha> --reason <text>` (lib/cli.mjs), not a
   // bare positional reason string.
-  p.cairn(["outside", item, "--reason", "The message text is not in either falsifier."]);
+  p.sudus(["outside", item, "--reason", "The message text is not in either falsifier."]);
   await p.wakeIs("Resolvable", "review", "fixture");
 
   // A defect against the commitment's requirement is worked, not captured (13.1).
-  const defect = sha(p.cairn(["item", "--defect", "--slug", "add-nan", "--from", "REQ-002", "--body", "add(NaN, 1) returns NaN instead of throwing."]).stdout, "item");
+  const defect = sha(p.sudus(["item", "--defect", "--slug", "add-nan", "--from", "REQ-002", "--body", "add(NaN, 1) returns NaN instead of throwing."]).stdout, "item");
   await p.wakeIs("Resolvable", "fix", "add-nan");
-  p.cairn(["begin", "fix", defect]);
+  p.sudus(["begin", "fix", defect]);
   p.write("src/add.mjs", ADD_OK.replace("typeof b !== \"number\")", "typeof b !== \"number\" || Number.isNaN(a) || Number.isNaN(b))"));
-  p.commit("Refuse NaN"); p.cairn(["end"]);
+  p.commit("Refuse NaN"); p.sudus(["end"]);
   // Deviation from the plan text, recorded in the report: the fix predicate ("its requirement has
   // a current pass at or after it", section 5) reads "at or after" literally -- the pass receipt
-  // must sit at or after the fix record in the log, not before it. `cairn fix` must run before
-  // the confirming `cairn check`, the reverse of the plan's own order.
-  p.cairn(["fix", defect]);
-  p.cairn(["check", "REQ-002"]);
+  // must sit at or after the fix record in the log, not before it. `sudus fix` must run before
+  // the confirming `sudus check`, the reverse of the plan's own order.
+  p.sudus(["fix", defect]);
+  p.sudus(["check", "REQ-002"]);
   assert.equal((await p.kinds()).at(-1), "receipt");
   await p.wakeIs("Resolvable", "review", "fixture");
 
@@ -191,12 +191,12 @@ export async function work(p) {
   // `d.commitment` against the currently open commitment), never a separate escalation-chosen
   // name -- the plan's own "--slug nan-policy" naming has no real counterpart; every escalate,
   // answer and reply below addresses the commitment slug "fixture" directly.
-  p.cairn(["escalate", "--commitment", "fixture", "--concern", "REQ-002", "--question", "Should add refuse NaN?", "--recommendation", "Yes", "--because", "NaN is a number type but not a sum.", "--if-wrong", "Callers relying on NaN propagation break.", "--instead", "Let NaN through."]);
+  p.sudus(["escalate", "--commitment", "fixture", "--concern", "REQ-002", "--question", "Should add refuse NaN?", "--recommendation", "Yes", "--because", "NaN is a number type but not a sum.", "--if-wrong", "Callers relying on NaN propagation break.", "--instead", "Let NaN through."]);
   const waiting = await p.wakeIs("Waiting");
   assert.equal(waiting.escalation.slug, "fixture");
   await p.developer.answer("fixture", "ask", "Which callers?");
   await p.wakeIs("Resolvable", "reply", "fixture");
-  p.cairn(["reply", "fixture", "No caller in src passes NaN today."]);
+  p.sudus(["reply", "fixture", "No caller in src passes NaN today."]);
   await p.wakeIs("Waiting");
   await p.developer.answer("fixture", "ok", "ok");
   // The kernel appends the ADR line and commits nothing; wake names the commit until the agent makes it.
@@ -210,16 +210,16 @@ export async function work(p) {
   // treats every path under a declared directory as declared forever and no breach is ever
   // possible for a stray file under it.
   p.write("src/extra.mjs", "export const extra = 1;\n"); p.commit("Stray file");
-  p.cairn(["item", "--backlog", "--slug", "stray", "--from", "REQ-001", "--body", "stray"]);
+  p.sudus(["item", "--backlog", "--slug", "stray", "--from", "REQ-001", "--body", "stray"]);
   const breach = (await p.readLog()).findLast((r) => r.kind === "scope-breach");
   assert.ok(breach); assert.equal(breach.payload.path, "src/extra.mjs");
   await p.wakeIs("Resolvable", "scope", "src/extra.mjs");
   p.remove("src/extra.mjs"); p.commit("Remove the stray file");
-  p.cairn(["scope", breach.sha, "restore"]);
+  p.sudus(["scope", breach.sha, "restore"]);
   assert.equal((await p.kinds()).at(-1), "scope");
   const strayItem = (await p.readLog()).findLast((r) => r.kind === "item");
   await p.wakeIs("Resolvable", "capture", "stray");
-  p.cairn(["outside", strayItem.sha, "--reason", "Not this commitment's work."]);
+  p.sudus(["outside", strayItem.sha, "--reason", "Not this commitment's work."]);
   await p.wakeIs("Resolvable", "review", "fixture");
   return { itemSha: item, defectSha: defect };
 }
@@ -239,7 +239,7 @@ test("work loop: implement, capture, fix, escalation, scope, decision", async ()
 const REVIEW = {
   examined: ["src/add.mjs", "tests/req.test.mjs"],
   answers: [
-    { question: "Q1", target: "tests", status: "observed", text: "add returning undefined; receipt from the declare step; printed cairn: REQ-001: fail and REQ-002: fail" },
+    { question: "Q1", target: "tests", status: "observed", text: "add returning undefined; receipt from the declare step; printed sudus: REQ-001: fail and REQ-002: fail" },
     { question: "Q2", target: "tests", status: "observed", text: "the stub returned undefined, so both lines failed for the violation, not setup" },
     { question: "Q3", target: "REQ-001", status: "observed", text: "add returns a + b for numbers; node tests/req.test.mjs prints pass" },
     { question: "Q4", target: "REQ-001", status: "observed", text: "nothing else; git diff shows src/add.mjs only" },
@@ -252,14 +252,14 @@ const REVIEW = {
 };
 
 export async function finish(p) {
-  p.cairn(["review", "fixture", "--file", p.outFile("review.json", REVIEW)]);
+  p.sudus(["review", "fixture", "--file", p.outFile("review.json", REVIEW)]);
   assert.equal((await p.kinds()).at(-1), "review");
   await p.wakeIs("Resolvable", "report", "fixture");
 
   // Deviation: the harness-detection env var is CLAUDECODE (lib/review.mjs's HARNESS_ENV), not
   // CLAUDE_CODE.
-  const briefOut = p.cairn(["brief", "fixture"], { env: { CLAUDECODE: "1" } }).stdout;
-  const briefSha = /^cairn: brief \S+ ([0-9a-f]{40})/m.exec(briefOut)[1];
+  const briefOut = p.sudus(["brief", "fixture"], { env: { CLAUDECODE: "1" } }).stdout;
+  const briefSha = /^sudus: brief \S+ ([0-9a-f]{40})/m.exec(briefOut)[1];
   const projection = /^projection: (.+)$/m.exec(briefOut)[1];
   const projectionDigest = /^projection digest: (\S+)$/m.exec(briefOut)[1];
   assert.equal(existsSync(join(projection, ".git")), false);
@@ -281,12 +281,12 @@ export async function finish(p) {
     interface_attempts: [],
     findings: [{ n: 1, text: "add(2, 3.5) is accepted; the falsifier of REQ-001 says numbers, but the sum of an integer and a float is not specified." }],
   };
-  p.cairn(["report", "fixture", "--file", p.outFile("report.json", report)]);
+  p.sudus(["report", "fixture", "--file", p.outFile("report.json", report)]);
   await p.wakeIs("Resolvable", "resolve", "fixture 1");
 
   // The resolution edits docs/spec/glossary.md, a developer-owned protected path (section 2).
   // Deviation from the plan text, recorded in the report: an in-flight protected-path edit is a
-  // scope breach unless it is covered by a fresh `cairn authorize` first (preflight's own
+  // scope breach unless it is covered by a fresh `sudus authorize` first (preflight's own
   // `authorized(path, digests, log)` exemption) -- the plan's own resolve step edited glossary.md
   // and called resolve directly, which breaches scope on the very next state-changing command.
   // Re-authorizing first is the spec-correct way to fold a protected-path change into an open
@@ -307,12 +307,12 @@ export async function finish(p) {
   // decision's own delta and make realize refuse "touches docs/spec/glossary.md (protected); the
   // decision is the developer's" -- correct behavior, not a defect, but it means decide must run
   // after every protected-path edit this commitment still intends to make, not before.
-  const decideOut = p.cairn(["decide", "--consequential", "--title", "Export add as default too", "--rests-on", "callers import default", "--wrong-if", "no caller does", "--body", "Add a default export of add."]);
+  const decideOut = p.sudus(["decide", "--consequential", "--title", "Export add as default too", "--rests-on", "callers import default", "--wrong-if", "no caller does", "--body", "Add a default export of add."]);
   const decisionId = /^decide ([0-9A-Z]{26})/.exec(decideOut.stdout)[1];
   p.commit("Record the decision");
 
-  const resolveOut = p.cairn(["resolve", "fixture", "1", "The glossary now says any finite numbers; the requirement text is unchanged."]);
-  const resolutionSha = /^cairn: resolution fixture ([0-9a-f]{40})/.exec(resolveOut.stdout)[1];
+  const resolveOut = p.sudus(["resolve", "fixture", "1", "The glossary now says any finite numbers; the requirement text is unchanged."]);
+  const resolutionSha = /^sudus: resolution fixture ([0-9a-f]{40})/.exec(resolveOut.stdout)[1];
   // Carried item (a): confirm the Done outcome still agrees end to end while this resolution is
   // "submitted" (unjudged). lib/wake.mjs's own openFindings() and lib/review.mjs's ledger()
   // disagree on whether an unjudged resolution counts as "resolved" (wake's looser helper says
@@ -322,23 +322,23 @@ export async function finish(p) {
   await p.wakeIs("Resolvable", "accept", "fixture");
 
   const acceptance1 = { resolutions: [{ sha: resolutionSha, verdict: "accepted", reason: "the glossary now bounds sum to finite numbers" }], findings: [] };
-  p.cairn(["accept", "fixture", "--file", p.outFile("accept1.json", acceptance1)]);
+  p.sudus(["accept", "fixture", "--file", p.outFile("accept1.json", acceptance1)]);
   await p.wakeIs("Resolvable", "build", decisionId);
 
-  p.cairn(["begin", "build", decisionId]);
+  p.sudus(["begin", "build", decisionId]);
   p.write("src/add.mjs", readFileSync(join(p.dir, "src/add.mjs"), "utf8") + "export default add;\n");
-  p.commit("Add the default export"); p.cairn(["end"]); p.cairn(["check", "REQ-001"]);
-  p.cairn(["realize", decisionId, "--subject", "default export added"]);
+  p.commit("Add the default export"); p.sudus(["end"]); p.sudus(["check", "REQ-001"]);
+  p.sudus(["realize", decisionId, "--subject", "default export added"]);
   p.commit("Record the realization");
   const adr = readFileSync(join(p.dir, "docs/decisions.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
   // Deviation from the plan text: the ADR already carries the nan-policy escalation's "ok"
-  // answer's `answered` line (written before `cairn decide` ran, in work()), so the full sequence
+  // answer's `answered` line (written before `sudus decide` ran, in work()), so the full sequence
   // is ["answered", "decision", "realized"], not the plan's ["decision", "answered", "realized"].
   assert.deepEqual(adr.map((l) => l.kind), ["answered", "decision", "realized"]);
   await p.wakeIs("Resolvable", "accept", "fixture");
-  p.cairn(["accept", "fixture", "--file", p.outFile("accept2.json", { resolutions: [], findings: [] })]);
+  p.sudus(["accept", "fixture", "--file", p.outFile("accept2.json", { resolutions: [], findings: [] })]);
   await p.wakeIs("Resolvable", "done", "fixture");
-  p.cairn(["done", "fixture"]);
+  p.sudus(["done", "fixture"]);
   assert.equal((await p.kinds()).at(-1), "done");
 }
 
@@ -355,20 +355,20 @@ const EVALUATOR = ["evaluation-intent", "evaluation-call", "measurement", "calib
 const UNREACHABLE = {
   "command-abort": "written only when a multi-store command dies before any planned write; the crash fixture variant B reaches it",
   read: "excluded by the task: the developer's queue read is a developer-authenticated act tested in plan 03",
-  // Spec revision 6, "Direction": `cairn authorize instead|ask` writes this instead of an
+  // Spec revision 6, "Direction": `sudus authorize instead|ask` writes this instead of an
   // ordinary authorization -- a developer-authenticated act this state-changing work-loop
   // fixture never runs (the same reason `read`, above, is excluded); covered directly by
   // tests/auth.test.mjs's own direction() tests.
-  direction: "the developer's redirect or question through cairn authorize instead|ask is a developer-authenticated act tested in tests/auth.test.mjs",
+  direction: "the developer's redirect or question through sudus authorize instead|ask is a developer-authenticated act tested in tests/auth.test.mjs",
 };
 
 // Carried item (b): a dangling answer (an 'answer' log record with no matching 'answered' ADR
 // line -- the state a crash between escalate.mjs's two writes would leave) is completed by the
-// next `cairn answer` for that slug, and wake neither crashes nor acts on it.
-test("carried item (b): a dangling answer is completed by the next cairn answer; wake does not act on it", async () => {
+// next `sudus answer` for that slug, and wake neither crashes nor acts on it.
+test("carried item (b): a dangling answer is completed by the next sudus answer; wake does not act on it", async () => {
   const p = buildProject();
   await tail(p);
-  p.cairn(["escalate", "--commitment", "fixture", "--concern", "REQ-001", "--question", "Ship as is?", "--recommendation", "Yes", "--because", "REQ-001 already passes.", "--if-wrong", "a later review finds a gap.", "--instead", "hold for another pass."]);
+  p.sudus(["escalate", "--commitment", "fixture", "--concern", "REQ-001", "--question", "Ship as is?", "--recommendation", "Yes", "--because", "REQ-001 already passes.", "--if-wrong", "a later review finds a gap.", "--instead", "hold for another pass."]);
   const escSha = (await p.readLog()).findLast((r) => r.kind === "escalation").sha;
 
   // Fabricate the dangling state directly: a real 'ok' answer record on the log, with no
@@ -387,7 +387,7 @@ test("carried item (b): a dangling answer is completed by the next cairn answer;
   assert.notEqual(w.verdict, "Waiting");
   await p.wakeIs("Resolvable", "implement", "REQ-001");
 
-  // The next cairn answer for the slug completes the dangling ADR line and refuses THIS call
+  // The next sudus answer for the slug completes the dangling ADR line and refuses THIS call
   // (lib/escalate.mjs's own contract: there is nothing left for this call to decide, only the
   // missing line to write), rather than silently succeeding or crashing. Called through the lib
   // directly (like every other developer-only command in this fixture; a raw CLI spawn needs a
@@ -414,12 +414,12 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
   // the roadmap's Current: line but never fabricates a new roadmap section from the backlog
   // item -- that is the agent's own spec-authoring work (matching the working agreement's own
   // description of promotion: "add the roadmap section"). The section must exist, naming the
-  // item's own requirements, before `cairn promote` can resolve a frozen set for it.
+  // item's own requirements, before `sudus promote` can resolve a frozen set for it.
   const roadmapBefore = readFileSync(join(p.dir, "docs/spec/roadmap.md"), "utf8");
   p.write("docs/spec/roadmap.md", roadmapBefore + "\n## fixture-2\n\nRequirements: REQ-002\n\nReport which argument was not a number.\n");
   p.commit("Add the fixture-2 roadmap section ahead of promotion");
   await p.wakeIs("Resolvable", "promote", "fixture-2");
-  p.cairn(["promote", itemSha]);
+  p.sudus(["promote", itemSha]);
   const roadmap = readFileSync(join(p.dir, "docs/spec/roadmap.md"), "utf8");
   assert.match(roadmap, /^Current: fixture-2$/m);
   assert.match(roadmap, /^## fixture-2\n\nRequirements: REQ-002$/m);
@@ -428,14 +428,14 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
   // (lib/wake.mjs) and fix() itself (lib/commitment.mjs) both measure "changes no protected
   // contract" against the CURRENTLY open commitment's own start snapshot, and a lot of protected
   // content (docs/spec/glossary.md, the roadmap's Current: line) legitimately changed between
-  // that old fix and fixture-2's start. This is not a dead end: re-running `cairn fix` for the
+  // that old fix and fixture-2's start. This is not a dead end: re-running `sudus fix` for the
   // same item under the new commitment re-attests it against the current baseline (empty delta,
   // since nothing has happened yet in fixture-2) and satisfies the predicate immediately.
   await p.wakeIs("Resolvable", "fix", "add-nan");
-  p.cairn(["fix", defectSha]);
+  p.sudus(["fix", defectSha]);
   // Same "at or after" ordering as the first fix (see work()): the confirming check must be
   // recorded after this fresh fix record too.
-  p.cairn(["check", "REQ-002"]);
+  p.sudus(["check", "REQ-002"]);
   await p.wakeIs("Resolvable", "review", "fixture-2");
 
   // supersede is developer-only; run through the lib directly (see tests/helpers/fixture.mjs).
@@ -492,22 +492,22 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
 
   // Travel: the authority remote receives both durable refs and the branch, in order (carried
   // item (d), first half).
-  p.cairn(["push"]);
+  p.sudus(["push"]);
   const remoteRefs = spawnSync("/usr/bin/git", ["--git-dir", p.remote, "for-each-ref", "--format=%(refname)"], { encoding: "utf8" }).stdout;
-  for (const r of ["refs/cairn/log", "refs/cairn/snapshots", "refs/heads/main"]) assert.ok(remoteRefs.includes(r), r);
-  assert.equal(remoteRefs.includes("refs/cairn/in-progress"), false);
+  for (const r of ["refs/sudus/log", "refs/sudus/snapshots", "refs/heads/main"]) assert.ok(remoteRefs.includes(r), r);
+  assert.equal(remoteRefs.includes("refs/sudus/in-progress"), false);
 
   // Carried item (d), second half: validation after fetch in a second clone. An ordinary `git
   // clone` fetches only refs/heads/*; the durable refs need the installed refspecs (lib/travel.mjs
   // installRefspecs) fetched explicitly, the same repair line wake would print for a fresh clone.
   const { installRefspecs, validateAfterFetch } = await import("../lib/travel.mjs");
-  const cloneDir = join(p.dir, "..", `cairn-clone-${Date.now()}`);
+  const cloneDir = join(p.dir, "..", `sudus-clone-${Date.now()}`);
   const clone = spawnSync("/usr/bin/git", ["clone", "-q", p.remote, cloneDir], { encoding: "utf8" });
   assert.equal(clone.status, 0, clone.stderr);
   spawnSync("/usr/bin/git", ["-C", cloneDir, "config", "user.email", "dev@example.invalid"]);
   spawnSync("/usr/bin/git", ["-C", cloneDir, "config", "user.name", "dev"]);
   await installRefspecs(cloneDir, "origin");
-  const fetched = spawnSync("/usr/bin/git", ["-C", cloneDir, "fetch", "origin", "refs/cairn/log:refs/cairn/log", "refs/cairn/snapshots:refs/cairn/snapshots"], { encoding: "utf8" });
+  const fetched = spawnSync("/usr/bin/git", ["-C", cloneDir, "fetch", "origin", "refs/sudus/log:refs/sudus/log", "refs/sudus/snapshots:refs/sudus/snapshots"], { encoding: "utf8" });
   assert.equal(fetched.status, 0, fetched.stderr);
   const repairs = await validateAfterFetch(cloneDir);
   assert.deepEqual(repairs, []);

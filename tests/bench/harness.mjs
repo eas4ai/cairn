@@ -1,6 +1,6 @@
 // tests/bench/harness.mjs -- the live benchmark harness (plan 18, Task 3). Guarded by
 // assertBenchEnabled: nothing here runs -- no project is built, no process is spawned, no network
-// call is ever attempted -- unless CAIRN_BENCH=1 and TYPESAFEAI_API_KEY are both present. The key
+// call is ever attempted -- unless SUDUS_BENCH=1 and TYPESAFEAI_API_KEY are both present. The key
 // itself is read only through spawnSync's env option (bin/typesafeai.mjs reads it from the spawned
 // child's own process.env); this module never reads, prints, logs or writes it anywhere.
 import { writeFile, readFile } from 'node:fs/promises';
@@ -15,7 +15,7 @@ import { policyDigest } from '../../lib/evaluate.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, '..', '..');
-const KERNEL = join(REPO_ROOT, 'bin', 'cairn.mjs');
+const KERNEL = join(REPO_ROOT, 'bin', 'sudus.mjs');
 const GIT = '/usr/bin/git'; // Global constraint: /usr/bin/git for every git command this file runs itself.
 const SCENARIOS = JSON.parse(await readFile(join(HERE, 'scenarios.json'), 'utf8'));
 
@@ -30,11 +30,11 @@ const RATE_LIMIT_WAIT_MS = 30000;
 export class BenchGuardError extends Error {}
 
 export function assertBenchEnabled(env) {
-  if (env.CAIRN_BENCH !== '1') throw new BenchGuardError('cairn bench: set CAIRN_BENCH=1 to run the live benchmark (it makes real network calls)');
-  if (!env.TYPESAFEAI_API_KEY || typeof env.TYPESAFEAI_API_KEY !== 'string') throw new BenchGuardError('cairn bench: TYPESAFEAI_API_KEY is not set');
+  if (env.SUDUS_BENCH !== '1') throw new BenchGuardError('sudus bench: set SUDUS_BENCH=1 to run the live benchmark (it makes real network calls)');
+  if (!env.TYPESAFEAI_API_KEY || typeof env.TYPESAFEAI_API_KEY !== 'string') throw new BenchGuardError('sudus bench: TYPESAFEAI_API_KEY is not set');
 }
 
-// Harness-env note: each spawned `cairn measure` gets a controlled env containing only PATH (git
+// Harness-env note: each spawned `sudus measure` gets a controlled env containing only PATH (git
 // is spawned by bare name in lib/gitx.mjs, so the child needs PATH to find it), HOME (git may
 // consult it, e.g. a global .gitconfig or a safe.directory check) and TYPESAFEAI_API_KEY
 // (bin/typesafeai.mjs's post() reads it from the child's own process.env) -- never the parent
@@ -66,7 +66,7 @@ function isRateLimited(measurement) {
   return !!measurement && measurement.outcome === 'unavailable' && measurement.reason === RATE_LIMIT_REASON;
 }
 
-// One attempt at one scenario: spawn `cairn measure` for it and read back whatever measurement
+// One attempt at one scenario: spawn `sudus measure` for it and read back whatever measurement
 // record landed on the project's log as a result (readLog before/after, same diffing approach the
 // brief's own reference implementation uses).
 async function measureScenarioOnce(project, sc, env, spawnImpl) {
@@ -102,21 +102,21 @@ export async function runScenarios(project, scenarios, env, { spawnImpl = defaul
   return rows;
 }
 
-function cairnHeadSha() {
+function sudusHeadSha() {
   const r = spawnSync(GIT, ['-C', REPO_ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
-  if (r.status !== 0) throw new Error(`cairn bench: git rev-parse HEAD failed: ${r.stderr}`);
+  if (r.status !== 0) throw new Error(`sudus bench: git rev-parse HEAD failed: ${r.stderr}`);
   return r.stdout.trim();
 }
 
 // Ruling 2: results.json's meta -- model, agent_ceiling, confidence_floors, weights, the policy
-// digest, started/finished timestamps and the cairn kernel's own HEAD SHA -- so the controller can
+// digest, started/finished timestamps and the sudus kernel's own HEAD SHA -- so the controller can
 // judge a run (which kernel commit produced it, under which policy) before committing it. Pure
 // function of its inputs, exported for a direct test independent of any I/O.
-export function buildMeta({ settings, started, finished, cairnHead, scenarioCount, usableCount, projectDir }) {
+export function buildMeta({ settings, started, finished, sudusHead, scenarioCount, usableCount, projectDir }) {
   const t = settings.typesafeai;
   return {
     model: t.model, agent_ceiling: t.agent_ceiling, confidence_floors: t.confidence_floors, weights: t.weights,
-    policy_digest: policyDigest(settings), started, finished, cairn_head: cairnHead,
+    policy_digest: policyDigest(settings), started, finished, sudus_head: sudusHead,
     scenario_count: scenarioCount, usable_count: usableCount, project_dir: projectDir,
   };
 }
@@ -137,7 +137,7 @@ export async function runBenchmark({ env = process.env, scenarios = SCENARIOS.sc
   const finished = new Date().toISOString();
   const usable = rows.filter((r) => r.measurement);
   const scored = scoreRun(usable);
-  const meta = buildMeta({ settings, started, finished, cairnHead: cairnHeadSha(), scenarioCount: scenarios.length, usableCount: usable.length, projectDir: project.dir });
+  const meta = buildMeta({ settings, started, finished, sudusHead: sudusHeadSha(), scenarioCount: scenarios.length, usableCount: usable.length, projectDir: project.dir });
   await writeFile(join(outDir, 'results.json'), JSON.stringify({ meta, rows }, null, 2) + '\n');
   await writeFile(join(outDir, 'results.md'), renderResultsMd({ meta, rows: usable, scored }));
   return { meta, rows, scored };

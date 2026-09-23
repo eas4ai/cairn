@@ -70,7 +70,7 @@ test('migrate refuses while a commitment is open, and names the slug', async (t)
 test('migrate moves the refs and the directory between commitments, commits the move, rewrites .gitignore, and the log reads as one', async (t) => {
   const p = await makeProject({ layout: 'cairn' });
   t.after(p.cleanup);
-  await p.write('.gitignore', 'node_modules/\n.cairn/output/\n/.cairn/scratch\n');
+  await p.write('.gitignore', 'node_modules/\n.cairn/output/\n/.cairn/scratch\n!.cairn/keep-me\n.cairn\n.cairnfoo/stays\n');
   await p.write('.cairn/mechanisms/demo.json', '{}\n');
   await p.commit('ignore and a mechanism');
   const before = (await readLog(p.cwd)).map((x) => x.sha);
@@ -83,7 +83,7 @@ test('migrate moves the refs and the directory between commitments, commits the 
   assert.equal(await readRef(p.cwd, 'refs/cairn/log'), null);
   assert.ok(await readRef(p.cwd, 'refs/sudus/log'));
   assert.ok(existsSync(join(p.cwd, '.sudus/settings.json')) && !existsSync(join(p.cwd, '.cairn')));
-  assert.equal(readFileSync(join(p.cwd, '.gitignore'), 'utf8'), 'node_modules/\n.sudus/output/\n/.sudus/scratch\n');
+  assert.equal(readFileSync(join(p.cwd, '.gitignore'), 'utf8'), 'node_modules/\n.sudus/output/\n/.sudus/scratch\n!.sudus/keep-me\n.sudus\n.cairnfoo/stays\n');
   const status = (await git(['status', '--porcelain'], { cwd: p.cwd })).stdout;
   assert.equal(status, '');
   const shown = (await git(['show', '--stat', '--format=%s', 'HEAD'], { cwd: p.cwd })).stdout;
@@ -117,7 +117,7 @@ test('a clone whose branch already carries .sudus/ but whose refs are still refs
   await git(['mv', '.cairn', '.sudus'], { cwd: p.cwd }); await p.commit('another clone migrated and pushed');
   forgetLayout(p.cwd);
   assert.equal(layoutOf(p.cwd), SUDUS);
-  assert.equal(await missingRefsLine(p.cwd), 'sudus migrate  (refs/cairn/log exists; the project was last used under the .cairn layout)');
+  assert.match(await missingRefsLine(p.cwd), /^sudus migrate  \(this clone still holds refs\/cairn\/log; /);
   const w = await wake(p.cwd);
   assert.equal(w.exit, 3);
   const r = await migrate(p.cwd);
@@ -192,4 +192,38 @@ test('measure captures the former layout\'s log head, and a CAS race on its log 
   assert.match(intent.payload.log_head, /^[0-9a-f]{40}$/);
   assert.equal(cliMessage(r.cwd, new CasError('refusing refs/cairn/log: expected abc', { ref: 'refs/cairn/log' })), 'sudus: refusing refs/cairn/log: expected abc; run the command again');
   assert.equal(cliMessage(process.cwd(), new CasError('refusing refs/cairn/log: expected abc', { ref: 'refs/cairn/log' })).endsWith('; run the command again'), false);
+});
+
+// Second adversarial review, migrate area: a second clone that still held refs/cairn/* after the
+// first clone migrated, pushed and did more work was told to migrate; renaming its stale refs
+// made a stale log current and wake called it Done. When the authority remote already holds the
+// moved refs, migrate names the fetch instead; and the moving clone gets the new refspecs.
+test('migrate refuses when the authority remote already holds refs/sudus/*, naming the fetch; the moving clone gets the new refspecs', async (t) => {
+  const { push } = await import('../lib/travel.mjs');
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  const remote = (await git(['remote', 'get-url', 'origin'], { cwd: repo.cwd })).stdout.trim();
+  await start(repo.cwd, 'first'); await done(repo.cwd, 'first', { unchecked: true });
+  await push(repo.cwd);
+  const { mkdtempSync } = await import('node:fs'); const { tmpdir } = await import('node:os');
+  const clone = mkdtempSync(join(tmpdir(), 'sudus-stale-'));
+  await git(['clone', '-q', remote, '.'], { cwd: clone });
+  await git(['config', 'user.email', 't@example.invalid'], { cwd: clone }); await git(['config', 'user.name', 't'], { cwd: clone });
+  await git(['fetch', '-q', 'origin', 'refs/cairn/log:refs/cairn/log', 'refs/cairn/snapshots:refs/cairn/snapshots'], { cwd: clone });
+  // Clone 1 migrates, pushes, and works on.
+  await migrate(repo.cwd);
+  const specs = (await git(['config', '--get-all', 'remote.origin.fetch'], { cwd: repo.cwd })).stdout;
+  assert.ok(specs.includes('refs/sudus/log:refs/sudus/log'), specs);
+  await push(repo.cwd);
+  await appendRecord(repo.cwd, 'item', 'later', { kind: 'backlog', slug: 'later', source: 'DEMO-001', body: 'later' });
+  await push(repo.cwd);
+  // Clone 2 pulls the branch (now .sudus/) but still holds refs/cairn/*.
+  await git(['pull', '-q', '--ff-only'], { cwd: clone });
+  forgetLayout(clone);
+  assert.match(await missingRefsLine(clone), /^sudus migrate  /);
+  await assert.rejects(migrate(clone), /origin already holds refs\/sudus\/log: another clone migrated and pushed; run: git fetch origin 'refs\/sudus\/log:refs\/sudus\/log'/);
+  assert.ok(await readRef(clone, 'refs/cairn/log'));
+  await git(['fetch', '-q', 'origin', 'refs/sudus/log:refs/sudus/log', 'refs/sudus/snapshots:refs/sudus/snapshots'], { cwd: clone });
+  assert.equal(await missingRefsLine(clone), null);
+  assert.equal((await readLog(clone)).length, (await readLog(repo.cwd)).length);
 });

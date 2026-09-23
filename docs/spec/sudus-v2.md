@@ -123,8 +123,9 @@ layout, and a mechanism's output line counts under either prefix, so a
 migrated log and an unchanged mechanism read as before. `sudus migrate` runs
 only between commitments: it renames the refs, moves the directory and the
 matching `.gitignore` lines in one commit, and refuses while a commitment,
-lease or transaction is open or the directory has uncommitted changes. The
-records already written keep their envelope. Wake prints one line naming the
+lease or transaction is open or the directory has uncommitted changes, and,
+with an authority remote, when that remote already holds the moved refs (it
+then names the fetch). The records already written keep their envelope. Wake prints one line naming the
 move while a project is on the former layout.
 
 Every repository path in settings, mechanisms, records and evaluator drafts is

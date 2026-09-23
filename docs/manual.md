@@ -974,10 +974,14 @@ and trailers; new ones are written as `sudus:` records, and the log reads
 as one. `.cairn/**` stays a reserved path afterwards, so a stray file
 there is never plain work.
 
-With an authority remote, `sudus push` publishes the moved refs. Another
-clone that pulls the move sees `.sudus/` on its branch but still holds
-`refs/cairn/*`; wake names `sudus migrate` there, and it moves the refs
-alone. The remote's old `refs/cairn/*` are left behind unused.
+With an authority remote, `sudus push` publishes the moved refs, and
+migrate gives the remote the new fetch and push refspecs. Another clone
+that pulls the move sees `.sudus/` on its branch but still holds
+`refs/cairn/*`; wake names `sudus migrate` there. Migrate asks the remote
+first: when it already holds the moved refs, migrate names the fetch that
+brings them, since renaming the clone's own stale refs would make an old
+log current; when it does not, migrate moves the refs alone. The remote's
+old `refs/cairn/*` are left behind unused.
 
 ## Get unstuck
 

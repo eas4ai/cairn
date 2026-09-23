@@ -283,7 +283,8 @@ matching lines of `.gitignore`, and refuses while a commitment, lease or
 transaction is open. Records already on the log keep their original
 form, and the log reads as one. With an authority remote, `sudus push`
 then publishes the moved refs, and every other clone runs `sudus migrate`
-once after it pulls. Install the plugin under its new name (below) and
+once after it pulls, which fetches the moved refs rather than renaming
+its own stale ones. Install the plugin under its new name (below) and
 remove the one named `cairn` from your harness, so two copies of the
 hooks do not run. The old GitHub address redirects to `eas4ai/sudus`.
 

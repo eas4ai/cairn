@@ -136,7 +136,7 @@ flowchart TB
   finish(["Finish current commitment, capture request as an item"])
   supersede["sudus supersede SUCCESSOR: close old range with decision, transition id and slug, carry open obligations, do not name a future start or move Current:"]
   pending["Pending successor: resume the transition, the later start points back to the superseded record"]
-  legacy{"Sudus 1.x records present?"}
+  legacy{"Cairn 1.x records present?"}
   migrate["Migrate: tell the developer, on ok remove the 1.x record directories (history keeps them), convert the spec in place until sudus lint docs/spec is clean, changing no requirement words, keep 1.x mechanism commands in docs/recon.md"]
   init["Ask the developer: authority remote or local-only, signed or attested. sudus init with the answers as flags"]
   carry["Carry: one sudus item per 1.x item file, remove the item directories"]
@@ -1129,7 +1129,7 @@ flowchart TB
   link["/install-sudus installs the shim bin/sudus.sh at ~/.local/bin/sudus, once; it runs the newest installed Sudus; no project remote is selected here"]
   path{"~/.local/bin on PATH?"}
   addpath["Tell the developer to add it, no hook edits the shell"]
-  help{"sudus --help prints commands and exit codes?"}
+  help{"sudus --help prints the command list?"}
   broken(["Stop: name the failure, link target, PATH or node"])
   project{"Initialized Sudus project?"}
   wake["Session-start hook prints the verdict and predicate"]

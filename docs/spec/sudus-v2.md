@@ -644,7 +644,7 @@ prepare the successor. The successor's start names the superseded record and
 `Current:` moves in the same recoverable start transaction. An interrupted gap
 is a pending transition, not a second open commitment.
 
-A Sudus 1.x project (record directories under `.cairn/`, or
+A Cairn 1.x project (record directories under `.cairn/`, or
 `docs/commitments/`) is migrated before initialization, on the developer's ok:
 the 1.x record directories are removed, since Sudus 2 reads none of them and
 Git history keeps them; the specification is converted in place until
@@ -919,7 +919,7 @@ predicate. The table is normative.
 | `recover TRANSACTION` | the intent has one terminal domain or abort record and every store matches its resulting identity |
 | `reconcile ACTION` | the local action lease is gone and the action it named finished or was explicitly abandoned |
 | `scope PATH` | every scope-breach record for the path has a developer-approved keep disposition or a restore snapshot equal to its allowed base; an unanswered escalation that concerns the breach is Waiting instead (added 2026-09-22) |
-| `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract against the contract in force when it was recorded (the last start before it, or that commitment's done snapshot once it had closed); its requirement has a current pass at or after it |
+| `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract of the commitment open when it was recorded (between commitments no contract is frozen and none is measured); its requirement has a current pass at or after it |
 | `record PATH` | the action lease covers the path through its target's declared inputs, or the path is clean |
 | `commit PATH` | the path is clean, or the action lease covers it; `docs/decisions.jsonl` is named here whenever it has uncommitted lines (added 2026-09-22) |
 | `declare REQ` | a mechanism definition names the requirement and no pre-existing undeclared delta was legalized |
@@ -1631,7 +1631,7 @@ specification.
 2. Hooks prompt and never block or write.
 3. The kernel has two decision levels; guidance may describe four.
 4. `next-iteration` is renamed `next-feature`, including its item kind and flag.
-5. Sudus 1.x records are not read; migration happens at a v2 Done.
+5. Cairn 1.x records are not read; migration happens at a v2 Done.
 6. Command output is ignored local data; a receipt can be current without it.
 7. This repository develops v2 on its v2 branch and archives 1.x at cutover.
 8. One adversarial report per commitment, plus bounded cumulative acceptance;

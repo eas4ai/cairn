@@ -14,7 +14,7 @@ digraph existing_project {
   finish [shape=oval, label="Finish current commitment;\ncapture request as an item"];
   supersede [label="sudus supersede SUCCESSOR:\nclose old range with decision, transition id and slug;\ncarry open obligations; do not name a future start\nor move Current:"];
   pending [label="Pending successor: resume the transition;\nthe later start points back to the superseded record"];
-  legacy [shape=diamond, label="Sudus 1.x records present?"];
+  legacy [shape=diamond, label="Cairn 1.x records present?"];
   migrate [label="Migrate: tell the developer, on ok remove the 1.x record\ndirectories (history keeps them); convert the spec in place\nuntil sudus lint docs/spec is clean, changing no requirement's words;\nkeep 1.x mechanism commands in docs/recon.md"];
   init [label="Ask the developer: authority remote or local-only,\nsigned or attested; sudus init with the answers as flags"];
   carry [label="Carry: one sudus item per 1.x item file;\nremove the item directories"];

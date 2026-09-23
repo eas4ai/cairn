@@ -326,7 +326,8 @@ skill once: it installs a small shim at `$HOME/.local/bin/sudus` that
 runs the newest installed Sudus, so a plugin update never strands the
 command. Inside a Sudus project, the session-start hook prints the wake
 verdict; outside one, it names `/new-project` or `/existing-project`. When
-the `sudus` it finds runs another version than the plugin, it uses the
+the `sudus` it finds runs an older version than the plugin, or cannot say
+its version, it uses the
 plugin's copy and prints the one command that installs the shim. No hook
 creates the link, refuses a stop, counts anything, or writes a record; a
 hook only prints, and a harness without hooks relies on the working

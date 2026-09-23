@@ -225,3 +225,30 @@ test('8 concurrent state-changing commands never collide on the cycle counter te
   const results = await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(run));
   for (const res of results) assert.equal(/ENOENT.*sudus-cycle\.json\.tmp/.test(res.err), false, res.err);
 });
+
+// Second adversarial review, two-commitments area: the counter was not reset when a new commitment
+// opened. A closed commitment sits at phase 3 and the next one starts at phase 0, which read as
+// no progress, so three "declare DEMO-001" completions from the first commitment plus one of the
+// second's own tripped the same-target bound and wrote a cycle escalation against the second.
+test('a new commitment resets the administrative cycle counter: counts from a closed commitment do not trip a bound on the next one', async () => {
+  const { start, done } = await import('../lib/commitment.mjs');
+  const { authorize } = await import('../lib/auth.mjs');
+  const { readFile: rf } = await import('node:fs/promises');
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  await done(r.cwd, 'first');
+  const V = (action, target) => ({ verdict: 'Resolvable', action, target });
+  let st = await readState(r.cwd);
+  for (let n = 0; n < 5; n++) await settle(r.cwd, V(n % 2 ? 'record' : 'declare', 'DEMO-001'), st);
+  assert.equal((await readCounter(r.cwd)).counts['declare\tDEMO-001'], 2);
+  assert.ok(progressMade({ passes: ['DEMO-001'], obligations: 0, phase: 3, answered: 0, slug: 'first' }, { passes: ['DEMO-001'], obligations: 0, phase: 0, answered: 0, slug: 'second' }));
+  const roadmap = await rf(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap.replace('Current: first', 'Current: second') + '\n## second\n\nRequirements: DEMO-001\n\nAgain.\n'); await r.commit('second');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await start(r.cwd, 'second');
+  st = await readState(r.cwd);
+  assert.deepEqual((await settle(r.cwd, V('declare', 'DEMO-001'), st)).bound, null);
+  assert.deepEqual((await readCounter(r.cwd)).counts, {});
+  for (let n = 0; n < 3; n++) assert.deepEqual((await settle(r.cwd, V(n % 2 ? 'record' : 'declare', 'DEMO-001'), st)).bound, null);
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation').length, 0);
+});

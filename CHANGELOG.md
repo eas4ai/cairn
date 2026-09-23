@@ -7,6 +7,16 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.0.2 - 2026-09-23
+
+A second adversarial review of the kernel (six read-only reviewers, every predicate against a two-commitment history, every test comment that called a behavior a deviation treated as a defect candidate). Every finding below was reproduced with a script before it was fixed.
+
+- No contract is frozen between commitments, so a fix recorded there measures no protected delta. A defect carried across a supersede could never be fixed: the gap after a supersede is where the spec phase edits Agreed text before the successor start, yet the fix was measured against the superseded start and refused for those edits, and under the successor it was refused as not owned. Section 5's fix row revised in place.
+- A new commitment resets the administrative cycle counter. A closed commitment's phase is 3 and the next one's starts at 0, which read as no progress, so counts from the closed commitment carried over and a single ordinary action under the new one wrote a false cycle escalation.
+- After the first invocation of a signed-key `sudus init` (settings written, no signature yet), wake named the clone's fetch, which fails against a remote nothing was pushed to, forever. Settings that are written but not committed, with no log, are an unfinished init: wake names `sudus init --adopt <digest>` with the flags to finish it.
+- Three sites still used the Sudus-layout ref names on a former-layout project: the after-fetch validation asked the remote for the wrong refs (a stale `.cairn` clone was told to push instead of fetch), the evaluator captured a null log head (every `sudus measure` failed), and a CAS race on the log lost its retry hint.
+- Text: `Cairn 1.x` where the rename had produced `Sudus 1.x`; the walkthrough's init and authorize transcripts showed the terminal prompts revision 6 removed and said the developer runs authorize; the README said the hooks fall back to the plugin copy on another version (only an older one); the manual's install diagram said `--help` prints exit codes.
+
 ## 3.0.1 - 2026-09-23
 
 - A fix recorded between commitments is judged against the contract in force when it was recorded (issue #4): the last start before it, or that commitment's done snapshot once it had closed. The newest start was used, so the next commitment's own spec edits revoked an earlier fix and a new fix was refused for the same delta; the defect could never be discharged. A new fix between commitments is judged against the last done snapshot. Section 5's predicate row revised in place.

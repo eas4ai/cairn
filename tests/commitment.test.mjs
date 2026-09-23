@@ -386,6 +386,26 @@ test('a fix recorded between commitments survives the next commitment\'s contrac
   await assert.doesNotReject(fix(repo.cwd, 'later'));
   assert.notEqual((await wake(repo.cwd)).reason, 'the fix snapshot changes a protected path');
 });
+// Second adversarial review, liveness area: a defect carried across a supersede could never be
+// fixed. The gap after a supersede is where the spec phase edits Agreed text before the successor
+// start, yet the fix was still measured against the superseded start's snapshot and refused for
+// those edits; under the successor it was refused as not owned. No contract is frozen between
+// commitments, so no protected delta is measured there.
+test('a defect carried across a supersede is fixed in the gap, after the spec edits the supersede was for', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  await item(repo.cwd, { kind: 'defect', slug: 'greet-typo', source: 'DEMO-001', body: 'x' });
+  await supersede(repo.cwd, 'second', { quote: 'move to the name argument now', env: {} });
+  await repo.write('docs/spec/overview.md', OVERVIEW + '\nRevised for second.\n');
+  await repo.write('docs/spec/roadmap.md', roadmapWith('second'));
+  await repo.commit('spec edits for second');
+  await authorize(repo.cwd, { quote: 'ok', env: {} });
+  await assert.doesNotReject(fix(repo.cwd, 'greet-typo'));
+  await start(repo.cwd, 'second');
+  await done(repo.cwd, 'second', { unchecked: true });
+  const v = await wake(repo.cwd);
+  assert.notEqual(v.reason, 'the fix snapshot changes a protected path', JSON.stringify(v));
+});
 test('promote refuses a developer-set Current: naming another slug instead of overwriting it', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001'); await r.review(); await r.report();

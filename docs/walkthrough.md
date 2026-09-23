@@ -50,24 +50,22 @@ Outside an initialized project, wake exits 3 and names what continues:
 sudus init  (durable refs refs/sudus/log, refs/sudus/snapshots are missing and no authority remote is configured)
 ```
 
-Run `sudus init`. It asks three questions at your terminal: an authority
-remote (a configured Git remote's name, or `local-only`), a signing key
-(a PEM file's path, or `unsigned-local`), and a final confirmation.
-Name the remote you just added, so Sudus's durable records can travel
-with the code later:
+The agent asks you three things in conversation: the authority remote (a
+configured Git remote's name, or local only), whether you sign with a key
+(a PEM file's path) or attest in words, and your ok. Name the remote you
+just added, so Sudus's durable records can travel with the code later.
+The agent then runs `sudus init` with your answers as flags, quoting your
+words; the command itself asks nothing, and you are never asked to run it:
 
 ```text
-$ sudus init
-authority remote [origin] or local-only: origin
-signing key PEM path or unsigned-local: unsigned-local
-sudus init sha256:<settings digest>: confirm as Ada Lovelace <ada@example.com> (unsigned-local; evidence, not authentication)
-Type yes to confirm: yes
-sudus: initialized; init record <sha> (unsigned-local: terminal confirmation by Ada Lovelace <ada@example.com>; evidence, not authentication)
+$ sudus init --remote origin --attested --quote "ok: origin, no signing key"
+sudus: initialized; init record <sha> (attested: "ok: origin, no signing key" through <harness> by Ada Lovelace <ada@example.com>; evidence, not authentication)
 ```
 
-Unsigned-local mode records your Git author identity as evidence of your
-decisions, not as cryptographic proof it was you; a project that needs
-that proof configures a signing key instead. `sudus wake` now asks for the
+Attested mode records your quoted words, the harness that carried them and
+your Git author identity as evidence of your decision, not as
+cryptographic proof it was you; a project that needs that proof configures
+a signing key instead. `sudus wake` now asks for the
 specification:
 
 ```text
@@ -206,19 +204,20 @@ authorize the prepared contract:
 
 ```sh
 cp <checkout>/skills/new-project/templates/AGENTS.md AGENTS.md
-sudus authorize
 ```
 
+The agent tells you what would be bound (the specification, the working
+agreement and settings, each by digest) and asks for your ok in
+conversation. Then it records your answer, quoting you:
+
 ```text
-$ sudus authorize
-sudus authorize {"agreement":"sha256:...","settings":"sha256:...","spec":"sha256:..."}: confirm as Ada Lovelace <ada@example.com> (unsigned-local; evidence, not authentication)
-Type yes to confirm: yes
-sudus: authorization <sha> (unsigned-local: terminal confirmation by Ada Lovelace <ada@example.com>; evidence, not authentication)
+$ sudus authorize --quote "ok"
+sudus: authorization <sha> (attested: "ok" through <harness> by Ada Lovelace <ada@example.com>; evidence, not authentication)
 ```
 
 `sudus authorize` commits the specification and the working agreement for
-you, as part of this record. Only the developer runs it; an agent never
-does. Before the first `sudus start`, write the roadmap's `Current:` line
+you, as part of this record. The agent runs it only after you have said
+ok; you are never asked to run it. Before the first `sudus start`, write the roadmap's `Current:` line
 by hand, naming the commitment you are about to open (`sudus start`
 checks that it already matches, rather than choosing it for you):
 

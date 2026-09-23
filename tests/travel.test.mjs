@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, chmodSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, chmodSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -397,6 +397,25 @@ describe('validateAfterFetch', () => {
   });
 });
 
+// Second adversarial review, legacy-layout area: validateAfterFetch asked the remote for the
+// Sudus-layout refs whatever the project's layout, so a stale former-layout clone was told to push
+// when the remote was ahead and a fetch was the repair.
+test('a stale former-layout clone is told to fetch, not push: the remote is asked for the layout\'s own refs', async () => {
+  const { project: cairnProject } = await import('./helpers/commitment-fixture.mjs');
+  const { cwd } = await cairnProject({}, { layout: 'cairn' });
+  const remote = sh(cwd, 'remote', 'get-url', 'origin');
+  await start(cwd, 'first');
+  await push(cwd);
+  const clone = mkdtempSync(join(tmpdir(), 'sudus-clone-'));
+  sh(clone, 'clone', '-q', remote, '.');
+  sh(clone, 'fetch', '-q', 'origin', 'refs/cairn/log:refs/cairn/log');
+  sh(clone, 'update-ref', 'refs/cairn/snapshots', sh(cwd, 'rev-parse', 'refs/cairn/snapshots^'));
+  const direct = await validateAfterFetch(clone);
+  assert.deepEqual(direct.map((r) => [r.kind, r.ref, r.command]), [['fetch', 'refs/cairn/snapshots', 'git fetch origin refs/cairn/snapshots:refs/cairn/snapshots']]);
+  const v = await wake(clone);
+  assert.equal(v.exit, 3); assert.equal(v.line, 'git fetch origin refs/cairn/snapshots:refs/cairn/snapshots');
+});
+
 describe('working agreement text', () => {
   test('the push paragraph names the command, the three refs, atomicity, the order and the lease', () => {
     assert.equal(AGREEMENT_PUSH_TEXT, [
@@ -410,4 +429,23 @@ describe('working agreement text', () => {
     ].join('\n'));
     assert.ok(/^[\x20-\x7e\n]+$/.test(AGREEMENT_PUSH_TEXT), 'ASCII only');
   });
+});
+
+// Second adversarial review, deviations area: after the first invocation of a signed-key
+// `sudus init` (settings written, no signature yet, no log), wake named the clone's fetch, which
+// fails against a remote nothing was ever pushed to, and named it again forever. Settings that
+// are written but not committed, with no log, are an unfinished init, not a clone.
+test('settings written but not committed with no log name sudus init again, not a fetch; committed settings are a clone', async () => {
+  const { cwd, remote } = await makeProject();
+  const fresh = mkdtempSync(join(tmpdir(), 'sudus-unfinished-'));
+  sh(fresh, 'init', '-q', '-b', 'main'); sh(fresh, 'config', 'user.email', 't@example.invalid'); sh(fresh, 'config', 'user.name', 't');
+  sh(fresh, 'remote', 'add', 'origin', remote);
+  mkdirSync(join(fresh, '.sudus'));
+  writeFileSync(join(fresh, '.sudus/settings.json'), readFileSync(join(cwd, '.sudus/settings.json')));
+  const { digest } = await loadSettings(fresh);
+  assert.equal(await missingRefsLine(fresh), `sudus init --adopt ${digest}  (.sudus/settings.json is written but not committed and no init record exists; finish init with the flags it was given, and with a signing key --nonce and --signature)`);
+  const v = await wake(fresh);
+  assert.equal(v.exit, 3); assert.match(v.line, /^sudus init --adopt /);
+  sh(fresh, 'add', '.sudus/settings.json'); sh(fresh, 'commit', '-q', '-m', 'settings');
+  assert.equal(await missingRefsLine(fresh), fetchCommand('origin'));
 });

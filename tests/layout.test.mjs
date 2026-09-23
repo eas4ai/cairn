@@ -173,3 +173,23 @@ test('the former command name runs the same kernel, and CAIRN_SIGNATURE still su
   const sign = cliSigner(['--nonce', 'n1'], { env: { CAIRN_SIGNATURE: 'c2ln' }, stdout: () => {} });
   assert.equal(Buffer.from(await sign(Buffer.from(JSON.stringify({ nonce: 'n1' })))).toString(), 'sig');
 });
+
+// Second adversarial review, legacy-layout area: the evaluator captured the log head from the
+// Sudus-layout ref whatever the layout, so every measure on a former-layout project threw a
+// schema error on log_head; and the CAS hint compared the failing ref with the Sudus-layout log.
+test('measure captures the former layout\'s log head, and a CAS race on its log gets the retry hint', async (t) => {
+  const { measure } = await import('../lib/evaluate.mjs');
+  const { cliMessage } = await import('../lib/escalate.mjs');
+  const { CasError } = await import('../lib/gitx.mjs');
+  const dims = () => ({ evidence: 0.2, reach: 0.2, contract: 0.2, surface: 0.2, ambiguity: 0.2 });
+  const r = await loopRepo({ layout: 'cairn', settings: { data: ['migrations/**'], typesafeai: { enabled: true, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: 60, request_cap_bytes: 48000 } } });
+  const draft = { commitment: 'first', concerns: ['DEMO-001'], question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', options: ['R', 'I'], named_paths: ['migrations/1.sql'], cited_decisions: [] };
+  // The intent record is written before any call; its log_head used to be captured from the
+  // Sudus-layout ref and came back null here, which the schema refused.
+  await measure(r.cwd, draft, { transport: async () => { throw new Error('no network in this test'); } }).catch(() => {});
+  const intent = (await readLog(r.cwd)).findLast((x) => x.kind === 'evaluation-intent');
+  assert.ok(intent, 'an evaluation-intent record was written');
+  assert.match(intent.payload.log_head, /^[0-9a-f]{40}$/);
+  assert.equal(cliMessage(r.cwd, new CasError('refusing refs/cairn/log: expected abc', { ref: 'refs/cairn/log' })), 'sudus: refusing refs/cairn/log: expected abc; run the command again');
+  assert.equal(cliMessage(process.cwd(), new CasError('refusing refs/cairn/log: expected abc', { ref: 'refs/cairn/log' })).endsWith('; run the command again'), false);
+});

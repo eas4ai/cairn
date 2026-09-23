@@ -1,4 +1,4 @@
-{ "name": "cairn", "version": "2.1.14",
+{ "name": "cairn", "version": "2.2.0",
   "description": "The referee for agent-led software development: reads the repository, names the next action.",
   "author": { "name": "eas4ai" }, "license": "MIT",
   "keywords": ["agent", "specification", "requirements", "review", "hooks"] }

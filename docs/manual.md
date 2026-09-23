@@ -991,12 +991,12 @@ prints one with its references resolved.
 | `declare <name> --file <path>` | Read a mechanism definition as JSON and write it under that name. |
 | `scope <breach-sha> keep\|restore` | Dispose of a scope breach: keep the captured work (after a developer `ok`) or restore the path to its allowed base. |
 | `start <slug>` | Open the commitment named in the roadmap's `Current:` line, after verifying the authorization; commits the prepared spec, agreement, and mechanisms. |
-| `done <slug>` | Close the open commitment once every Done condition holds. |
+| `done <slug>` | Close the open commitment. Refuses until wake names `done`, and says what wake names instead (an unfixed defect, an unresolved finding, an unanswered escalation). |
 | `supersede <successor> --quote <text>` | Close the open commitment without Done, quoting the developer's ruling, and name the intended successor slug. |
 | `promote <item-sha>` | After Done, with the backlog holding this item, open it as the next commitment. |
 | `item --backlog\|--next-feature\|--defect --slug <s> --from <REQ or contract> --body <text>` | Capture an idea or a defect. |
 | `outside <item-sha> --reason <text>` | Record that a captured item is not this commitment's work. |
-| `fix <item-sha>` | Record that a defect item is fixed, naming the workspace snapshot. |
+| `fix <item-sha>` | Record that a defect item is fixed, naming the workspace snapshot. Runs under the open commitment, or under the last closed one when it raised the defect against its own requirement. |
 | `decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` | Record a spec-phase deference ruling, before any commitment is open. |
 | `decide --consequential --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> [--option <t>...] [--path <p>...] [--decision <id>...]` | Record a measured work-loop Consequential decision; the agent continues. Refused without a current `composite`-outcome measurement: `cairn: no measurement for this exact draft; run cairn measure first` when the draft differs from the one measured, or a message naming the floor or veto that caught it. |
 | `realize <decision-id> --subject <text>` | Record that a Consequential decision was built. |

@@ -156,12 +156,14 @@ test('setCurrent replaces exactly the Current: line', async () => {
 });
 
 import { done } from '../lib/commitment.mjs';
+import { loopRepo } from './helpers/loop.mjs';
+import { wake } from '../lib/wake.mjs';
 
 test('done closes the open commitment at its final workspace snapshot', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
   await repo.write('src/main.mjs', 'console.log("hello");\n// final\n');
-  const sha = await done(repo.cwd, 'first');
+  const sha = await done(repo.cwd, 'first', { unchecked: true });
   const rec = await last(repo.cwd, 'done');
   assert.equal(rec.sha, sha);
   assert.deepEqual(Object.keys(rec.payload).sort(), ['slug', 'snapshot']);
@@ -182,6 +184,27 @@ test('done refuses when no commitment is open or the slug is another commitment'
   await start(repo.cwd, 'first');
   await assert.rejects(done(repo.cwd, 'second'), /commitment first is open, not second/);
 });
+test('done refuses while the Done rule fails or an earlier predicate is unmet, naming what wake names', async () => {
+  const r = await loopRepo();
+  await assert.rejects(done(r.cwd, 'first'), /first is not at Done; wake names run DEMO-001: no current receipt/);
+  const d = await item(r.cwd, { kind: 'defect', slug: 'gate-bug', source: 'DEMO-001', body: 'gate invisible' });
+  await assert.rejects(done(r.cwd, 'first'), /first is not at Done; wake names fix gate-bug: defect gate-bug against DEMO-001 has no fix record/);
+  await fix(r.cwd, d);
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  await assert.doesNotReject(done(r.cwd, 'first'));
+});
+test('fix records a defect against the last closed commitment\'s own requirement, so a done written before the check is not a deadlock', async () => {
+  const r = await loopRepo();
+  const d = await item(r.cwd, { kind: 'defect', slug: 'gate-bug', source: 'DEMO-001', body: 'gate invisible' });
+  await r.passReq('DEMO-001');
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  assert.equal((await wake(r.cwd)).action, 'fix');
+  const other = await item(r.cwd, { kind: 'defect', slug: 'elsewhere', source: 'DEMO-002', body: 'x' }).catch(() => null);
+  if (other) await assert.rejects(fix(r.cwd, other), /open the next commitment with \/next-feature, then cairn fix/);
+  await fix(r.cwd, d);
+  await r.passReq('DEMO-001');
+  assert.notEqual((await wake(r.cwd)).action, 'fix');
+});
 
 test('every record kind of this plan round-trips through decodeRecord', async () => {
   const repo = await project();
@@ -189,7 +212,7 @@ test('every record kind of this plan round-trips through decodeRecord', async ()
   const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
   await outside(repo.cwd, d, 'not this commitment');
   await fix(repo.cwd, d);
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   const log = await readLog(repo.cwd);
   for (const kind of ['start', 'item', 'outside', 'fix', 'done']) {
     const rec = log.filter((r) => r.kind === kind).at(-1);
@@ -277,7 +300,7 @@ import { queue } from '../lib/adr.mjs';
 async function finished(repo) {
   await start(repo.cwd, 'first');
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'Greet by name.' });
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   return b;
 }
 
@@ -310,7 +333,7 @@ test('promote refuses a next-feature item', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
   const n = await item(repo.cwd, { kind: 'next-feature', slug: 'second', source: 'DEMO-002 falsifier', body: 'x' });
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   await assert.rejects(promote(repo.cwd, n), (e) => e instanceof CommitmentError && /next-feature item waits for the developer/.test(e.message));
 });
 
@@ -319,7 +342,7 @@ test('promote refuses while a defect item is unfixed', async () => {
   await start(repo.cwd, 'first');
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'x' });
   await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   await assert.rejects(promote(repo.cwd, b), /defect item typo is unfixed; defects are fixed before promotion/);
 });
 
@@ -328,11 +351,11 @@ test('promote refuses while a commitment is open, a section naming Draft text, a
   await start(repo.cwd, 'first');
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'drafty', source: 'DEMO-001', body: 'x' });
   await assert.rejects(promote(repo.cwd, b), /commitment first is open/);
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   await assert.rejects(promote(repo.cwd, b), /DEMO-003 is Draft/);
   const b2 = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'x' });
   const s = await promote(repo.cwd, b2);
-  await done(repo.cwd, 'second');
+  await done(repo.cwd, 'second', { unchecked: true });
   await assert.rejects(promote(repo.cwd, b2), /already promoted/);
   await assert.rejects(promote(repo.cwd, s), /not an item record/);
 });
@@ -592,7 +615,7 @@ test('Fix round 3 finding 1: a crash between an append landing and markDone, fol
   const repo = await project();
   await start(repo.cwd, 'first');
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'second', source: 'DEMO-002', body: 'Greet by name.' });
-  await done(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
   // The same shape of ADR append write promote() itself stages.
   const base_snap = await writeWorkspaceSnapshot(repo.cwd);
   const { bytes: adrBytes } = await decisionAppendBytes(repo.cwd, {

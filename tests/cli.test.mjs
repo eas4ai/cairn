@@ -470,6 +470,8 @@ test('cairn end reports an unclaimed touch, with no doubled cairn: prefix, for a
 // <item-sha>`, `cairn decide --consequential --title ... --rests-on ... --wrong-if ... --body
 // ...`, `cairn realize <decision-id> --subject <text>`, and bare `cairn decisions` (tested above).
 import { project } from './helpers/commitment-fixture.mjs';
+import { loopRepo } from './helpers/loop.mjs';
+import { done } from '../lib/commitment.mjs';
 import { readLog } from '../lib/records.mjs';
 import { readAdr } from '../lib/adr.mjs';
 
@@ -485,12 +487,13 @@ test('cairn start prints one line and writes a start record reachable only throu
   assert.match(bad.err, /^cairn: commitment first is open/);
 });
 
-test('cairn done prints one line and closes the open commitment', async (t) => {
-  const repo = await project();
-  t.after(repo.cleanup);
-  await run(['start', 'first'], repo.cwd);
+test('cairn done prints one line and closes the open commitment once wake names done; before that it refuses with what wake names', async (t) => {
+  const repo = await loopRepo();
+  const early = await run(['done', 'first'], repo.cwd);
+  assert.equal(early.code, 1); assert.match(early.err, /^cairn: first is not at Done; wake names run DEMO-001: /);
+  await repo.passReq('DEMO-001'); await repo.review(); await repo.report();
   const r = await run(['done', 'first'], repo.cwd);
-  assert.equal(r.code, 0);
+  assert.equal(r.code, 0, r.err);
   const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'done').at(-1);
   assert.equal(r.out, `done ${rec.sha} first\n`);
   const missingSlug = await run(['done'], repo.cwd);
@@ -516,7 +519,7 @@ test('cairn promote prints one line and opens the successor commitment, after do
   t.after(repo.cleanup);
   await run(['start', 'first'], repo.cwd);
   await run(['item', '--backlog', '--slug', 'second', '--from', 'DEMO-002', '--body', 'Greet by name.'], repo.cwd);
-  await run(['done', 'first'], repo.cwd);
+  await done(repo.cwd, 'first', { unchecked: true });   // this test is promote's plumbing, not the Done rule
   const b = (await readLog(repo.cwd)).filter((x) => x.kind === 'item').at(-1).sha;
   const r = await run(['promote', b], repo.cwd);
   assert.equal(r.code, 0);

@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.1.14 - 2026-09-22
+
+- `cairn done` refuses until wake names `done`, and its refusal says what wake names instead. It used to write the done record with an unfixed defect against the commitment's own requirement (issue #1: wake then named `fix` on a closed commitment that no command could fix) and with findings unresolved (issue #2: a cycle escalation written before the done record left the finished commitment Waiting).
+- `cairn fix` records a defect raised by the last closed commitment against its own requirement, so a project that reached that state on an earlier version has a way out. For any other defect with no open commitment the refusal names the route: open the next commitment, then fix.
+
 ## 2.1.13 - 2026-09-22
 
 - The acceptance-round bound counts rounds since the developer's last ok or instead answer to a cycle escalation, as the escalation itself says. It used to count every round after the report, so each answer was followed by a fresh escalation on the next round.

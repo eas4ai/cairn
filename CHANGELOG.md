@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.2.0 - 2026-09-23
+
+- After a supersede, the successor's brief, `sudus report` and wake's report predicate measure changed paths and interface obligations from the first start of the supersession chain (issue #8). The successor carries the superseded commitment's work, all of it committed before its own start, so its brief listed almost nothing under Changed paths and raised no interface obligation for that work: Q4 had nothing to compare and the interfaces got no caller-level attempt. The brief's heading names the commitment it measures from. Spec revision 9, section 9.
+- In Claude Code, the plugin can keep the wake verdict on screen: a status line under the prompt (the default), a pane beside the transcript, or both, with a face drawn by blobatar whose expression follows the verdict. It runs `sudus wake` itself after every turn and after every `sudus`, `cairn` or history-changing `git` command, and never asks the model. A repository without `.sudus/settings.json` or `.cairn/settings.json` shows nothing. The view, the face, the ASCII face and the command are plugin options in `~/.claude/settings.json`. It is a hooks module, which Claude Code loads only with function hooks on (early access, `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS`); without them, and in Codex and Muse, the shell hooks work as before.
+
 ## 3.1.2 - 2026-09-23
 
 - After `sudus migrate`, the first scope preflight between commitments no longer records the migration's own move of the mechanism definitions as breaches (issue #7). The base is the last done snapshot, which still names the former paths, so each moved file read as two breaches: the former path as a deletion, the new path as bytes with no base and no ledger line. A kernel-managed path now resolves its counterpart under the other layout: the moved file is valid when its bytes are what the base or the ledger holds for the former path, and the former path's absence is valid when the counterpart holds those bytes. Thanks to John Lockwood for the report.

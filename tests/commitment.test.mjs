@@ -362,6 +362,30 @@ test('between commitments any defect is fixed and wake names it before promote; 
   const after = await wake(repo.cwd);
   assert.match(after.reason, /DEMO-002 has no current pass at or after the fix/, JSON.stringify(after));   // the fix is recorded; the pass is next
 });
+// Issue #4 (johnwlockwood, 3.0.0): a fix recorded between commitments was judged against the newest
+// start, so the next commitment's own contract changes (a new spec file, an edited overview) revoked
+// it, and a new fix was refused for the same delta. The base is the contract in force when the fix
+// was recorded: the last start before it, or that commitment's done snapshot once it had closed.
+test('a fix recorded between commitments survives the next commitment\'s contract changes, and a later fix is judged against the last done (issue #4)', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  await item(repo.cwd, { kind: 'defect', slug: 'gate', source: 'DEMO-001', body: 'x' });
+  await done(repo.cwd, 'first', { unchecked: true });
+  await fix(repo.cwd, 'gate');
+  // The next commitment changes protected contract: a spec edit and the roadmap's Current: line.
+  await repo.write('docs/spec/overview.md', OVERVIEW + '\nSecond phase.\n');
+  await repo.write('docs/spec/roadmap.md', roadmapWith('second'));
+  await repo.commit('second phase spec');
+  await authorize(repo.cwd, { quote: 'ok', env: {} });
+  await start(repo.cwd, 'second');
+  await done(repo.cwd, 'second', { unchecked: true });
+  const v = await wake(repo.cwd);
+  // The fix stands; what wake names next is the pass DEMO-001 still lacks, never the revocation.
+  assert.deepEqual([v.action, v.target, v.reason], ['fix', 'gate', 'DEMO-001 has no current pass at or after the fix'], JSON.stringify(v));
+  await item(repo.cwd, { kind: 'defect', slug: 'later', source: 'DEMO-002', body: 'y' });
+  await assert.doesNotReject(fix(repo.cwd, 'later'));
+  assert.notEqual((await wake(repo.cwd)).reason, 'the fix snapshot changes a protected path');
+});
 test('promote refuses a developer-set Current: naming another slug instead of overwriting it', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001'); await r.review(); await r.report();

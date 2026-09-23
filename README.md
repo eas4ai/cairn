@@ -505,3 +505,10 @@ Sudus's own development uses the same workflow. From this repository,
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Thanks
+
+John Lockwood ([johnwlockwood](https://github.com/johnwlockwood)) filed
+the first bug reports against Sudus, each with the exact timeline, the
+cause in the code and the expected behavior. Issues #1 through #5 were
+fixed from them, in 2.1.14, 2.2.2 and 3.0.1.

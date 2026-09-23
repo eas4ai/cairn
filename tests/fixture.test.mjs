@@ -423,19 +423,11 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
   const roadmap = readFileSync(join(p.dir, "docs/spec/roadmap.md"), "utf8");
   assert.match(roadmap, /^Current: fixture-2$/m);
   assert.match(roadmap, /^## fixture-2\n\nRequirements: REQ-002$/m);
-  // Deviation from the plan text, recorded in the report: REQ-002's earlier defect fix (in
-  // work()) carries a workspace snapshot from well before fixture-2 started; the 'fix' predicate
-  // (lib/wake.mjs) and fix() itself (lib/commitment.mjs) both measure "changes no protected
-  // contract" against the CURRENTLY open commitment's own start snapshot, and a lot of protected
-  // content (docs/spec/glossary.md, the roadmap's Current: line) legitimately changed between
-  // that old fix and fixture-2's start. This is not a dead end: re-running `sudus fix` for the
-  // same item under the new commitment re-attests it against the current baseline (empty delta,
-  // since nothing has happened yet in fixture-2) and satisfies the predicate immediately.
-  await p.wakeIs("Resolvable", "fix", "add-nan");
-  p.sudus(["fix", defectSha]);
-  // Same "at or after" ordering as the first fix (see work()): the confirming check must be
-  // recorded after this fresh fix record too.
-  p.sudus(["check", "REQ-002"]);
+  // Issue #4: REQ-002's earlier defect fix (in work()) is judged against the contract in force
+  // when it was recorded, so the protected content that legitimately changed since (the
+  // glossary, the roadmap's Current: line) does not revoke it. Until 3.0.1 wake named `fix`
+  // again here and the fix had to be re-recorded under the new commitment.
+  assert.ok(defectSha);
   await p.wakeIs("Resolvable", "review", "fixture-2");
 
   // supersede is developer-only; run through the lib directly (see tests/helpers/fixture.mjs).
@@ -477,9 +469,8 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
     "acceptance", "done",
     // promote(): transactional (command-intent), the promotion record, and the successor start.
     "command-intent", "promotion", "start",
-    // full-loop test: re-attesting the carried-over add-nan fix under fixture-2 (see this test's
-    // own "fix predicate" deviation comment), and the confirming check.
-    "fix", "receipt",
+    // full-loop test: the carried-over add-nan fix stands under fixture-2 (issue #4), so nothing
+    // is re-recorded here.
     // supersede(): transactional (command-intent), then the superseded record.
     "command-intent", "superseded",
   ]);

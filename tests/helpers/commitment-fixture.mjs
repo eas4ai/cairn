@@ -59,8 +59,8 @@ Requirements: DEMO-003
 
 Delivers the quiet flag.
 `;
-export async function project(settings = {}) {
-  const repo = await makeProject({ settings: { source: ['src/**'], interfaces: ['src/api/**'], data: ['migrations/**'], ...settings } });
+export async function project(settings = {}, { layout = 'sudus' } = {}) {
+  const repo = await makeProject({ settings: { source: ['src/**'], interfaces: ['src/api/**'], data: ['migrations/**'], ...settings }, layout });
   await repo.write('docs/spec/overview.md', OVERVIEW);
   await repo.write('docs/spec/glossary.md', '# Glossary\n\ngreeter: the program.\n');
   await repo.write('docs/spec/demo.md', DEMO);

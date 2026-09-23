@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.0.1 - 2026-09-23
+
+- A fix recorded between commitments is judged against the contract in force when it was recorded (issue #4): the last start before it, or that commitment's done snapshot once it had closed. The newest start was used, so the next commitment's own spec edits revoked an earlier fix and a new fix was refused for the same delta; the defect could never be discharged. A new fix between commitments is judged against the last done snapshot. Section 5's predicate row revised in place.
+- After `sudus migrate`, a transaction recorded under the former refs is not drift (issue #5): a store named `refs/cairn/*` resolves through the layout, so wake no longer names a recover that could never succeed. Migrate commits with the repository's hooks bypassed and moves the refs only after the commit; a commit that fails leaves the project unchanged, where a formatting hook used to leave it half moved.
+
 ## 3.0.0 - 2026-09-23
 
 - Cairn is renamed Sudus. The old name collided with an autonomous penetration-testing tool and two other agent tools of the same name. The command, package, plugins, marketplace, skills, spec, manual and README carry the new name; the repositories are eas4ai/sudus and eas4ai/sudus-dev, and GitHub redirects the old addresses.

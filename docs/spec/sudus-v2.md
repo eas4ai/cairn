@@ -919,7 +919,7 @@ predicate. The table is normative.
 | `recover TRANSACTION` | the intent has one terminal domain or abort record and every store matches its resulting identity |
 | `reconcile ACTION` | the local action lease is gone and the action it named finished or was explicitly abandoned |
 | `scope PATH` | every scope-breach record for the path has a developer-approved keep disposition or a restore snapshot equal to its allowed base; an unanswered escalation that concerns the breach is Waiting instead (added 2026-09-22) |
-| `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract; its requirement has a current pass at or after it |
+| `fix ITEM` | a fix record names the item and a workspace snapshot that changes no protected contract against the contract in force when it was recorded (the last start before it, or that commitment's done snapshot once it had closed); its requirement has a current pass at or after it |
 | `record PATH` | the action lease covers the path through its target's declared inputs, or the path is clean |
 | `commit PATH` | the path is clean, or the action lease covers it; `docs/decisions.jsonl` is named here whenever it has uncommitted lines (added 2026-09-22) |
 | `declare REQ` | a mechanism definition names the requirement and no pre-existing undeclared delta was legalized |

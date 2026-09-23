@@ -19,6 +19,9 @@ import { declare } from '../lib/mechanisms.mjs';
 import { check } from '../lib/check.mjs';
 import { cliSigner } from '../lib/auth.mjs';
 import { version } from '../lib/cli.mjs';
+import { project } from './helpers/commitment-fixture.mjs';
+import { start, done } from '../lib/commitment.mjs';
+import { pendingTransaction } from '../lib/tx.mjs';
 
 const BIN = new URL('../bin/sudus.mjs', import.meta.url).pathname;
 const ALIAS = new URL('../bin/cairn.mjs', import.meta.url).pathname;
@@ -121,6 +124,36 @@ test('a clone whose branch already carries .sudus/ but whose refs are still refs
   assert.equal(r.dir, null); assert.equal(r.commit, null); assert.equal(r.moves.length, 2);
   assert.equal(await missingRefsLine(p.cwd), null);
   assert.equal((await readLog(p.cwd))[0].kind, 'init');
+});
+
+// Issue #5 (johnwlockwood, 3.0.0): the last start transaction's closing record names its stores as
+// refs/cairn/*; after the move those refs are gone, so the drift check read them as null and wake
+// named a recover that could never succeed. A store name resolves through the layout.
+test('after migrate, a transaction recorded under the former refs is not drift: wake does not name recover (issue #5)', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  await start(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
+  const r = await migrate(repo.cwd);
+  assert.equal(r.dir, '.cairn -> .sudus');
+  assert.equal(await pendingTransaction(repo.cwd, await readLog(repo.cwd)), null);
+  const v = await wake(repo.cwd);
+  assert.notEqual(v.action, 'recover', JSON.stringify(v));
+});
+
+// Issue #5, secondary: a repository hook that rewrites files (an end-of-file fixer) aborted the
+// migrate commit after the refs were already renamed and the directory moved. The commit is purely
+// mechanical and runs with --no-verify; the refs move only after it succeeds, and a failed commit
+// puts the directory and .gitignore back.
+test('migrate commits with hooks bypassed, and leaves the project untouched when the commit fails', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  const hooks = join(repo.cwd, '.git/hooks');
+  writeFileSync(join(hooks, 'pre-commit'), '#!/bin/sh\nprintf x >> .cairn/settings.json 2>/dev/null; printf x >> .sudus/settings.json 2>/dev/null; exit 1\n', { mode: 0o755 });
+  const r = await migrate(repo.cwd);
+  assert.ok(r.commit);
+  assert.equal((await git(['status', '--porcelain'], { cwd: repo.cwd })).stdout, '');
+  assert.ok(await readRef(repo.cwd, 'refs/sudus/log'));
 });
 
 test('the session-start hook does not report the former refs as missing', () => {

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.1.1 - 2026-09-23
+
+- The working agreement template no longer tells the agent that better evidence lowers the measure composite. The evidence requirement stands on its own; a sentence describing the score's mechanics steered effort toward the score instead of the evidence (prompt audit, accepted by the developer).
+
 ## 3.1.0 - 2026-09-23
 
 - Wake names `supersede SLUG` when the Agreed text of a requirement in the open commitment was revised under it. Receipts and `sudus review mechanism` bind to the text as it reads now, while the start record, the review predicate and the Done rule hold the frozen digest, so wake named `review mechanism` after every review and nothing in the project could satisfy it. The frozen contract is not amended: the reason names both exits, restoring the frozen text or superseding on the developer's ruling to a successor that freezes the revised text. New action row in the spec's section 5 and the manual; the precedence order places it after Waiting and before `fix`.

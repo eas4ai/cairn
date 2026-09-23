@@ -801,3 +801,27 @@ test('a declared input directory containing a __proto__ path component is curren
   const v = await wake(r.cwd);
   assert.notEqual(v.action, 'run');
 });
+// Issue #6 (johnwlockwood, 3.0.2): between commitments the fix predicate checks every unfixed
+// defect, but the pass table wake built covered only the last commitment's requirement set. A
+// defect against a requirement that commitment never owned read an undefined entry, so a later
+// passing check never counted and wake named fix forever.
+test('a defect against a requirement outside the last commitment\'s set is discharged by a later pass (issue #6)', async () => {
+  const { done, item, fix } = await import('../lib/commitment.mjs');
+  const { authorize } = await import('../lib/auth.mjs');
+  const { check } = await import('../lib/check.mjs');
+  const r = await loopRepo({ reqs: ['DEMO-001', 'DEMO-002'] });
+  await r.passReq('DEMO-001'); await r.passReq('DEMO-002'); await r.review(); await r.report();
+  await done(r.cwd, 'first');
+  await item(r.cwd, { kind: 'defect', slug: 'gate', source: 'DEMO-001', body: 'x' });
+  await fix(r.cwd, 'gate');
+  const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap.replace('Current: first', 'Current: second') + '\n## second\n\nRequirements: DEMO-002\n\nOnly the name.\n'); await r.commit('second');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await start(r.cwd, 'second');
+  await done(r.cwd, 'second', { unchecked: true });
+  assert.match((await wake(r.cwd)).reason, /DEMO-001 has no current pass at or after the fix/);
+  await check(r.cwd, 'DEMO-001');
+  const v = await wake(r.cwd);
+  assert.notEqual(v.reason, 'DEMO-001 has no current pass at or after the fix', JSON.stringify(v));
+  assert.notEqual(v.target, 'gate', JSON.stringify(v));
+});

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.0.3 - 2026-09-23
+
+- Between commitments, a defect against a requirement the last commitment never owned can now be discharged (issue #6). Wake's fix predicate read the pass table built for that commitment's requirement set, found nothing for the defect's requirement, and named `fix` after every later passing check. It now looks the pass up for the defect's own requirement. Thanks to John Lockwood for the report.
+
 ## 3.0.2 - 2026-09-23
 
 A second adversarial review of the kernel (six read-only reviewers, every predicate against a two-commitment history, every test comment that called a behavior a deviation treated as a defect candidate). Every finding below was reproduced with a script before it was fixed.

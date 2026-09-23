@@ -512,5 +512,5 @@ MIT. See [LICENSE](LICENSE).
 
 John Lockwood ([johnwlockwood](https://github.com/johnwlockwood)) filed
 the first bug reports against Sudus, each with the exact timeline, the
-cause in the code and the expected behavior. Issues #1 through #5 were
-fixed from them, in 2.1.14, 2.2.2 and 3.0.1.
+cause in the code and the expected behavior. Issues #1 through #6 were
+fixed from them, in 2.1.14, 2.2.2, 3.0.1 and 3.0.3.

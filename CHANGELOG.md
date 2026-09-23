@@ -7,6 +7,24 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.2.0 - 2026-09-22
+
+From an adversarial review of the kernel by six independent agents; every finding was reproduced with a script before it was fixed, and each fix carries that reproduction as a test.
+
+- `cairn realize` escalates, as the spec says, when the realized delta touches a data, protected or reserved path: one escalation concerning `decision:<id>`, and the developer's ok lets the next `cairn realize` record the realization. It used to refuse forever with nothing written.
+- A promoted commitment can reach Done: the promote decision no longer stops on the roadmap line its own start transaction wrote. Every commitment opened by `cairn promote` was stuck at `build <decision>`.
+- `cairn check` refuses a fourth distinct failing attempt until an escalation concerns the requirement, as the spec's "requires an escalation first" states; receipts used to pile up without limit while wake said escalate.
+- `cairn fix` under an open commitment takes only a defect against that commitment's own requirement; between commitments it takes any defect, since promote refuses while one is unfixed. Wake names `fix` for any unfixed defect once the range is closed, instead of naming a promote that then refuses.
+- `cairn promote` refuses when `Current:` names a section that is neither the finished commitment nor the promoted item, instead of overwriting the developer's line.
+- Unresolved findings carried by a supersession stay open in the successor until resolved; they used to fall out of scope, and Done was reachable over them.
+- Between commitments, a hand-written `Current:` line is not a missing start record: wake no longer prints a `cairn push` repair that recommends itself.
+- `cairn done` writes the done record only once wake names `done` (2.1.14) and now also gates the case above.
+- Under `developer: absent`, every unanswered escalation exits 4, not only the floor or a veto (spec revised in place).
+- `cairn fix`, `cairn outside` and `cairn promote` take the item slug wake prints as well as the sha; `cairn scope` takes the path wake prints; `cairn review mechanism REQ` defaults to the latest fail receipt, which wake's reason now names.
+- `cairn begin --touch` refuses a gitignored path: it can never be an input, and touching one counted an untouched file as changed and unbound the mechanism's review.
+- Lease refusals name `cairn end` and `cairn end --abandon` instead of a `cairn reconcile` command that does not exist; the manual's reconcile row says the same; the start refusal for a wrong `Current:` names the edit instead of an impossible supersede.
+- The item usage line says `--from <REQ or contract>` only for `--next-feature`; the install skill's help gate tests for the command list `cairn --help` actually prints.
+
 ## 2.1.14 - 2026-09-22
 
 - `cairn done` refuses until wake names `done`, and its refusal says what wake names instead. It used to write the done record with an unfixed defect against the commitment's own requirement (issue #1: wake then named `fix` on a closed commitment that no command could fix) and with findings unresolved (issue #2: a cycle escalation written before the done record left the finished commitment Waiting).

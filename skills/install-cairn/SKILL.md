@@ -46,7 +46,7 @@ Is `~/.local/bin` on PATH? `command -v cairn` answers. Yes: `help`. No: `addpath
 Tell the developer to add `export PATH="$HOME/.local/bin:$PATH"` to their shell startup file. No hook edits the shell. Until a new shell, use the absolute path `~/.local/bin/cairn`. Then `help`.
 
 ### `help`
-Run `cairn --help`. It prints the commands and exit codes: `project`. It does not: `broken`.
+Run `cairn --help`. It prints the command list: `project`. It does not: `broken`.
 
 ### `broken`
 Stop and name the failure exactly as observed: link target, PATH or node.

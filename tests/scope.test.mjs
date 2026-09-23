@@ -307,6 +307,15 @@ test('keep accepts the escalation cairn escalate itself writes, with the breach:
   assert.deepEqual([rec.kind, rec.payload.breach, rec.payload.disposition, rec.payload.escalation, rec.payload.answer], ['scope', b, 'keep', esc, ans]);
 });
 
+test('scope takes the path wake prints and resolves it to its one open breach', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await assert.rejects(dispose(r.cwd, 'src/other.mjs', 'restore'), /no open scope-breach for src\/other.mjs/);
+  await r.remove('src/stray.mjs');
+  const s = await dispose(r.cwd, 'src/stray.mjs', 'restore');
+  assert.equal((await r.log()).find((x) => x.sha === s).payload.breach, b);
+});
 test('restore is refused while the path differs from its allowed base', async () => {
   const r = await loopRepo();
   await r.write('src/stray.mjs', 'x\n');

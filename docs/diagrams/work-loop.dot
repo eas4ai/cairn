@@ -8,7 +8,7 @@ digraph work_loop {
   wake [shape=oval, label="cairn wake is read-only:\nprint verdict, action or party, reason and predicate\n(missing refs, pending transition or recovery: one line, exit 3)"];
   verdict [shape=diamond, label="Verdict?"];
 
-  waiting [label="Waiting: print the escalation's five fields verbatim;\nthe agent adds nothing to the work, asks the developer in prose\nand records their answer with cairn answer\n(developer: absent and a floor or veto escalation: same print, exit 4)"];
+  waiting [label="Waiting: print the escalation's five fields verbatim;\nthe agent adds nothing to the work, asks the developer in prose\nand records their answer with cairn answer\n(developer: absent: same print, exit 4)"];
   answer [label="The agent asks the developer in conversation and records the words:\ncairn answer ok | instead | ask --quote;\nsigned when a key exists, attested otherwise"];
   reply [label="reply after ask:\na reply record names the escalation"];
 

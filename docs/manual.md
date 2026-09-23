@@ -358,7 +358,7 @@ again.
 flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
-  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
@@ -878,7 +878,7 @@ bound to the loop. Until then wake names the repair.
 | `network_exclude` | `[]` | Path globs whose content never reaches any model, on top of the built-in credential patterns. |
 | `signing_key` | the key `init` chose, or `null` | The key that signs developer answers and authorizations; `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. |
 | `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
-| `developer` | `"present"` | `"absent"` for an autonomous run: a floor or veto escalation prints as Waiting and wake exits 4 instead of waiting for an answer. |
+| `developer` | `"present"` | `"absent"` for an autonomous run: any unanswered escalation prints as Waiting and wake exits 4 instead of waiting for an answer no one can give. |
 | `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `cairn brief` and by the review source of the evaluator. |
 | `typesafeai.enabled` | `false` | `true` sends each Consequential measurement to TypeSafe's jev model; `false` uses your harness's review model through `cairn measure --brief`. |
 | `typesafeai.model` | `null` | The versioned model id, required when enabled: `"jev-1.13.0"` at the time of writing. An alias such as `"jev"` is refused. |
@@ -950,25 +950,25 @@ specific than the action word alone.
 |---|---|
 | `repair PATH` | A hand-written file (spec or settings) does not read under its grammar. Fix only what is broken; `cairn lint docs/spec` shows spec problems. |
 | `recover TRANSACTION` | A multi-record write (`start`, `promote`, `supersede`, `authorize`) was interrupted. Run `cairn recover <transaction>`. |
-| `reconcile ACTION` | A local action lease exists with no matching finished work. Finish it and `cairn end --lease <sha>`, or `cairn end --abandon`. |
-| `scope PATH` | An undeclared change was observed. Restore it (`cairn scope <breach> restore`) or ask to keep it (`cairn escalate`, then `cairn scope <breach> keep`). |
-| `fix ITEM` | A recorded defect against this commitment is still open. Write a failing test, fix it, commit, check, then `cairn fix <item-sha>`. |
+| `reconcile ACTION` | A local action lease exists with no matching finished work, usually left by a session that ended. Finish the action and `cairn end`, or `cairn end --abandon`; a dead session's lease needs no `--lease`. |
+| `scope PATH` | An undeclared change was observed. Restore it (`cairn scope PATH restore`) or ask to keep it (`cairn escalate`, then `cairn scope PATH keep`); the breach sha wake's reason names works too. |
+| `fix ITEM` | A recorded defect is still open: this commitment's own while it is open, any defect between commitments. Write a failing test, fix it, commit, check, then `cairn fix ITEM` (the slug wake prints, or the sha). |
 | `record PATH` / `commit PATH` | A declared input has uncommitted changes with no covering lease. Lease the action that changes it with `cairn begin <action> <target>` (`record` is not a begin action), then commit; or revert it. An untracked build artifact under a declared input is gitignored instead. |
 | `declare REQ` | No mechanism speaks for this requirement yet. `cairn declare` one. |
 | `run REQ` | A check is due: `cairn check REQ`. |
 | `implement REQ` | The latest receipt is not a current pass. Read it and the captured output, then fix the code under a lease. |
 | `escalate REQ` | Three distinct failing attempts with no pass since. `cairn escalate` before a fourth. |
-| `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `cairn review mechanism REQ <fail-receipt>`. |
-| `capture ITEM` | An idea outside this commitment needs a disposition: `cairn outside <item-sha> --reason "..."`, or escalate if it actually belongs. |
+| `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `cairn review mechanism REQ`; it takes the latest fail receipt, which wake's reason names, unless you pass another. |
+| `capture ITEM` | An idea outside this commitment needs a disposition: `cairn outside ITEM --reason "..."` (slug or sha), or escalate if it actually belongs. |
 | `review SLUG` | Write and record the review, answering all six questions. |
 | `report SLUG` | `cairn brief`, start an adversary with none of your context, then `cairn report --file`. |
 | `resolve SLUG N` | An open finding needs a fix or a dispute. |
 | `accept SLUG` | Give the adversary the report, the resolutions, and the delta; `cairn accept --file`. |
 | `build DECISION` | Build what the decision says, commit, then `cairn realize`. |
 | `done SLUG` | Every condition holds: `cairn done SLUG`. |
-| `promote` | No commitment is open and the backlog holds an item. Choose one; `cairn promote <item-sha>`. |
+| `promote` | No commitment is open and the backlog holds an item. Choose one; `cairn promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. |
 | `reply SLUG` | You asked a question with `ask`; the agent owes an explanation: `cairn reply SLUG "..."`. |
-| `Waiting` | An escalation needs your answer. With `developer: absent`, the one the evaluator floor or a veto raised has no one to answer it; wake exits 4 instead of sitting there. |
+| `Waiting` | An escalation needs your answer. With `developer: absent` no one can answer any escalation; wake exits 4 instead of sitting there. |
 
 ## Command reference
 
@@ -989,12 +989,13 @@ prints one with its references resolved.
 | `end [--abandon] [--lease <sha>]` | Release the action lease; `--lease` refuses a mismatched sha; `--abandon` releases without claiming touched paths. |
 | `check <REQ>` | Run the one mechanism declaring `REQ` and record a receipt. |
 | `declare <name> --file <path>` | Read a mechanism definition as JSON and write it under that name. |
-| `scope <breach-sha> keep\|restore` | Dispose of a scope breach: keep the captured work (after a developer `ok`) or restore the path to its allowed base. |
+| `scope <breach-sha or path> keep\|restore` | Dispose of a scope breach: keep the captured work (after a developer `ok`) or restore the path to its allowed base. A path resolves to its one open breach. |
 | `start <slug>` | Open the commitment named in the roadmap's `Current:` line, after verifying the authorization; commits the prepared spec, agreement, and mechanisms. |
 | `done <slug>` | Close the open commitment. Refuses until wake names `done`, and says what wake names instead (an unfixed defect, an unresolved finding, an unanswered escalation). |
 | `supersede <successor> --quote <text>` | Close the open commitment without Done, quoting the developer's ruling, and name the intended successor slug. |
 | `promote <item-sha>` | After Done, with the backlog holding this item, open it as the next commitment. |
-| `item --backlog\|--next-feature\|--defect --slug <s> --from <REQ or contract> --body <text>` | Capture an idea or a defect. |
+| `item --backlog\|--defect --slug <s> --from <REQ> --body <text>` | Capture an idea or a defect against an Agreed requirement. |
+| `item --next-feature --slug <s> --from <REQ or contract> --body <text>` | Capture a change to Agreed text or a contract path; it waits for the developer. |
 | `outside <item-sha> --reason <text>` | Record that a captured item is not this commitment's work. |
 | `fix <item-sha>` | Record that a defect item is fixed, naming the workspace snapshot. Runs under the open commitment, or under the last closed one when it raised the defect against its own requirement. |
 | `decide --consequential --title <t> --rests-on <REQ,...> --wrong-if <t> --body <t>` | Record a spec-phase deference ruling, before any commitment is open. |
@@ -1007,7 +1008,7 @@ prints one with its references resolved.
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
 | `dispute --commitment <s> --record <sha> --n <n> --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with a specific finding or its resolution. |
 | `review <slug> --file <path>` | Record the builder's review. |
-| `review mechanism <REQ> <fail-receipt>` | Bind a mechanism's review metadata to its current definition and the requirement's current text. |
+| `review mechanism <REQ> [<fail-receipt>]` | Bind a mechanism's review metadata to its current definition and the requirement's current text; the latest fail receipt for REQ when none is given. |
 | `brief <slug> [--harness <name>]` | Write the adversary brief and projection for a reviewed commitment. |
 | `report <slug> --file <path>` | Record the adversary's report. |
 | `resolve <slug> <n> "<how>" [--source <sha>]` | Record a fix for finding `n` of a specific review, report, or acceptance record. |

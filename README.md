@@ -152,7 +152,7 @@ first`.
 | No key, network down, or a rate limit after the built-in retries | `unavailable <class>` | you |
 | The model's answer does not parse | `unavailable invalid` | you |
 | The request is over `request_cap_bytes` | `unavailable oversize` | you |
-| `developer: absent` (an autonomous run) and the floor or veto fires | the escalation prints as Waiting and `cairn wake` exits 4 | the run stops |
+| `developer: absent` (an autonomous run) and any escalation is unanswered | the escalation prints as Waiting and `cairn wake` exits 4 | the run stops |
 
 Nothing is retried silently, and nothing routes a floor-caught or vetoed
 draft to the agent. `cairn calibrate` reports, from decisions you later
@@ -223,7 +223,7 @@ with its completion predicate, done by the agent, then wake again.
 flowchart TB
   wake(["cairn wake is read-only: print verdict, action or party, reason and predicate. Missing refs, pending transition or recovery: one line, exit 3"])
   verdict{"Verdict?"}
-  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent and a floor or veto escalation: same print, exit 4"]
+  waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with cairn answer. Developer: absent: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: cairn answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
   stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]

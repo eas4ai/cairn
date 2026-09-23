@@ -9,6 +9,8 @@ import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { makeProject } from './helpers/repo.mjs';
 import { declare } from '../lib/mechanisms.mjs';
 import { appendDecision } from '../lib/adr.mjs';
+import { supersede, start } from '../lib/commitment.mjs';
+import { authorize } from '../lib/auth.mjs';
 import { git, readRef, catCommit, commitTree, updateRefCAS } from '../lib/gitx.mjs';
 import { main } from '../lib/cli.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -277,6 +279,45 @@ test('developer: absent exits 4 when the open escalation names a floor-outcome m
   assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I' });
 });
 
+test('developer: absent exits 4 on any unanswered escalation, since no one can answer it', async () => {
+  const r = await loopRepo({ settings: { developer: 'absent' } });
+  await r.escalate('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting'); assert.equal(v.exit, 4);
+});
+test('a fourth distinct failing attempt is refused by cairn check until an escalation concerns the requirement', async () => {
+  const r = await loopRepo();
+  for (let i = 1; i <= 3; i++) { await r.write('src/demo.mjs', `console.log(${i});\n`); await r.commit(`attempt ${i}`); await check(r.cwd, 'DEMO-001'); }
+  assert.deepEqual([(await wake(r.cwd)).action, (await wake(r.cwd)).target], ['escalate', 'DEMO-001']);
+  await r.write('src/demo.mjs', 'console.log(4);\n'); await r.commit('attempt 4');
+  await assert.rejects(check(r.cwd, 'DEMO-001'), /3 distinct failing attempts at DEMO-001 without a pass; a fourth attempt needs an escalation first/);
+  await r.escalate('DEMO-001');
+  await assert.doesNotReject(check(r.cwd, 'DEMO-001'));
+});
+test('review mechanism names the latest fail receipt in its reason', async () => {
+  const r = await loopRepo();
+  const fail = await r.failReq('DEMO-001');
+  await r.write('flags/DEMO-001', 'pass\n'); await r.commit('pass'); await check(r.cwd, 'DEMO-001');   // a pass with no mechanism review bound
+  const v = await wake(r.cwd);
+  assert.equal(v.action, 'review mechanism');
+  assert.match(v.reason, new RegExp(`its latest fail receipt is ${fail}`));
+});
+test('an unresolved finding carried by a supersession stays open in the successor until resolved', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review([{ n: 1, text: 'carried finding' }]);
+  const rev = (await r.log()).findLast((x) => x.kind === 'review').sha;
+  const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap + '\n## second\n\nRequirements: DEMO-001\n\nAgain.\n'); await r.commit('second section');
+  await supersede(r.cwd, 'second', { quote: 'go on', env: {} });
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await start(r.cwd, 'second');
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  const v = await wake(r.cwd);
+  assert.equal(v.action, 'resolve', JSON.stringify(v));
+  await r.add('resolution', 'second', { source: rev, finding: 1, snapshot: await r.snap(), explanation: 'fixed' });
+  assert.notEqual((await wake(r.cwd)).action, 'resolve');
+});
 test('the same floor escalation with developer: present is ordinary Waiting, no exit code', async () => {
   const r = await loopRepo({ settings: { developer: 'present' } });
   const mSha = await r.add('measurement', r.slug, measurement(r, 'floor', { reason: 'floor:data' }));
@@ -300,38 +341,36 @@ test('developer: absent exits 4 when the open escalation names a veto-outcome me
   assert.equal(v.exit, 4);
 });
 
-test('developer: absent leaves a plain dispute escalation (no measurement named) at ordinary Waiting', async () => {
+// Revised 2026-09-22: every unanswered escalation exits 4 under developer: absent, since no one
+// can answer any of them; the floor-or-veto-only rule left the agent's own escalations, cycle
+// bounds and breaches at an exit-0 Waiting a benchmark run could never leave.
+test('developer: absent exits 4 on a plain cycle escalation too', async () => {
   const r = await loopRepo({ settings: { developer: 'absent' } });
   await r.escalate('cycle');
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting');
-  assert.equal(v.exit, undefined);
+  assert.equal(v.exit, 4);
 });
 
-// Global constraint for this task: an escalation the agent chose to raise on a composite
-// measurement is not exit 4 even with developer: absent -- section 5's own text says the agent's
-// own choice to escalate past a suggestion "would have no one to answer it either," but the brief
-// decides wake does not treat that as exit 4 (only the floor or a veto does); this is not a gap,
-// it is what the brief specifies.
-test("developer: absent leaves the agent's own escalation past a composite measurement at ordinary Waiting, not exit 4", async () => {
+test("developer: absent exits 4 on the agent's own escalation past a composite measurement as well", async () => {
   const r = await loopRepo({ settings: { developer: 'absent' } });
   const mSha = await r.add('measurement', r.slug, measurement(r, 'composite', { composite: 0.1, suggested: 'agent', reason: 'composite 0.100' }));
   await r.escalate('DEMO-001', r.slug, mSha);
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting');
-  assert.equal(v.exit, undefined);
+  assert.equal(v.exit, 4);
 });
 
-test('developer: absent leaves an unavailable or an indeterminate measurement at ordinary Waiting, not exit 4', async () => {
+test('developer: absent exits 4 on an unavailable or an indeterminate measurement escalation as well', async () => {
   const r1 = await loopRepo({ settings: { developer: 'absent' } });
   const m1 = await r1.add('measurement', r1.slug, measurement(r1, 'unavailable', { reason: 'unavailable excluded' }));
   await r1.escalate('DEMO-001', r1.slug, m1);
-  assert.equal((await wake(r1.cwd)).exit, undefined);
+  assert.equal((await wake(r1.cwd)).exit, 4);
 
   const r2 = await loopRepo({ settings: { developer: 'absent' } });
   const m2 = await r2.add('measurement', r2.slug, measurement(r2, 'indeterminate', { reason: 'indeterminate: an intent was left open by a crash' }));
   await r2.escalate('DEMO-001', r2.slug, m2);
-  assert.equal((await wake(r2.cwd)).exit, undefined);
+  assert.equal((await wake(r2.cwd)).exit, 4);
 });
 
 test('cmdWake exits 4 through main() and prints the five fields exactly as ordinary Waiting does, not a bare line', async () => {

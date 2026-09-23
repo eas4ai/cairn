@@ -55,11 +55,23 @@ test('fix names a defect item and a workspace snapshot under an open commitment'
   assert.match(rec.payload.snapshot, /^[0-9a-f]{40}$/);
 });
 
+test('fix, outside and promote take the item slug wake prints as well as the sha, and record the sha', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');
+  const d = await item(repo.cwd, { kind: 'defect', slug: 'typo', source: 'DEMO-001', body: 'x' });
+  const b = await item(repo.cwd, { kind: 'backlog', slug: 'later', source: 'DEMO-001', body: 'y' });
+  await outside(repo.cwd, 'later', 'not now');
+  await fix(repo.cwd, 'typo');
+  const log = await readLog(repo.cwd);
+  assert.equal(log.find((r) => r.kind === 'outside').payload.item, b);
+  assert.equal(log.find((r) => r.kind === 'fix').payload.item, d);
+  await assert.rejects(fix(repo.cwd, 'nope'), /nope is not an item record or item slug; cairn show items lists them/);
+});
 test('fix refuses a backlog item, no open commitment, and a snapshot that changes protected contract', async () => {
   const repo = await project();
   const b = await item(repo.cwd, { kind: 'backlog', slug: 'greet-twice', source: 'DEMO-001', body: 'x' });
   const d = await item(repo.cwd, { kind: 'defect', slug: 'hello-typo', source: 'DEMO-001', body: 'x' });
-  await assert.rejects(fix(repo.cwd, d), /open commitment/);
+  await assert.rejects(fix(repo.cwd, d), /after a first commitment has started/);
   await start(repo.cwd, 'first');
   await assert.rejects(fix(repo.cwd, b), /only a defect item is fixed/);
   await repo.write('AGENTS.md', '# Working agreement\n\nChanged.\n');
@@ -157,6 +169,7 @@ test('setCurrent replaces exactly the Current: line', async () => {
 
 import { done } from '../lib/commitment.mjs';
 import { loopRepo } from './helpers/loop.mjs';
+import { authorize } from '../lib/auth.mjs';
 import { wake } from '../lib/wake.mjs';
 
 test('done closes the open commitment at its final workspace snapshot', async () => {
@@ -337,6 +350,41 @@ test('promote refuses a next-feature item', async () => {
   await assert.rejects(promote(repo.cwd, n), (e) => e instanceof CommitmentError && /next-feature item waits for the developer/.test(e.message));
 });
 
+test('between commitments any defect is fixed and wake names it before promote; an open commitment fixes only its own', async () => {
+  const repo = await project();
+  await start(repo.cwd, 'first');   // first owns DEMO-001 only
+  const d = await item(repo.cwd, { kind: 'defect', slug: 'elsewhere', source: 'DEMO-002', body: 'x' });
+  await assert.rejects(fix(repo.cwd, d), /defect elsewhere is against DEMO-002, which commitment first does not own/);
+  await done(repo.cwd, 'first', { unchecked: true });
+  const v = await wake(repo.cwd);
+  assert.deepEqual([v.action, v.target], ['fix', 'elsewhere'], JSON.stringify(v));
+  await fix(repo.cwd, 'elsewhere');
+  const after = await wake(repo.cwd);
+  assert.match(after.reason, /DEMO-002 has no current pass at or after the fix/, JSON.stringify(after));   // the fix is recorded; the pass is next
+});
+test('promote refuses a developer-set Current: naming another slug instead of overwriting it', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  await r.item('backlog', 'DEMO-001', 'do-more'); await outside(r.cwd, 'do-more', 'later');
+  await done(r.cwd, 'first');
+  const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap.replace('Current: first', 'Current: something-else') + '\n## do-more\n\nRequirements: DEMO-001\n\nMore.\n'); await r.commit('developer names the next section');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await assert.rejects(promote(r.cwd, 'do-more'), /roadmap names something-else as Current:, not the finished commitment first or do-more/);
+  assert.match((await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8')), /Current: something-else/);
+});
+test('a promoted commitment can reach Done: the promote decision does not stop on the roadmap line its own start wrote', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001'); await r.review(); await r.report();
+  await r.item('backlog', 'DEMO-001', 'do-more'); await outside(r.cwd, 'do-more', 'later');
+  await done(r.cwd, 'first');
+  const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap + '\n## do-more\n\nRequirements: DEMO-001\n\nMore.\n'); await r.commit('do-more section');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await promote(r.cwd, 'do-more');
+  const id = (await readAdr(r.cwd)).findLast((l) => l.kind === 'decision').id;
+  await assert.doesNotReject(realize(r.cwd, id, { subject: 'promoted' }));
+});
 test('promote refuses while a defect item is unfixed', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');
@@ -430,6 +478,20 @@ test('Fix round 2 finding 4: realize uses the shared, ledger-based kernelManaged
   await assert.doesNotReject(realize(repo.cwd, id, { subject: 'ledger-recorded mechanism write' }));
 });
 
+test('a realization that touches a data path escalates with concern decision:<id>, refuses until the developer answers ok, then records', async () => {
+  const r = await loopRepo({ settings: { data: ['data/**'] } });
+  const id = await r.decide();
+  await r.write('data/rows.csv', 'a,b\n');
+  await assert.rejects(realize(r.cwd, id, { subject: 's' }), /touches data\/rows.csv \(data\); the decision is the developer's; escalation [0-9a-f]{40} written, their ok lets cairn realize proceed/);
+  const esc = (await r.log()).findLast((x) => x.kind === 'escalation');
+  assert.equal(esc.payload.concerns, `decision:${id}`);
+  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
+  await assert.rejects(realize(r.cwd, id, { subject: 's' }), /awaits their answer/);
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation').length, 1, 'one escalation, not one per attempt');
+  await r.answer(esc.sha, 'ok');
+  await assert.doesNotReject(realize(r.cwd, id, { subject: 's' }));
+  assert.notEqual((await wake(r.cwd)).action, `build ${id}`);
+});
 test('Fix round 1 finding 12: realize takes no durable snapshot when the stop check does not pass', async () => {
   const repo = await project();
   await start(repo.cwd, 'first');

@@ -21,6 +21,7 @@ import { readSnapshot } from '../lib/snapshots.mjs';
 import { init } from '../lib/init.mjs';
 import { loadSettings } from '../lib/settings.mjs';
 import { begin, readLease, LEASE_REF } from '../lib/lease.mjs';
+import { loopRepo } from './helpers/loop.mjs';
 
 // Deviation from the plan text: see tests/tx.test.mjs's SETTINGS note; lib/settings.mjs's
 // validateSettings (plan 02, already committed) requires every typesafeai.* threshold key.
@@ -58,7 +59,7 @@ test('begin refuses when a lease exists and names reconcile', async () => {
   const cwd = await initialized();
   await begin(cwd, { action: 'implement', target: 'CORE-001', env: {} });
   await assert.rejects(begin(cwd, { action: 'run', target: 'CORE-002', env: {} }),
-    /^LeaseError: cairn: action lease held: implement CORE-001; run cairn end or cairn reconcile/);
+    /^LeaseError: cairn: action lease held: implement CORE-001; run cairn end when it is finished, or cairn end --abandon/);
 });
 
 test('begin refuses an unknown action and a touch path that is reserved, protected, invalid or output', async () => {
@@ -75,6 +76,11 @@ test('begin refuses an unknown action and a touch path that is reserved, protect
 // applyTouch's own declare() call would refuse later, at `cairn end`, with the lease already
 // created and nothing left to retry against. Reproduced: begin implement REQ --touch README.md
 // with README.md in settings.outside used to succeed. checkTouch now applies the same rules.
+test('begin refuses a --touch path that is gitignored: it can never be a mechanism input', async (t) => {
+  const r = await loopRepo();
+  await r.write('.gitignore', 'ignored.txt\n'); await r.write('ignored.txt', 'x\n'); await r.commit('ignore it');
+  await assert.rejects(begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: ['ignored.txt'], env: {} }), /--touch ignored.txt is gitignored and cannot be a mechanism input; unignore it or drop --touch/);
+});
 test('begin refuses a --touch path that is outside or names a glob metacharacter (finding 1a)', async (t) => {
   const settings = { ...JSON.parse(SETTINGS), outside: ['README.md'] };
   const { cwd } = await repoWith({ '.cairn/settings.json': JSON.stringify(settings), 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n', 'README.md': 'r\n' });
@@ -147,7 +153,7 @@ test('a stale expected lease is refused and names the newer lease, by sha (revie
   await begin(cwd, { action: 'run', target: 'CORE-002', env: { CAIRN_SESSION: 's2' } });
   await assert.rejects(
     end(cwd, { expect: shaA }),
-    /^LeaseError: cairn: action lease [0-9a-f]{40} is now run CORE-002 \(session s2\), not the lease [0-9a-f]{40} this end expected; run cairn reconcile$/,
+    /^LeaseError: cairn: action lease [0-9a-f]{40} is now run CORE-002 \(session s2\), not the lease [0-9a-f]{40} this end expected; run cairn end --lease [0-9a-f]{40}, or cairn end --abandon$/,
   );
   // B's lease is untouched by A's stale, refused attempt.
   const live = await readLease(cwd);
@@ -330,6 +336,6 @@ test('Fix round 1 finding 5: a lease ref that changed under cairn end is a CAS m
   assert.equal(fulfilled.length, 1, 'exactly one of the two concurrent end() calls removes the ref');
   assert.equal(rejected.length, 1, 'the other observes the CAS mismatch');
   assert.equal(rejected[0].reason.name, 'LeaseError');
-  assert.match(rejected[0].reason.message, /^cairn: action lease changed under cairn end; run cairn reconcile/);
+  assert.match(rejected[0].reason.message, /^cairn: action lease changed under cairn end; run cairn wake and follow it/);
   assert.equal(await readRef(cwd, LEASE_REF), null);
 });

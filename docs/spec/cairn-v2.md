@@ -992,11 +992,12 @@ Settings' `developer` field states whether a human can ever answer that
 Waiting. `developer: absent` is what an autonomous benchmark runs with: the
 narrow floor in section 10 is the only path left to the developer, since the
 agent's own choice to escalate past a `suggested: agent` measurement would
-have no one to answer it either. When the floor or a veto names the developer
-and `developer: absent`: the run records that decision as an escalation on
-the log exactly as it would with a developer present; wake prints that
-escalation's five fields exactly as Waiting always prints them; and the run
-then exits 4, instead of sitting at Waiting for an answer that cannot come.
+have no one to answer it either. Under `developer: absent` every escalation
+is recorded on the log exactly as it would be with a developer present, wake
+prints its five fields exactly as Waiting always prints them, and the run
+then exits 4 instead of sitting at Waiting for an answer that cannot come:
+the floor, a veto, the agent's own escalation after three failed attempts, a
+cycle bound, a breach, all alike.
 Exit 4 is distinct from wake's exit 3 for a non-verdict state (section 2,
 exit-code table): a floor hit or a veto in absent mode is a real Waiting
 verdict, just one this run cannot resolve, so it stops there rather than
@@ -1008,6 +1009,11 @@ in the one mode where nobody can end it, which the developer's stated reason
 for the evaluator redesign, "The reason I wanted this design was to be able
 to use Cairn in an autonomous benchmark," requires: a benchmark run cannot
 sit at Waiting forever.
+
+Revised 2026-09-22: previously only the floor or a veto exited 4. An
+escalation the agent files after three failed attempts, a cycle bound or a
+breach had no one to answer it either and left the run at an exit-0 Waiting
+forever, which the purpose above rules out.
 
 The kernel also prevents administrative cycling. It counts each completed
 administrative action (`repair`, `recover`, `reconcile`, `scope`, `record`,

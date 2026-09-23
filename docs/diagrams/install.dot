@@ -16,7 +16,7 @@ digraph install {
   link [label="/install-cairn installs the shim bin/cairn.sh\nat ~/.local/bin/cairn, once; it runs the newest installed Cairn\n(no project remote is selected here)"];
   path [shape=diamond, label="~/.local/bin on PATH?"];
   addpath [label="Tell the developer to add it;\nno hook edits the shell"];
-  help [shape=diamond, label="cairn --help prints\ncommands and exit codes?"];
+  help [shape=diamond, label="cairn --help prints\nthe command list?"];
   broken [shape=oval, label="Stop: name the failure\n(link target, PATH or node)"];
   project [shape=diamond, label="Initialized Cairn project?"];
   wake [label="Session-start hook prints\nthe verdict and predicate"];

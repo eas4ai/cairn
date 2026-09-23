@@ -2,7 +2,7 @@ import { mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { makeProject } from './repo.mjs';
 import { git } from '../../lib/gitx.mjs';
-import { appendRecord, readLog } from '../../lib/records.mjs';
+import { appendRecord, readLog, range } from '../../lib/records.mjs';
 import { writeWorkspaceSnapshot } from '../../lib/snapshots.mjs';
 import { parseDomainFile } from '../../lib/spec.mjs';
 import { declare } from '../../lib/mechanisms.mjs';
@@ -65,6 +65,8 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
   // appendRecord calls, not the authenticateDeveloper flow), so any structurally valid value
   // satisfies the schema check that appendRecord runs.
   const evidence = { mode: 'unsigned-local', purpose: 'answer', subject: 'answer', nonce: 'test-nonce', author: { name: 'Dev', email: 'dev@example.test' }, confirmed: true };
+  // The open commitment's slug: a test that supersedes to a successor keeps using these steps.
+  const cur = async () => { const r = range(await readLog(cwd)); return r.start ? r.start.payload.slug : slug; };
   const steps = {
     async passReq(r) {
       await write(`flags/${r}`, 'fail\n'); await commit(`${r} flag fail`);
@@ -76,13 +78,14 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
     },
     async failReq(r) { await write(`flags/${r}`, 'fail\n'); await commit(`${r} flag fail`); return check(cwd, r); },
     async review(findings = []) {
+      const s = await cur();
       const mech = reqs.map((r) => r.toLowerCase());
       const answers = [
         ...mech.flatMap((m) => ['Q1', 'Q2'].map((q) => ({ question: q, target: m, status: 'observed', text: 'flag fail receipt' }))),
         ...reqs.flatMap((r) => ['Q3', 'Q4'].map((q) => ({ question: q, target: r, status: 'observed', text: 'flag pass' }))),
-        ...['Q5', 'Q6'].map((q) => ({ question: q, target: slug, status: 'not-checked', text: '' })),
+        ...['Q5', 'Q6'].map((q) => ({ question: q, target: s, status: 'not-checked', text: '' })),
       ];
-      return add('review', slug, { slug, session: null, snapshot: await snap(), examined: ['src/demo.mjs'], answers, findings });
+      return add('review', s, { slug: s, session: null, snapshot: await snap(), examined: ['src/demo.mjs'], answers, findings });
     },
     // Deviation from the plan text: the real 'brief' schema (lib/records.mjs) names its three
     // digest fields projection_digest/payload_digest/exclusions_digest, not
@@ -91,18 +94,20 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
     // attempts entries and interface_attempts entries are {question,target,text} and {path,text}
     // objects, not bare strings/pairs. Adapted here to the schema actually committed.
     async report(findings = []) {
+      const s = await cur();
       const log = await readLog(cwd);
       const rev = log.filter((x) => x.kind === 'review').at(-1);
-      const brief = await add('brief', slug, { slug, review: rev.sha, harness: 'test-harness', model: 'test-model', transport: 'local', boundary: 'enforced', projection_digest: 'sha256:' + '1'.repeat(64), payload_digest: 'sha256:' + '2'.repeat(64), exclusions_digest: 'sha256:' + '3'.repeat(64) });
+      const brief = await add('brief', s, { slug: s, review: rev.sha, harness: 'test-harness', model: 'test-model', transport: 'local', boundary: 'enforced', projection_digest: 'sha256:' + '1'.repeat(64), payload_digest: 'sha256:' + '2'.repeat(64), exclusions_digest: 'sha256:' + '3'.repeat(64) });
       const attempts = rev.payload.answers.map(({ question, target }) => ({ question, target, text: 'attempted' }));
-      return add('report', slug, { slug, session: null, snapshot: rev.payload.snapshot, brief, model: 'test-model', transport: 'local', boundary: 'enforced', builder_model: null, projection_digest: 'sha256:' + '1'.repeat(64), attempts, findings, interface_attempts: [] });
+      return add('report', s, { slug: s, session: null, snapshot: rev.payload.snapshot, brief, model: 'test-model', transport: 'local', boundary: 'enforced', builder_model: null, projection_digest: 'sha256:' + '1'.repeat(64), attempts, findings, interface_attempts: [] });
     },
-    resolveFinding: async (source, n) => add('resolution', slug, { source, finding: n, snapshot: await snap(), explanation: 'fixed' }),
+    resolveFinding: async (source, n) => add('resolution', await cur(), { source, finding: n, snapshot: await snap(), explanation: 'fixed' }),
     // Deviation from the plan text: the real 'acceptance' schema names its digest field
     // delta_digest, not delta.
     async accept({ accepted = [], rejected = [], findings = [] } = {}) {
       const rep = (await readLog(cwd)).filter((x) => x.kind === 'report').at(-1);
-      return add('acceptance', slug, { slug, session: null, report: rep.sha, snapshot: await snap(), delta_digest: 'sha256:' + '4'.repeat(64), accepted: accepted.map((s) => ({ resolution: s, reason: 'ok' })), rejected: rejected.map((s) => ({ resolution: s, reason: 'not fixed' })), findings });
+      const s = await cur();
+      return add('acceptance', s, { slug: s, session: null, report: rep.sha, snapshot: await snap(), delta_digest: 'sha256:' + '4'.repeat(64), accepted: accepted.map((s) => ({ resolution: s, reason: 'ok' })), rejected: rejected.map((s) => ({ resolution: s, reason: 'not fixed' })), findings });
     },
     escalate: (concerns, s = slug, evaluation = null) => add('escalation', s, { slug: s, question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', concerns, evaluation }),
     answer: (esc, kind, text = '') => add('answer', slug, { escalation: esc, kind, text, owner: null, evidence }),

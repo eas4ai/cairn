@@ -403,7 +403,7 @@ test('cairn end --lease <sha> refuses a stale caller and leaves the newer actors
   assert.equal((await run(['begin', 'run', 'DEMO-002'], repo.cwd)).code, 0); // B begins
   const staleEnd = await run(['end', '--lease', shaA], repo.cwd);
   assert.equal(staleEnd.code, 1);
-  assert.match(staleEnd.err, /^cairn: action lease [0-9a-f]{40} is now run DEMO-002 \(session none\), not the lease [0-9a-f]{40} this end expected; run cairn reconcile\n$/);
+  assert.match(staleEnd.err, /^cairn: action lease [0-9a-f]{40} is now run DEMO-002 \(session none\), not the lease [0-9a-f]{40} this end expected; run cairn end --lease [0-9a-f]{40}, or cairn end --abandon\n$/);
 
   // B's lease is untouched: a bare `cairn end` (no --lease) still finds and ends it normally.
   const normalEnd = await run(['end'], repo.cwd);

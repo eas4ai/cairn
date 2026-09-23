@@ -177,22 +177,22 @@
 <!-- help -->
 <g id="node12" class="node">
 <title>help</title>
-<path fill="none" stroke="black" d="M251.76,-331.53C251.76,-331.53 108.49,-301.46 108.49,-301.46 102.62,-300.23 102.62,-297.76 108.49,-296.53 108.49,-296.53 251.76,-266.46 251.76,-266.46 257.63,-265.23 269.37,-265.23 275.24,-266.46 275.24,-266.46 418.51,-296.53 418.51,-296.53 424.38,-297.76 424.38,-300.23 418.51,-301.46 418.51,-301.46 275.24,-331.53 275.24,-331.53 269.37,-332.76 257.63,-332.76 251.76,-331.53"/>
+<path fill="none" stroke="black" d="M252,-330.59C252,-330.59 157,-302.41 157,-302.41 151.25,-300.7 151.25,-297.29 157,-295.59 157,-295.59 252,-267.41 252,-267.41 257.75,-265.7 269.25,-265.7 275,-267.41 275,-267.41 370,-295.59 370,-295.59 375.75,-297.29 375.75,-300.7 370,-302.41 370,-302.41 275,-330.59 275,-330.59 269.25,-332.29 257.75,-332.29 252,-330.59"/>
 <text xml:space="preserve" text-anchor="middle" x="263.5" y="-302.05" font-family="Helvetica,sans-Serif" font-size="11.00">cairn &#45;&#45;help prints</text>
-<text xml:space="preserve" text-anchor="middle" x="263.5" y="-288.55" font-family="Helvetica,sans-Serif" font-size="11.00">commands and exit codes?</text>
+<text xml:space="preserve" text-anchor="middle" x="263.5" y="-288.55" font-family="Helvetica,sans-Serif" font-size="11.00">the command list?</text>
 </g>
 <!-- path&#45;&gt;help -->
 <g id="edge14" class="edge">
 <title>path&#45;&gt;help</title>
-<path fill="none" stroke="black" d="M274,-457.07C281.93,-444.23 292.17,-425.27 296.5,-407 300.19,-391.43 299.95,-386.62 296.5,-371 294.24,-360.76 290.34,-350.25 286.01,-340.56"/>
-<polygon fill="black" stroke="black" points="289.29,-339.31 281.83,-331.78 282.97,-342.32 289.29,-339.31"/>
+<path fill="none" stroke="black" d="M274,-457.07C281.93,-444.23 292.17,-425.27 296.5,-407 300.19,-391.43 299.95,-386.62 296.5,-371 294.17,-360.47 290.12,-349.65 285.63,-339.73"/>
+<polygon fill="black" stroke="black" points="288.8,-338.24 281.31,-330.74 282.49,-341.27 288.8,-338.24"/>
 <text xml:space="preserve" text-anchor="middle" x="307.8" y="-385.87" font-family="Helvetica,sans-Serif" font-size="10.00">yes</text>
 </g>
 <!-- addpath&#45;&gt;help -->
 <g id="edge15" class="edge">
 <title>addpath&#45;&gt;help</title>
-<path fill="none" stroke="black" d="M215.35,-370.61C221.43,-361.7 229.1,-350.46 236.51,-339.58"/>
-<polygon fill="black" stroke="black" points="239.33,-341.66 242.07,-331.43 233.54,-337.72 239.33,-341.66"/>
+<path fill="none" stroke="black" d="M215.35,-370.61C221.76,-361.22 229.93,-349.24 237.71,-337.82"/>
+<polygon fill="black" stroke="black" points="240.52,-339.92 243.26,-329.68 234.74,-335.97 240.52,-339.92"/>
 </g>
 <!-- broken -->
 <g id="node13" class="node">
@@ -204,8 +204,8 @@
 <!-- help&#45;&gt;broken -->
 <g id="edge16" class="edge">
 <title>help&#45;&gt;broken</title>
-<path fill="none" stroke="black" d="M258.21,-264.88C256.28,-252.76 254.08,-239 252.12,-226.7"/>
-<polygon fill="black" stroke="black" points="255.6,-226.28 250.56,-216.95 248.68,-227.38 255.6,-226.28"/>
+<path fill="none" stroke="black" d="M258.26,-265.18C256.32,-253.04 254.12,-239.24 252.15,-226.89"/>
+<polygon fill="black" stroke="black" points="255.62,-226.41 250.58,-217.08 248.7,-227.51 255.62,-226.41"/>
 <text xml:space="preserve" text-anchor="middle" x="261" y="-236.5" font-family="Helvetica,sans-Serif" font-size="10.00">no</text>
 </g>
 <!-- project -->
@@ -217,8 +217,8 @@
 <!-- help&#45;&gt;project -->
 <g id="edge17" class="edge">
 <title>help&#45;&gt;project</title>
-<path fill="none" stroke="black" d="M317.18,-274.76C362.73,-255.04 427.12,-227.16 468.59,-209.21"/>
-<polygon fill="black" stroke="black" points="469.95,-212.43 477.74,-205.25 467.17,-206.01 469.95,-212.43"/>
+<path fill="none" stroke="black" d="M310.64,-277.59C356.3,-257.82 424.83,-228.15 468.35,-209.31"/>
+<polygon fill="black" stroke="black" points="469.67,-212.56 477.45,-205.37 466.89,-206.13 469.67,-212.56"/>
 <text xml:space="preserve" text-anchor="middle" x="417.16" y="-236.5" font-family="Helvetica,sans-Serif" font-size="10.00">yes</text>
 </g>
 <!-- wake -->

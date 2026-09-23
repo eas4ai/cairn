@@ -211,6 +211,27 @@ test('cairn authorize itself and the gap between commitments exempt protected pa
   assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
 });
 
+test('between commitments a new mechanism file is not a breach, a kernel-managed hand edit still is, and a gap breach from an earlier version is closed by the next start', async () => {
+  const r = await loopRepo();
+  await r.add('done', r.slug, { slug: r.slug, snapshot: await r.snap() });
+  await r.write('tests/next.test.mjs', 'export const t = 1;\n'); await r.commit('the next commitment\'s test, before its start');
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'declare' }), []);
+  assert.deepEqual(await preflight(r.cwd, await r.log(), { command: 'check' }), []);
+  const mech = join(r.cwd, '.cairn/mechanisms/demo-001.json');
+  const entry = JSON.parse(await readFile(mech, 'utf8'));
+  entry.definition.inputs = [...entry.definition.inputs, 'src/util.mjs'].sort();
+  await r.write('.cairn/mechanisms/demo-001.json', canonicalize(entry));
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.ok(b, 'a hand-edited mechanism file is a breach even between commitments');
+  // a gap breach recorded by an earlier version: the next start closes it
+  const gap = await r.add('scope-breach', 'x', { path: 'tests/next.test.mjs', snapshot: await r.snap(), base: r.startSnapshot, declarations_digest: 'sha256:' + 'c'.repeat(64) });
+  assert.ok(openBreaches(await r.log()).some((x) => x.sha === gap));
+  await r.add('start', 'second', { slug: 'second', snapshot: await r.snap(), from_superseded: null, intent: null, results: [], requirements: [] });
+  const log = await r.log();
+  assert.ok(!openBreaches(log).some((x) => x.sha === gap));
+  assert.equal(await allowedBase(r.cwd, log), log.findLast((x) => x.kind === 'start').payload.snapshot);
+});
+
 test('the assigned command\'s exact mutation of a kernel-managed path is exempt', async () => {
   const r = await loopRepo();
   await appendDecision(r.cwd, decisionLine(r), { command: 'decide' });

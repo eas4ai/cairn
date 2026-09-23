@@ -453,10 +453,15 @@ would change Agreed text or the working agreement and names what. A defect names
 an Agreed requirement the code violates. Outside, promotion and fix records
 later reference the item.
 
-**Scope breach.** A durable record of the first Cairn observation that a path
-differs from the latest allowed workspace snapshot while no then-active
-mechanism declared it and `outside` did not list it. It names that snapshot and
-the declaration-set digest. A later declaration cannot clear it.
+**Scope breach.** A durable record of the first Cairn observation, while a
+commitment is open, that a path differs from the latest allowed workspace
+snapshot while no then-active mechanism declared it and `outside` did not list
+it. It names that snapshot and the declaration-set digest. A later declaration
+cannot clear it. Between commitments no breach is observed: the spec phase
+writes the next commitment's mechanisms, tests and declarations before `cairn
+start`, and that start's snapshot is the next allowed base. (Revised
+2026-09-22: the gap used to be observed against the finished commitment's base,
+so every file the spec phase was told to create became a breach.)
 
 **Start.** Opens a commitment at a workspace snapshot. Its **set** is every
 requirement in the roadmap section plus every Agreed `Scope: every commitment`

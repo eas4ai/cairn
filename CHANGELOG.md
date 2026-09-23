@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 2.2.2 - 2026-09-23
+
+- No scope breach is observed between commitments (issue #3). The spec phase writes the next commitment's mechanism files, tests and declarations before `cairn start`, and every one of them read as an undeclared change against the finished commitment's base, so the developer was asked to keep files the working agreement had just told the agent to create. The next start's snapshot is the next allowed base; only the kernel-managed ledger is still checked in the gap. A gap breach recorded by an earlier version is closed by the next start, so a project already carrying one is unblocked on upgrade. Spec definition revised in place.
+
 ## 2.2.1 - 2026-09-22
 
 - The spec and manual state the Done rule's acceptance exception the kernel always applied: a report with no findings and no change after it needs no acceptance record. Found by the adversarial review; the developer chose documenting the exception over demanding an empty acceptance.

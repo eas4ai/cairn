@@ -132,7 +132,7 @@ Write the roadmap section with the Agreed requirements, delivery and done-when. 
 For this commitment only: `sudus declare <name> --file <path>`, reading the mechanism definition as JSON. Show the violating example fails: `sudus check <REQ>` must record a fail receipt, then `sudus review mechanism <REQ> <receipt>` binds it. The violating example needs no commit: make it in the working tree, check, bind, then undo it. The receipt's input snapshot keeps the violating bytes, so only the bound mechanism file is committed.
 
 ### `agreement`
-Copy `templates/AGENTS.md` from this skill to `AGENTS.md` for developer authorization. Do not edit it after authorization.
+Copy the new-project skill's working agreement, `../new-project/templates/AGENTS.md` from this skill's directory, to `AGENTS.md` for developer authorization. Do not edit it after authorization.
 
 ### `authorize`
 State what would be bound: the specification, the working agreement and settings, and what changed in them. Ask for ok, changes or a question, and wait. On ok run `sudus authorize --quote "<their words>"`: one record binding the final spec, agreement and settings digests. On changes or a question run `sudus authorize instead|ask --quote "<their words>"`, act on it, and ask again.

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { ROOT } from "./helpers/hookenv.mjs";
 
@@ -162,3 +162,13 @@ test("existing-project names supersession as two phases", () => {
 test("next-feature follows next-feature.dot and spec-phase.dot", () => checkSkill("next-feature", ["next-feature.dot", "spec-phase.dot"]));
 test("next-feature carries the same spec-phase tail", () => assert.equal(tail("next-feature"), tail("new-project")));
 test("next-feature runs from Done only", () => assert.ok(/says Done\?[\s\S]*Stop/.test(skill("next-feature"))));
+
+// Issue #10: existing-project and next-feature said to copy templates/AGENTS.md "from this skill",
+// which only new-project ships. Every template path a skill names resolves from its own directory.
+test("every template path a skill names exists relative to that skill", () => {
+  for (const name of readdirSync(join(ROOT, "skills"))) {
+    const text = readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");
+    const paths = [...text.matchAll(/`([^`\s]*templates\/[^`\s]+)`/g)].map((m) => m[1]);
+    for (const p of paths) assert.ok(existsSync(join(ROOT, "skills", name, p)), `${name}/SKILL.md names ${p}, which does not exist from skills/${name}`);
+  }
+});

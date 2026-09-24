@@ -7,6 +7,13 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.0 - 2026-09-24
+
+- A backlog item that other work already delivered can be retired instead of promoted (issue #24). The agent escalates with the concern `retire:<item sha>`; your `ok` takes the item out of the backlog, wake stops naming its promotion, `sudus promote` refuses it, and `sudus show items` marks it retired. An `instead` answer leaves it in the backlog. When no commitment is open, after Done, the escalation names the finished commitment. Before, the only way out of the backlog was promotion: a roadmap section, a commitment and a full review with the adversary for work already done. Spec revision 14.
+- An `ok` on a capture escalation (`item:<item sha>`, which says an item is outside the commitment) does not retire the item; only the `retire:` concern does.
+- Wake's `ok closes:` line names each backlog item an escalation's `ok` would retire.
+- A log with a retirement stays readable by Sudus 3.7.0 and earlier, which still name the retired item for promotion.
+
 ## 3.7.0 - 2026-09-24
 
 - Acceptance rounds no longer run on without bound when each round ends with one narrower finding (issue #23). After three rounds without Done, the escalation names the open findings and recommends closing them, each captured as a backlog item. Your `ok` closes them, so Done needs no further round; `instead` takes another round or supersedes the commitment. Before, the escalation named no finding and `ok` only restarted the count. Spec revision 13.

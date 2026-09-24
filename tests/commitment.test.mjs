@@ -115,6 +115,20 @@ test('start freezes the roadmap section plus every Scope: every commitment Agree
   assert.deepEqual(openCommitment(await readLog(repo.cwd)).open.sha, sha);
 });
 
+// Issue #11: .sudus/output/ holds check output and briefs, kept local by its own .gitignore. The
+// start commit names the whole .sudus/ directory, and its ignored files were forced in with it.
+test('start leaves check output and briefs under .sudus/output out of its commit', async () => {
+  const repo = await project();
+  await repo.write('.sudus/output/.gitignore', '*\n');
+  await repo.write('.sudus/output/0123456789abcdef', 'raw check output: /home/someone/project HOST=build-3\n');
+  await repo.write('.sudus/output/brief-0123.md', 'a brief quoting src/missing-file.mjs\n');
+  await start(repo.cwd, 'first');
+  const files = (await repo.git('ls-tree', '-r', '--name-only', 'HEAD')).split('\n');
+  assert.deepEqual(files.filter((f) => f.startsWith('.sudus/output/')), []);
+  assert.ok(files.includes('.sudus/settings.json'), files.join(' '));
+  await repo.cleanup();
+});
+
 test('start with a local-only authority remote installs nothing', async () => {
   const repo = await project({ authority_remote: null });
   const calls = [];

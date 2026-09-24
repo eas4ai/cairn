@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.3.2 - 2026-09-24
+
+- In Claude Code, the verdict moves from the status row under the prompt to the band above it. Claude Code draws a plugin's status text itself, in bold with a warning prefix, cut to one line, so a long reason could not be read. The band shows the verdict in its colour, what it names, and the reason in full, wrapped rather than cut.
+- Sudus's face is its blobatar, floating at the band's right, not an ASCII face. It breathes, glances and blinks the way blobatar does, and wears the verdict's expression: thinking during a turn, idle with work to do, unsure while you owe an answer, mad when no one can answer, sick on a repair, sleepy when `sudus wake` cannot be reached, happy at Done. On a terminal that shows pictures it is a picture. Where Claude Code reports that the terminal draws none, such as inside tmux, it is the same face in braille, which blinks and changes expression too. Blobatar 2.7.0 (MIT) ships in `mod/vendor/blobatar`, so any `face` text is drawn on your machine and nothing is fetched. The `asciiFace` option is gone; `motion: false` keeps the face still.
+
 ## 3.3.1 - 2026-09-24
 
 - The developer's answer to an escalation no longer costs an acceptance round. Sudus appends an `answered` line to `docs/decisions.jsonl` for it, and that line moved the workspace off the last acceptance, so wake named `accept` and the adversary ran one more round to examine that line alone. A workspace that differs from an accepted, reviewed or reported snapshot only by `answered`, `read` or `realized` lines is still at it. `build` follows `accept`, so realizing a decision after the last acceptance cost the same extra round.

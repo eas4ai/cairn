@@ -947,3 +947,63 @@ test('a redeclare that adds an input or a tool probe keeps the mechanism review 
   v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['review mechanism', 'DEMO-001'], JSON.stringify(v));
 });
+
+// Issue #24: a backlog item another commitment already delivered left the backlog only by
+// promotion, a commitment and review that changed nothing. The developer's ok on an escalation
+// naming retire:<item> retires it; an ok on a capture escalation (item:<item>) does not.
+import { escalate, answer } from '../lib/escalate.mjs';
+import { promote } from '../lib/commitment.mjs';
+
+const retireDraft = (item, over = {}) => ({ commitment: 'first', concerns: [`retire:${item}`], question: 'Retire nicer-greeting?', recommendation: 'Retire it: the defect fix already delivered it.', because: 'the greeting fix landed under this commitment', if_wrong: 'the nicer greeting is never built', instead: 'promote it', options: [], named_paths: [], cited_decisions: [], ...over });
+
+test('after Done, the ok on a retire escalation takes a backlog item out of the backlog', async () => {
+  const r = await finished();
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  const e = await escalate(r.cwd, retireDraft(item));
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.deepEqual(v.escalation.closes, ['backlog item nicer-greeting']);
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok, retire it', env: {} });
+  await r.commit('the answered line');
+  assert.equal((await wake(r.cwd)).verdict, 'Done');
+  await assert.rejects(promote(r.cwd, item), { message: `item nicer-greeting was retired by the developer's ok on escalation ${e}` });
+  let out = '';
+  assert.equal(await main(['show', 'items'], { cwd: r.cwd, stdout: { write: (s) => { out += s; } } }), 0);
+  assert.equal(out, `${item} backlog nicer-greeting from DEMO-001 retired by ${e}: an idea\n`);
+  await assert.rejects(escalate(r.cwd, retireDraft(item)), { message: `sudus: item nicer-greeting was retired by the developer's ok on escalation ${e}` });
+});
+
+test('an instead answer on a retire escalation keeps the item in the backlog', async () => {
+  const r = await finished();
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  await escalate(r.cwd, retireDraft(item));
+  await answer(r.cwd, 'first', 'instead', { quote: 'no, build it', env: {} });
+  await r.commit('the answered line');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'nicer-greeting']);
+});
+
+test('only a backlog item that waits is retired, and only a retire concern may name a finished commitment', async () => {
+  const r = await finished();
+  const idea = await r.item('next-feature', 'DEMO-001', 'colour');
+  await assert.rejects(escalate(r.cwd, retireDraft(idea)), { message: 'sudus: item colour is a next-feature item; only a backlog item is retired' });
+  await assert.rejects(escalate(r.cwd, retireDraft('a'.repeat(40))), { message: `sudus: no item record ${'a'.repeat(40)}` });
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  await assert.rejects(escalate(r.cwd, retireDraft(item, { commitment: 'other' })), { message: 'sudus: other is not the latest commitment' });
+  await assert.rejects(escalate(r.cwd, retireDraft(item, { concerns: [`retire:${item}`, 'DEMO-001'] })), { message: 'sudus: no open commitment first' });
+  await r.add('promotion', 'nicer-greeting', { item, decision: ulid(), intent: null, results: [] });
+  await assert.rejects(escalate(r.cwd, retireDraft(item)), { message: 'sudus: item nicer-greeting was promoted; it is not retired' });
+});
+
+test('the ok on a capture escalation naming an item leaves it in the backlog', async () => {
+  const r = await finished();
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  const e = await r.escalate(`item:${item}`);
+  await r.answer(e, 'ok');
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'nicer-greeting']);
+});

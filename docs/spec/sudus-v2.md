@@ -4,8 +4,16 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 13, 2026-09-24. Nothing here is Agreed until the
+Status: Draft, revision 14, 2026-09-24. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 14 lets the developer retire a backlog item that other work already
+delivered (section 8, Capture and promotion). An escalation whose concerns
+name `retire:<item>` retires the item on the developer's `ok`, and wake stops
+naming its promotion; the escalation may name the finished commitment after
+Done. Before, a backlog item left the backlog only by promotion, a commitment
+and a review that changed nothing. Issue #24 asked for it; the developer
+accepted this recommendation on 2026-09-24 ("ok on the above all").
 
 Revision 13 bounds acceptance rounds that each end with one narrower finding
 (section 5, Waiting and liveness). After three rounds without Done, the
@@ -1021,7 +1029,7 @@ predicate. The table is normative.
 | `accept SLUG` | an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action |
 | `build DECISION` | a realized ADR line names the decision's base and resulting snapshots and the realization check passed |
 | `done SLUG` | a done record names the commitment and final workspace snapshot |
-| `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally |
+| `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally; a backlog item retired by the developer's ok is not named (revision 14) |
 | `reply SLUG` | a reply record names the open `ask` escalation |
 
 A Consequential decision carries one more requirement this table does not
@@ -1345,6 +1353,14 @@ agent may promote one backlog item by a Consequential decision. Promotion,
 roadmap change and successor start form one recoverable transaction, and the
 new roadmap section may name only Agreed requirements. A next-feature item waits
 for the developer. Defect items are fixed before promotion.
+
+A backlog item that other work already delivered is retired instead. The agent
+escalates with the concern `retire:<item>`; the developer's ok retires the
+item, wake no longer names its promotion, and `sudus promote` refuses it. An
+instead answer leaves it in the backlog. After Done the escalation names the
+finished commitment, since no other is open. An ok on an escalation that
+names the item as `item:<item>`, the capture gate's concern, does not retire
+it. Added 2026-09-24 (revision 14).
 
 Model-recommended capture is fallible. Sudus does not claim a passing mechanism
 proves a captured change unnecessary. The item remains visible, the frozen

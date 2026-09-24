@@ -35,7 +35,7 @@ The move for each action wake can name:
 - After three acceptance rounds without Done, an escalation names the open findings. The developer's `ok` closes them; then capture each: `sudus item --backlog --slug <s> --from <REQ> --body "<the finding>"`, then `sudus outside <item> --reason "closed by the developer's ok on escalation <sha>"`.
 - `build DECISION`: build what the decision says, commit, then `sudus realize <id> --subject "<what was built>"`.
 - `done SLUG`: `sudus done SLUG`.
-- `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text.
+- `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text. When other work already delivered the item, escalate with `--commitment <the finished slug> --concern retire:<item sha>` instead; the developer's `ok` retires it.
 - `reply SLUG`: `sudus reply SLUG "<explanation>"`; an `ask` answer authorizes an explanation only.
 
 When Sudus itself is wrong -- a command crashes, a message contradicts the manual, or wake keeps naming an action whose predicate already holds -- follow the report-sudus-issue skill: it drafts an issue for eas4ai/sudus, files it only after the developer's `ok`, and updates the plugin when the fix is released.

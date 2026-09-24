@@ -85,7 +85,9 @@ promote one by a recorded decision that waits for your review. An item that
 would change the agreement is a next-feature item, and waits for you to
 open the next feature specification. A defect against the current
 commitment's own requirement is neither: it is worked now, because the
-agreement already forbids it.
+agreement already forbids it. When other work already delivered a backlog
+item, the agent asks you to retire it instead of promoting it; your `ok`
+takes it out of the backlog.
 
 This is the new-project skill: from an empty directory to an Agreed first
 commitment.
@@ -1066,7 +1068,7 @@ specific than the action word alone.
 | `accept SLUG` | Give the adversary the report, the resolutions, and the delta; `sudus accept --file`. |
 | `build DECISION` | Build what the decision says, commit, then `sudus realize`. |
 | `done SLUG` | Every condition holds: `sudus done SLUG`. |
-| `promote` | No commitment is open and the backlog holds an item. Choose one; `sudus promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. |
+| `promote` | No commitment is open and the backlog holds an item. Choose one; `sudus promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. An item other work already delivered is retired instead: `sudus escalate --commitment <finished slug> --concern retire:<item sha> ...`, and the developer's `ok` takes it out of the backlog. |
 | `reply SLUG` | You asked a question with `ask`; the agent owes an explanation: `sudus reply SLUG "..."`. |
 | `Waiting` | An escalation needs your answer. With `developer: absent` no one can answer any escalation; wake exits 4 instead of sitting there. |
 
@@ -1079,7 +1081,7 @@ prints one with its references resolved.
 | Command | Purpose |
 |---|---|
 | `show <sha>` | Print one record, with the records and snapshots it references described. |
-| `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted or fixed. |
+| `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted, fixed or retired. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
 | `init --remote <name>\|--local-only [--signing-key <path>] [--adopt <digest>] --quote <words>` | Create or adopt `.sudus/settings.json` and the two durable refs, with the developer's answer as flags; the command asks nothing itself. Attested unless `--signing-key` names a public key file. |
 | `migrate` | Move a project from the former layout (`.cairn/`, `refs/cairn/*`) to `.sudus/` and `refs/sudus/*`, once, between commitments; nothing to do on a Sudus project. |

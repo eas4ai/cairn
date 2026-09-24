@@ -619,3 +619,50 @@ test('after a supersede, the brief, the report and wake measure the successor fr
   assert.deepEqual([v?.action, v?.target], ['report', 'second'], JSON.stringify(v));
   assert.match(v.reason, /no caller-level attempt at interface src\/api\/x\.mjs/);
 });
+
+// tests/review.test.mjs (an answer after the acceptance)
+// A pasted agent report: the developer's ok on the cycle escalation appended its answered line to
+// docs/decisions.jsonl, which moved the workspace off the third acceptance's snapshot and forced a
+// fourth round to examine that one line; and accept() counted its rounds from the report, so an ok
+// never restarted the count its own escalation promised to restart.
+import { writeCycleEscalation } from '../lib/cycle.mjs';
+import { doneRule } from '../lib/wake.mjs';
+
+test('an answered or read line recorded after the last acceptance leaves it at the final workspace snapshot', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'fix');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'accepted')], findings: [] });
+  await writeCycleEscalation(r.cwd, 'first', { kind: 'acceptanceRounds', actionClass: 'accept', target: 'first' });
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  const adrFile = path.join(r.cwd, 'docs/decisions.jsonl');
+  assert.match(await fs.readFile(adrFile, 'utf8'), /"kind":"answered"/);
+  const acceptP = predicates.find((p) => p.name === 'accept');
+  const held = async () => {
+    assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, []);
+    const st = await readState(r.cwd);
+    assert.equal(await acceptP.test(st), null);
+    assert.equal((await doneRule(st)).failed.includes('acceptance'), false);
+  };
+  await held();
+  await fs.appendFile(adrFile, `${canonicalize({ kind: 'read', id: '01J00000000000000000000000', ts: '2026-09-24T00:00:00.000Z', of: '01J00000000000000000000001', record: 'a'.repeat(40) })}\n`);
+  await held();
+  // Any other ADR line is the agent's and still needs an acceptance, as does any other file.
+  await fs.appendFile(adrFile, `${canonicalize({ kind: 'decision', id: '01J00000000000000000000002' })}\n`);
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, ['the latest acceptance is not at the final workspace snapshot']);
+  assert.match((await acceptP.test(await readState(r.cwd)))?.reason ?? '', /differs from the last accepted snapshot/);
+});
+
+test("the developer's ok on the cycle escalation restarts accept's round count", async () => {
+  const r = await reported();
+  let source = null;
+  const round = async (n) => {
+    const res = await fixed(r, 1, `round ${n}`, source ? { source } : {});
+    source = await accept(r.cwd, 'first', { resolutions: [verdict(res, 'accepted')], findings: [{ n: 1, text: `new finding ${n}` }] });
+  };
+  for (let n = 1; n <= 3; n++) await round(n);
+  assert.ok(openCycleEscalation(await r.log()));
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  for (let n = 4; n <= 5; n++) { await round(n); assert.equal(openCycleEscalation(await r.log()), null, `round ${n}`); }
+  await round(6);
+  assert.ok(openCycleEscalation(await r.log()), 'the third round after the ok escalates');
+});

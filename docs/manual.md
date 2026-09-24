@@ -545,7 +545,10 @@ sudus realize <decision-id> --subject "what was actually built"
 the decision's starting and resulting workspace snapshots, and the
 realization check, comparing the two, passes. A change touching a `data`
 path, frozen Agreed text, the working agreement, or protected settings
-always stops and escalates, whatever the decision said it intended.
+always stops and escalates, whatever the decision said it intended. The
+move `sudus migrate` made from `.cairn/` to `.sudus/` is not the
+decision's change, even when the decision's starting snapshot predates it;
+a moved file changed after the move is judged as the path it is now.
 
 If a resolution to a finding is rejected twice, or you want to contest one
 directly, that becomes an escalation of its own:
@@ -786,7 +789,12 @@ same finding raises its own escalation automatically.
 Done requires the latest acceptance to examine the final workspace
 snapshot with every resolution accepted and every finding, anywhere,
 resolved or disputed by you. A report with no findings and no change after
-it needs no acceptance: there is nothing to examine. When it holds:
+it needs no acceptance: there is nothing to examine. The lines Sudus
+appends to `docs/decisions.jsonl` for your answer to an escalation, your
+read of a decision and a decision's realization are not work to examine: a
+workspace that differs from the accepted snapshot only by those lines is
+still at it, so answering an escalation or realizing a decision after the
+last acceptance costs no further round. When it holds:
 
 ```sh
 sudus done reject-empty-names
@@ -983,7 +991,7 @@ after Done), because the next start's snapshot is the next allowed base
 and the work of the next spec phase is compared against the last done
 snapshot only for kernel-managed paths. That snapshot still names the
 `.cairn/` mechanism files; their move is the kernel's own and is never a
-scope breach. It refuses while a commitment, an action lease or a transaction is
+scope breach, including for a definition redeclared after the move. It refuses while a commitment, an action lease or a transaction is
 open, and while anything under `.cairn/` or `.gitignore` is changed and
 uncommitted, so that the move is the whole of its commit. It renames the
 three refs, moves the directory with `git mv`, rewrites the `.cairn`

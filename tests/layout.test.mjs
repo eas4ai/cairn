@@ -257,3 +257,63 @@ test('after migrate, the moved mechanism files are not scope breaches at the nex
   const v = await wake(repo.cwd);
   assert.notEqual(v.action, 'scope', JSON.stringify(v));
 });
+
+// A pasted agent report: a decision made before sudus migrate could not be realized after it.
+// The realization delta ran from the decision's base, which still held .cairn/, so the settings
+// file and every mechanism definition read as protected or reserved changes the decision made, and
+// realize escalated them to the developer. A definition redeclared after the move no longer
+// matched the base bytes issue #7 compared with, so even its deletion stopped.
+import { decide, readAdr } from '../lib/adr.mjs';
+import { realize, RealizationError } from '../lib/commitment.mjs';
+
+test('after migrate, a decision made before the move realizes without stopping on the moved files', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  await repo.write('flags/DEMO-001', 'fail\n'); await repo.commit('flag');
+  await declare(repo.cwd, 'demo-001', mechanismFor('DEMO-001'));
+  await repo.write('.cairn/notes.txt', 'kept\n');
+  await repo.commit('declare demo-001');
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, { title: 'Split main', rests_on: ['DEMO-001'], wrong_if: 'the split hides the greeting', body: 'Move the greeting into a module.' });
+  await repo.commit('decision');
+  await done(repo.cwd, 'first', { unchecked: true });
+  assert.equal((await migrate(repo.cwd)).dir, '.cairn -> .sudus');
+  // Redeclared the ordinary way after the move: its bytes are the ledger's, not the base's.
+  await declare(repo.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: [...mechanismFor('DEMO-001').inputs, 'src'] });
+  await repo.write('src/greet.mjs', 'export const greet = () => "hello";\n');
+  await repo.commit('redeclare and realize');
+  const rid = await realize(repo.cwd, id, { subject: 'Greeting module' });
+  assert.equal((await readAdr(repo.cwd)).find((l) => l.id === rid)?.kind, 'realized');
+});
+
+test('after migrate, a former-layout file with no counterpart in the layout in use is still a stop', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  await repo.write('.cairn/notes.txt', 'kept\n');
+  await repo.commit('notes');
+  await start(repo.cwd, 'first');
+  const id = await decide(repo.cwd, { title: 'Split main', rests_on: ['DEMO-001'], wrong_if: 'the split hides the greeting', body: 'Move the greeting into a module.' });
+  await repo.commit('decision');
+  await done(repo.cwd, 'first', { unchecked: true });
+  await migrate(repo.cwd);
+  await git(['rm', '-q', '.sudus/notes.txt'], { cwd: repo.cwd });
+  await repo.commit('drop the notes');
+  await assert.rejects(realize(repo.cwd, id, { subject: 's' }), (e) => e instanceof RealizationError && e.paths.some((p) => p.path === '.cairn/notes.txt' && p.class === 'reserved'));
+});
+
+test('after migrate, a definition redeclared before the next start leaves no breach on its former path', async (t) => {
+  const repo = await project({}, { layout: 'cairn' });
+  t.after(repo.cleanup);
+  await repo.write('flags/DEMO-001', 'fail\n'); await repo.commit('flag');
+  await declare(repo.cwd, 'demo-001', mechanismFor('DEMO-001'));
+  await repo.commit('declare demo-001');
+  await start(repo.cwd, 'first');
+  await done(repo.cwd, 'first', { unchecked: true });
+  await migrate(repo.cwd);
+  await preflight(repo.cwd, await readLog(repo.cwd), { command: 'declare' });
+  await declare(repo.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: [...mechanismFor('DEMO-001').inputs, 'src'] });
+  await repo.commit('redeclare demo-001');
+  await preflight(repo.cwd, await readLog(repo.cwd), { command: 'check' });
+  const breaches = (await readLog(repo.cwd)).filter((x) => x.kind === 'scope-breach').map((x) => x.payload.path);
+  assert.deepEqual(breaches, [], JSON.stringify(breaches));
+});

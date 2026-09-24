@@ -149,7 +149,7 @@ describe('the narrow floor', () => {
 });
 
 import { contractState, measureState, EgressError } from '../lib/evaluate.mjs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, symlink } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
@@ -869,6 +869,15 @@ describe('measure()', () => {
     await assert.rejects(measure(cwd, { ...draft(), named_paths: ['scripts', 'src/auth/rotate.mjs'] }, { transport: async () => {} }),
       (e) => e instanceof DraftError && e.message === 'sudus: measure: --path scripts is a directory; name the files the decision touches');
     assert.equal((await readLog(cwd)).length, head);
+  });
+  // Review of 3.5.0: the directory check followed symlinks, so a symlink to a directory, which
+  // measure has always read as a link, was refused.
+  test('a symlink to a directory in --path is read as a link, not refused', async () => {
+    const cwd = await repoWithCommitment();
+    await mkdirAndWrite(cwd, 'scripts/run.sh', 'echo\n');
+    await symlink('scripts', join(cwd, 'link-to-scripts'));
+    const r = await measure(cwd, { ...draft(), named_paths: ['link-to-scripts'] }, { transport: transport([goodBody()]) });
+    assert.equal(r.outcome, 'composite');
   });
   test('an incomplete-projection floor names the concern and the decision that caused it', async () => {
     const cwd = await repoWithCommitment();

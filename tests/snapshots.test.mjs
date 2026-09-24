@@ -194,3 +194,14 @@ test('writeWorkspaceSnapshotFromTree commits exactly the given tree as a workspa
   const sha2 = await writeWorkspaceSnapshotFromTree(repo.dir, tree);
   assert.equal((await readSnapshot(repo.dir, sha2, 'workspace')).tree, tree, 'still the original tree, not a re-read of the now-dirty working tree');
 });
+
+// Review of 3.5.0: git hash-object --stdin-paths reads one path per line, so a file whose name
+// has a newline in it broke every workspace snapshot of that project.
+test('a workspace snapshot holds a file whose name has a newline', async () => {
+  const repo = await makeRepo();
+  await repo.write('a.txt', 'a\n');
+  await repo.write('odd\nname.txt', 'b\n');
+  const sha = await writeWorkspaceSnapshot(repo.dir);
+  const s = await readSnapshot(repo.dir, sha, 'workspace');
+  assert.deepEqual((await listTree(repo.dir, s.tree)).map((e) => e.path).sort(), ['a.txt', 'odd\nname.txt']);
+});

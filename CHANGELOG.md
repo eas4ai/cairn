@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.2.2 - 2026-09-23
+
+- The skills and the manual say that a violating example needs no commit: make it in the working tree, run `sudus check`, bind the fail receipt with `sudus review mechanism`, then undo it. The receipt's input snapshot keeps the violating bytes, so the only commit is the bound mechanism file. An agent rebinding reviews after a redeclare had committed each example and its revert, two extra commits per batch.
+
 ## 3.2.1 - 2026-09-23
 
 - Wake reads each mechanism's input tree and tool identities once per pass instead of once per stale receipt. It walked every receipt of every requirement and re-ran `git ls-files`, `git hash-object` and every declared tool version probe for each one. On a Rust project with 23 requirements, up to 31 receipts each and `cargo`/`rustc` probes through rustup, one wake started 34,077 processes and took 28 s; it now takes 1.4 s, and a mechanism redeclare went from 59 s to 3.5 s. The verdict is unchanged.

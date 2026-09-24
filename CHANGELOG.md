@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.6.0 - 2026-09-24
+
+- A fifth skill, `report-sudus-issue`, is the agent's own. When Sudus itself is wrong -- a command crashes, a message contradicts the manual, or wake keeps naming an action whose predicate already holds -- the agent looks for an existing issue, reproduces the defect outside the project, and drafts an issue or a comment for eas4ai/sudus. It posts nothing until you answer `ok`: the post is public and goes out under your GitHub account. The project's code, spec text, records, secrets, hostnames and home-directory paths stay out of the post and out of the searches the agent sends. The agent then watches the issue, and when the fix is released it updates the plugin in Claude Code, Codex or Muse and tells you to reload the session. The working agreement template names the skill; a project picks the line up when its agreement is next copied and authorized, and the skill itself arrives with the plugin update. Spec revision 12.
+- The `sudus` command shim now finds Sudus installed as a Muse plugin, under `~/.local/share/muse/plugins/cache/`. On a machine with only the Muse plugin, every `sudus` command said "no installed Sudus found". Copy the shim again (`/install-sudus` does it) to pick this up.
+
 ## 3.5.4 - 2026-09-24
 
 - `sudus accept` no longer fails after recording when the second rejection of a finding has a reason that spans lines. It exited 1 with "draft field because must be one non-empty line", with the acceptance appended and no escalation for the finding. The escalation now quotes each reason on one line; the acceptance keeps the reason as written. The escalations an acceptance writes are drafted and checked before the acceptance is appended, so `accept` cannot stop between the two (issue #21).

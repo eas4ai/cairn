@@ -7,6 +7,14 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.4.0 - 2026-09-24
+
+- Setting up a project no longer asks how your decisions are recorded. They are attested by default: your words as the agent quoted them, the harness and your Git author. `sudus init` needs no `--signing-key` or `--attested`; `--signing-key <path>` still sets a key, and `--attested` names the default. The new-project and existing-project skills ask only which remote holds the records, or local-only.
+- A signing key is optional, and it lives in the settings file. Put your public key in `signing_key` in `.sudus/settings.json`, and the next `sudus authorize` takes a signature from it. The manual's "Attested or signed" section says how.
+- Decisions are checked against the key in force: the key in the settings you last authorized, not the settings file on disk. Before, an agent could set `signing_key` to its own key or to `null`, approve that change itself, and then sign every answer after it. Replacing or removing a key now takes a signature from the key in force. Only records whose evidence verifies count, so a record appended outside Sudus's commands cannot move the key either. A project that has only ever been attested reads nothing extra.
+- `sudus authorize` works in a repository with no commits yet, where a new project starts. It failed with "git rev-parse exited 1".
+- When `SUDUS_ROOT` or `CAIRN_ROOT` pins an older Sudus than the plugin, the hooks name that variable and say to unset it, instead of telling you to copy the shim again, which changed nothing (issue #9). A pin to a versioned plugin folder keeps running that version after an update.
+
 ## 3.3.4 - 2026-09-24
 
 - The verdict band and pane in Claude Code are off until you turn them on. The `view` option now takes `off` (the default), `above-prompt`, `pane` or `both`. `above-prompt` is the band, and replaces `status-line`; a stored `status-line` now reads as off. The README's "The verdict above the prompt in Claude Code" section gives the three steps to turn it on: function hooks in the settings `env` block, `above-prompt` in `/config` (the row "Where the Sudus verdict shows"), and a new session or `/reload-plugins`.

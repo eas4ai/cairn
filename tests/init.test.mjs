@@ -63,13 +63,19 @@ test('creating settings needs exactly one of --remote or --local-only', async ()
   assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
 });
 
-test('creating settings needs exactly one of --signing-key or --attested', async () => {
+// Revision 11: the developer is no longer asked how decisions are recorded. Without --signing-key
+// the project is attested; a key is set in the settings file afterwards by a developer who wants one.
+test('creating settings is attested unless --signing-key is given; both together refuse', async () => {
   const { cwd } = await repoWith({});
-  await assert.rejects(init(cwd, fresh({ attested: false })),
-    /^InitError: sudus: init needs --signing-key <path> or --attested$/);
   await assert.rejects(init(cwd, fresh({ signingKeyPem: 'not a real key' })),
-    /^InitError: sudus: init needs --signing-key <path> or --attested$/);
+    /^InitError: sudus: init takes --signing-key <path> or --attested, not both$/);
+  assert.equal(existsSync(join(cwd, '.sudus/settings.json')), false);
   assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
+  const r = await init(cwd, fresh({ attested: false }));
+  assert.equal(r.created, true);
+  assert.equal(r.evidence.mode, 'attested');
+  assert.equal((await loadSettings(cwd)).settings.signing_key, null);
+  assert.equal((await readLog(cwd))[0].payload.auth_mode, 'attested');
 });
 
 test('a --remote that is not a configured remote refuses as today', async () => {

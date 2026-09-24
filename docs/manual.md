@@ -64,11 +64,12 @@ currently does is marked **Observed**. It becomes an agreement about what
 the code should do only after you confirm it.
 
 Each of these skills runs `sudus init` the first time your project needs
-it. Before that the agent asks you two things in conversation: whether
+it. Before that the agent asks you one thing in conversation: whether
 Sudus's durable records should travel to a Git remote (naming one, or
-explicit local-only operation), and whether to verify your decisions with
-a signing key or record them as attested, in your own words. You answer
-once per project, not once per commitment, and you never type a command.
+explicit local-only operation). You answer once per project, not once per
+commitment, and you never type a command. Your decisions are recorded as
+attested, in your own words; a signing key is optional and set in the
+settings file (see Attested or signed below).
 
 Expect the agent to propose the first **commitment**: one selected piece of
 work with a defined result. A commitment is not a Git commit or a promise
@@ -94,7 +95,7 @@ flowchart TB
   start(["Start: /new-project"])
   exists{"Source code or docs/spec/overview.md exists? README, license and Git do not count"}
   switch(["Switch to /existing-project"])
-  init["Initialize Git if needed. Ask the developer: authority remote or local-only, signed or attested. sudus init with the answers as flags"]
+  init["Initialize Git if needed. Ask the developer: authority remote or local-only. sudus init with the answer as flags"]
   ask["One open question: what is the software for?"]
   restate["Gate 1: restate in own words, developer corrects"]
   keystone["Write docs/spec/overview.md: what it is, its problem, what it is not, spec map"]
@@ -138,7 +139,7 @@ flowchart TB
   pending["Pending successor: resume the transition, the later start points back to the superseded record"]
   legacy{"Cairn 1.x records present?"}
   migrate["Migrate: tell the developer, on ok remove the 1.x record directories (history keeps them), convert the spec in place until sudus lint docs/spec is clean, changing no requirement words, keep 1.x mechanism commands in docs/recon.md"]
-  init["Ask the developer: authority remote or local-only, signed or attested. sudus init with the answers as flags"]
+  init["Ask the developer: authority remote or local-only. sudus init with the answer as flags"]
   carry["Carry: one sudus item per 1.x item file, remove the item directories"]
   hasspec{"docs/spec/overview.md exists?"}
   readspec["Path B: read glossary, keystone, domains, roadmap, decisions and items first"]
@@ -492,14 +493,21 @@ with `sudus reply app-002 "<explanation>"`, and the decision comes back to
 you. You can ask again; only `ok` or `instead` closes it. You never type a
 command: the agent asks, you answer, the agent records.
 
+### Attested or signed
+
 `sudus answer`, `sudus decisions --read` and `sudus authorize` carry
-evidence of your decision. With a signing key configured, the record must
-carry a valid signature; the command prints the exact bytes to sign and the
-nonce to repeat when it needs one. Without a signing key, the project uses
-attested mode: the record holds your words as the agent quoted them, the
-name of the harness the conversation ran in, and your Git author identity.
-That is evidence, not cryptographic proof it was you, and Sudus says so
-wherever it reports the decision.
+evidence of your decision. By default the project uses attested mode: the
+record holds your words as the agent quoted them, the name of the harness
+the conversation ran in, and your Git author identity. That is evidence,
+not cryptographic proof it was you, and Sudus says so wherever it reports
+the decision.
+
+A signing key is optional. To use one, put your public key (PEM) in
+`signing_key` in `.sudus/settings.json`. That is a settings change, so the
+next `sudus authorize` must carry a signature from that key: the command
+prints the exact bytes to sign and the nonce to repeat. From then on every
+answer, reading and authorization must be signed; the attested records
+before the change stand.
 
 ## Decisions that did not stop the work
 
@@ -903,7 +911,7 @@ bound to the loop. Until then wake names the repair.
 | `authority_remote` | the remote `init` confirmed, or `null` | The one remote the records may be pushed to (`sudus push`). |
 | `outside`, `source`, `interfaces`, `data` | `[]` | Path globs that classify the tree: outside the agreement, source, public interfaces, data that cannot be regenerated. The floor and the scope check read them. |
 | `network_exclude` | `[]` | Path globs whose content never reaches any model, on top of the built-in credential patterns. |
-| `signing_key` | the key `init` chose, or `null` | The key that signs developer answers and authorizations; `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. |
+| `signing_key` | `null` | `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. A public key (PEM) means every developer answer and authorization must be signed with its private key; see Attested or signed. |
 | `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
 | `developer` | `"present"` | `"absent"` for an autonomous run: any unanswered escalation prints as Waiting and wake exits 4 instead of waiting for an answer no one can give. |
 | `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `sudus brief` and by the review source of the evaluator. |
@@ -1051,7 +1059,7 @@ prints one with its references resolved.
 | `show <sha>` | Print one record, with the records and snapshots it references described. |
 | `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted or fixed. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
-| `init --remote <name>\|--local-only --signing-key <path>\|--attested [--adopt <digest>] --quote <words>` | Create or adopt `.sudus/settings.json` and the two durable refs, with the developer's answers as flags; the command asks nothing itself. |
+| `init --remote <name>\|--local-only [--signing-key <path>] [--adopt <digest>] --quote <words>` | Create or adopt `.sudus/settings.json` and the two durable refs, with the developer's answer as flags; the command asks nothing itself. Attested unless `--signing-key` names a public key file. |
 | `migrate` | Move a project from the former layout (`.cairn/`, `refs/cairn/*`) to `.sudus/` and `refs/sudus/*`, once, between commitments; nothing to do on a Sudus project. |
 | `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |
 | `decisions [--read <id> --quote <words>]` | Print the ADR file, or mark one decision read, quoting the developer. |

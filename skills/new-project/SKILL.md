@@ -16,7 +16,7 @@ Does source code or `docs/spec/overview.md` exist here? A README, a license and 
 Stop and switch to `/existing-project`.
 
 ### `init`
-Initialize Git if there is none (`git init -b main`). Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only, and whether decisions are signed with a key or attested in their own words. Then run `sudus init --remote <name>|--local-only --signing-key <path>|--attested --quote "<their words>"`; it writes the init record and the ref roots. The command asks nothing itself. Rerunning it is idempotent.
+Initialize Git if there is none (`git init -b main`). Ask the developer, in conversation, which Git remote holds the authority records or whether the project is local-only. Then run `sudus init --remote <name>|--local-only --quote "<their words>"`; it writes the init record and the ref roots. Decisions are attested (the developer's words as you quote them, with the harness and the Git author); do not ask about signing, which a developer who wants it turns on later with `signing_key` in the settings file. The command asks nothing itself. Rerunning it is idempotent.
 
 ### `ask`
 One open question, verbatim: "What is the software for?"

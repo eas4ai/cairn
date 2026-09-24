@@ -429,10 +429,12 @@ For a project already under Sudus, once the loop reports Done:
 > commitment.
 
 Each of these skills runs `sudus init` the first time it is needed. Before
-it does, the agent asks you two things in conversation: which Git remote
-holds the records, or explicit local-only operation, and whether your
-decisions are signed with a key or attested in your own words. Nothing else
-in Sudus asks for that setup, and you never type a command yourself.
+it does, the agent asks you one thing in conversation: which Git remote
+holds the records, or explicit local-only operation. Your decisions are
+attested: your words as the agent quoted them, with your Git author. To
+have them signed with a key instead, set `signing_key` in
+`.sudus/settings.json` (see the manual's Settings section). Nothing else in
+Sudus asks for setup, and you never type a command yourself.
 
 The agent should explain requirements in terms you understand and propose
 observable failures that would show they are not met. Sudus calls one of

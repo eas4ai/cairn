@@ -4,8 +4,18 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 10, 2026-09-23. Nothing here is Agreed until the
+Status: Draft, revision 11, 2026-09-24. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 11 removes a setup question. Developer evidence is attested unless
+the settings name a signing key, and a developer who wants signed decisions
+sets `signing_key` in the settings file (section 2, Settings; section 3,
+Project initialization). The developer ruled on 2026-09-24: "Make
+attestation default and managed via the settings file. If someone want to
+use a key, they can optionally enable it in settings and we can remove that
+onboarding step". The protected-path check compares digests before it
+verifies the latest authorization's evidence, so a settings change that
+sets a key is named as a settings change to authorize (section 8).
 
 Revision 10 makes two changes the developer accepted on 2026-09-23 ("I will
 accept your recommendation") after an agent reported their cost on a
@@ -200,8 +210,11 @@ after the developer confirms it. Its fields are:
 - `network_exclude`: paths whose bytes Sudus must not place in an evaluator
   request, adversary brief or adversary projection. It does not govern the
   project's ordinary Git remotes or the primary coding agent.
-- `signing_key`: the developer's public verification key, or `null`. With a
-  key, developer-only records must verify. With `null` the project is in
+- `signing_key`: the developer's public verification key, or `null`, the
+  default. With a key, developer-only records must verify. Setting a key is
+  a settings change, authorized with a signature from that key; the attested
+  records before it stand. Revised 2026-09-24: previously `init` asked the
+  developer for a key or attested mode. With `null` the project is in
   attested mode: the agent asks the developer in conversation, and the command
   records the developer's answer in their own words, the harness that carried
   the conversation and the Git author; this is evidence, not cryptographic
@@ -621,14 +634,18 @@ prints the current verdict; elsewhere it names `/new-project` or
 
 New-project and existing-project run `sudus init` before they need settings,
 mechanisms or refs. It initializes Git when the new-project directory has none;
-validates or creates settings; takes the developer's answers as flags:
-`--remote <name>` or `--local-only` for the authority, `--signing-key <path>`
-or `--attested` for developer evidence, and `--quote <words>` in attested
-mode; writes the init record; and creates the durable ref roots with
-compare-and-swap. The agent asks those questions in conversation before it
-runs the command; the command asks nothing itself and refuses, naming the
-flag, when an answer is missing. Revised 2026-09-21: previously the command
-asked its questions at the controlling terminal. Protection begins at the
+validates or creates settings; takes the developer's answer as flags:
+`--remote <name>` or `--local-only` for the authority and `--quote <words>`
+for the developer's words; writes the init record; and creates the durable
+ref roots with compare-and-swap. Evidence is attested unless
+`--signing-key <path>` names a public key file; `--attested` names the
+default and refuses alongside `--signing-key`. The agent asks the question in
+conversation before it runs the command and does not ask about signing; the
+command asks nothing itself and refuses, naming the flag, when an answer is
+missing. Revised 2026-09-24: previously the developer was also asked for
+`--signing-key <path>` or `--attested`, and the command refused without one.
+Revised 2026-09-21: previously the command asked its questions at the
+controlling terminal. Protection begins at the
 settings digest in that record. Initialization makes no evaluator call.
 
 If settings exist but the refs do not, initialization adopts them only with

@@ -50,22 +50,21 @@ Outside an initialized project, wake exits 3 and names what continues:
 sudus init  (durable refs refs/sudus/log, refs/sudus/snapshots are missing and no authority remote is configured)
 ```
 
-The agent asks you three things in conversation: the authority remote (a
-configured Git remote's name, or local only), whether you sign with a key
-(a PEM file's path) or attest in words, and your ok. Name the remote you
-just added, so Sudus's durable records can travel with the code later.
-The agent then runs `sudus init` with your answers as flags, quoting your
+The agent asks you two things in conversation: the authority remote (a
+configured Git remote's name, or local only) and your ok. Name the remote
+you just added, so Sudus's durable records can travel with the code later.
+The agent then runs `sudus init` with your answer as flags, quoting your
 words; the command itself asks nothing, and you are never asked to run it:
 
 ```text
-$ sudus init --remote origin --attested --quote "ok: origin, no signing key"
-sudus: initialized; init record <sha> (attested: "ok: origin, no signing key" through <harness> by Ada Lovelace <ada@example.com>; evidence, not authentication)
+$ sudus init --remote origin --quote "ok: origin"
+sudus: initialized; init record <sha> (attested: "ok: origin" through <harness> by Ada Lovelace <ada@example.com>; evidence, not authentication)
 ```
 
 Attested mode records your quoted words, the harness that carried them and
 your Git author identity as evidence of your decision, not as
-cryptographic proof it was you; a project that needs that proof configures
-a signing key instead. `sudus wake` now asks for the
+cryptographic proof it was you; a project that needs that proof sets a
+public key in `signing_key` in `.sudus/settings.json` instead. `sudus wake` now asks for the
 specification:
 
 ```text

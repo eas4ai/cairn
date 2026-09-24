@@ -200,6 +200,22 @@ test('authorize writes one record binding the three digests with verified eviden
   assert.equal(authorizations(log).length, 2);
 });
 
+// A new project reaches its first authorize with no commit: git init, sudus init, then the
+// specification and the working agreement. authorize makes the first commit instead of failing on
+// the missing HEAD ("git rev-parse exited 1"), and that commit holds only the protected paths.
+test('authorize on a branch with no commits yet makes the first commit', async () => {
+  const repo = await makeRepo();
+  await init(repo.dir, { localOnly: true, quote: 'ok', env: {} });
+  await repo.write('AGENTS.md', 'agreement\n');
+  await repo.write('docs/spec/app.md', '# App\n');
+  await repo.write('notes.txt', 'not protected\n');
+  const sha = await authorize(repo.dir, { quote: 'ok', env: {} });
+  assert.equal((await readLog(repo.dir)).at(-1).sha, sha);
+  assert.equal(await repo.git('rev-list', '--count', 'HEAD'), '1');
+  assert.deepEqual((await repo.git('show', '--name-only', '--format=', 'HEAD')).split('\n').sort(),
+    ['.sudus/settings.json', 'AGENTS.md', 'docs/spec/app.md']);
+});
+
 test('authorize refuses before init', async () => {
   const { cwd } = await repoWith(BASE);
   await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /^AuthError: sudus: run sudus init first/);
@@ -269,6 +285,25 @@ test('a settings change needs a new authorization naming the new digest', async 
   await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.sudus\/settings\.json changed to/);
   await authorize(cwd, { quote: 'ok', env: {} });
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+});
+
+// Revision 11: a project starts attested, and a developer who wants signed decisions sets
+// signing_key in the settings file. That change is authorized with a signature from the new key,
+// and every developer record after it must be signed; the attested records before it stand.
+test('a signing key set in settings after an attested init is authorized by a signature from that key', async () => {
+  const cwd = await initialized();
+  await authorize(cwd, { quote: 'ok', env: {} });
+  const { pem, sign } = keyPair();
+  const s = JSON.parse(SETTINGS); s.signing_key = pem;
+  writeFileSync(join(cwd, '.sudus/settings.json'), JSON.stringify(s));
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.sudus\/settings\.json changed to/);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /signing_key is set/);
+  await authorize(cwd, { sign, env: {} });
+  const log = await readLog(cwd);
+  assert.equal(log.at(-1).payload.evidence.mode, 'signed');
+  assert.equal(authorizations(log).at(-2).payload.evidence.mode, 'attested');
+  await refuseUnauthorizedProtected(cwd, log);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /signing_key is set/);
 });
 
 // Fix round 1, item 2: appendRecord is not developer-gated, so a record with schema-valid but

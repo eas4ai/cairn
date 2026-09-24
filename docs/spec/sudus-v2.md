@@ -1674,9 +1674,10 @@ suggestion was `agent`.
 Sudus ships as one plugin: the command, hooks, five skills (`install-sudus`,
 `new-project`, `existing-project`, `next-feature`, `report-sudus-issue`) and
 the optional evaluator module. `report-sudus-issue` is for a defect in Sudus
-itself: the agent files an issue on eas4ai/sudus only after the developer's
-`ok`, since the issue is public and filed under the developer's account, and
-keeps the project's code, records and secrets out of it. The command also answers to its former name, `cairn`, so a shim, hook
+itself: the agent posts an issue or a comment on eas4ai/sudus only after the
+developer's `ok`, since it is public and posted under the developer's
+account, and keeps the project's code, records and secrets out of it and out
+of the searches it sends. The command also answers to its former name, `cairn`, so a shim, hook
 or working agreement written before 3.0.0 still runs. Claude Code, Codex and Muse manifests share one version. The skills also
 install through the skills CLI. The runtime is Node and Git, with no build,
 package dependency or service. Linux and macOS are supported.

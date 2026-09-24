@@ -172,11 +172,21 @@ test("report-sudus-issue is the agent's to open, asks before filing, and keeps t
   checkSkill("report-sudus-issue", []);
   assert.ok(!/^disable-model-invocation:/m.test(text), "the agent opens it on its own");
   for (const node of ["confirm", "search", "reproduce", "draft", "ask", "work", "watch", "update"]) assert.ok(text.includes("### `" + node + "`"), node);
-  const ask = text.indexOf("### `ask`"), create = text.indexOf("gh issue create");
-  assert.ok(ask > 0 && create > ask && text.slice(ask, create).includes("`ok | instead | ask`"), "the ok question comes before gh issue create");
-  assert.ok(text.includes("Never file without an `ok`"));
+  // Review finding 2: a comment on an existing issue is a public post too, and waits for the same ok.
+  const ask = text.indexOf("### `ask`"), question = text.indexOf("`ok | instead | ask`", ask);
+  for (const post of ["gh issue create", "gh issue comment"]) {
+    assert.equal(text.indexOf(post), text.lastIndexOf(post), `${post} appears once`);
+    assert.ok(ask > 0 && question > ask && text.indexOf(post) > question, `${post} comes only after the ok question`);
+  }
+  assert.ok(text.includes("Never post without an `ok`"));
   assert.ok(/--repo eas4ai\/sudus/.test(text));
-  for (const kept of ["code", "secret", "token", "home directory"]) assert.ok(text.slice(text.indexOf("### `draft`"), ask).includes(kept), kept);
+  // Review findings 1 and 4: the keep-out rule covers the search as well as the post, and it comes
+  // before the first node, so it binds every step.
+  const rule = text.slice(0, text.indexOf("### `confirm`"));
+  for (const kept of ["a search, an issue, a comment", "code", "secret", "token", "remote URL", "IP addresses", "home directory"]) assert.ok(rule.includes(kept), kept);
+  assert.ok(text.includes("never a path, URL or value from it"), "the search sends no path or value");
+  // Review finding 3: a closed issue fixed in this version or earlier, or closed without a fix, has a branch.
+  assert.ok(text.includes("fixed in your version or earlier, or closed without a fix"));
   for (const cmd of ["claude plugin update sudus@", "codex plugin marketplace upgrade", "muse plugins update sudus", "reload"]) assert.ok(text.includes(cmd), cmd);
   assert.ok(/names the skill|report-sudus-issue skill/.test(AGENTS_TEMPLATE()), "the working agreement names the skill");
 });

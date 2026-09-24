@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.4.1 - 2026-09-24
+
+- The new-project, existing-project and next-feature skills name the working agreement template by a path that exists from each of them: `../new-project/templates/AGENTS.md` from the skill's directory. existing-project and next-feature said to copy `templates/AGENTS.md` "from this skill", which only new-project ships, so an agent had to search for it or write `AGENTS.md` from memory (issue #10).
+
 ## 3.4.0 - 2026-09-24
 
 - Setting up a project no longer asks how your decisions are recorded. They are attested by default: your words as the agent quoted them, the harness and your Git author. `sudus init` needs no `--signing-key` or `--attested`; `--signing-key <path>` still sets a key, and `--attested` names the default. The new-project and existing-project skills ask only which remote holds the records, or local-only.

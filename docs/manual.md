@@ -812,7 +812,8 @@ rounds without reaching Done raise one more: it names the findings still
 open and recommends closing them. Your `ok` closes them, Done needs no
 further round, and the agent captures each as a backlog item. Answer
 `instead` to take another round. One escalation may also name several
-findings; your `ok` closes each.
+findings; your `ok` closes each, and wake lists them on an `ok closes:`
+line, which the agent reads to you with the recommendation.
 
 Done requires the latest acceptance to examine the final workspace
 snapshot with every resolution accepted and every finding, anywhere,

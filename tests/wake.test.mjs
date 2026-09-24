@@ -229,7 +229,7 @@ test('an escalation without a final answer is Waiting with the five fields verba
   let v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting');
   assert.equal(v.party, 'developer');
-  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I' });
+  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', closes: [] });
   await r.answer(esc, 'ask', 'why?');
   v = await wake(r.cwd);
   assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'reply', 'first']);
@@ -276,7 +276,7 @@ test('developer: absent exits 4 when the open escalation names a floor-outcome m
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting');
   assert.equal(v.exit, 4);
-  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I' });
+  assert.deepEqual(v.escalation, { sha: esc, slug: 'first', question: 'Q?', recommendation: 'R', because: 'B', if_wrong: 'W', instead: 'I', closes: [] });
 });
 
 test('developer: absent exits 4 on any unanswered escalation, since no one can answer it', async () => {

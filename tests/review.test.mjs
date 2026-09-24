@@ -908,3 +908,17 @@ test('the three-round escalation leaves a finding to the escalation already wait
   const a3 = await accept(r.cwd, 'first', { resolutions: [verdict(r3, 'accepted')], findings: [{ n: 1, text: 'a narrower mechanism gap' }] });
   assert.equal(openCycleEscalation(await r.log()).payload.concerns, `cycle finding:${a3}#1`);
 });
+
+// Issue #23 review: an ok closes every finding an escalation names, and its fields need not name
+// them all, so wake prints the list the developer's ok would close.
+import { render } from '../lib/wake.mjs';
+
+test("wake prints every finding an escalation's ok closes, whatever its fields say", async () => {
+  const r = await briefed();
+  r.rep = await report(r.cwd, 'first', adversary(r, { findings: [1, 2, 3].map((n) => ({ n, text: `gap ${n}` })) }));
+  await escalate(r.cwd, { commitment: 'first', concerns: [1, 2, 3].map((n) => `finding:${r.rep}#${n}`), question: 'Close finding 1 as a duplicate?', recommendation: 'Close finding 1 as answered.', because: 'finding 1 restates an accepted gap', if_wrong: 'finding 1 ships unfixed', instead: 'fix finding 1', options: [], named_paths: [], cited_decisions: [] });
+  const v = await wake(r.cwd);
+  const s = r.rep.slice(0, 12);
+  assert.deepEqual(v.escalation.closes, [1, 2, 3].map((n) => `finding ${n} on the report ${s}`));
+  assert.match(render(v), new RegExp(`\\ninstead: fix finding 1\\nok closes: finding 1 on the report ${s}, finding 2 on the report ${s}, finding 3 on the report ${s}\\npredicate: `));
+});

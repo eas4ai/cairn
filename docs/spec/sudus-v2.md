@@ -14,10 +14,10 @@ as a backlog item; the developer's `ok` closes them, so Done needs no further
 round, and `instead` takes another round or supersedes the commitment.
 Before, the escalation named no finding and `ok` only restarted the count.
 One escalation may name several findings, and an `ok` closes each (section 2,
-Finding): the kernel had closed a finding only for an escalation that named
-it alone. Issue #23 reported a one-line commitment that took six rounds of
-mechanism hardening; the developer accepted this recommendation on 2026-09-24
-("ok").
+Finding), and wake prints an `ok closes:` line naming them: the kernel had
+closed a finding only for an escalation that named it alone. Issue #23
+reported a one-line commitment that took six rounds of mechanism hardening;
+the developer accepted this recommendation on 2026-09-24 ("ok").
 
 Revision 12 adds a fifth skill, `report-sudus-issue` (section 11). When
 Sudus itself is wrong, the agent reproduces the defect outside the project,
@@ -494,15 +494,17 @@ resolution with a reason, and may raise new findings anywhere in that delta.
 
 **Escalation, answer and reply.** An escalation has five one-line fields:
 question, recommendation, because, if wrong, and instead. Wake prints them
-verbatim. The agent puts them to the developer in conversation, in plain
-prose without a choice widget: the problem, then the recommendation as `ok`,
-the cost if wrong and the alternative as `instead`, and discussion as `ask`,
-ending with `ok | instead | ask`. The developer answers in their own words. The agent records
-`ok`, `instead` or `ask`, quoting those words verbatim, with
-`sudus answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until
-an agent reply. Developer-only commands use the authentication rule in
-Settings. Revised 2026-09-21: previously "The developer writes `ok`,
-`instead <text>` or `ask <text>` with `sudus answer`".
+verbatim, and for an escalation that names findings, an `ok closes:` line
+naming each, since an ok closes them all. The agent puts them to the developer
+in conversation, in plain prose without a choice widget: the problem, then the
+recommendation as `ok` with each finding on the `ok closes:` line, the cost if
+wrong and the alternative as `instead`, and discussion as `ask`, ending with
+`ok | instead | ask`. The developer answers in their own words. The agent
+records `ok`, `instead` or `ask`, quoting those words verbatim, with `sudus
+answer <slug> ok|instead|ask --quote <words>`; `ask` stays open until an agent
+reply. Developer-only commands use the authentication rule in Settings.
+Revised 2026-09-21: previously "The developer writes `ok`, `instead <text>` or
+`ask <text>` with `sudus answer`".
 
 **Developer evidence.** Every developer-only record carries evidence of the
 developer's decision. `signed` evidence is a signature over the purpose,

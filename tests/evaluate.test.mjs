@@ -731,7 +731,7 @@ describe('veto and composite', () => {
 });
 
 // --- Task 9: measure() -- identity, the intent, the jev call, finalize, crash recovery ---------
-import { measure, recoverMeasurement } from '../lib/evaluate.mjs';
+import { measure, recoverMeasurement, DraftError } from '../lib/evaluate.mjs';
 import { readLog, decodeRecord } from '../lib/records.mjs';
 import { unb64url } from '../lib/canon.mjs';
 import { start } from '../lib/commitment.mjs';
@@ -846,6 +846,27 @@ describe('measure()', () => {
     const body = goodBody({ contract: { score: 3.5, confidence: 0.9, legend: {}, probabilities: { 0: 0, 1: 0, 2: 0, 3: 0.5, 4: 0.5 } } });
     const r = await measure(cwd, draft(), { transport: transport([body]) });
     assert.equal(r.outcome, 'veto'); assert.equal(r.veto, 'contract'); assert.equal(r.suggested, null);
+  });
+  // Issue #12: a recommendation that is not one --option word for word floored as a bare
+  // incomplete-projection, which cost the developer an answer and named nothing to fix.
+  test('a recommendation that is not one option word for word is refused before any record', async () => {
+    const cwd = await repoWithCommitment();
+    const head = (await readLog(cwd)).length;
+    let called = false;
+    const never = async () => { called = true; };
+    await assert.rejects(measure(cwd, { ...draft(), recommendation: 'Rotate hourly: it keeps sessions short.' }, { transport: never }),
+      (e) => e instanceof DraftError && e.message === 'sudus: measure: --recommendation must repeat one --option word for word; it is none of "hourly", "daily"');
+    await assert.rejects(measure(cwd, { ...draft(), options: [] }, { transport: never }),
+      (e) => e instanceof DraftError && e.message === 'sudus: measure: name each choice with --option; --recommendation must repeat one of them word for word');
+    assert.equal(called, false);
+    assert.equal((await readLog(cwd)).length, head);
+  });
+  test('an incomplete-projection floor names the concern and the decision that caused it', async () => {
+    const cwd = await repoWithCommitment();
+    const r = await measure(cwd, { ...draft(), concerns: ['AUTH-003', 'AUTH-999'], cited_decisions: ['01J0000000000000000000ABCD'] }, { transport: async () => {} });
+    assert.equal(r.outcome, 'floor'); assert.equal(r.reason, 'floor:incomplete-projection');
+    assert.equal(r.detail, 'concern AUTH-999 names nothing in this commitment; decision 01J0000000000000000000ABCD was not found');
+    assert.equal((await readLog(cwd)).at(-1).payload.reason, 'floor:incomplete-projection');
   });
   test('the floor writes an intent and a measurement with no call at all', async () => {
     const cwd = await repoWithCommitment();

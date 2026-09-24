@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.3.1 - 2026-09-24
+
+- The developer's answer to an escalation no longer costs an acceptance round. Sudus appends an `answered` line to `docs/decisions.jsonl` for it, and that line moved the workspace off the last acceptance, so wake named `accept` and the adversary ran one more round to examine that line alone. A workspace that differs from an accepted, reviewed or reported snapshot only by `answered`, `read` or `realized` lines is still at it. `build` follows `accept`, so realizing a decision after the last acceptance cost the same extra round.
+- The developer's ok or instead answer to the acceptance-round cycle escalation now restarts the count in `sudus accept` as well as in wake. `accept` counted every round after the report, so the first round after an ok that did not reach Done wrote a new cycle escalation.
+- A decision made before `sudus migrate` can be realized after it. The realization delta runs from the decision's starting snapshot, which still held `.cairn/`, so `realize` escalated the settings file and every mechanism definition as protected or reserved changes the decision made. The move is no longer the decision's; a moved file changed afterwards is judged as the path it is now. The same move was a scope breach on a definition redeclared after `migrate` and before the next start.
+
 ## 3.3.0 - 2026-09-23
 
 Spec revision 10, accepted by the developer on 2026-09-23 after an agent reported what the rules cost on a consumer project.

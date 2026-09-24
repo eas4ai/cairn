@@ -55,7 +55,7 @@ test('protectedDigests carries agreement null when AGENTS.md is absent', async (
 });
 
 import { generateKeyPairSync, sign as cryptoSign } from 'node:crypto';
-import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence } from '../lib/auth.mjs';
+import { authenticateDeveloper, verifyEvidence, signingPayload, describeEvidence, evidenceSettings } from '../lib/auth.mjs';
 
 function keyPair() {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
@@ -348,6 +348,33 @@ test('with a key in force, another key takes a signature from the key in force, 
   await refuseUnauthorizedProtected(cwd, await readLog(cwd));
   await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { sign: dev.sign, env: {} }), /does not verify against signing_key/);
   await readDecision(cwd, '01J0000000000000000000ABCD', { sign: agent.sign, env: {} });
+});
+
+// Adversarial review of 3.4.0: appendRecord is not developer-gated, and the key in force was read
+// from what the newest record said about itself. A record now changes the key in force only when it
+// verifies against the key in force before it, so none of these forgeries moves it.
+test('forged records cannot change the key in force', async () => {
+  const { cwd, dev } = await signedProject();
+  const agent = keyPair();
+  const p = join(cwd, '.sudus/settings.json');
+  const real = readFileSync(p, 'utf8');
+  setKey(cwd, agent.pem);
+  await git(['commit', '-q', '-m', 'agent key', '--', '.sudus/settings.json'], { cwd });
+  const agentDigest = (await loadSettings(cwd)).digest;
+  writeFileSync(p, real);
+  await git(['commit', '-q', '-m', 'revert', '--', '.sudus/settings.json'], { cwd });
+  const d = await protectedDigests(cwd);
+  const subject = canonicalize({ spec: d.spec, agreement: d.agreement, settings: agentDigest });
+  const forge = (settings_digest, evidence) => appendRecord(cwd, 'authorization', 'protected', {
+    spec_digest: d.spec, agreement_digest: d.agreement, settings_digest, evidence, decision: null, intent: null, results: [] });
+  await forge(agentDigest, { mode: 'signed', purpose: 'authorize', subject, nonce: 'n', signature: 'AAAA' });
+  await forge(agentDigest, await authenticateDeveloper(cwd, { signing_key: agent.pem }, { purpose: 'authorize', subject, sign: agent.sign }));
+  await forge('sha256:' + '0'.repeat(64), await authenticateDeveloper(cwd, { signing_key: null }, { purpose: 'authorize', subject, quote: 'ok', env: {} }));
+  await appendRecord(cwd, 'init', 'project', { settings_digest: agentDigest, authority_remote: null, auth_mode: 'attested' });
+  assert.equal((await evidenceSettings(cwd, await readLog(cwd))).signing_key, dev.pem);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { sign: agent.sign, env: {} }), /does not verify against signing_key/);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { quote: 'ok', env: {} }), /signing_key is set/);
+  await readDecision(cwd, '01J0000000000000000000ABCD', { sign: dev.sign, env: {} });
 });
 
 test('the protected check refuses a key change whose record the key in force did not sign', async () => {

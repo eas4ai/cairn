@@ -471,13 +471,14 @@ including exactly how `ok`, `instead`, and `ask` work.
 
 The plugin can keep the current verdict on screen while the agent works:
 in the band above the prompt, in a pane beside the transcript, or both.
-The band shows the verdict in its colour, what it names, and the reason in
-full, wrapped rather than cut:
+The band says in plain words where things stand and what happens next:
 
 ```
-sudus  Resolvable  record docs/spec/roadmap.md
-docs/spec/roadmap.md is a declared input with uncommitted changes; ...
+sudus  Working  independent review of z-index-tests-segfault
 ```
+
+A question you owe an answer to shows in full on a line of its own. The
+pane keeps the detail the agent reads: wake's reason and predicate.
 
 Sudus's face floats at the band's right: a
 [blobatar](https://github.com/Alain00/blobatar) drawn from the name

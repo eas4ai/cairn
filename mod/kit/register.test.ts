@@ -9,7 +9,7 @@ const WAKE = 'verdict: Resolvable\naction: record docs/spec/roadmap.md\nreason: 
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} }
 
 function world(on: On, blits: { deny?: string }) {
-  const seen = { runs: 0, blits: 0, sources: new Set<string>() }
+  const seen = { runs: 0, blits: 0, sources: new Set<string>(), status: [] as (string | undefined)[] }
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('session.cwd', () => ({ value: '/work' }))
   on('fs.exists', ($, e) => ({ value: e.path === '/work/.sudus/settings.json' || e.path === '/work/.git' }))
@@ -18,24 +18,30 @@ function world(on: On, blits: { deny?: string }) {
   // What the engine draws in the band beneath the plugins: nothing of its own.
   on('ui.render', { component: 'AbovePrompt' }, () => ({ type: 'Box', children: [] }))
   on('ui.log', () => ({ value: undefined }))
+  on('ui.status', ($, e) => { seen.status.push(e.text); return { value: undefined } })
   return seen
 }
 
 describe('register', () => {
-  test('the band shows the verdict whole at the left and the picture face at the right', async ($, on) => {
+  test('the band says the next step in plain words at the left, with the picture face at the right', async ($, on) => {
     const clock = mock.clock(on)
     const seen = world(on, {})
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
     await clock.settle()
     expect(seen.runs).toBe(1)
+    // The status row an earlier version pinned is cleared, and nothing writes it again.
+    expect(seen.status).toEqual([undefined])
     const ui = await $.ui.mount({ plugin: 'sudus', surface: 'terminal', component: 'AbovePrompt', props: BAND, viewport: { columns: 100, rows: 40 } })
-    expect((await ui.find({ type: 'Text', text: /Resolvable/ }))).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /record docs\/spec\/roadmap\.md/ }))).toBeDefined()
-    expect((await ui.find({ type: 'Text', text: /so that the receipt binds the committed bytes$/ }))).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /^Working$/ }))).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /committing docs\/spec\/roadmap\.md before the checks run/ }))).toBeDefined()
+    expect((await ui.find({ type: 'Text', text: /declared input|receipt|Resolvable/ }))).toBeUndefined()
     expect((await ui.find({ type: 'Image', key: 'face' }))).toBeDefined()
+    // Clear of the collapse control the engine draws over the band's top-right corner.
+    expect(JSON.stringify(await ui.drawn())).toContain('"paddingRight":4')
     await clock.advance(8000)
     expect(seen.blits > 50).toBe(true)
     expect(seen.sources.size > 20).toBe(true)
+    expect(seen.status).toEqual([undefined])
   })
 
   test('a terminal that draws no pictures gets the braille face, which blinks', async ($, on) => {
@@ -67,7 +73,8 @@ describe('register', () => {
     await clock.settle()
     const ui = await $.ui.mount({ plugin: 'sudus', surface: 'terminal', component: 'Pane', requestId: 'sudus', props: { title: 'Sudus', isFocused: false, bodyColumns: 60, placement: 'dock', scroll: { offset: 0, bodyRows: 20 }, view: {} }, viewport: { columns: 160, rows: 40 } })
     expect(await ui.find({ type: 'Image', key: 'face' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /^record docs\/spec\/roadmap\.md$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^Working: committing docs\/spec\/roadmap\.md before the checks run$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /so that the receipt binds the committed bytes$/ })).toBeDefined()
   })
 
   test('a survey keeps the band', async ($, on) => {
@@ -77,6 +84,6 @@ describe('register', () => {
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
     await clock.settle()
     const ui = await $.ui.mount({ plugin: 'sudus', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND, hasSurvey: true }, viewport: { columns: 100, rows: 40 } })
-    expect(await ui.find({ type: 'Text', text: /Resolvable/ })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /Working/ })).toBeUndefined()
   })
 })

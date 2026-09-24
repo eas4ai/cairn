@@ -5,7 +5,7 @@ import { brailleOf } from './braille.ts'
 import { blinkOf, figureAt, svgOf, type Expression } from './figure.ts'
 import { latest } from './latest.ts'
 import { rasterOf } from './raster.ts'
-import { bandOf, cannotStart, changesVerdict, expressionOf, parseWake, usesSudus, type Verdict } from './verdict.ts'
+import { bandOf, cannotStart, changesVerdict, expressionOf, parseWake, shortHashes, usesSudus, type Verdict } from './verdict.ts'
 
 // The Sudus plugin's hooks module: what `sudus wake` names next, in front of the person, in the
 // band above the prompt, a pane beside the transcript, or both. Sudus's blobatar floats at the
@@ -34,6 +34,9 @@ const SVG_PX = 72
 const FRAME_MS = 80
 const PROBE_MS = 250
 const WAKE_TIMEOUT_MS = 20000
+// The engine draws the band's collapse control, `[-]`, over its top-right corner; the face and
+// the text keep clear of it.
+const COLLAPSE_COLUMNS = 4
 // Why `$.ui.blit` refuses a picture on a terminal that draws none; the face turns to braille.
 const NO_PICTURES = /the Image draws its alt here/
 
@@ -98,6 +101,9 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     const r = await next(e)
+    // Versions before 3.3.2 pinned the verdict in the engine's status row, and a plugin updated
+    // inside a running session left that row behind: this version never writes it, so it clears it.
+    try { $.ui.status(undefined) } catch (err) { $.ui.log(`sudus: the old status row not cleared: ${err}`) }
     paint = () => {
       try {
         if (showsBand() || isPaneOpen) $.ui.invalidate('ui.render')
@@ -228,7 +234,7 @@ export const register: Register = (on, options) => {
     const below = await next(e)
     return (
       <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={2} paddingLeft={1}>
+        <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={2} paddingLeft={1} paddingRight={COLLAPSE_COLUMNS}>
           <Box flexDirection="column" flexGrow={1} flexShrink={1}>
             <Text wrap="wrap">
               <Text dimColor>{'sudus  '}</Text>
@@ -282,14 +288,16 @@ export const register: Register = (on, options) => {
   })
 }
 
+// The pane is the place for detail: the band's plain words as its headline, then wake's reason,
+// predicate and layout line, with record hashes cut to 7 characters.
 function paneLines(v: Verdict, isTurnRunning: boolean): { headline: string; body: string[]; notes: string[] } {
   const turn = isTurnRunning ? ' (a turn is running)' : ''
-  if (v.kind === 'none') return { headline: 'No Sudus project here' + turn, body: ['This repository has no .sudus/settings.json; the new-project or existing-project skill starts one.'], notes: [] }
-  if (v.kind === 'missing') return { headline: 'Sudus is not reachable' + turn, body: [v.detail], notes: [] }
-  if (v.kind === 'line') return { headline: (v.exit === 3 ? 'Repair' : 'Sudus') + turn, body: [v.line], notes: [] }
+  const band = bandOf(v)
+  if (v.kind === 'none' || band === undefined) return { headline: 'No Sudus project here' + turn, body: ['This repository has no .sudus/settings.json; the new-project or existing-project skill starts one.'], notes: [] }
+  const headline = `${band.label}${band.subject ? `: ${band.subject}` : ''}${turn}`
+  if (v.kind === 'missing') return { headline, body: [v.detail], notes: [] }
+  if (v.kind === 'line') return { headline, body: [shortHashes(v.line)], notes: [] }
   const notes = [`predicate: ${v.predicate}`]
   if (v.layout) notes.push(v.layout)
-  if (v.verdict === 'Done') return { headline: (v.target ? `Done: ${v.target}` : 'Done') + turn, body: [v.reason], notes }
-  if (v.verdict === 'Waiting') return { headline: `Waiting for the ${v.party ?? 'developer'}` + turn, body: v.question ? [v.question, v.reason] : [v.reason], notes }
-  return { headline: `${v.action ?? ''} ${v.target ?? ''}`.trim() + turn, body: [v.reason], notes }
+  return { headline, body: [...band.lines, shortHashes(v.reason)], notes }
 }

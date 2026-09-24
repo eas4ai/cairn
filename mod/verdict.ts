@@ -97,17 +97,68 @@ export function expressionOf(v: Verdict, isTurnRunning: boolean): Expression {
   return 'idle'
 }
 
-// What the band above the prompt says: the verdict in its colour and what it names, then the lines
-// under it, each wrapped by the band, never cut. Undefined where the repository does not use Sudus.
+// What the band above the prompt says, for a person rather than for the agent: the state in a
+// word and its colour, then what happens next in plain words, with no record hashes or kernel
+// terms. The agent reads wake itself; the pane keeps the reason and the predicate for anyone who
+// wants them. Only a question the developer owes an answer to gets a line of its own.
 export type Band = { label: string; color: 'green' | 'yellow' | 'cyan' | 'red'; subject: string; lines: string[] }
+
+// A 40-hex record or snapshot hash cut to the 7 characters Git shows.
+export const shortHashes = (text: string): string => text.replace(/\b([0-9a-f]{7})[0-9a-f]{33}\b/g, '$1')
+
+// A finding's target is "<commitment> <n>".
+const finding = (t: string): string => {
+  const m = /^(\S+) (\d+)$/.exec(t)
+  return m ? `review finding ${m[2]} on ${m[1]}` : t
+}
+
+// What each action wake names means, as the next step in plain words (lib/wake.mjs ORDER and the
+// actions its predicates name besides).
+const NEXT: Record<string, (target: string) => string> = {
+  repair: t => `repairing ${t}`,
+  recover: () => 'finishing an interrupted Sudus command',
+  reconcile: () => 'closing a step that did not finish',
+  scope: t => `settling a change to ${t} outside the plan`,
+  supersede: t => `replacing ${t}, whose agreed text changed`,
+  fix: t => `fixing the defect ${t}`,
+  record: t => `committing ${t} before the checks run`,
+  commit: t => `committing ${t}`,
+  declare: t => `writing the check for ${t}`,
+  run: t => `running the check for ${t}`,
+  implement: t => `making ${t} pass`,
+  escalate: t => `preparing a question for you about ${finding(t)}`,
+  'review mechanism': t => `reviewing the check for ${t}`,
+  capture: t => `recording ${t}`,
+  review: t => `reviewing the work on ${t}`,
+  report: t => `independent review of ${t}`,
+  resolve: t => `fixing ${finding(t)}`,
+  accept: t => `independent check of the fixes on ${t}`,
+  build: () => 'carrying out a recorded decision',
+  done: t => `closing ${t}`,
+  promote: t => `starting the next commitment, ${t}`,
+  reply: t => `answering your question about ${t}`,
+}
+
+export function nextStepOf(action: string | null, target: string | null): string {
+  const t = target ?? ''
+  const say = action === null ? undefined : NEXT[action]
+  return shortHashes(say ? say(t) : `${action ?? ''} ${t}`.trim())
+}
+
+// A one-line refusal or repair hint, without the `sudus: ` prefix or the command it names for the
+// agent: "sudus: no commitment started; run /new-project" reads "no commitment started".
+const plainLine = (line: string): string => shortHashes(line.replace(/^(sudus|cairn): /, '').replace(/;\s*(run|see) .*$/, ''))
 
 export function bandOf(v: Verdict): Band | undefined {
   if (v.kind === 'none') return undefined
-  if (v.kind === 'missing') return { label: 'Not reachable', color: 'red', subject: '', lines: [v.detail] }
-  if (v.kind === 'line') return { label: v.exit === 3 ? 'Repair' : 'Sudus', color: 'red', subject: '', lines: [v.line] }
-  if (v.verdict === 'Done') return { label: 'Done', color: 'cyan', subject: v.target ?? '', lines: [v.reason] }
-  if (v.verdict === 'Waiting') return { label: `Waiting for the ${v.party ?? 'developer'}`, color: 'yellow', subject: '', lines: [v.question ?? v.reason] }
-  return { label: 'Resolvable', color: 'green', subject: `${v.action ?? ''} ${v.target ?? ''}`.trim(), lines: [v.reason] }
+  if (v.kind === 'missing') return { label: 'Not answering', color: 'red', subject: /cannot start/.test(v.detail) ? 'the sudus command cannot start' : 'sudus wake did not finish', lines: [] }
+  if (v.kind === 'line') return { label: v.exit === 3 ? 'Setup' : 'Problem', color: 'red', subject: plainLine(v.line), lines: [] }
+  if (v.verdict === 'Done') return { label: 'Done', color: 'cyan', subject: v.target ?? '', lines: [] }
+  if (v.verdict === 'Waiting') {
+    if (v.exit === 4) return { label: 'Stuck', color: 'yellow', subject: 'a question waits and no developer is here to answer it', lines: v.question ? [shortHashes(v.question)] : [] }
+    return { label: 'Your answer needed', color: 'yellow', subject: '', lines: v.question ? [shortHashes(v.question)] : [] }
+  }
+  return { label: 'Working', color: 'green', subject: nextStepOf(v.action, v.target), lines: [] }
 }
 
 // Whether a Bash command can change the verdict: any sudus or cairn invocation, or a git commit.

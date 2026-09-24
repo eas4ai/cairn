@@ -105,7 +105,8 @@ test('review mechanism binds the requirement to the definition and text digests 
   await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', sha);
   const { greeter } = await readMechanisms(repo.cwd);
   const { textDigest } = await requirementDigest(repo.cwd, 'DEMO-001');
-  assert.deepEqual(greeter.review, { 'DEMO-001': { definitionDigest: greeter.definitionDigest, textDigest, failReceipt: sha } });
+  const { detectionDigest } = await import('../lib/mechanisms.mjs');
+  assert.deepEqual(greeter.review, { 'DEMO-001': { definitionDigest: greeter.definitionDigest, detectionDigest: detectionDigest(greeter.definition), textDigest, failReceipt: sha } });
   assert.equal(reviewBinds(greeter, 'DEMO-001', textDigest), true);
   assert.equal(reviewBinds(greeter, 'DEMO-001', 'sha256:' + '0'.repeat(64)), false);
   assert.notEqual(greeter.reviewDigest, reviewDigest({}));
@@ -118,12 +119,16 @@ test('a fail receipt written before any start record is accepted: currency is by
   await assert.doesNotReject(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', sha));
 });
 
-test('a changed definition unbinds the review metadata; an identical redeclare keeps it', async () => {
+// Spec revision 10: a review binds to the command, the working directory and the results mode.
+test('a changed command unbinds the review metadata; an added requirement or input keeps it', async () => {
   const repo = await declared();
   await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
+  const { textDigest } = await requirementDigest(repo.cwd, 'DEMO-001');
   await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-002', 'DEMO-001'] });
-  assert.equal(Object.keys((await readMechanisms(repo.cwd)).greeter.review).length, 1);
-  await declare(repo.cwd, 'greeter', { ...DEFINITION, inputs: [...DEFINITION.inputs, 'extra.txt'] });
+  assert.deepEqual(Object.keys((await readMechanisms(repo.cwd)).greeter.review), ['DEMO-001']);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-002', 'DEMO-001'], inputs: [...DEFINITION.inputs, 'extra.txt'] });
+  assert.equal(reviewBinds((await readMechanisms(repo.cwd)).greeter, 'DEMO-001', textDigest), true);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, command: `${DEFINITION.command} --strict` });
   assert.deepEqual((await readMechanisms(repo.cwd)).greeter.review, {});
 });
 
@@ -155,7 +160,7 @@ import { applyTouch } from '../lib/mechanisms.mjs';
 // touchOutcome computes. These tests call applyTouch directly with a real lease and a real
 // outcome, the same shape lib/cli.mjs's wiring produces, then call end() separately to confirm it
 // still finishes normally (it does not, itself, write anything into a definition any more).
-test('applyTouch writes a changed touched path into the definition and unbinds review metadata', async () => {
+test('applyTouch writes a changed touched path into the definition and keeps the review metadata bound', async () => {
   const repo = await declared();
   await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', await failReceipt(repo));
   await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
@@ -166,7 +171,7 @@ test('applyTouch writes a changed touched path into the definition and unbinds r
   assert.deepEqual(result, { added: ['helper.mjs'], dropped: [], unclaimed: [] });
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
-  assert.deepEqual(greeter.review, {});
+  assert.equal(reviewBinds(greeter, 'DEMO-001', (await requirementDigest(repo.cwd, 'DEMO-001')).textDigest), true);
   await end(repo.cwd);
   assert.equal(await readLease(repo.cwd), null);
 });
@@ -240,4 +245,21 @@ test('finding 4: applyTouch reports an unclaimable touch for a REQ no mechanism 
   const result = await applyTouch(repo.cwd, lease, outcome);
   assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares DEMO-999' }] });
   await end(repo.cwd);
+});
+
+// Spec revision 10, part B: which reviews a redeclare keeps.
+test('carriedReviews keeps a review whose command, working directory and results mode are unchanged, including one written before revision 10', async () => {
+  const { carriedReviews, definitionDigest, detectionDigest, reviewHolds } = await import('../lib/mechanisms.mjs');
+  const def = { command: 'node check.mjs', cwd: '.', inputs: ['src/a.mjs'], documents: [], requirements: ['APP-001', 'APP-002'], results: 'per-requirement', identity: { tools: {}, env: [], image: null } };
+  const entry = (d, review) => ({ definition: d, definitionDigest: definitionDigest(d), review });
+  const legacy = { definitionDigest: definitionDigest(def), textDigest: 'sha256:t1', failReceipt: 'f1' };
+  const stale = { definitionDigest: 'sha256:old', textDigest: 'sha256:t2', failReceipt: 'f2' };
+  const moreInputs = { ...def, inputs: ['src/a.mjs', 'src/b.mjs'], identity: { tools: { node: 'node --version' }, env: [], image: null } };
+  const kept = carriedReviews(entry(def, { 'APP-001': legacy, 'APP-002': stale }), moreInputs);
+  assert.deepEqual(Object.keys(kept), ['APP-001']);
+  assert.equal(kept['APP-001'].detectionDigest, detectionDigest(def));
+  assert.ok(reviewHolds(kept['APP-001'], entry(moreInputs, kept), 'APP-001'));
+  assert.deepEqual(carriedReviews(entry(def, { 'APP-001': legacy }), { ...def, command: 'node other.mjs' }), {});
+  assert.deepEqual(carriedReviews(entry(def, { 'APP-001': legacy }), { ...moreInputs, requirements: ['APP-002'] }), {});
+  assert.deepEqual(carriedReviews(undefined, def), {});
 });

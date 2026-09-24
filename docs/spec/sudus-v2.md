@@ -4,8 +4,17 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 9, 2026-09-23. Nothing here is Agreed until the
+Status: Draft, revision 10, 2026-09-23. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 10 makes two changes the developer accepted on 2026-09-23 ("I will
+accept your recommendation") after an agent reported their cost on a
+consumer project. While the latest report has an unresolved finding, a
+missing current receipt waits and wake names the next resolution (section 5,
+Precedence). A mechanism review binds to what decides what the check
+detects, its command, working directory and results mode, so a redeclare
+that adds inputs, documents, tool identity or requirements keeps it bound
+(sections 2 and 8).
 
 Revision 9 measures a successor's brief from the first start of its
 supersession chain (section 9, Brief and projection). The work a successor
@@ -321,11 +330,17 @@ and `sudus review mechanism`. It has two separately digested parts:
   identity**. The identity may contain runtime and tool versions, container or
   image identity, and named non-secret environment values. It records declared
   values verbatim. It never hashes or records undeclared environment values.
-- The **review metadata**: for each requirement, the definition digest against
-  which it was accepted, the requirement text digest, and the fail receipt for
-  its violating example.
+- The **review metadata**: for each requirement, the detection digest (the
+  digest of the command, working directory and results mode) and the
+  definition digest against which it was accepted, the requirement text
+  digest, and the fail receipt for its violating example.
 
-A changed definition unbinds its review metadata. Undeclared external state,
+A changed command, working directory or results mode unbinds its review
+metadata. A change to inputs, documents, execution identity or the
+requirement list does not: those decide only when a receipt is current, and a
+new requirement needs its own review. Review metadata written before revision
+10 names only the definition digest; it binds that definition, and a redeclare
+that keeps the command, working directory and results mode carries it over. Undeclared external state,
 including installed tools, services, locale and host configuration, can change
 a mechanism without staling its receipt; therefore "current" is not a claim of
 hermetic execution.
@@ -379,7 +394,7 @@ removes it and records the action as explicitly abandoned rather than
 finished. `sudus begin --touch <path>`
 provisionally adds a path to the target's mechanism inputs for the life of the
 lease, so the declaration precedes the change; `sudus end` writes the addition
-into the definition, which unbinds its review metadata as any definition change
+into the definition, which leaves its review metadata bound as any added input
 does, or drops it when the path is unchanged. It carries the action, target,
 workspace snapshot at start, timestamp and harness session when available.
 While it exists, its target's declared inputs are neither `record` nor `commit`
@@ -935,9 +950,9 @@ predicate. The table is normative.
 | `commit PATH` | the path is clean, or the action lease covers it; `docs/decisions.jsonl` is named here whenever it has uncommitted lines (added 2026-09-22) |
 | `declare REQ` | a mechanism definition names the requirement and no pre-existing undeclared delta was legalized |
 | `run REQ` | a current receipt carries a result for the requirement |
-| `implement REQ` | a current receipt says pass and review metadata binds the requirement to the current definition and text digests with a fail receipt |
+| `implement REQ` | a current receipt says pass and review metadata binds the requirement to the current detection and text digests with a fail receipt |
 | `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth; a receipt where another requirement of the commitment also failed is not an attempt |
-| `review mechanism REQ` | review metadata binds the requirement to the current definition and text digests with a fail receipt |
+| `review mechanism REQ` | review metadata binds the requirement to the current detection and text digests with a fail receipt |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `review SLUG` | a review names the current workspace snapshot and answers every fixed question for every target |
 | `report SLUG` | a current brief and report name the reviewed snapshot and projection; every question and interface obligation has an attempt |
@@ -999,6 +1014,13 @@ rejected resolution (`resolve`); post-report resolutions not examined at the
 current snapshot (`accept`); unrealized Consequential decision (`build`); Done
 rule satisfied without a done record (`done`); closed range with a backlog item
 (`promote`); Done.
+
+While the latest report has an unresolved finding, a missing current receipt
+waits: wake names the next `resolve` instead of `run`, so the checks run once,
+after the last finding is resolved and before `accept`, not after every fix. A
+current receipt that fails is still `implement`, and three failing attempts are
+still `escalate`. The Done rule is unchanged: every requirement needs a current
+passing receipt.
 
 ### Done
 
@@ -1135,7 +1157,8 @@ agreement.
 A receipt is current only by the identities in section 2: input snapshot tree,
 mechanism definition digest, frozen requirement text digest, observed declared
 execution identity and readable schema. A kernel release does not itself stale
-evidence. A changed definition unbinds review metadata. A mechanism reused for
+evidence. A changed command, working directory or results mode unbinds review
+metadata; other definition changes stale receipts only. A mechanism reused for
 a revised requirement in a later commitment needs `review mechanism` before its
 evidence counts.
 
@@ -1699,7 +1722,9 @@ specification.
 33. Acceptance examines the whole cumulative delta and may create findings.
 34. Realization checks the actual delta against protected categories.
 35. Start freezes requirement-set membership and text digests.
-36. Mechanism review binds to the exact definition digest.
+36. Mechanism review binds to the detection digest: command, working
+    directory and results mode (revision 10; before it, the exact definition
+    digest).
 37. Execution identity contains only declared, non-secret values; undeclared
     external state weakens freshness.
 38. One authority remote is developer-confirmed; pushes are atomic when

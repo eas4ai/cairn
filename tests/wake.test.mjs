@@ -474,13 +474,12 @@ test('no current receipt is run; a current fail is implement; three attempts mak
   assert.equal((await wake(r.cwd)).action, 'implement');
 });
 
-test('a current pass whose review metadata is unbound is review mechanism', async () => {
+test('a current pass whose review metadata is unbound by a changed command is review mechanism', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
   assert.equal((await wake(r.cwd)).action, 'review');
-  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), inputs: ['src/demo.mjs', 'flags/DEMO-001', 'src/util.mjs'] });
-  await r.write('src/util.mjs', '');
-  await r.commit('widen inputs');
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), command: `${mechanismFor('DEMO-001').command} && true` });
+  await r.commit('change the command');
   await r.failReq('DEMO-001');
   await r.write('flags/DEMO-001', 'pass\n'); await r.commit('pass again');
   await check(r.cwd, 'DEMO-001');
@@ -882,4 +881,59 @@ test('wake reads a mechanism input tree and probes its tools once, however many 
   const st = await readState(r.cwd);
   assert.equal(st.current['DEMO-001'], null);
   assert.equal(await readFile(probes, 'utf8'), 'x', 'one probe for three stale receipts');
+});
+
+// Spec revision 10, part A (the developer: "I will accept your recommendation", 2026-09-23): a
+// fix for a finding makes receipts stale, and naming a full check run before every next
+// resolution cost an agent twenty runs for twenty findings. While the latest report has an
+// unresolved finding, a stale receipt waits; a current receipt that fails does not.
+test('while a report has an unresolved finding, wake names resolve before a stale run, and run before accept once the last finding is resolved', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  const rep = await r.report([{ n: 1, text: 'the greeting ignores a blank name' }, { n: 2, text: 'no test for a long name' }]);
+  await r.write('src/demo.mjs', 'console.log("hello, world");\n'); await r.commit('fix finding 1');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', `${r.slug} 1`], JSON.stringify(v));
+  await r.resolveFinding(rep, 1);
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', `${r.slug} 2`], JSON.stringify(v));
+  await r.resolveFinding(rep, 2);
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['run', 'DEMO-001'], JSON.stringify(v));
+  await check(r.cwd, 'DEMO-001');
+  assert.equal((await wake(r.cwd)).action, 'accept');
+});
+
+test('a current receipt that fails is named at once even while findings are unresolved', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  await r.report([{ n: 1, text: 'a finding' }]);
+  await r.failReq('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['implement', 'DEMO-001'], JSON.stringify(v));
+});
+
+// Spec revision 10, part B: a redeclare that only adds inputs or tool probes left every review
+// unbound, and rebinding cost an agent nine commits. A review binds to what decides detection:
+// the command, the working directory and the results mode.
+test('a redeclare that adds an input or a tool probe keeps the mechanism review bound; a changed command unbinds it', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.write('src/extra.mjs', 'export const extra = 1;\n'); await r.commit('an input the check reads');
+  const def = mechanismFor('DEMO-001');
+  await declare(r.cwd, 'demo-001', { ...def, inputs: [...def.inputs, 'src/extra.mjs'], identity: { tools: { node: 'node --version' }, env: [], image: null } });
+  await r.commit('declare the input and the tool');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['run', 'DEMO-001'], JSON.stringify(v));
+  await check(r.cwd, 'DEMO-001');
+  assert.notEqual((await wake(r.cwd)).action, 'review mechanism');
+  await declare(r.cwd, 'demo-001', { ...def, command: `${def.command} && true` });
+  await r.commit('change the command');
+  v = await wake(r.cwd);
+  assert.equal(v.action, 'run', JSON.stringify(v));
+  await check(r.cwd, 'DEMO-001');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['review mechanism', 'DEMO-001'], JSON.stringify(v));
 });

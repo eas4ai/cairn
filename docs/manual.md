@@ -656,15 +656,18 @@ violating example and binds that failure:
 sudus review mechanism APP-001 <the-fail-receipt-sha>
 ```
 
-This binds the mechanism's review metadata to its current definition
-digest and the requirement's current text digest, with that fail receipt
-as the demonstration that the check actually catches the violation. The
+This binds the mechanism's review metadata to what decides what the check
+detects (its command, working directory and results mode) and the
+requirement's current text digest, with that fail receipt as the
+demonstration that the check actually catches the violation. The
 violating example needs no commit. The agent makes it in the working tree,
 runs `sudus check`, binds the fail receipt, and undoes the change: the
 receipt's input snapshot keeps the violating bytes, so the only commit is
-the bound mechanism file. A revised requirement, or a changed mechanism
-definition, unbinds this and `review mechanism REQ` becomes the next wake
-action before another check counts.
+the bound mechanism file. A revised requirement, or a changed command,
+working directory or results mode, unbinds this and `review mechanism REQ`
+becomes the next wake action before another check counts. Declaring more
+inputs, documents, tool versions or requirements keeps it bound; those only
+make receipts stale, so wake names `run` instead.
 
 ## Review, the adversary, and Done
 
@@ -755,7 +758,11 @@ sudus resolve reject-empty-names 1 "fixed by validating with String.prototype.tr
 ```
 
 or disputed with `sudus escalate` when you and the agent disagree that it
-is a real finding. After fixes, give the same adversary session the
+is a real finding. Fixes make the checks out of date, but wake does not ask
+for a full run after every fix: while a finding is unresolved it names the
+next resolution, and once the last one is resolved it names each check to
+run again, then the acceptance. A check that ran and failed is named at
+once. After fixes, give the same adversary session the
 report, every resolution since it, and the cumulative delta; it judges
 each submitted resolution and may raise new findings anywhere in that
 delta, in a JSON file:

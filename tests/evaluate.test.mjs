@@ -861,6 +861,15 @@ describe('measure()', () => {
     assert.equal(called, false);
     assert.equal((await readLog(cwd)).length, head);
   });
+  // Issue #16: a directory in --path was refused as a "special file".
+  test('a directory in --path is refused by name before any record', async () => {
+    const cwd = await repoWithCommitment();
+    await mkdirAndWrite(cwd, 'scripts/run.sh', 'echo\n');
+    const head = (await readLog(cwd)).length;
+    await assert.rejects(measure(cwd, { ...draft(), named_paths: ['scripts', 'src/auth/rotate.mjs'] }, { transport: async () => {} }),
+      (e) => e instanceof DraftError && e.message === 'sudus: measure: --path scripts is a directory; name the files the decision touches');
+    assert.equal((await readLog(cwd)).length, head);
+  });
   test('an incomplete-projection floor names the concern and the decision that caused it', async () => {
     const cwd = await repoWithCommitment();
     const r = await measure(cwd, { ...draft(), concerns: ['AUTH-003', 'AUTH-999'], cited_decisions: ['01J0000000000000000000ABCD'] }, { transport: async () => {} });
@@ -1003,13 +1012,19 @@ describe('measure()', () => {
   // sizeCheck's own boundaries are unit-tested directly in "the Score request" describe block
   // above; this is measure()'s own wiring of an oversize request into 'unavailable oversize' with
   // no call and no request digest recorded.
-  test('an oversize request is unavailable oversize and writes no call', async () => {
+  // Issue #17: the reason says which limit broke, by how much, and where the bytes are.
+  test('an oversize request is unavailable oversize, names its size, the cap and the largest named file, and writes no call', async () => {
     const cwd = await repoWithCommitment();
+    await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n');
+    await mkdirAndWrite(cwd, 'src/auth/keys.mjs', 'export const keys = [];\n' + '// padding\n'.repeat(100));
     let called = false;
-    const r = await measure(cwd, { ...draft(), because: 'x'.repeat(200000) }, { transport: async () => { called = true; } });
+    const r = await measure(cwd, { ...draft(), because: 'x'.repeat(200000), named_paths: ['src/auth/rotate.mjs', 'src/auth/keys.mjs'] }, { transport: async () => { called = true; } });
     assert.equal(called, false);
-    assert.equal(r.outcome, 'unavailable'); assert.equal(r.reason, 'unavailable oversize');
+    assert.equal(r.outcome, 'unavailable');
+    const named = 'export const rotate = () => {};\n'.length + 'export const keys = [];\n'.length + '// padding\n'.length * 100;
+    assert.match(r.reason, new RegExp(`^unavailable oversize: the request is \\d+ bytes, over its cap of 48000; the named paths' contents are ${named} bytes, the largest src/auth/keys.mjs at ${named - 'export const rotate = () => {};\n'.length}$`));
     const log = await readLog(cwd);
+    assert.equal(log.at(-1).payload.reason, r.reason);
     assert.deepEqual(log.slice(-2).map((x) => x.kind), ['evaluation-intent', 'measurement']);
     assert.equal(log.at(-2).payload.request_digest, null, 'an oversize request is never recorded as sent');
     assert.equal(log.at(-1).payload.call, null);

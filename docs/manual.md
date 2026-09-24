@@ -1071,7 +1071,7 @@ prints one with its references resolved.
 | `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |
 | `decisions [--read <id> --quote <words>]` | Print the ADR file, or mark one decision read, quoting the developer. |
 | `recover <transaction>` | Finish or safely abandon an interrupted multi-record write. |
-| `begin <action> <target> [--touch <path>]...` | Claim the local action lease before changing a declared input; `--touch` provisionally declares a new path. |
+| `begin <action> <target> [--touch <path>]...` | Claim the local action lease before changing a declared input; `--touch` provisionally declares a new path; `end` adds it to the inputs only when no declared input already covers it. |
 | `end [--abandon] [--lease <sha>]` | Release the action lease; `--lease` refuses a mismatched sha; `--abandon` releases without claiming touched paths. |
 | `check <REQ>` | Run the one mechanism declaring `REQ` and record a receipt. |
 | `declare <name> --file <path>` | Read a mechanism definition as JSON and write it under that name. |

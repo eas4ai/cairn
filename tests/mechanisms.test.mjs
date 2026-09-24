@@ -168,7 +168,7 @@ test('applyTouch writes a changed touched path into the definition and keeps the
   const lease = await readLease(repo.cwd);
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
-  assert.deepEqual(result, { added: ['helper.mjs'], dropped: [], unclaimed: [] });
+  assert.deepEqual(result, { added: ['helper.mjs'], dropped: [], unclaimed: [], covered: [] });
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md']);
   assert.equal(reviewBinds(greeter, 'DEMO-001', (await requirementDigest(repo.cwd, 'DEMO-001')).textDigest), true);
@@ -184,7 +184,7 @@ test('applyTouch drops an unchanged touched path and leaves the definition and r
   const lease = await readLease(repo.cwd);
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
-  assert.deepEqual(result, { added: [], dropped: ['helper.mjs'], unclaimed: [] });
+  assert.deepEqual(result, { added: [], dropped: ['helper.mjs'], unclaimed: [], covered: [] });
   assert.deepEqual(await readMechanisms(repo.cwd), before);
   await end(repo.cwd);
 });
@@ -197,7 +197,7 @@ test('a touched path that changed and was removed again is dropped, following to
   const lease = await readLease(repo.cwd);
   const outcome = await touchOutcome(repo.cwd, lease);
   assert.deepEqual(outcome, { changed: [], unchanged: ['scratch.txt'] });
-  assert.deepEqual(await applyTouch(repo.cwd, lease, outcome), { added: [], dropped: ['scratch.txt'], unclaimed: [] });
+  assert.deepEqual(await applyTouch(repo.cwd, lease, outcome), { added: [], dropped: ['scratch.txt'], unclaimed: [], covered: [] });
   await end(repo.cwd);
 });
 
@@ -215,10 +215,37 @@ test('a mode-only change (chmod +x) is reported changed by touchOutcome and writ
   const outcome = await touchOutcome(repo.cwd, lease);
   assert.deepEqual(outcome, { changed: ['extra.txt'], unchanged: [] }, 'mode-only change is changed, not unchanged');
   const result = await applyTouch(repo.cwd, lease, outcome);
-  assert.deepEqual(result, { added: ['extra.txt'], dropped: [], unclaimed: [] });
+  assert.deepEqual(result, { added: ['extra.txt'], dropped: [], unclaimed: [], covered: [] });
   const { greeter } = await readMechanisms(repo.cwd);
   assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'extra.txt', 'hello.txt', 'notes.md']);
   await end(repo.cwd);
+});
+
+// Issue #14: a --touch path that a declared directory input already covers is not declared again.
+// Declaring it changed the definition digest, rewrote the mechanism file after the builder's commit
+// and repeated the directory in the inputs. A touched path no input covers is still added.
+test('applyTouch reports a path a directory input covers and leaves the definition alone', async () => {
+  const repo = await declared({ inputs: [...DEFINITION.inputs, 'src'] });
+  await repo.write('src/existing.mjs', 'export const x = 1;\n');
+  await repo.commit('add src');
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['src/new_file.mjs', 'helper.mjs'] });
+  await repo.write('src/new_file.mjs', 'export const y = 2;\n');
+  await repo.write('helper.mjs', 'export const z = 3;\n');
+  const lease = await readLease(repo.cwd);
+  const result = await applyTouch(repo.cwd, lease, await touchOutcome(repo.cwd, lease));
+  assert.deepEqual(result, { added: ['helper.mjs'], dropped: [], unclaimed: [], covered: [{ path: 'src/new_file.mjs', by: 'src' }] });
+  const { greeter } = await readMechanisms(repo.cwd);
+  assert.deepEqual(greeter.definition.inputs, ['check.mjs', 'hello.txt', 'helper.mjs', 'notes.md', 'src']);
+  await end(repo.cwd);
+  const only = await declared({ inputs: [...DEFINITION.inputs, 'src'] });
+  const digest = (await readMechanisms(only.cwd)).greeter.definitionDigest;
+  await begin(only.cwd, { action: 'implement', target: 'DEMO-001', touch: ['src/new_file.mjs'] });
+  await only.write('src/new_file.mjs', 'export const y = 2;\n');
+  const l2 = await readLease(only.cwd);
+  const r2 = await applyTouch(only.cwd, l2, await touchOutcome(only.cwd, l2));
+  assert.deepEqual(r2, { added: [], dropped: [], unclaimed: [], covered: [{ path: 'src/new_file.mjs', by: 'src' }] });
+  assert.equal((await readMechanisms(only.cwd)).greeter.definitionDigest, digest);
+  await end(only.cwd);
 });
 
 // Fix round 1 finding 4: a lease target that no mechanism declares, or more than one, used to make
@@ -232,7 +259,7 @@ test('finding 4: applyTouch reports an unclaimable touch instead of throwing, fo
   const lease = await readLease(repo.cwd);
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
-  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares my-slug' }] });
+  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares my-slug' }], covered: [] });
   await end(repo.cwd);
 });
 
@@ -243,7 +270,7 @@ test('finding 4: applyTouch reports an unclaimable touch for a REQ no mechanism 
   const lease = await readLease(repo.cwd);
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
-  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares DEMO-999' }] });
+  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares DEMO-999' }], covered: [] });
   await end(repo.cwd);
 });
 

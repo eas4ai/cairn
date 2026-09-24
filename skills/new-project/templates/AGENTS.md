@@ -10,7 +10,7 @@ Run `sudus wake` first, every session, and act on the verdict only. With hooks t
 - Waiting: an escalation is unanswered and wake printed its five fields verbatim. Add nothing to the work. Put the escalation to the developer as "The developer" below says, ending with `ok | instead | ask`, and when they answer, record it yourself with `sudus answer`. Never hand them a command to run.
 - Done: a done record exists and nothing waits. Report it and stop. Backlog waiting: wake names `promote` instead.
 
-Before changing a declared input: `sudus begin <action> <target>` (`--touch <path>` declares a new file); it prints the lease sha. After the commit: `sudus end --lease <sha>` with that sha, so a stale end never closes another session's lease. Commit before `sudus check`; an uncommitted declared input makes wake name `commit` or `record` before anything else. Push with `sudus push`: it pushes the branch and both durable refs atomically where the remote allows and in the safe order otherwise. Never push `refs/sudus/*` with plain `git push`.
+Before changing a declared input: `sudus begin <action> <target>` (`--touch <path>` declares a new file that no input of the leased mechanism covers); it prints the lease sha. After the commit: `sudus end --lease <sha>` with that sha, so a stale end never closes another session's lease. Commit before `sudus check`; an uncommitted declared input makes wake name `commit` or `record` before anything else. Push with `sudus push`: it pushes the branch and both durable refs atomically where the remote allows and in the safe order otherwise. Never push `refs/sudus/*` with plain `git push`.
 
 The move for each action wake can name:
 

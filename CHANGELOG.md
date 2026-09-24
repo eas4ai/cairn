@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.2.1 - 2026-09-23
+
+- Wake reads each mechanism's input tree and tool identities once per pass instead of once per stale receipt. It walked every receipt of every requirement and re-ran `git ls-files`, `git hash-object` and every declared tool version probe for each one. On a Rust project with 23 requirements, up to 31 receipts each and `cargo`/`rustc` probes through rustup, one wake started 34,077 processes and took 28 s; it now takes 1.4 s, and a mechanism redeclare went from 59 s to 3.5 s. The verdict is unchanged.
+
 ## 3.2.0 - 2026-09-23
 
 - After a supersede, the successor's brief, `sudus report` and wake's report predicate measure changed paths and interface obligations from the first start of the supersession chain (issue #8). The successor carries the superseded commitment's work, all of it committed before its own start, so its brief listed almost nothing under Changed paths and raised no interface obligation for that work: Q4 had nothing to compare and the interfaces got no caller-level attempt. The brief's heading names the commitment it measures from. Spec revision 9, section 9.

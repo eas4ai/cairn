@@ -752,7 +752,10 @@ builder raised it. Its findings, in a JSON file shaped like the
 review's but with `attempts` (one `{"question", "target", "text"}` per
 required pair) in place of `answers`, plus `interface_attempts` (one
 `{"path", "text"}` per changed interface path) and the `model` and
-`projection_digest` the brief printed, are recorded:
+`projection_digest`, are recorded. The brief ends with a Report section
+that gives the adversary this shape, its projection digest and every
+required pair as the report spells it, so the file goes to `sudus report`
+unchanged:
 
 ```sh
 sudus report reject-empty-names --file report.json

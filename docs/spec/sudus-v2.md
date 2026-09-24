@@ -1348,7 +1348,11 @@ Each question is answered `observed` with a command, path or output, or
 When the review exists, wake names `report SLUG`. `sudus brief <slug>` writes a
 brief record and renders the roadmap section, frozen requirements and
 falsifiers, mechanism definitions, builder claims and findings, interface
-obligations, exclusion manifest and brief digest. The changed paths and the
+obligations, exclusion manifest and brief digest. It ends with the report
+the adversary writes: its fields, the projection digest, every required
+(question, target) pair as the report spells it, and the interface paths,
+so the adversary's file reaches `sudus report` unchanged. Revised
+2026-09-24 (issue #13): previously the brief named none of these. The changed paths and the
 interface obligations run from the commitment's start snapshot to the reviewed
 snapshot. A successor started after a supersede carries the superseded
 commitment's work, so for it both run from the first start of its

@@ -340,7 +340,7 @@ cat > /tmp/report.json <<'EOF'
 {
   "model": "the adversary's model name",
   "transport": "local",
-  "projection_digest": "sha256:<the digest sudus brief printed>",
+  "projection_digest": "sha256:<the digest the brief's Report section gives>",
   "attempts": [
     { "question": "Q1", "target": "names", "text": "reverted src/names.mjs to always return true inside the projection; the check printed sudus: APP-001: fail" },
     { "question": "Q2", "target": "names", "text": "the failure is the empty-string assertion; deleting the Ada assertion still fails on the empty-name line" },

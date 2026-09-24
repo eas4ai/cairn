@@ -175,6 +175,25 @@ test('report records attempts, model, transport, boundary and session at the rev
   await assert.rejects(report(r.cwd, 'first', adversary(r)), /one report per commitment; first has/);
 });
 
+// Issue #13: the brief is the adversary's entire prompt, and it never said what file sudus report
+// accepts. An adversary that reads only the brief text can now write a report that is accepted.
+test('a report written from the brief text alone is accepted', async () => {
+  const r = await briefed();
+  const report_ = r.b.text.slice(r.b.text.indexOf('## Report\n'));
+  const listed = (field) => { const lines = report_.split('\n'); const i = lines.findIndex((l) => l.startsWith(`- "${field}"`)); const out = []; for (let j = i + 1; j < lines.length && lines[j].startsWith('  '); j++) out.push(lines[j].trim()); return out; };
+  const body = {
+    projection_digest: /^- "projection_digest": "([^"]+)"$/m.exec(report_)[1],
+    model: /model (\S+), transport/.exec(r.b.text)[1], transport: /transport (\w+)\./.exec(r.b.text)[1],
+    attempts: listed('attempts').map((l) => { const [question, target] = l.split(' '); return { question, target, text: 'tried to break it: held' }; }),
+    interface_attempts: listed('interface_attempts').map((path) => ({ path, text: 'called it from a fresh module: held' })),
+    findings: [],
+  };
+  assert.equal(body.projection_digest, r.bp.projection_digest);
+  assert.ok(body.attempts.length > 0 && body.interface_attempts.length === 1, JSON.stringify(body));
+  const sha = await report(r.cwd, 'first', body);
+  assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.projection_digest, r.bp.projection_digest);
+});
+
 test('report refuses a snapshot differing from the review, a stale projection and a stale brief', async () => {
   const r = await briefed();
   await assert.rejects(report(r.cwd, 'first', adversary(r, { projection_digest: 'sha256:' + '0'.repeat(64) })), /projection digest does not match the brief/);

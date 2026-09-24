@@ -409,6 +409,22 @@ test('after an instead answer on the rejected-twice escalation, wake names the n
   assert.deepEqual(ledger(await r.log(), 'first').map((f) => f.status), ['resolved']);
 });
 
+// Issue #21: a rejection reason spanning lines was stored, then the escalation quoting it was
+// refused after the acceptance was already appended, so accept failed half done.
+test('a second rejection whose reason spans lines is quoted on one line, and accept writes both records', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  const a1 = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [] });
+  const r2 = await fixed(r, 1, 'two');
+  const a2 = await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'two problems:\n- form feeds pass\r\n- CR passes\u2028end')], findings: [] });
+  const log = await r.log();
+  assert.equal(log.at(-1).kind, 'escalation');
+  assert.equal(log.at(-2).sha, a2);
+  const [e] = unanswered(log);
+  assert.equal(e.payload.because, `The adversary rejected it twice: still accepts tabs (acceptance ${a1}); two problems: - form feeds pass - CR passes end (acceptance ${a2}).`);
+  assert.equal(decodeRecord(await catCommit(r.cwd, a2)).payload.rejected[0].reason, 'two problems:\n- form feeds pass\r\n- CR passes\u2028end');
+});
+
 test('three acceptance rounds without Done create the cycle escalation through plan 08, even with newly numbered findings', async () => {
   const r = await reported();
   let source = null;

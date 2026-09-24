@@ -500,6 +500,16 @@ test('an item captured from a set requirement needs an outside record or an esca
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
 
+// Issue #23: "an escalation concerns it" holds for an escalation that also names other concerns.
+test('an escalation naming an item among other concerns covers its capture', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  const item = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  const e = await r.escalate(`DEMO-001 item:${item}`);
+  await r.answer(e, 'ok');
+  assert.equal((await wake(r.cwd)).action, 'review');
+});
+
 test('review is named until a review at the current workspace answers every fixed question for every target', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');

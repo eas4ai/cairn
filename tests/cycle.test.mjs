@@ -85,7 +85,7 @@ test('the third acceptance round without Done is the same escalation', async () 
   const res = await r.resolveFinding(rep, 4); await r.accept({ rejected: [res], findings: [{ n: 5, text: 'new' }] });
   const st2 = await readState(r.cwd);
   assert.deepEqual(await settle(r.cwd, await verdictOf(st2), st2), { bound: null });
-  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns === 'cycle').length, 1);
+  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns.split(' ').includes('cycle')).length, 1);
   assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
 });
 

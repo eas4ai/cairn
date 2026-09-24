@@ -30,8 +30,9 @@ The move for each action wake can name:
 - `capture ITEM`: `sudus outside <item> --reason "<why it is not this commitment's work>"`, or escalate.
 - `review SLUG`: `sudus review SLUG --file <path>` naming a file that answers Q1 to Q6 for every target with observed commands, paths or outputs.
 - `report SLUG`: `sudus brief SLUG`; start one adversary with none of your context on the brief and projection only; wait; `sudus report SLUG --file <its report>`.
-- `resolve SLUG N`: fix finding N as its own work, commit, then `sudus resolve SLUG N "<how>"`; or dispute it with `sudus escalate`.
+- `resolve SLUG N`: fix finding N as its own work, commit, then `sudus resolve SLUG N "<how>"`; or dispute it with `sudus escalate`, which may name several findings, one `--concern finding:<sha>#<n>` each.
 - `accept SLUG`: give the adversary the report, the resolutions and the cumulative delta; `sudus accept SLUG --file <its acceptance>`.
+- After three acceptance rounds without Done, an escalation names the open findings. The developer's `ok` closes them; then capture each: `sudus item --backlog --slug <s> --from <REQ> --body "<the finding>"`, then `sudus outside <item> --reason "closed by the developer's ok on escalation <sha>"`.
 - `build DECISION`: build what the decision says, commit, then `sudus realize <id> --subject "<what was built>"`.
 - `done SLUG`: `sudus done SLUG`.
 - `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text.

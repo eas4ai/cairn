@@ -434,7 +434,7 @@ test('three acceptance rounds without Done create the cycle escalation through p
     assert.equal(openCycleEscalation(await r.log()) !== null, round === 3, `round ${round}`);
   }
   const cycle = openCycleEscalation(await r.log());
-  assert.equal(cycle.payload.concerns, 'cycle');
+  assert.equal(cycle.payload.concerns, `cycle finding:${source}#1`);
   assert.match(cycle.payload.question, /3 acceptance rounds after the report have not reached Done/);
 });
 
@@ -836,7 +836,75 @@ test("the developer's ok on the cycle escalation restarts accept's round count",
   for (let n = 1; n <= 3; n++) await round(n);
   assert.ok(openCycleEscalation(await r.log()));
   await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
-  for (let n = 4; n <= 5; n++) { await round(n); assert.equal(openCycleEscalation(await r.log()), null, `round ${n}`); }
+  // Issue #23: the ok closed the third round's finding, so the next round examines a new change.
+  await r.write('src/demo.mjs', 'export const demo = "round 4";\n');
+  source = await accept(r.cwd, 'first', { resolutions: [], findings: [{ n: 1, text: 'new finding 4' }] });
+  assert.equal(openCycleEscalation(await r.log()), null, 'round 4');
+  await round(5);
+  assert.equal(openCycleEscalation(await r.log()), null, 'round 5');
   await round(6);
   assert.ok(openCycleEscalation(await r.log()), 'the third round after the ok escalates');
+});
+
+// Issue #23: rounds that each ended with one narrower finding ran on without bound; ok on the
+// cycle escalation only restarted the count, and closing N findings took N escalations, since an
+// escalation naming several findings closed none. A dispute is an escalation naming the finding.
+import { escalate } from '../lib/escalate.mjs';
+
+test('one escalation naming two findings holds both while it waits and closes both on ok', async () => {
+  const r = await briefed();
+  r.rep = await report(r.cwd, 'first', adversary(r, { findings: [{ n: 1, text: 'a check script corner case' }, { n: 2, text: 'a narrower check script corner case' }] }));
+  const e = await escalate(r.cwd, { commitment: 'first', concerns: [`finding:${r.rep}#1`, `finding:${r.rep}#2`], question: 'Close both mechanism findings?', recommendation: 'Close findings 1 and 2 as answered.', because: 'both harden a check script, not the requirement code', if_wrong: 'the check script keeps both gaps', instead: 'fix both and take another round', options: [], named_paths: [], cited_decisions: [] });
+  await assert.rejects(resolve(r.cwd, 'first', 2, 'x'), { message: `sudus: resolve: finding 2 on ${r.rep} is under escalation ${e}` });
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => [f.n, f.status]), [[1, 'disputed'], [2, 'disputed']]);
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, []);
+});
+
+async function threeRounds(r, first = null) {
+  let source = first;
+  for (let round = 1; round <= 3; round++) {
+    const res = await fixed(r, 1, `round ${round}`, source ? { source } : {});
+    source = await accept(r.cwd, 'first', { resolutions: [verdict(res, 'accepted')], findings: [{ n: 1, text: `a narrower mechanism gap ${round}` }] });
+  }
+  return source;
+}
+
+test('the three-round escalation names the open findings, and its ok closes them so Done needs no further round', async () => {
+  const r = await reported();
+  const last = await threeRounds(r);
+  const e = openCycleEscalation(await r.log());
+  assert.equal(e.payload.concerns, `cycle finding:${last}#1`);
+  assert.equal(e.payload.question, `The loop is cycling: 3 acceptance rounds after the report have not reached Done, and finding 1 on the acceptance ${last.slice(0, 12)} is open. Does it need another round?`);
+  assert.equal(e.payload.recommendation, 'Close the open findings as answered and capture each as a backlog item, so Done needs no further acceptance round');
+  assert.equal(e.payload.if_wrong, 'a defect one of these findings names ships unfixed until its backlog item is worked');
+  assert.equal(e.payload.instead, 'take another round, which restarts the count, or supersede the commitment');
+  await assert.rejects(resolve(r.cwd, 'first', 1, 'x', { source: last }), /is under escalation/);
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok, capture the rest', env: {} });
+  assert.equal(ledger(await r.log(), 'first').at(-1).status, 'disputed');
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, []);
+});
+
+test('an instead answer on the three-round escalation keeps its findings open for another round', async () => {
+  const r = await reported();
+  const last = await threeRounds(r);
+  await answer(r.cwd, 'first', 'instead', { quote: 'take another round', env: {} });
+  assert.equal(ledger(await r.log(), 'first').at(-1).status, 'open');
+  const res = await fixed(r, 1, 'round 4', { source: last });
+  await accept(r.cwd, 'first', { resolutions: [verdict(res, 'accepted')], findings: [] });
+  assert.deepEqual((await reviewState(r.cwd, 'first')).reasons, []);
+  assert.equal(openCycleEscalation(await r.log()), null);
+});
+
+test('the three-round escalation leaves a finding to the escalation already waiting on it', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [] });
+  const r2 = await fixed(r, 1, 'two');
+  const a2 = await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'still accepts form feeds')], findings: [{ n: 1, text: 'a mechanism gap' }] });
+  const twice = unanswered(await r.log())[0];
+  assert.equal(twice.payload.concerns, `finding:${r.rep}#1`);
+  const r3 = await fixed(r, 1, 'three', { source: a2 });
+  const a3 = await accept(r.cwd, 'first', { resolutions: [verdict(r3, 'accepted')], findings: [{ n: 1, text: 'a narrower mechanism gap' }] });
+  assert.equal(openCycleEscalation(await r.log()).payload.concerns, `cycle finding:${a3}#1`);
 });

@@ -807,7 +807,12 @@ sudus accept reject-empty-names --file acceptance.json
 ```
 
 A rejected verdict needs a `reason`. A resolution rejected twice for the
-same finding raises its own escalation automatically.
+same finding raises its own escalation automatically. Three acceptance
+rounds without reaching Done raise one more: it names the findings still
+open and recommends closing them. Your `ok` closes them, Done needs no
+further round, and the agent captures each as a backlog item. Answer
+`instead` to take another round. One escalation may also name several
+findings; your `ok` closes each.
 
 Done requires the latest acceptance to examine the final workspace
 snapshot with every resolution accepted and every finding, anywhere,

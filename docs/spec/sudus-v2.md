@@ -4,8 +4,20 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 12, 2026-09-24. Nothing here is Agreed until the
+Status: Draft, revision 13, 2026-09-24. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 13 bounds acceptance rounds that each end with one narrower finding
+(section 5, Waiting and liveness). After three rounds without Done, the
+escalation names the open findings and recommends closing them, each captured
+as a backlog item; the developer's `ok` closes them, so Done needs no further
+round, and `instead` takes another round or supersedes the commitment.
+Before, the escalation named no finding and `ok` only restarted the count.
+One escalation may name several findings, and an `ok` closes each (section 2,
+Finding): the kernel had closed a finding only for an escalation that named
+it alone. Issue #23 reported a one-line commitment that took six rounds of
+mechanism hardening; the developer accepted this recommendation on 2026-09-24
+("ok").
 
 Revision 12 adds a fifth skill, `report-sudus-issue` (section 11). When
 Sudus itself is wrong, the agent reproduces the defect outside the project,
@@ -473,7 +485,8 @@ snapshot. One report is written per commitment.
 **Finding.** A numbered entry on a review, report or acceptance. A finding is
 answered by a **resolution**, which names the snapshot after a fix and explains
 it, or by a **dispute**, which is an escalation naming the finding and resolved
-by the developer.
+by the developer. One escalation may name several findings; the developer's
+`ok` closes each of them.
 
 **Acceptance.** The adversary's record at a later workspace snapshot. It
 examines the cumulative post-report delta, accepts or rejects each submitted
@@ -1146,8 +1159,14 @@ the classes, so a cycle that rotates targets is caught as soon as one that
 repeats them.
 Three acceptance rounds after the report without reaching Done create the same
 kind of escalation, even when each round raises a newly numbered finding; the
-developer's ok or instead answer restarts that count. These constants are in
-the kernel, not settings.
+developer's ok or instead answer restarts that count. The escalation names
+every open finding that no other unanswered escalation names, and recommends
+closing them. The developer's ok closes them, so Done needs no further round,
+and the agent captures each as a backlog item; instead takes another round or
+supersedes the commitment. Revised 2026-09-24 (revision 13): previously the
+escalation named no finding and ok only restarted the count, so rounds that
+each ended with one narrower finding ran on without bound. These constants
+are in the kernel, not settings.
 
 Before committing a kernel-managed mutation, the kernel evaluates the
 post-state. If its specified bookkeeping alone would create a new Sudus

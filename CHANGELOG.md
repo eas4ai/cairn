@@ -7,6 +7,19 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.5.0 - 2026-09-24
+
+- `sudus start` and `sudus promote` no longer commit `.sudus/output/`, the check output and briefs that its own `.gitignore` keeps local, and `sudus push` no longer publishes them. This covers files that are untracked, ignored, or already tracked by an earlier version. Files an earlier version committed stay in history; `git rm -r --cached .sudus/output` and a commit stop tracking them (issue #11).
+- `sudus measure` refuses a draft whose `--recommendation` does not repeat one `--option` word for word, or that has no `--option`, before writing any record, and names the options. Such a draft used to floor as `incomplete-projection` and cost you an answer. When a concern names nothing in the commitment or a cited decision is missing, the floor's printed reason now names it (issue #12).
+- The adversary brief ends with a Report section: the report's JSON fields, the brief's projection digest, every required (question, target) pair as the report spells it, and the interface paths as JSON strings. The adversary's file goes to `sudus report` unchanged (issue #13).
+- The new optional settings key `adversary_rules` is a list of one-line rules the machine sets for the adversary, such as a cap on parallel build jobs. The brief prints them under Host rules, inside the text its record digests. It is the only key a settings file may leave out (issue #13).
+- `sudus end` no longer declares a touched path that a declared input already covers, such as `src/new.rs` under `src`. It prints that the input covers it, and the mechanism file does not change. A declared input written with a trailing slash, `src/`, now covers the paths under it (issue #14).
+- `sudus show` describes a workspace or input snapshot: its kind, path count, tree and payload. It used to refuse with "unknown record kind snapshot" (issue #15).
+- `sudus measure` refuses a directory in `--path` by name before writing any record; it used to call it a special file. The usage lines say `--path <file>` (issue #16).
+- An oversize measurement names the limit that broke, both sizes in bytes, the named files' total and the largest named file (issue #17).
+- A changed interface file whose name has non-ASCII bytes is an interface obligation again. Git quoted the name, no `interfaces` glob matched it, and the brief and the report dropped it.
+- A file whose name holds a newline no longer breaks the workspace snapshot or the lease listing.
+
 ## 3.4.1 - 2026-09-24
 
 - The new-project, existing-project and next-feature skills name the working agreement template by a path that exists from each of them: `../new-project/templates/AGENTS.md` from the skill's directory. existing-project and next-feature said to copy `templates/AGENTS.md` "from this skill", which only new-project ships, so an agent had to search for it or write `AGENTS.md` from memory (issue #10).

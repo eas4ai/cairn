@@ -43,6 +43,14 @@ test('declared paths are mechanism inputs, documents and lease touches', () => {
   assert.ok(!isDeclared('src/other.mjs', d));
   assert.ok(!isDeclared('flagsx', d));
 });
+// Review of 3.5.0: an input written with a trailing slash (src/) names the same directory.
+test('isDeclared reads a trailing slash on an input as the same directory, and still matches whole components', () => {
+  assert.ok(isDeclared('src/a.mjs', ['src/']));
+  assert.ok(isDeclared('src', ['src//']));
+  assert.ok(!isDeclared('src2/a.mjs', ['src/']));
+  assert.ok(!isDeclared('srcx', ['src']));
+});
+
 
 test('a lease covers a path through its target requirement or its touch list', () => {
   const lease = { action: 'implement', target: 'DEMO-001', touch: ['src/new.mjs'] };

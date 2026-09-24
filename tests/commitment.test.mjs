@@ -129,6 +129,20 @@ test('start leaves check output and briefs under .sudus/output out of its commit
   await repo.cleanup();
 });
 
+// Review of 3.5.0: a project hit by issue #11 before the fix already tracks .sudus/output/ files;
+// a later start must not commit their new content either.
+test('start leaves an output file already tracked from an earlier version as it was', async () => {
+  const repo = await project();
+  await repo.write('.sudus/output/0123456789abcdef', 'old output\n');
+  await repo.git('add', '-f', '.sudus/output/0123456789abcdef');
+  await repo.git('commit', '-q', '-m', 'tracked by an earlier version');
+  await repo.write('.sudus/output/0123456789abcdef', 'new output: /home/someone/project\n');
+  await start(repo.cwd, 'first');
+  assert.equal(await repo.git('show', 'HEAD:.sudus/output/0123456789abcdef'), 'old output');
+  assert.ok(!(await repo.git('show', '--name-only', '--format=', 'HEAD')).includes('.sudus/output/'));
+  await repo.cleanup();
+});
+
 test('start with a local-only authority remote installs nothing', async () => {
   const repo = await project({ authority_remote: null });
   const calls = [];

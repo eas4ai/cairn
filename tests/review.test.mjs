@@ -185,7 +185,7 @@ test('a report written from the brief text alone is accepted', async () => {
     projection_digest: /^- "projection_digest": "([^"]+)"$/m.exec(report_)[1],
     model: /model (\S+), transport/.exec(r.b.text)[1], transport: /transport (\w+)\./.exec(r.b.text)[1],
     attempts: listed('attempts').map((l) => { const [question, target] = l.split(' '); return { question, target, text: 'tried to break it: held' }; }),
-    interface_attempts: listed('interface_attempts').map((path) => ({ path, text: 'called it from a fresh module: held' })),
+    interface_attempts: listed('interface_attempts').map((line) => ({ path: JSON.parse(line), text: 'called it from a fresh module: held' })),
     findings: [],
   };
   assert.equal(body.projection_digest, r.bp.projection_digest);
@@ -205,6 +205,33 @@ test('the brief prints adversary_rules under Host rules, inside the text its rec
   assert.ok(b.text.includes('\n## Host rules\nThe machine you run on sets these limits; keep to them in every experiment.\n- build with at most 4 parallel jobs\n- use target-adversary/ as the build directory\n\n## Your work\n'), b.text);
   assert.equal(decodeRecord(await catCommit(r.cwd, b.sha)).payload.payload_digest, sha256(b.text));
   assert.ok(!(await briefed()).b.text.includes('## Host rules'));
+});
+
+// Review of 3.5.0: git C-quoted a non-ASCII path in diffTree's output, so no interfaces glob
+// matched it and a changed interface file got no obligation at all.
+test('a changed interface file with a non-ASCII name is an obligation in the brief and the report', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/caf\u00e9.mjs', 'export const x = 2;\n');
+  await r.commit('change an interface');
+  const rev = await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
+  const revPayload = decodeRecord(await catCommit(r.cwd, rev)).payload;
+  assert.deepEqual(await interfaceObligations(r.cwd, SETTINGS, r.startSnapshot, revPayload.snapshot), ['src/api/caf\u00e9.mjs']);
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  assert.ok(b.text.includes('## Interface obligations\nsrc/api/caf\u00e9.mjs\n'), b.text);
+  const bp = decodeRecord(await catCommit(r.cwd, b.sha)).payload;
+  const body = adversary({ bp, revPayload }, { interface_attempts: [] });
+  await assert.rejects(report(r.cwd, 'first', body), /interface src\/api\/caf\u00e9\.mjs has no attempt/);
+});
+
+// Review of 3.5.0: a path ending in a space was not recoverable from a plain line; the Report
+// section writes each interface path as a JSON string.
+test('the Report section writes interface paths as JSON strings, so a trailing space survives', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/handler.mjs ', 'export const x = 2;\n');
+  await r.commit('change an interface');
+  await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  assert.ok(b.text.includes('\n  "src/api/handler.mjs "\n'), b.text);
 });
 
 test('report refuses a snapshot differing from the review, a stale projection and a stale brief', async () => {

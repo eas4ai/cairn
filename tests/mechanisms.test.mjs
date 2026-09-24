@@ -1,7 +1,7 @@
 // tests/mechanisms.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { rm, chmod } from 'node:fs/promises';
 import { canonicalize, sha256 } from '../lib/canon.mjs';
@@ -246,6 +246,24 @@ test('applyTouch reports a path a directory input covers and leaves the definiti
   assert.deepEqual(r2, { added: [], dropped: [], unclaimed: [], covered: [{ path: 'src/new_file.mjs', by: 'src' }] });
   assert.equal((await readMechanisms(only.cwd)).greeter.definitionDigest, digest);
   await end(only.cwd);
+});
+
+// Review of 3.5.0: a definition on disk with a trailing-slash input (written by hand, or before
+// declare validated inputs) did not cover paths under it, so end tried to redeclare and failed on
+// the unrelated input.
+test('applyTouch reads a trailing-slash input as covering the paths under it', async () => {
+  const repo = await declared();
+  const file = join(repo.cwd, '.sudus/mechanisms/greeter.json');
+  const saved = JSON.parse(await readFile(file, 'utf8'));
+  await writeFile(file, canonicalize({ ...saved, definition: { ...saved.definition, inputs: [...saved.definition.inputs, 'src/'] } }));
+  const digest = (await readMechanisms(repo.cwd)).greeter.definitionDigest;
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['src/new_file.mjs'] });
+  await repo.write('src/new_file.mjs', 'export const y = 2;\n');
+  const lease = await readLease(repo.cwd);
+  const result = await applyTouch(repo.cwd, lease, await touchOutcome(repo.cwd, lease));
+  assert.deepEqual(result, { added: [], dropped: [], unclaimed: [], covered: [{ path: 'src/new_file.mjs', by: 'src/' }] });
+  assert.equal((await readMechanisms(repo.cwd)).greeter.definitionDigest, digest);
+  await end(repo.cwd);
 });
 
 // Fix round 1 finding 4: a lease target that no mechanism declares, or more than one, used to make

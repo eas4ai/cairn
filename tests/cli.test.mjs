@@ -90,6 +90,18 @@ test('show describes a workspace snapshot: kind, path count and tree', async (t)
   assert.match(r.out, new RegExp(`^sha: ${sha}$`, 'm'));
 });
 
+// Review of 3.5.0: a subject that only looks like a snapshot still fell through to "unknown record
+// kind snapshot".
+test('show refuses a commit named a snapshot of no known kind, saying what it is', async (t) => {
+  const { cwd } = await makeProject();
+  const exec = promisify(execFile);
+  const tree = (await exec('git', ['write-tree'], { cwd })).stdout.trim();
+  const sha = (await exec('git', ['commit-tree', tree, '-m', 'sudus: snapshot bogus'], { cwd })).stdout.trim();
+  const r = await run(['show', sha], cwd);
+  assert.equal(r.code, 1);
+  assert.equal(r.err, `sudus: ${sha} is named a snapshot but is neither a workspace nor an input snapshot: sudus: snapshot bogus\n`);
+});
+
 test('show renders a record with its references resolved and kind-checked', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('a.txt', 'a'); await repo.commit('base');

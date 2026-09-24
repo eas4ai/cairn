@@ -2,8 +2,9 @@ import type { On } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 // The band, the pane and the braille fallback, run through Claude Code's own engine by its mod test
-// kit. The kit runs every *.test.ts under the folder it is given, so these live here, apart from
-// the node tests; `npm run test:mod` copies the plugin to a scratch folder and runs them there.
+// kit, with the view turned on: `npm run test:mod` runs these in a copy of the plugin whose `view`
+// default is `above-prompt`, as a person who chose it in /config has it. The kit passes a plugin
+// its manifest's defaults and nothing else.
 
 const WAKE = 'verdict: Resolvable\naction: record docs/spec/roadmap.md\nreason: docs/spec/roadmap.md is a declared input with uncommitted changes; commit it, then run the check again, so that the receipt binds the committed bytes\npredicate: the path is clean\n'
 const BAND = { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} }

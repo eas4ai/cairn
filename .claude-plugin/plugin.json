@@ -4,9 +4,9 @@
   "keywords": ["agent", "specification", "requirements", "review", "hooks"],
   "hooks": "./mod/hooks.json",
   "userConfig": {
-    "view": { "type": "string", "title": "Where the Sudus verdict shows", "required": false, "default": "status-line",
-      "options": ["status-line", "pane", "both", "off"],
-      "description": "\"status-line\" (default): the verdict above the prompt with the face at its right. \"pane\": a pane beside the transcript with the face. \"both\". \"off\": nothing. Needs function hooks (early access)." },
+    "view": { "type": "string", "title": "Where the Sudus verdict shows", "required": false, "default": "off",
+      "options": ["off", "above-prompt", "pane", "both"],
+      "description": "\"off\" (default): nothing. \"above-prompt\": the verdict in a band above the prompt with Sudus's face at its right. \"pane\": a pane beside the transcript. \"both\". Needs function hooks (early access): CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 in the env block of ~/.claude/settings.json." },
     "face": { "type": "string", "title": "Blobatar face", "required": false, "default": "sudus",
       "description": "The text the face is drawn from; blobatar draws the same face from the same text every time, here, with no network." },
     "motion": { "type": "boolean", "title": "Face motion", "required": false, "default": true,

@@ -8,14 +8,15 @@ import { rasterOf } from './raster.ts'
 import { bandOf, cannotStart, changesVerdict, expressionOf, parseWake, shortHashes, usesSudus, type Verdict } from './verdict.ts'
 
 // The Sudus plugin's hooks module: what `sudus wake` names next, in front of the person, in the
-// band above the prompt, a pane beside the transcript, or both. Sudus's blobatar floats at the
-// band's right and wears the verdict's expression, breathing, glancing and blinking as blobatar
-// does; a terminal that shows no pictures gets the same face in braille, blinking. Everything is
-// set in settings.json (pluginConfigs.sudus.options); there is no command. Zero tokens: the module
-// runs `sudus wake` itself after every turn and every sudus, cairn or git command, and never asks
-// the model anything. A hook never waits on wake: it asks for a refresh and returns, and one wake
-// runs at a time with the newest request always landing. Claude Code loads it only with function
-// hooks on (early access); the plugin's shell hooks run either way.
+// band above the prompt, a pane beside the transcript, or both; off until the person chooses one
+// (the `view` option, in /config or pluginConfigs.sudus.options in settings.json). Sudus's
+// blobatar floats at the band's right and wears the verdict's expression, breathing, glancing and
+// blinking as blobatar does; a terminal that shows no pictures gets the same face in braille,
+// blinking. Zero tokens: the module runs `sudus wake` itself after every turn and every sudus,
+// cairn or git command, and never asks the model anything. A hook never waits on wake: it asks
+// for a refresh and returns, and one wake runs at a time with the newest request always landing.
+// Claude Code loads it only with function hooks on (early access); the plugin's shell hooks run
+// either way.
 
 const PANE_ID = 'sudus'
 const TITLE = 'Sudus'
@@ -40,13 +41,14 @@ const COLLAPSE_COLUMNS = 4
 // Why `$.ui.blit` refuses a picture on a terminal that draws none; the face turns to braille.
 const NO_PICTURES = /the Image draws its alt here/
 
-type View = 'status-line' | 'pane' | 'both' | 'off'
+type View = 'off' | 'above-prompt' | 'pane' | 'both'
 
-const VIEWS: readonly View[] = ['status-line', 'pane', 'both', 'off']
+const VIEWS: readonly View[] = ['off', 'above-prompt', 'pane', 'both']
 
-const viewOf = (value: unknown): View => (VIEWS as readonly unknown[]).includes(value) ? (value as View) : 'status-line'
+// Off unless the person chose a view (plugin.json `view`, in /config or settings.json).
+const viewOf = (value: unknown): View => (VIEWS as readonly unknown[]).includes(value) ? (value as View) : 'off'
 
-let view: View = 'status-line'
+let view: View = 'off'
 let command = 'sudus'
 let isPluginCopy = false
 let hasMotion = true
@@ -72,7 +74,7 @@ let paint: () => void = () => undefined
 let refresh: () => void = () => undefined
 let probe: () => void = () => undefined
 
-const showsBand = () => view === 'status-line' || view === 'both'
+const showsBand = () => view === 'above-prompt' || view === 'both'
 const showsPane = () => view === 'pane' || view === 'both'
 
 const colorOf = (v: Verdict): string | undefined => bandOf(v)?.color

@@ -467,18 +467,44 @@ You do not need to approve every implementation detail. Pay attention to:
 The [human manual](docs/manual.md) walks through each of these moments,
 including exactly how `ok`, `instead`, and `ask` work.
 
-### The verdict above the prompt in Claude Code
+### The verdict above the prompt in Claude Code (off by default)
 
-The plugin can keep the current verdict on screen while the agent works:
-in the band above the prompt, in a pane beside the transcript, or both.
-The band says in plain words where things stand and what happens next:
+In Claude Code, the plugin can keep the current verdict on screen while
+the agent works, in a band above the prompt:
 
 ```
 sudus  Working  independent review of z-index-tests-segfault
 ```
 
-A question you owe an answer to shows in full on a line of its own. The
-pane keeps the detail the agent reads: wake's reason and predicate.
+It is off until you turn it on. To turn it on:
+
+1. Let Claude Code load plugin hooks modules. They are early access, so
+   Claude Code loads them only with this line in the `env` block of
+   `~/.claude/settings.json`:
+
+   ```json
+   { "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" } }
+   ```
+
+2. Choose where the verdict shows. In Claude Code, open `/config`, find
+   **Where the Sudus verdict shows**, and pick `above-prompt`. Or set it
+   in `~/.claude/settings.json`:
+
+   ```json
+   { "pluginConfigs": { "sudus": { "options": { "view": "above-prompt" } } } }
+   ```
+
+3. Start a new Claude Code session, or run `/reload-plugins` in the one
+   you have.
+
+To turn it off again, pick `off`. You can also ask the agent to make
+either change for you.
+
+The band says in plain words where things stand and what happens next. A
+question you owe an answer to shows in full on a line of its own. The
+`pane` view puts the same verdict in a pane beside the transcript, with
+the detail the agent reads (wake's reason and predicate); `both` shows
+the band and the pane.
 
 Sudus's face floats at the band's right: a
 [blobatar](https://github.com/Alain00/blobatar) drawn from the name
@@ -504,25 +530,16 @@ never asks the model. A repository without `.sudus/settings.json` or
 `.cairn/settings.json` shows nothing. When `sudus` is not on PATH, the
 plugin runs its own copy.
 
-It runs as a Claude Code hooks module, which is early access. Turn it
-on, and choose the view, in `~/.claude/settings.json`:
-
-```json
-{
-  "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" },
-  "pluginConfigs": { "sudus": { "options": { "view": "status-line" } } }
-}
-```
-
 | Option | Values | Default |
 |---|---|---|
-| `view` | `status-line` (the band above the prompt), `pane`, `both`, `off` | `status-line` |
+| `view` | `off`, `above-prompt`, `pane`, `both` | `off` |
 | `face` | any text; blobatar draws the same face from the same text every time, on this machine | `sudus` |
 | `motion` | `false` keeps the face still | `true` |
 | `command` | the command the plugin runs for the verdict | `sudus` |
 
-Without the flag, Claude Code does not load the module, and the plugin's
-shell hooks work as before. Codex and Muse do not read it.
+Without function hooks on, Claude Code does not load the module, whatever
+`view` says, and the plugin's shell hooks work as before. Codex and Muse
+do not read it.
 
 ## What Sudus can and cannot establish
 

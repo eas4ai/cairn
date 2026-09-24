@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.5.2 - 2026-09-24
+
+- An untracked nested git repository or worktree, such as the ones Claude Code's agent tool creates under `.claude/worktrees/`, no longer makes every command fail with "git hash-object exited 128". It is left out of the workspace (issue #19).
+- A project with a tracked submodule can run Sudus. The submodule is recorded as git records it: a gitlink at its checked-out commit. Committing inside the submodule shows as a change to it. A brief still refuses a projection that holds a gitlink, as before.
+
 ## 3.5.1 - 2026-09-24
 
 - The escalation `sudus accept` writes for a finding rejected twice quotes that finding's own two rejection reasons, in order, each naming its acceptance record. It used to quote every rejection in the latest acceptance, which could be other findings', and left out the finding's first rejection (issue #18).

@@ -237,6 +237,11 @@ after the developer confirms it. Its fields are:
 - `attribution`: `forbidden` or `allowed`, for the release script.
 - `harness`: one entry per supported harness, including the adversary model and
   whether the adversary is local or remote.
+- `adversary_rules`: optional, a list of one-line rules. The host's limits
+  for the adversary, such as a cap on parallel build jobs or a separate build
+  directory. The brief prints them under Host rules, so they are part of the
+  text its record digests. Every other key is required; this is the one a
+  settings file may leave out. Added 2026-09-24 (issue #13).
 - `developer`: `present` or `absent`, default `present`. `absent` declares
   that no human will ever answer an escalation; only the narrow evaluator
   floor in section 10 can still name the developer. When it does, the run
@@ -1351,8 +1356,9 @@ falsifiers, mechanism definitions, builder claims and findings, interface
 obligations, exclusion manifest and brief digest. It ends with the report
 the adversary writes: its fields, the projection digest, every required
 (question, target) pair as the report spells it, and the interface paths,
-so the adversary's file reaches `sudus report` unchanged. Revised
-2026-09-24 (issue #13): previously the brief named none of these. The changed paths and the
+so the adversary's file reaches `sudus report` unchanged. Settings'
+`adversary_rules`, when present, appear under Host rules before the work.
+Revised 2026-09-24 (issue #13): previously the brief named none of these. The changed paths and the
 interface obligations run from the commitment's start snapshot to the reviewed
 snapshot. A successor started after a supersede carries the superseded
 commitment's work, so for it both run from the first start of its

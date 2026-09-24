@@ -924,6 +924,7 @@ bound to the loop. Until then wake names the repair.
 | `signing_key` | `null` | `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. A public key (PEM) means every developer answer and authorization must be signed with its private key; see Attested or signed. |
 | `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
 | `developer` | `"present"` | `"absent"` for an autonomous run: any unanswered escalation prints as Waiting and wake exits 4 instead of waiting for an answer no one can give. |
+| `adversary_rules` | absent | Optional. One-line rules the machine sets for the adversary, such as a cap on parallel build jobs or a separate build directory. `sudus brief` prints them under Host rules, inside the brief its record digests, so you never edit the brief by hand. |
 | `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `sudus brief` and by the review source of the evaluator. |
 | `typesafeai.enabled` | `false` | `true` sends each Consequential measurement to TypeSafe's jev model; `false` uses your harness's review model through `sudus measure --brief`. |
 | `typesafeai.model` | `null` | The versioned model id, required when enabled: `"jev-1.13.0"` at the time of writing. An alias such as `"jev"` is refused. |

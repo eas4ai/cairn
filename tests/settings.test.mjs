@@ -20,6 +20,14 @@ test('refuses an unknown field at any level', () => {
   refuses((s) => { s.harness.codex.temperature = 1; }, /unknown field harness.codex.temperature/);
   refuses((s) => { delete s.attribution; }, /missing field attribution/);
 });
+// Issue #13: adversary_rules is the one optional key; a settings file without it stays valid.
+test('adversary_rules is optional, a list of one-line rules', () => {
+  assert.deepEqual(validateSettings(GOOD), []);
+  assert.deepEqual(validateSettings({ ...GOOD, adversary_rules: [] }), []);
+  assert.deepEqual(validateSettings({ ...GOOD, adversary_rules: ['build with at most 4 parallel jobs'] }), []);
+  for (const bad of ['one string', [''], ['two\nlines'], [4], null]) refuses((s) => { s.adversary_rules = bad; }, /adversary_rules must be a list of one-line rules/);
+  refuses((s) => { s.adversary_rule = []; }, /unknown field adversary_rule/);
+});
 test('refuses an invalid glob', () => { refuses((s) => { s.outside.push('/abs/**'); }, /invalid glob/); refuses((s) => { s.source.push('a/***'); }, /invalid glob/); });
 test('refuses an outside path overlapping source, interfaces, data, a reserved path or a mechanism input', () => {
   refuses((s) => { s.outside.push('src/generated/**'); }, /outside src\/generated\/\*\* overlaps source/);

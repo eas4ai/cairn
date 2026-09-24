@@ -194,6 +194,19 @@ test('a report written from the brief text alone is accepted', async () => {
   assert.equal(decodeRecord(await catCommit(r.cwd, sha)).payload.projection_digest, r.bp.projection_digest);
 });
 
+// Issue #13: the host's limits for the adversary come from settings.adversary_rules and are part of
+// the recorded brief, so nobody edits the prompt the brief record names.
+test('the brief prints adversary_rules under Host rules, inside the text its record digests', async () => {
+  const r = await loopRepo({ settings: { ...SETTINGS, adversary_rules: ['build with at most 4 parallel jobs', 'use target-adversary/ as the build directory'] } });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  await r.commit('change an interface');
+  await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  assert.ok(b.text.includes('\n## Host rules\nThe machine you run on sets these limits; keep to them in every experiment.\n- build with at most 4 parallel jobs\n- use target-adversary/ as the build directory\n\n## Your work\n'), b.text);
+  assert.equal(decodeRecord(await catCommit(r.cwd, b.sha)).payload.payload_digest, sha256(b.text));
+  assert.ok(!(await briefed()).b.text.includes('## Host rules'));
+});
+
 test('report refuses a snapshot differing from the review, a stale projection and a stale brief', async () => {
   const r = await briefed();
   await assert.rejects(report(r.cwd, 'first', adversary(r, { projection_digest: 'sha256:' + '0'.repeat(64) })), /projection digest does not match the brief/);

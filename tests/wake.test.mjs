@@ -865,3 +865,21 @@ test('Agreed text revised under an open commitment is supersede, not review mech
   await supersede(r.cwd, 'second', { quote: 'raise the bound to 1 ms now', env: {} });
   assert.deepEqual(await wake(r.cwd), { exit: 3, line: 'sudus: pending supersession to second; run /existing-project' });
 });
+
+// A consumer project with 23 requirements and up to 31 receipts each spent 30 s in one wake:
+// every receipt currentReceipt tried recomputed the mechanism's input tree and ran every tool
+// version probe again (313 readings, 626 probes through rustup). The reading is taken once per
+// mechanism definition per wake, however many receipts are stale.
+test('wake reads a mechanism input tree and probes its tools once, however many stale receipts it walks', async () => {
+  const r = await loopRepo();
+  const probes = join(await mkdtemp(join(tmpdir(), 'sudus-probes-')), 'count');
+  const probe = `node -e "require('fs').appendFileSync('${probes}', 'x'); console.log('probe 1')"`;
+  await declare(r.cwd, 'demo-001', { ...mechanismFor('DEMO-001'), identity: { tools: { probe }, env: [], image: null } });
+  await r.commit('declare the probe');
+  for (const flag of ['fail', 'pass', 'fail']) { await r.write('flags/DEMO-001', `${flag}\n`); await r.commit(flag); await check(r.cwd, 'DEMO-001'); }
+  await r.write('flags/DEMO-001', 'changed\n'); await r.commit('no receipt is current now');
+  await writeFile(probes, '');
+  const st = await readState(r.cwd);
+  assert.equal(st.current['DEMO-001'], null);
+  assert.equal(await readFile(probes, 'utf8'), 'x', 'one probe for three stale receipts');
+});

@@ -18,7 +18,14 @@ want=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$here/package.json" | head -
 have=$($run --version 2>/dev/null | head -n 1)
 older() { awk -v a="$1" -v b="$2" 'BEGIN{split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){p=x[i]+0;q=y[i]+0;if(p<q)exit 0;if(p>q)exit 1}exit 1}'; }
 if [ -n "$want" ] && older "$have" "$want"; then
-  printf 'sudus: the sudus command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/sudus.sh ~/.local/bin/sudus && chmod +x ~/.local/bin/sudus\n' "${have:-an older version}" "$want" "$here"
+  # The shim runs $SUDUS_ROOT, else $CAIRN_ROOT, first when it holds a bin/sudus.mjs. When that pin
+  # is the version found, it is the cause, and copying the shim again changes nothing (issue #9).
+  pin=SUDUS_ROOT; pinned=${SUDUS_ROOT:-}; [ -n "$pinned" ] || { pin=CAIRN_ROOT; pinned=${CAIRN_ROOT:-}; }
+  if [ -n "$pinned" ] && [ -f "$pinned/bin/sudus.mjs" ] && [ "$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$pinned/package.json" 2>/dev/null | head -n 1)" = "$have" ]; then
+    printf 'sudus: %s=%s pins Sudus %s, this plugin is %s; using the plugin copy. The sudus command runs %s first: unset it so it runs the newest installed Sudus, or point it at %s.\n' "$pin" "$pinned" "$have" "$want" "$pin" "$here"
+  else
+    printf 'sudus: the sudus command found runs %s, this plugin is %s; using the plugin copy. Install the shim so this never recurs: cp %s/bin/sudus.sh ~/.local/bin/sudus && chmod +x ~/.local/bin/sudus\n' "${have:-an older version}" "$want" "$here"
+  fi
   run="node $here/bin/sudus.mjs"
 fi
 # A project still on the former layout (refs/cairn/*, before 3.0.0) is not missing anything: wake

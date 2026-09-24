@@ -37,6 +37,32 @@ test("session-start uses the plugin's own copy and says so when the sudus found 
   assert.ok(!r.stdout.includes("STALE VERDICT"), r.stdout);
 });
 
+// Issue #9: the shim runs $SUDUS_ROOT, else $CAIRN_ROOT, first. When that pin is the older version
+// found, the hooks name the variable, not the shim, whose copy would change nothing.
+test("every hook names SUDUS_ROOT or CAIRN_ROOT when it pins the older version found, and the shim otherwise", () => {
+  for (const name of ["session-start.sh", "turn.sh", "stop.sh"]) {
+    for (const pin of ["SUDUS_ROOT", "CAIRN_ROOT"]) {
+      const { dir } = throwawayRepo();
+      const bin = join(dir, "fakebin");
+      fakeSudus(bin, { stdout: "PINNED VERDICT", version: "2.0.2" });
+      const pinned = fakeRoot(join(dir, "old"), "2.0.2", "unused");
+      const r = runHook(name, { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home"), [pin]: pinned } });
+      assert.equal(r.status, 0);
+      assert.ok(r.stdout.includes(`sudus: ${pin}=${pinned} pins Sudus 2.0.2, this plugin is `), `${name} ${pin}: ${r.stdout}`);
+      assert.ok(r.stdout.includes(`The sudus command runs ${pin} first: unset it so it runs the newest installed Sudus, or point it at ${ROOT}.`), `${name} ${pin}: ${r.stdout}`);
+      assert.ok(!r.stdout.includes("Install the shim"), `${name} ${pin}: ${r.stdout}`);
+      assert.ok(!r.stdout.includes("PINNED VERDICT"), `${name} ${pin}: ${r.stdout}`);
+    }
+    const { dir } = throwawayRepo();
+    const bin = join(dir, "fakebin");
+    fakeSudus(bin, { stdout: "STALE VERDICT", version: "2.0.2" });
+    const other = fakeRoot(join(dir, "other"), "2.9.0", "unused");
+    const r = runHook(name, { cwd: dir, env: { PATH: `${bin}:/usr/bin:/bin`, HOME: join(dir, "home"), SUDUS_ROOT: other, CAIRN_ROOT: other } });
+    assert.ok(r.stdout.includes("sudus: the sudus command found runs 2.0.2, this plugin is "), `${name}: ${r.stdout}`);
+    assert.ok(!r.stdout.includes("pins Sudus"), `${name}: ${r.stdout}`);
+  }
+});
+
 test("session-start and turn use a sudus found that runs a newer version than this plugin, silently", () => {
   for (const name of ["session-start.sh", "turn.sh"]) {
     const { dir } = throwawayRepo();

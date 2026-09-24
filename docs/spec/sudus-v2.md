@@ -10,10 +10,10 @@ developer confirms it.
 Revision 14 lets the developer retire a backlog item that other work already
 delivered (section 8, Capture and promotion). An escalation whose concerns
 name `retire:<item>` retires the item on the developer's `ok`, and wake stops
-naming its promotion; the escalation may name the finished commitment after
-Done. Before, a backlog item left the backlog only by promotion, a commitment
-and a review that changed nothing. Issue #24 asked for it; the developer
-accepted this recommendation on 2026-09-24 ("ok on the above all").
+naming its promotion; when no commitment is open, the escalation names the
+latest one. Before, a backlog item left the backlog only by promotion, a
+commitment and a review that changed nothing. Issue #24 asked for it; the
+developer accepted this recommendation on 2026-09-24 ("ok on the above all").
 
 Revision 13 bounds acceptance rounds that each end with one narrower finding
 (section 5, Waiting and liveness). After three rounds without Done, the
@@ -1029,7 +1029,7 @@ predicate. The table is normative.
 | `accept SLUG` | an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action |
 | `build DECISION` | a realized ADR line names the decision's base and resulting snapshots and the realization check passed |
 | `done SLUG` | a done record names the commitment and final workspace snapshot |
-| `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally; a backlog item retired by the developer's ok is not named (revision 14) |
+| `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally |
 | `reply SLUG` | a reply record names the open `ask` escalation |
 
 A Consequential decision carries one more requirement this table does not
@@ -1357,10 +1357,11 @@ for the developer. Defect items are fixed before promotion.
 A backlog item that other work already delivered is retired instead. The agent
 escalates with the concern `retire:<item>`; the developer's ok retires the
 item, wake no longer names its promotion, and `sudus promote` refuses it. An
-instead answer leaves it in the backlog. After Done the escalation names the
-finished commitment, since no other is open. An ok on an escalation that
-names the item as `item:<item>`, the capture gate's concern, does not retire
-it. Added 2026-09-24 (revision 14).
+instead answer leaves it in the backlog. When no commitment is open, after
+Done or before a supersession's successor starts, the escalation names the
+latest commitment. An ok on an escalation that names the item as
+`item:<item>`, the capture gate's concern, does not retire it. Added
+2026-09-24 (revision 14).
 
 Model-recommended capture is fallible. Sudus does not claim a passing mechanism
 proves a captured change unnecessary. The item remains visible, the frozen

@@ -77,6 +77,19 @@ test('show exits 3 and names the fetch when the durable refs are missing', async
   const r = await run(['show', 'a'.repeat(40)], repo.dir);
   assert.equal(r.code, 3); assert.equal(r.out, `sudus: durable refs missing; run: ${expected}\n`);
 });
+// Issue #15: records and wake reasons name snapshot commits, and show refused them with
+// "unknown record kind snapshot", which read like a corrupt log.
+test('show describes a workspace snapshot: kind, path count and tree', async (t) => {
+  const { cwd } = await makeProject();
+  const sha = await writeWorkspaceSnapshot(cwd);
+  const r = await run(['show', sha], cwd);
+  assert.equal(r.code, 0, r.err); assert.equal(r.err, '');
+  const tree = (await promisify(execFile)('git', ['rev-parse', `${sha}^{tree}`], { cwd })).stdout.trim();
+  const count = (await promisify(execFile)('git', ['ls-tree', '-r', '--name-only', tree], { cwd })).stdout.split('\n').filter(Boolean).length;
+  assert.match(r.out, new RegExp(`^a workspace snapshot of ${count} paths, tree ${tree}; git ls-tree -r ${tree} lists them$`, 'm'));
+  assert.match(r.out, new RegExp(`^sha: ${sha}$`, 'm'));
+});
+
 test('show renders a record with its references resolved and kind-checked', async (t) => {
   const repo = await makeRepo(); t.after(repo.remove);
   await repo.write('a.txt', 'a'); await repo.commit('base');

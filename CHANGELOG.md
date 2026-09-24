@@ -7,6 +7,13 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.7.0 - 2026-09-24
+
+- Acceptance rounds no longer run on without bound when each round ends with one narrower finding (issue #23). After three rounds without Done, the escalation names the open findings and recommends closing them, each captured as a backlog item. Your `ok` closes them, so Done needs no further round; `instead` takes another round or supersedes the commitment. Before, the escalation named no finding and `ok` only restarted the count. Spec revision 13.
+- One escalation can name several findings, and your `ok` closes each of them. Before, an escalation closed a finding only when it named that finding alone, so closing five findings took five escalations and five answers. An escalation that names a captured item among other concerns now covers that item's capture too.
+- Wake prints an `ok closes:` line listing every finding an escalation's `ok` would close, and the agent reads it to you with the recommendation. The escalation's own fields need not name them all, so without the line you could close findings you never saw (found by the adversarial review of this release).
+- The working agreement template tells the agent to capture the findings the three-round `ok` closes, and to name the `ok closes:` findings when it asks you. A project picks this up when its agreement is next copied and authorized.
+
 ## 3.6.1 - 2026-09-24
 
 - A finding carried into a commitment by a supersession can be disputed. Wake named its resolution "or an escalation disputes it", but `sudus escalate`, `sudus dispute` and `sudus measure` refused it with "no record ... in the open range", so it could only be resolved (issue #22).

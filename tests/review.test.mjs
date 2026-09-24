@@ -347,6 +347,33 @@ test('a resolution rejected twice for the same finding escalates as a dispute th
   await assert.rejects(fixed(r, 1, 'three'), /is under escalation/);
 });
 
+// Issue #18: the escalation for a finding rejected twice quoted every rejection in the latest
+// acceptance, including other findings', and left out the finding's own first rejection.
+test('the rejected-twice escalation quotes that finding\'s own two rejections and names both acceptances', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  const a1 = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [{ n: 1, text: 'the trim drops newlines' }] });
+  const r2 = await fixed(r, 1, 'two', { source: r.rep });
+  const o1 = await fixed(r, 1, 'keep newlines', { source: a1 });
+  const a2 = await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'still accepts form feeds'), verdict(o1, 'rejected', 'newlines still dropped')], findings: [] });
+  const open = unanswered(await r.log());
+  assert.equal(open.length, 1);
+  assert.equal(open[0].payload.concerns, `finding:${r.rep}#1`);
+  assert.equal(open[0].payload.because, `The adversary rejected it twice: still accepts tabs (acceptance ${a1}); still accepts form feeds (acceptance ${a2}).`);
+});
+
+test('a later acceptance does not escalate a finding already rejected twice a second time', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  const a1 = await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [{ n: 1, text: 'the trim drops newlines' }] });
+  const r2 = await fixed(r, 1, 'two', { source: r.rep });
+  const o1 = await fixed(r, 1, 'keep newlines', { source: a1 });
+  await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'still accepts form feeds'), verdict(o1, 'rejected', 'newlines still dropped')], findings: [] });
+  const o2 = await fixed(r, 1, 'keep newlines again', { source: a1 });
+  await accept(r.cwd, 'first', { resolutions: [verdict(o2, 'accepted')], findings: [] });
+  assert.equal(unanswered(await r.log()).filter((e) => e.payload.concerns === `finding:${r.rep}#1`).length, 1);
+});
+
 test('three acceptance rounds without Done create the cycle escalation through plan 08, even with newly numbered findings', async () => {
   const r = await reported();
   let source = null;

@@ -260,7 +260,7 @@ The Graphviz source is docs/diagrams/work-loop.dot.
 
 ## Install
 
-Sudus is a plugin. One install brings the command, the four skills, and the
+Sudus is a plugin. One install brings the command, the five skills, and the
 hooks. Have Node 24 and Git 2.40 or newer available. Sudus runs on Linux
 and macOS; Windows is not supported, since the hooks use symbolic links and
 `$HOME`.
@@ -408,10 +408,15 @@ that in place.
 
 ## Start with your project
 
-Open your project's repository in your coding agent. The four skills are
-opened by you, by name, the way your agent application invokes a skill: in
-Claude Code, type the name with a slash. They do not appear in the agent's
-own skill list, so a prose request does not reach them.
+Open your project's repository in your coding agent. The project skills,
+`/new-project`, `/existing-project` and `/next-feature`, are opened by you,
+by name, the way your agent application invokes a skill: in Claude Code,
+type the name with a slash. They do not appear in the agent's own skill
+list, so a prose request does not reach them. The fifth skill,
+`report-sudus-issue`, is the agent's: when Sudus itself is wrong, the agent
+drafts an issue for eas4ai/sudus and asks you with `ok | instead | ask`
+before filing it under your GitHub account. When the fix is released, the
+agent updates the plugin and tells you to reload the session.
 
 For new software:
 

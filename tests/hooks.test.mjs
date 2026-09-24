@@ -109,6 +109,19 @@ test("the shim runs the newest installed Sudus across the Claude Code and Codex 
   assert.equal(spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, SUDUS_ROOT: pinned } }).stdout, "pinned", "SUDUS_ROOT wins");
 });
 
+// A machine with only the Muse plugin: Muse keeps it under ~/.local/share/muse/plugins/cache/<source>/
+// sudus/<digest>/package/, which the shim did not scan, so every sudus command said no Sudus was
+// installed.
+test("the shim finds a Sudus installed only as a Muse plugin", () => {
+  const { dir } = throwawayRepo();
+  const shim = join(dir, "shim"); writeFileSync(shim, readFileSync(join(ROOT, "bin", "sudus.sh"))); chmodSync(shim, 0o755);
+  const run = () => spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin` } });
+  fakeRoot(join(dir, ".local", "share", "muse", "plugins", "cache", "local", "sudus", "bcf40d52", "package"), "3.5.4", "muse-3.5.4");
+  assert.equal(run().stdout, "muse-3.5.4");
+  fakeRoot(join(dir, ".claude", "plugins", "cache", "m", "sudus", "3.5.3"), "3.5.3", "cache-3.5.3");
+  assert.equal(run().stdout, "muse-3.5.4", "the newest version wins across harnesses");
+});
+
 test("session-start names a missing PATH entry when only the link exists", () => {
   const { dir } = throwawayRepo();
   const home = join(dir, "home");

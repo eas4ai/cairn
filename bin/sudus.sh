@@ -3,15 +3,15 @@
 # command: the versioned plugin cache moves, this file does not. Installed by /install-sudus at
 # ~/.local/bin/sudus; safe to delete and copy again.
 # Order: $SUDUS_ROOT (or $CAIRN_ROOT, the former name) when it holds a bin/sudus.mjs; else the
-# newest of the Claude Code and Codex plugin caches and the checkouts at ~/.local/share/sudus and
-# ~/.local/share/cairn, by package.json version.
+# newest of the Claude Code, Codex and Muse plugin caches and the checkouts at ~/.local/share/sudus
+# and ~/.local/share/cairn, by package.json version.
 newer() { awk -v a="$1" -v b="$2" 'BEGIN{split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){p=x[i]+0;q=y[i]+0;if(p>q)exit 0;if(p<q)exit 1}exit 1}'; }
 ver() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$1/package.json" 2>/dev/null | head -n 1; }
 root="${SUDUS_ROOT:-${CAIRN_ROOT:-}}"
 [ -n "$root" ] && [ -f "$root/bin/sudus.mjs" ] || root=""
 if [ -z "$root" ]; then
   best=""
-  for d in "$HOME"/.claude/plugins/cache/*/sudus/*/ "$HOME"/.claude/plugins/cache/*/cairn/*/ "${CODEX_HOME:-$HOME/.codex}"/plugins/cache/*/sudus/*/ "${CODEX_HOME:-$HOME/.codex}"/plugins/cache/*/cairn/*/ "$HOME/.local/share/sudus/" "$HOME/.local/share/cairn/"; do
+  for d in "$HOME"/.claude/plugins/cache/*/sudus/*/ "$HOME"/.claude/plugins/cache/*/cairn/*/ "${CODEX_HOME:-$HOME/.codex}"/plugins/cache/*/sudus/*/ "${CODEX_HOME:-$HOME/.codex}"/plugins/cache/*/cairn/*/ "$HOME"/.local/share/muse/plugins/cache/*/sudus/*/package/ "$HOME"/.local/share/muse/plugins/cache/*/cairn/*/package/ "$HOME/.local/share/sudus/" "$HOME/.local/share/cairn/"; do
     [ -f "$d/bin/sudus.mjs" ] || continue
     v=$(ver "$d")
     if [ -z "$root" ] || newer "$v" "$best"; then root="$d"; best="$v"; fi

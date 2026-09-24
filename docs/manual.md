@@ -1242,6 +1242,7 @@ agreement instruct the agent how to reason and when to stop.
 | Pushing the durable refs | `lib/travel.mjs` |
 | Starting a project and confirming behavior | `skills/new-project/SKILL.md`, `skills/existing-project/SKILL.md`, `skills/next-feature/SKILL.md` |
 | The agent's per-turn and per-project responsibilities | `skills/new-project/templates/AGENTS.md` |
+| Reporting a defect in Sudus itself, and updating when it is fixed | `skills/report-sudus-issue/SKILL.md` |
 
 Tests under `tests/` exercise each module named above; run `npm test` in
 this checkout.

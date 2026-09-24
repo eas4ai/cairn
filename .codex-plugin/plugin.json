@@ -3,5 +3,5 @@
   "author": { "name": "eas4ai" }, "license": "MIT",
   "keywords": ["agent", "specification", "requirements", "review", "hooks"], "skills": "./skills/",
   "interface": { "displayName": "Sudus", "shortDescription": "The referee for agent-led software development",
-    "longDescription": "Sudus reads the repository and names the agent's next action. The plugin carries the command, the four skills and the hooks that print the wake verdict; no hook blocks or writes.",
+    "longDescription": "Sudus reads the repository and names the agent's next action. The plugin carries the command, the five skills and the hooks that print the wake verdict; no hook blocks or writes.",
     "developerName": "eas4ai", "category": "Productivity" } }

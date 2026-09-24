@@ -5,4 +5,5 @@
     "hooks": [ { "id": "session-start", "event": "SessionStart", "command": ["sh", "hooks/session-start.sh"] },
                { "id": "stop", "event": "Stop", "command": ["sh", "hooks/stop.sh"] } ],
     "skills": [ { "id": "install-sudus", "path": "skills/install-sudus/SKILL.md" }, { "id": "new-project", "path": "skills/new-project/SKILL.md" },
-                { "id": "existing-project", "path": "skills/existing-project/SKILL.md" }, { "id": "next-feature", "path": "skills/next-feature/SKILL.md" } ] } }
+                { "id": "existing-project", "path": "skills/existing-project/SKILL.md" }, { "id": "next-feature", "path": "skills/next-feature/SKILL.md" },
+                { "id": "report-sudus-issue", "path": "skills/report-sudus-issue/SKILL.md" } ] } }

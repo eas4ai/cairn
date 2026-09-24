@@ -165,6 +165,21 @@ test("next-feature runs from Done only", () => assert.ok(/says Done\?[\s\S]*Stop
 
 // Issue #10: existing-project and next-feature said to copy templates/AGENTS.md "from this skill",
 // which only new-project ships. Every template path a skill names resolves from its own directory.
+// Revision 12: the agent reports a defect in Sudus itself, but only after the developer's ok,
+// since the issue is public and filed under the developer's GitHub account.
+test("report-sudus-issue is the agent's to open, asks before filing, and keeps the project out of the issue", () => {
+  const text = skill("report-sudus-issue");
+  checkSkill("report-sudus-issue", []);
+  assert.ok(!/^disable-model-invocation:/m.test(text), "the agent opens it on its own");
+  for (const node of ["confirm", "search", "reproduce", "draft", "ask", "work", "watch", "update"]) assert.ok(text.includes("### `" + node + "`"), node);
+  const ask = text.indexOf("### `ask`"), create = text.indexOf("gh issue create");
+  assert.ok(ask > 0 && create > ask && text.slice(ask, create).includes("`ok | instead | ask`"), "the ok question comes before gh issue create");
+  assert.ok(text.includes("Never file without an `ok`"));
+  assert.ok(/--repo eas4ai\/sudus/.test(text));
+  for (const kept of ["code", "secret", "token", "home directory"]) assert.ok(text.slice(text.indexOf("### `draft`"), ask).includes(kept), kept);
+  for (const cmd of ["claude plugin update sudus@", "codex plugin marketplace upgrade", "muse plugins update sudus", "reload"]) assert.ok(text.includes(cmd), cmd);
+  assert.ok(/names the skill|report-sudus-issue skill/.test(AGENTS_TEMPLATE()), "the working agreement names the skill");
+});
 test("every template path a skill names exists relative to that skill", () => {
   for (const name of readdirSync(join(ROOT, "skills"))) {
     const text = readFileSync(join(ROOT, "skills", name, "SKILL.md"), "utf8");

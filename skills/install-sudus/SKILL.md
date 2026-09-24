@@ -26,13 +26,13 @@ Install the Sudus plugin from its marketplace. The plugin registers the hooks in
 Install the plugin with `muse plugins install <plugin root>`, then approve its two hooks with `muse plugins approve sudus:hook:session-start` and `muse plugins approve sudus:hook:stop`; its manifest registers SessionStart and Stop. Continue at `link`.
 
 ### `other`
-Install the four skills with the skills CLI (`npx skills add eas4ai/sudus --skill install-sudus new-project existing-project next-feature --global`), then run this skill. Register `hooks/session-start.sh`, `hooks/turn.sh` and `hooks/stop.sh` under the harness's own event names where it has them. No hook system: `nohooks`.
+Install the five skills with the skills CLI (`npx skills add eas4ai/sudus --skill install-sudus new-project existing-project next-feature report-sudus-issue --global`), then run this skill. Register `hooks/session-start.sh`, `hooks/turn.sh` and `hooks/stop.sh` under the harness's own event names where it has them. No hook system: `nohooks`.
 
 ### `nohooks`
 Instruction-only: the working agreement in AGENTS.md is the enforcement and the agent runs `sudus wake` itself. Continue at `link`.
 
 ### `link`
-Install the command shim, `bin/sudus.sh`, at `~/.local/bin/sudus`. It runs the newest installed Sudus at run time (`$SUDUS_ROOT` when set, else the newest Claude Code or Codex plugin cache entry or the checkout at `~/.local/share/sudus`, by version), so a plugin update never strands it. Write it when nothing is there, or when what is there is a symlink to a `bin/sudus.mjs` or an earlier copy of the shim; never replace any other file. No remote is selected here.
+Install the command shim, `bin/sudus.sh`, at `~/.local/bin/sudus`. It runs the newest installed Sudus at run time (`$SUDUS_ROOT` when set, else the newest Claude Code, Codex or Muse plugin cache entry or the checkout at `~/.local/share/sudus`, by version), so a plugin update never strands it. Write it when nothing is there, or when what is there is a symlink to a `bin/sudus.mjs` or an earlier copy of the shim; never replace any other file. No remote is selected here.
 
     mkdir -p ~/.local/bin
     if [ ! -e ~/.local/bin/sudus ] || [ -L ~/.local/bin/sudus ] || grep -q 'sudus command shim' ~/.local/bin/sudus; then
@@ -61,4 +61,4 @@ The session-start hook prints the verdict and predicate. Hand the developer to t
 Choose `/new-project` or `/existing-project`; the chosen flow runs `sudus init`. Installation never does.
 
 ### `done`
-Report where the command is linked, which hooks are registered, and that the four skills are available.
+Report where the command is linked, which hooks are registered, and that the five skills are available.

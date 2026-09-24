@@ -4,8 +4,19 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 11, 2026-09-24. Nothing here is Agreed until the
+Status: Draft, revision 12, 2026-09-24. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 12 adds a fifth skill, `report-sudus-issue` (section 11). When
+Sudus itself is wrong, the agent reproduces the defect outside the project,
+drafts an issue for eas4ai/sudus, and files it only after the developer's
+`ok`; it then watches the issue and, when the fix is released, updates the
+plugin and tells the developer to reload the session. The working agreement
+names the skill. The developer asked for it on 2026-09-24 ("I want to add
+instruction to the sudus skill to report issues to the production repo
+issues and to monitor for the issue to be closed so that the agent can
+update the plugin in real time and promot the user to reload") and chose
+that the agent asks before filing ("Yes ask").
 
 Revision 11 removes a setup question. Developer evidence is attested unless
 the settings name a signing key, and a developer who wants signed decisions
@@ -641,7 +652,7 @@ Four entry flows, one shared tail and one work loop.
 it. The developer installs the plugin for Claude Code, Codex or Muse, or uses
 the skills CLI and `/install-sudus`. Installation links
 `~/.local/bin/sudus`, registers hooks where the harness supports them, and
-lists the four skills. A harness without hooks is instruction-only.
+lists the five skills. A harness without hooks is instruction-only.
 
 Installation is global and never asks for a project remote. It is complete when
 `sudus --help` prints. Inside an initialized project the session-start hook also
@@ -1660,9 +1671,12 @@ suggestion was `agent`.
 
 ## 11. Distribution
 
-Sudus ships as one plugin: the command, hooks, four skills (`install-sudus`,
-`new-project`, `existing-project`, `next-feature`) and the optional evaluator
-module. The command also answers to its former name, `cairn`, so a shim, hook
+Sudus ships as one plugin: the command, hooks, five skills (`install-sudus`,
+`new-project`, `existing-project`, `next-feature`, `report-sudus-issue`) and
+the optional evaluator module. `report-sudus-issue` is for a defect in Sudus
+itself: the agent files an issue on eas4ai/sudus only after the developer's
+`ok`, since the issue is public and filed under the developer's account, and
+keeps the project's code, records and secrets out of it. The command also answers to its former name, `cairn`, so a shim, hook
 or working agreement written before 3.0.0 still runs. Claude Code, Codex and Muse manifests share one version. The skills also
 install through the skills CLI. The runtime is Node and Git, with no build,
 package dependency or service. Linux and macOS are supported.

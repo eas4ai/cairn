@@ -757,6 +757,43 @@ test('after a supersede, the brief, the report and wake measure the successor fr
   assert.match(v.reason, /no caller-level attempt at interface src\/api\/x\.mjs/);
 });
 
+// Issue #22: a finding carried by a supersession could be resolved but never disputed, since an
+// escalation's concern had to name a record in the open range; and the supersession carried
+// findings by "any resolution record exists", so a finding whose only fix was rejected vanished.
+async function supersededToSecond(r) {
+  const roadmap = await fs.readFile(path.join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap + '\n## second\n\nRequirements: DEMO-001\n\nCarries the work of first.\n');
+  await r.commit('second section');
+  await supersede(r.cwd, 'second', { quote: 'go on under second', env: {} });
+  const carried = (await r.log()).find((x) => x.kind === 'superseded').payload.carried;
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await startCommitment(r.cwd, 'second');
+  return carried;
+}
+
+test('a finding carried by a supersede can be disputed, and the developer\'s ok settles it in the successor (issue #22)', async () => {
+  const r = await reported();
+  assert.deepEqual(await supersededToSecond(r), [r.rep]);
+  await dispute(r.cwd, { commitment: 'second', record: r.rep, n: 1, question: 'Is finding 1 a defect?', recommendation: 'Close it as answered.', because: 'tabs are valid names here', if_wrong: 'a tab name passes', instead: 'reject tabs' });
+  await answer(r.cwd, 'second', 'ok', { quote: 'ok', env: {} });
+  assert.deepEqual(ledger(await r.log(), 'second').map((f) => [f.source, f.status]), [[r.rep, 'disputed']]);
+  assert.equal(await predicates.find((p) => p.name === 'resolve').test(await readState(r.cwd)), null);
+});
+
+test('a finding whose only fix was rejected carries across a supersede; one the developer settled does not (issue #22)', async () => {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [] });
+  await r.commit('the rejected fix');
+  assert.deepEqual(await supersededToSecond(r), [r.rep]);
+  assert.deepEqual(ledger(await r.log(), 'second').map((f) => [f.source, f.status]), [[r.rep, 'rejected']]);
+
+  const d = await reported();
+  await dispute(d.cwd, { commitment: 'first', record: d.rep, n: 1, question: 'Is finding 1 a defect?', recommendation: 'Close it as answered.', because: 'tabs are valid names here', if_wrong: 'a tab name passes', instead: 'reject tabs' });
+  await answer(d.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  assert.deepEqual(await supersededToSecond(d), []);
+});
+
 // tests/review.test.mjs (an answer after the acceptance)
 // A pasted agent report: the developer's ok on the cycle escalation appended its answered line to
 // docs/decisions.jsonl, which moved the workspace off the third acceptance's snapshot and forced a

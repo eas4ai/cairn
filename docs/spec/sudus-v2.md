@@ -13,9 +13,15 @@ sets `signing_key` in the settings file (section 2, Settings; section 3,
 Project initialization). The developer ruled on 2026-09-24: "Make
 attestation default and managed via the settings file. If someone want to
 use a key, they can optionally enable it in settings and we can remove that
-onboarding step". The protected-path check compares digests before it
-verifies the latest authorization's evidence, so a settings change that
-sets a key is named as a settings change to authorize (section 8).
+onboarding step". Developer evidence verifies against the key in force,
+the `signing_key` of the settings the latest init or authorization bound,
+not the settings file on disk; while a key is in force, a settings change,
+including a new key or none, is signed with it (section 8). The developer
+agreed on 2026-09-24 ("ok") after an agent reproduced that an agent could
+set its own key or none and approve that change itself. The protected-path
+check compares digests before it verifies the latest authorization's
+evidence, so a settings change that sets a key is named as a settings
+change to authorize.
 
 Revision 10 makes two changes the developer accepted on 2026-09-23 ("I will
 accept your recommendation") after an agent reported their cost on a
@@ -211,9 +217,12 @@ after the developer confirms it. Its fields are:
   request, adversary brief or adversary projection. It does not govern the
   project's ordinary Git remotes or the primary coding agent.
 - `signing_key`: the developer's public verification key, or `null`, the
-  default. With a key, developer-only records must verify. Setting a key is
-  a settings change, authorized with a signature from that key; the attested
-  records before it stand. Revised 2026-09-24: previously `init` asked the
+  default. With a key in force, developer-only records must verify against
+  it. The key in force is the one in the settings the latest init or
+  authorization bound, not the file on disk. Setting a key is a settings
+  change, authorized with a signature from that key; the attested records
+  before it stand. While a key is in force, any settings change, including a
+  new key or none, is authorized with a signature from it. Revised 2026-09-24: previously `init` asked the
   developer for a key or attested mode. With `null` the project is in
   attested mode: the agent asks the developer in conversation, and the command
   records the developer's answer in their own words, the harness that carried
@@ -1262,7 +1271,9 @@ agent itself chooses to escalate anyway; no other level is measured.
 
 The agent runs `sudus answer`, `sudus decisions --read` and `sudus authorize`
 only after the developer has answered in conversation, and never asks the
-developer to run a command. With a signing key their records must verify. In
+developer to run a command. With a signing key in force their records must
+verify against it: the key in the settings the latest init or authorization
+bound, never a key the settings file on disk names since. In
 attested mode the developer's quoted words, the harness name and the Git
 author are evidence only; Sudus says so wherever it reports the decision.
 With `developer: absent`, none of this paragraph's questions has anyone to

@@ -1,7 +1,7 @@
 // tests/auth.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 
@@ -304,6 +304,64 @@ test('a signing key set in settings after an attested init is authorized by a si
   assert.equal(authorizations(log).at(-2).payload.evidence.mode, 'attested');
   await refuseUnauthorizedProtected(cwd, log);
   await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /signing_key is set/);
+});
+
+// Revision 11: with a key in force, the settings file on disk does not decide what verifies. An
+// agent that sets its own key, or none, can neither approve that change nor sign the decisions
+// after it; the developer's key signs the change, and the key it binds is in force from then on.
+async function signedProject() {
+  const repo = await makeRepo();
+  await repo.write('AGENTS.md', 'agreement\n');
+  await repo.write('docs/spec/a.md', 'spec\n');
+  await repo.commit('fixture');
+  const dev = keyPair();
+  await init(repo.dir, { localOnly: true, signingKeyPem: dev.pem, sign: dev.sign, env: {} });
+  await authorize(repo.dir, { sign: dev.sign, env: {} });
+  return { cwd: repo.dir, dev };
+}
+
+function setKey(cwd, pem) {
+  const p = join(cwd, '.sudus/settings.json');
+  const s = JSON.parse(readFileSync(p, 'utf8'));
+  s.signing_key = pem;
+  writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
+}
+
+test('with a key in force, removing it takes a signature from it', async () => {
+  const { cwd, dev } = await signedProject();
+  setKey(cwd, null);
+  await assert.rejects(authorize(cwd, { quote: 'ok', env: {} }), /signing_key is set/);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { quote: 'ok', env: {} }), /signing_key is set/);
+  await authorize(cwd, { sign: dev.sign, env: {} });
+  await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+  await readDecision(cwd, '01J0000000000000000000ABCD', { quote: 'ok', env: {} });
+});
+
+test('with a key in force, another key takes a signature from the key in force, then signs', async () => {
+  const { cwd, dev } = await signedProject();
+  const agent = keyPair();
+  setKey(cwd, agent.pem);
+  await assert.rejects(authorize(cwd, { sign: agent.sign, env: {} }), /does not verify against signing_key/);
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { sign: agent.sign, env: {} }), /does not verify against signing_key/);
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /\.sudus\/settings\.json changed to/);
+  await authorize(cwd, { sign: dev.sign, env: {} });
+  await refuseUnauthorizedProtected(cwd, await readLog(cwd));
+  await assert.rejects(readDecision(cwd, '01J0000000000000000000ABCD', { sign: dev.sign, env: {} }), /does not verify against signing_key/);
+  await readDecision(cwd, '01J0000000000000000000ABCD', { sign: agent.sign, env: {} });
+});
+
+test('the protected check refuses a key change whose record the key in force did not sign', async () => {
+  const { cwd, dev } = await signedProject();
+  const agent = keyPair();
+  setKey(cwd, agent.pem);
+  const d = await protectedDigests(cwd);
+  const subject = canonicalize({ spec: d.spec, agreement: d.agreement, settings: d.settings });
+  const evidence = await authenticateDeveloper(cwd, { signing_key: agent.pem }, { purpose: 'authorize', subject, sign: agent.sign });
+  await git(['add', '.sudus/settings.json'], { cwd });
+  await git(['commit', '-q', '-m', 'swap'], { cwd });
+  await appendRecord(cwd, 'authorization', 'protected', { spec_digest: d.spec, agreement_digest: d.agreement, settings_digest: d.settings, evidence, decision: null, intent: null, results: [] });
+  await assert.rejects(refuseUnauthorizedProtected(cwd, await readLog(cwd)), /does not verify against the signing key in force/);
+  assert.equal(dev.pem === agent.pem, false);
 });
 
 // Fix round 1, item 2: appendRecord is not developer-gated, so a record with schema-valid but

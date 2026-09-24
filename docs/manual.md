@@ -509,6 +509,13 @@ prints the exact bytes to sign and the nonce to repeat. From then on every
 answer, reading and authorization must be signed; the attested records
 before the change stand.
 
+Sudus checks each decision against the key in force: the key in the
+settings you last authorized, not whatever the settings file says now. An
+agent that edits `signing_key` to its own key, or to `null`, cannot approve
+that edit or sign anything after it. Replacing or removing your key takes a
+signature from it, so keep the private key: Sudus has no way to remove a
+key you can no longer sign with.
+
 ## Decisions that did not stop the work
 
 Sudus has two levels of decision, both left to the agent's judgment about

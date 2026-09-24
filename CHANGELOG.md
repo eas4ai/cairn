@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.5.3 - 2026-09-24
+
+- The escalation `sudus accept` writes for a finding rejected twice now recommends the one ruling your `ok` makes: the finding is closed as answered, and Done no longer waits on a fix for it. It used to offer "the finding stands and the fix changes approach" as well, but `ok` closed the finding either way, and `sudus resolve` then refused the new fix with "no unresolved finding". Its `instead` line now says the finding stays open for a fix in the direction you give (issue #20).
+- After an `instead` answer on an escalation about a finding, wake names the finding's next resolution. It used to leave out any finding an escalation had ever concerned, so it named an acceptance with nothing to judge, which spent an acceptance round.
+- `sudus resolve` on a finding your `ok` closed names that escalation, instead of "no unresolved finding".
+
 ## 3.5.2 - 2026-09-24
 
 - An untracked nested git repository or worktree, such as the ones Claude Code's agent tool creates under `.claude/worktrees/`, no longer makes every command fail with "git hash-object exited 128". It is left out of the workspace (issue #19).

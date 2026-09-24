@@ -7,6 +7,13 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.3.0 - 2026-09-23
+
+Spec revision 10, accepted by the developer on 2026-09-23 after an agent reported what the rules cost on a consumer project.
+
+- While the latest report has an unresolved finding, wake names the next `resolve` instead of `run` for a receipt a fix made stale. The checks run once, after the last finding is resolved and before `accept`, not after every fix. A check that ran and failed is still `implement`, and three failing attempts are still `escalate`; Done still needs a current passing receipt for every requirement.
+- A mechanism review binds to what decides what the check detects: its command, working directory and results mode. A redeclare that adds inputs, documents, tool versions or requirements, or a `--touch` input written at `sudus end`, keeps the review bound and only makes receipts stale; a changed command, working directory or results mode unbinds it, and a new requirement needs its own review. Review metadata written before 3.3.0 binds its exact definition as before, and a redeclare that keeps those three carries it over.
+
 ## 3.2.2 - 2026-09-23
 
 - The skills and the manual say that a violating example needs no commit: make it in the working tree, run `sudus check`, bind the fail receipt with `sudus review mechanism`, then undo it. The receipt's input snapshot keeps the violating bytes, so the only commit is the bound mechanism file. An agent rebinding reviews after a redeclare had committed each example and its revert, two extra commits per batch.

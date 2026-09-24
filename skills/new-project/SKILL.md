@@ -75,7 +75,7 @@ Set `Status: Agreed <date>` on each confirmed block. A ruling instead of a confi
 Write the roadmap section with the Agreed requirements, delivery and done-when. Write `Current:` by hand too, unless this start resumes a pending supersession, when `sudus start` moves it itself.
 
 ### `declare`
-For this commitment only: `sudus declare <name> --file <path>`, reading the mechanism definition as JSON. Show the violating example fails: `sudus check <REQ>` must record a fail receipt, then `sudus review mechanism <REQ> <receipt>` binds it.
+For this commitment only: `sudus declare <name> --file <path>`, reading the mechanism definition as JSON. Show the violating example fails: `sudus check <REQ>` must record a fail receipt, then `sudus review mechanism <REQ> <receipt>` binds it. The violating example needs no commit: make it in the working tree, check, bind, then undo it. The receipt's input snapshot keeps the violating bytes, so only the bound mechanism file is committed.
 
 ### `agreement`
 Copy `templates/AGENTS.md` from this skill to `AGENTS.md` for developer authorization. Do not edit it after authorization.

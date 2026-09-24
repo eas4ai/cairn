@@ -658,10 +658,13 @@ sudus review mechanism APP-001 <the-fail-receipt-sha>
 
 This binds the mechanism's review metadata to its current definition
 digest and the requirement's current text digest, with that fail receipt
-as the demonstration that the check actually catches the violation. A
-revised requirement, or a changed mechanism definition, unbinds this and
-`review mechanism REQ` becomes the next wake action before another check
-counts.
+as the demonstration that the check actually catches the violation. The
+violating example needs no commit. The agent makes it in the working tree,
+runs `sudus check`, binds the fail receipt, and undoes the change: the
+receipt's input snapshot keeps the violating bytes, so the only commit is
+the bound mechanism file. A revised requirement, or a changed mechanism
+definition, unbinds this and `review mechanism REQ` becomes the next wake
+action before another check counts.
 
 ## Review, the adversary, and Done
 

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRepo } from './helpers/repo.mjs';
+import { join } from 'node:path';
 import { git, emptyTree, listTree, updateRefCAS, CasError } from '../lib/gitx.mjs';
 import { sha256 } from '../lib/canon.mjs';
 import { writeWorkspaceSnapshot, writeWorkspaceSnapshotFromTree, readSnapshot, globToRegExp, SnapshotError, KindError, SNAPSHOTS_REF } from '../lib/snapshots.mjs';
@@ -204,4 +205,36 @@ test('a workspace snapshot holds a file whose name has a newline', async () => {
   const sha = await writeWorkspaceSnapshot(repo.dir);
   const s = await readSnapshot(repo.dir, sha, 'workspace');
   assert.deepEqual((await listTree(repo.dir, s.tree)).map((e) => e.path).sort(), ['a.txt', 'odd\nname.txt']);
+});
+
+// Issue #19: git lists an untracked nested repository or worktree (an agent's worktree under
+// .claude/worktrees/) as one directory entry, and hashing it failed every command. A tracked
+// submodule failed the same way. The first is not project content; the second is a gitlink.
+import { workspaceDelta } from '../lib/scope.mjs';
+test('an untracked nested worktree is left out of the snapshot and the delta', async () => {
+  const repo = await makeRepo();
+  await repo.write('a.txt', 'a\n');
+  await repo.commit('base');
+  await repo.git('worktree', 'add', '-q', '.claude/worktrees/x', 'HEAD');
+  const sha = await writeWorkspaceSnapshot(repo.dir);
+  const tree = (await readSnapshot(repo.dir, sha, 'workspace')).tree;
+  assert.deepEqual((await listTree(repo.dir, tree)).map((e) => e.path), ['a.txt']);
+  assert.deepEqual(await workspaceDelta(repo.dir, tree), []);
+});
+test('a tracked submodule is a gitlink at its checked-out HEAD in the snapshot and the delta', async () => {
+  const inner = await makeRepo();
+  await inner.write('i.txt', 'i\n');
+  const first = await inner.commit('inner');
+  const repo = await makeRepo();
+  await repo.write('a.txt', 'a\n');
+  await repo.commit('base');
+  await repo.git('-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', inner.dir, 'sub');
+  await repo.commit('add the submodule');
+  const sha = await writeWorkspaceSnapshot(repo.dir);
+  const tree = (await readSnapshot(repo.dir, sha, 'workspace')).tree;
+  assert.deepEqual((await listTree(repo.dir, tree)).find((e) => e.path === 'sub'), { path: 'sub', mode: '160000', sha: first });
+  assert.deepEqual(await workspaceDelta(repo.dir, tree), []);
+  await git(['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'moved'], { cwd: join(repo.dir, 'sub') });
+  const moved = (await git(['rev-parse', 'HEAD'], { cwd: join(repo.dir, 'sub') })).stdout.trim();
+  assert.deepEqual(await workspaceDelta(repo.dir, tree), [{ path: 'sub', change: 'modified', mode: '160000', sha: moved }]);
 });

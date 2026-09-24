@@ -7,6 +7,12 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.3.3 - 2026-09-24
+
+- The band above the prompt says where things stand in a word (Working, Your answer needed, Stuck, Done, Setup, Not answering) and what happens next in plain words, such as "independent review of z-index-tests-segfault". It used to repeat wake's reason for the agent, with record hashes and kernel terms. Only a question you owe an answer to gets a line of its own, with hashes cut to 7 characters. The pane keeps wake's reason and predicate.
+- The status row that 3.3.1 pinned under the prompt no longer stays on screen after the plugin updates inside a running session.
+- The face keeps clear of the band's collapse control, which Claude Code draws over the band's top-right corner.
+
 ## 3.3.2 - 2026-09-24
 
 - In Claude Code, the verdict moves from the status row under the prompt to the band above it. Claude Code draws a plugin's status text itself, in bold with a warning prefix, cut to one line, so a long reason could not be read. The band shows the verdict in its colour, what it names, and the reason in full, wrapped rather than cut.

@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.6.1 - 2026-09-24
+
+- A finding carried into a commitment by a supersession can be disputed. Wake named its resolution "or an escalation disputes it", but `sudus escalate`, `sudus dispute` and `sudus measure` refused it with "no record ... in the open range", so it could only be resolved (issue #22).
+- A supersession carries the findings that are still open in the superseded commitment: its own and those carried into it. A finding whose only fix the adversary rejected is open and now carries; it used to be dropped, since any resolution record counted. A finding settled by your `ok` on a dispute does not carry, and neither does an open finding of an unrelated earlier commitment. A supersession recorded before this release keeps the records it carried.
+
 ## 3.6.0 - 2026-09-24
 
 - A fifth skill, `report-sudus-issue`, is the agent's own. When Sudus itself is wrong -- a command crashes, a message contradicts the manual, or wake keeps naming an action whose predicate already holds -- the agent looks for an existing issue, reproduces the defect outside the project, and drafts an issue or a comment for eas4ai/sudus. It posts nothing until you answer `ok`: the post is public and goes out under your GitHub account. The project's code, spec text, records, secrets, hostnames and home-directory paths stay out of the post and out of the searches the agent sends. The agent then watches the issue, and when the fix is released it updates the plugin in Claude Code, Codex or Muse and tells you to reload the session. The working agreement template names the skill; a project picks the line up when its agreement is next copied and authorized, and the skill itself arrives with the plugin update. Spec revision 12.

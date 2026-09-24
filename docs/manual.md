@@ -573,6 +573,11 @@ sudus dispute --commitment reject-empty-names --record <finding-record-sha> --n 
   --question '...' --recommendation '...' --because '...' --if-wrong '...' --instead '...'
 ```
 
+Your `ok` on an escalation about a finding closes the finding as answered,
+and Done no longer waits on a fix for it. `instead` with a direction keeps
+the finding open: the agent resolves it again that way, and the next
+acceptance judges the fix.
+
 This is next-feature: it starts from Done and specifies the next
 commitment.
 

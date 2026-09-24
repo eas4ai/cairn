@@ -306,6 +306,7 @@ test('the same number on two records is ambiguous until --source names one; a se
 import { accept, reviewState } from '../lib/review.mjs';
 import { unanswered } from '../lib/escalate.mjs';
 import { openCycleEscalation } from '../lib/cycle.mjs';
+import { wake } from '../lib/wake.mjs';
 
 const verdict = (sha, v, reason = '') => ({ sha, verdict: v, reason });
 
@@ -372,6 +373,40 @@ test('a later acceptance does not escalate a finding already rejected twice a se
   const o2 = await fixed(r, 1, 'keep newlines again', { source: a1 });
   await accept(r.cwd, 'first', { resolutions: [verdict(o2, 'accepted')], findings: [] });
   assert.equal(unanswered(await r.log()).filter((e) => e.payload.concerns === `finding:${r.rep}#1`).length, 1);
+});
+
+// Issue #20: the rejected-twice escalation offered "the finding stands" as a ruling, but ok closes
+// the finding, and resolve then refused the new fix with "no unresolved finding". After an
+// instead answer, the finding stayed open but wake never named its resolution.
+async function rejectedTwice() {
+  const r = await reported();
+  const r1 = await fixed(r, 1, 'one');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r1, 'rejected', 'still accepts tabs')], findings: [] });
+  const r2 = await fixed(r, 1, 'two');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r2, 'rejected', 'still accepts form feeds')], findings: [] });
+  return r;
+}
+
+test('the rejected-twice escalation recommends what ok does, closing the finding, and resolve then names the escalation', async () => {
+  const r = await rejectedTwice();
+  const [e] = unanswered(await r.log());
+  assert.equal(e.payload.recommendation, 'Close finding 1 as answered: Done stops waiting on an accepted fix for it.');
+  assert.equal(e.payload.instead, 'Answer instead with the approach the next fix takes; the finding stays open, and the agent resolves it again.');
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => f.status), ['disputed']);
+  await assert.rejects(fixed(r, 1, 'three'), { message: `sudus: resolve: the developer's ok on escalation ${e.sha} closed finding 1 on ${r.rep}; it takes no resolution` });
+});
+
+test('after an instead answer on the rejected-twice escalation, wake names the next resolution and the next acceptance judges it', async () => {
+  const r = await rejectedTwice();
+  await answer(r.cwd, 'first', 'instead', { quote: 'strip every Unicode space', text: 'strip every Unicode space', env: {} });
+  await r.commit('the rejected fix and the answer line');
+  await r.passReq('DEMO-001');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  const r3 = await fixed(r, 1, 'three');
+  await accept(r.cwd, 'first', { resolutions: [verdict(r3, 'accepted')], findings: [] });
+  assert.deepEqual(ledger(await r.log(), 'first').map((f) => f.status), ['resolved']);
 });
 
 test('three acceptance rounds without Done create the cycle escalation through plan 08, even with newly numbered findings', async () => {

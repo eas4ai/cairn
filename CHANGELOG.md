@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.3.4 - 2026-09-24
+
+- The verdict band and pane in Claude Code are off until you turn them on. The `view` option now takes `off` (the default), `above-prompt`, `pane` or `both`. `above-prompt` is the band, and replaces `status-line`; a stored `status-line` now reads as off. The README's "The verdict above the prompt in Claude Code" section gives the three steps to turn it on: function hooks in the settings `env` block, `above-prompt` in `/config` (the row "Where the Sudus verdict shows"), and a new session or `/reload-plugins`.
+
 ## 3.3.3 - 2026-09-24
 
 - The band above the prompt says where things stand in a word (Working, Your answer needed, Stuck, Done, Setup, Not answering) and what happens next in plain words, such as "independent review of z-index-tests-segfault". It used to repeat wake's reason for the agent, with record hashes and kernel terms. Only a question you owe an answer to gets a line of its own, with hashes cut to 7 characters. The pane keeps wake's reason and predicate.

@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.5.1 - 2026-09-24
+
+- The escalation `sudus accept` writes for a finding rejected twice quotes that finding's own two rejection reasons, in order, each naming its acceptance record. It used to quote every rejection in the latest acceptance, which could be other findings', and left out the finding's first rejection (issue #18).
+- A later acceptance no longer writes a second escalation for a finding already rejected twice; only the acceptance that rejects it the second time escalates it.
+
 ## 3.5.0 - 2026-09-24
 
 - `sudus start` and `sudus promote` no longer commit `.sudus/output/`, the check output and briefs that its own `.gitignore` keeps local, and `sudus push` no longer publishes them. This covers files that are untracked, ignored, or already tracked by an earlier version. Files an earlier version committed stay in history; `git rm -r --cached .sudus/output` and a commit stop tracking them (issue #11).

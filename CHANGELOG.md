@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.5.4 - 2026-09-24
+
+- `sudus accept` no longer fails after recording when the second rejection of a finding has a reason that spans lines. It exited 1 with "draft field because must be one non-empty line", with the acceptance appended and no escalation for the finding. The escalation now quotes each reason on one line; the acceptance keeps the reason as written. The escalations an acceptance writes are drafted and checked before the acceptance is appended, so `accept` cannot stop between the two (issue #21).
+
 ## 3.5.3 - 2026-09-24
 
 - The escalation `sudus accept` writes for a finding rejected twice now recommends the one ruling your `ok` makes: the finding is closed as answered, and Done no longer waits on a fix for it. It used to offer "the finding stands and the fix changes approach" as well, but `ok` closed the finding either way, and `sudus resolve` then refused the new fix with "no unresolved finding". Its `instead` line now says the finding stays open for a fix in the direction you give (issue #20).

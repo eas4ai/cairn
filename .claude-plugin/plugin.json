@@ -6,10 +6,10 @@
   "userConfig": {
     "view": { "type": "string", "title": "Where the Sudus verdict shows", "required": false, "default": "status-line",
       "options": ["status-line", "pane", "both", "off"],
-      "description": "\"status-line\" (default): one line under the prompt. \"pane\": a pane beside the transcript with the face. \"both\". \"off\": nothing. Needs function hooks (early access)." },
+      "description": "\"status-line\" (default): the verdict above the prompt with the face at its right. \"pane\": a pane beside the transcript with the face. \"both\". \"off\": nothing. Needs function hooks (early access)." },
     "face": { "type": "string", "title": "Blobatar face", "required": false, "default": "sudus",
-      "description": "The text the face is drawn from; blobatar draws the same face from the same text every time. \"sudus\" is built in; any other text is fetched from blobatar.dev once per session." },
-    "asciiFace": { "type": "boolean", "title": "ASCII face in the status line", "required": false, "default": true,
-      "description": "Put a small ASCII face in the same expression before the status line." },
+      "description": "The text the face is drawn from; blobatar draws the same face from the same text every time, here, with no network." },
+    "motion": { "type": "boolean", "title": "Face motion", "required": false, "default": true,
+      "description": "The face breathes, glances and blinks as blobatar does; false keeps it still. A terminal that shows no pictures gets the face in braille, which blinks." },
     "command": { "type": "string", "title": "sudus command", "required": false, "default": "sudus",
-      "description": "The command the status line runs; \"sudus\" on PATH by default, and this plugin's own copy when that cannot start." } } }
+      "description": "The command the mod runs for the verdict; \"sudus\" on PATH by default, and this plugin's own copy when that cannot start." } } }

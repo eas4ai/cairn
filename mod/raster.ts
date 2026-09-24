@@ -1,105 +1,12 @@
-// Draws a blobatar SVG into RGBA pixels for the terminal's Image element. Blobatar uses only
-// what this reads: <path d> with M, C and Z, <circle>, <g fill> and <g transform="translate(x y)">,
-// a fill on each shape or inherited from its group. Anything else is skipped. Pure: no engine.
+// The figure's shapes (mod/figure.ts) as RGBA pixels for the terminal's Image: filled in drawing
+// order, supersampled, transparent where nothing is drawn. Pure: no engine.
 
-type Rgb = [number, number, number]
-type Point = [number, number]
-type Shape = { points: Point[]; fill: Rgb }
+import type { Point, Rgb, Shape } from './figure.ts'
 
-const CURVE_STEPS = 12
-const CIRCLE_STEPS = 48
 const SUPERSAMPLE = 2
+const UNITS = 100
 
 export type Raster = { rgba: string; width: number; height: number }
-
-function colorOf(hex: string | undefined): Rgb | null {
-  if (hex === undefined) return null
-  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim())
-  if (!m) return null
-  let h = m[1]!
-  if (h.length === 3) h = h.split('').map(c => c + c).join('')
-  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]
-}
-
-function attr(tag: string, name: string): string | undefined {
-  const m = new RegExp(`\\s${name}="([^"]*)"`).exec(tag)
-  return m ? m[1] : undefined
-}
-
-function cubic(p0: Point, p1: Point, p2: Point, p3: Point, into: Point[]): void {
-  for (let i = 1; i <= CURVE_STEPS; i++) {
-    const t = i / CURVE_STEPS, u = 1 - t
-    into.push([
-      u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
-      u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1],
-    ])
-  }
-}
-
-// One path's `d` (M, C, L, Z) as closed polygons, in user units.
-export function polygonsOfPath(d: string): Point[][] {
-  const tokens = d.match(/[MCLZmclz]|-?\d*\.?\d+(?:e-?\d+)?/g) ?? []
-  const polys: Point[][] = []
-  let cur: Point[] = []
-  let pos: Point = [0, 0]
-  let i = 0
-  let cmd = ''
-  const num = () => Number(tokens[i++])
-  while (i < tokens.length) {
-    const t = tokens[i]!
-    if (/[MCLZmclz]/.test(t)) { cmd = t; i++; if (cmd === 'Z' || cmd === 'z') { if (cur.length) polys.push(cur); cur = [] } continue }
-    if (cmd === 'M' || cmd === 'm') {
-      const x = num(), y = num()
-      pos = cmd === 'm' ? [pos[0] + x, pos[1] + y] : [x, y]
-      if (cur.length) polys.push(cur)
-      cur = [pos]
-      cmd = cmd === 'm' ? 'l' : 'L'
-    } else if (cmd === 'L' || cmd === 'l') {
-      const x = num(), y = num()
-      pos = cmd === 'l' ? [pos[0] + x, pos[1] + y] : [x, y]
-      cur.push(pos)
-    } else if (cmd === 'C' || cmd === 'c') {
-      const rel = cmd === 'c'
-      const o: Point = rel ? pos : [0, 0]
-      const p1: Point = [o[0] + num(), o[1] + num()]
-      const p2: Point = [o[0] + num(), o[1] + num()]
-      const p3: Point = [o[0] + num(), o[1] + num()]
-      cubic(pos, p1, p2, p3, cur)
-      pos = p3
-    } else { i++ }
-  }
-  if (cur.length) polys.push(cur)
-  return polys
-}
-
-// The SVG's filled shapes in drawing order, translated by their groups, with the viewBox size.
-export function shapesOf(svg: string): { shapes: Shape[]; size: number } {
-  const vb = /viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/.exec(svg)
-  const size = vb ? Math.max(Number(vb[1]), Number(vb[2])) : 100
-  const shapes: Shape[] = []
-  const groups: { fill: Rgb | null; dx: number; dy: number }[] = [{ fill: null, dx: 0, dy: 0 }]
-  const top = () => groups[groups.length - 1]!
-  for (const tag of svg.match(/<\/?[a-z]+[^>]*>/g) ?? []) {
-    if (tag.startsWith('</g')) { if (groups.length > 1) groups.pop(); continue }
-    if (tag.startsWith('<g')) {
-      const t = /translate\(\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*\)/.exec(attr(tag, 'transform') ?? '')
-      groups.push({ fill: colorOf(attr(tag, 'fill')) ?? top().fill, dx: top().dx + (t ? Number(t[1]) : 0), dy: top().dy + (t ? Number(t[2]) : 0) })
-      continue
-    }
-    const fill = colorOf(attr(tag, 'fill')) ?? top().fill
-    if (!fill) continue
-    const { dx, dy } = top()
-    if (tag.startsWith('<path')) {
-      for (const poly of polygonsOfPath(attr(tag, 'd') ?? '')) shapes.push({ points: poly.map(([x, y]) => [x + dx, y + dy]), fill })
-    } else if (tag.startsWith('<circle')) {
-      const cx = Number(attr(tag, 'cx')) + dx, cy = Number(attr(tag, 'cy')) + dy, r = Number(attr(tag, 'r'))
-      const points: Point[] = []
-      for (let k = 0; k < CIRCLE_STEPS; k++) { const a = (k / CIRCLE_STEPS) * Math.PI * 2; points.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]) }
-      shapes.push({ points, fill })
-    }
-  }
-  return { shapes, size }
-}
 
 function fillPolygon(buf: Uint8Array, w: number, h: number, points: Point[], scale: number, fill: Rgb): void {
   const n = points.length
@@ -132,12 +39,11 @@ export function base64Of(bytes: Uint8Array): string {
   return out
 }
 
-// The SVG drawn `px` pixels square: transparent where nothing is filled, supersampled twice.
-export function rasterOf(svg: string, px: number): Raster {
-  const { shapes, size } = shapesOf(svg)
+// The shapes of a 100-unit square drawn `px` pixels square.
+export function rasterOf(shapes: Shape[], px: number): Raster {
   const big = px * SUPERSAMPLE
   const buf = new Uint8Array(big * big * 4)
-  for (const s of shapes) fillPolygon(buf, big, big, s.points, big / size, s.fill)
+  for (const s of shapes) fillPolygon(buf, big, big, s.points, big / UNITS, s.fill)
   const out = new Uint8Array(px * px * 4)
   for (let y = 0; y < px; y++) for (let x = 0; x < px; x++) {
     let r = 0, g = 0, b = 0, a = 0

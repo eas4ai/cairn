@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "bin": { "sudus": "bin/sudus.mjs", "cairn": "bin/cairn.mjs" },
-  "scripts": { "test": "node --test tests/*.test.mjs tests/*.test.ts tests/bench/*.test.mjs", "bench": "node tests/bench/harness.mjs" },
+  "scripts": { "test": "node --test tests/*.test.mjs tests/*.test.ts tests/bench/*.test.mjs", "bench": "node tests/bench/harness.mjs", "test:mod": "node scripts/test-mod.mjs" },
   "engines": { "node": ">=24" },
   "files": ["bin/", "lib/", "hooks/", "mod/", "skills/", "scripts/release.mjs", "README.md"]
 }

@@ -30,7 +30,7 @@ test("Claude Code reads the status line module through plugin.json, never throug
   assert.equal(p.hooks, "./mod/hooks.json");
   assert.deepEqual(read("mod/hooks.json").modules, ["./register.tsx"]);
   assert.ok(existsSync(join(ROOT, "mod/register.tsx")));
-  assert.deepEqual(Object.keys(p.userConfig), ["view", "face", "asciiFace", "command"]);
+  assert.deepEqual(Object.keys(p.userConfig), ["view", "face", "motion", "command"]);
   assert.equal(p.userConfig.view.default, "status-line");
   for (const m of [".codex-plugin/plugin.json", ".muse-plugin/plugin.json"]) assert.ok(!readFileSync(join(ROOT, m), "utf8").includes("mod/"), m);
 });

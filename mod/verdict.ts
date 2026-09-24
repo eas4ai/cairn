@@ -1,7 +1,7 @@
-// What `sudus wake` printed, read into one record, and what the status line and the face say
-// about it. Pure functions: no engine, no I/O, so tests/mod-verdict.test.ts runs them alone.
+// What `sudus wake` printed, read into one record, and what the band above the prompt and the
+// face say about it. Pure functions: no engine, no I/O, so tests/mod-verdict.test.ts runs them alone.
 
-import type { Expression } from './faces.ts'
+import type { Expression } from './figure.ts'
 
 export type Verdict =
   | {
@@ -21,7 +21,7 @@ export type Verdict =
   | { kind: 'none' }
 
 // A working tree with neither .sudus/settings.json nor .cairn/settings.json does not use Sudus:
-// wake is not run there, the status line is cleared and the pane says so.
+// wake is not run there, the band draws nothing and the pane says so.
 export const SETTINGS_FILES: readonly string[] = ['.sudus/settings.json', '.cairn/settings.json']
 
 // Whether the session's directory belongs to a Sudus project: a settings file of either layout in
@@ -36,8 +36,8 @@ export async function usesSudus(cwd: string, exists: (path: string) => Promise<b
   }
 }
 
-// Whether `$.process.run` rejected because the command cannot start, the one case the status line
-// runs this plugin's own copy instead; a command that is only slow is reported, never replaced.
+// Whether `$.process.run` rejected because the command cannot start, the one case the mod runs
+// this plugin's own copy instead; a command that is only slow is reported, never replaced.
 export function cannotStart(err: unknown): boolean {
   return /failed to start|\bENOENT\b/.test(String(err))
 }
@@ -85,43 +85,29 @@ export function parseWake(stdout: string, exitCode: number): Verdict {
 }
 
 // The face for a verdict: thinking while a turn runs; idle with work to do or no Sudus project;
-// sad while the developer owes an answer; mad when no one can answer; sick on a repair or outside
-// a project; happy at Done.
+// unsure while the developer owes an answer; mad when no one can answer; sick on a repair or
+// outside a project; sleepy when wake cannot be reached; happy at Done.
 export function expressionOf(v: Verdict, isTurnRunning: boolean): Expression {
   if (isTurnRunning) return 'thinking'
   if (v.kind === 'none') return 'idle'
-  if (v.kind === 'missing') return 'sick'
+  if (v.kind === 'missing') return 'sleepy'
   if (v.kind === 'line') return 'sick'
   if (v.verdict === 'Done') return 'happy'
-  if (v.verdict === 'Waiting') return v.exit === 4 ? 'mad' : 'sad'
+  if (v.verdict === 'Waiting') return v.exit === 4 ? 'mad' : 'unsure'
   return 'idle'
 }
 
-// A tiny ASCII face for the status line, keyed to the same expression as the picture.
-export const ASCII_FACE: Record<Expression, string> = {
-  idle: '(o_o)',
-  happy: '(^_^)',
-  sad: '(;_;)',
-  mad: '(>_<)',
-  sick: '(x_x)',
-  thinking: '(o_o)?',
-}
+// What the band above the prompt says: the verdict in its colour and what it names, then the lines
+// under it, each wrapped by the band, never cut. Undefined where the repository does not use Sudus.
+export type Band = { label: string; color: 'green' | 'yellow' | 'cyan' | 'red'; subject: string; lines: string[] }
 
-const STATUS_MAX = 120
-
-// One line under the prompt, or undefined to clear it where the repository does not use Sudus.
-// The reason is cut to fit by characters, never inside one.
-export function statusTextOf(v: Verdict, isTurnRunning: boolean, withFace: boolean): string | undefined {
+export function bandOf(v: Verdict): Band | undefined {
   if (v.kind === 'none') return undefined
-  const face = withFace ? `${ASCII_FACE[expressionOf(v, isTurnRunning)]} ` : ''
-  let text: string
-  if (v.kind === 'missing') text = `Sudus | ${v.detail}`
-  else if (v.kind === 'line') text = `Sudus | ${v.line}`
-  else if (v.verdict === 'Done') text = v.target ? `Sudus | Done | ${v.target}` : 'Sudus | Done'
-  else if (v.verdict === 'Waiting') text = `Sudus | Waiting for the ${v.party ?? 'developer'} | ${v.question ?? v.reason}`
-  else text = `Sudus | Resolvable | ${v.action ?? ''} ${v.target ?? ''} | ${v.reason}`.replace(/\s+\|/g, ' |')
-  const chars = Array.from(face + text)
-  return chars.length <= STATUS_MAX ? chars.join('') : chars.slice(0, STATUS_MAX - 3).join('') + '...'
+  if (v.kind === 'missing') return { label: 'Not reachable', color: 'red', subject: '', lines: [v.detail] }
+  if (v.kind === 'line') return { label: v.exit === 3 ? 'Repair' : 'Sudus', color: 'red', subject: '', lines: [v.line] }
+  if (v.verdict === 'Done') return { label: 'Done', color: 'cyan', subject: v.target ?? '', lines: [v.reason] }
+  if (v.verdict === 'Waiting') return { label: `Waiting for the ${v.party ?? 'developer'}`, color: 'yellow', subject: '', lines: [v.question ?? v.reason] }
+  return { label: 'Resolvable', color: 'green', subject: `${v.action ?? ''} ${v.target ?? ''}`.trim(), lines: [v.reason] }
 }
 
 // Whether a Bash command can change the verdict: any sudus or cairn invocation, or a git commit.

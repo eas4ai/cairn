@@ -922,3 +922,19 @@ test("wake prints every finding an escalation's ok closes, whatever its fields s
   assert.deepEqual(v.escalation.closes, [1, 2, 3].map((n) => `finding ${n} on the report ${s}`));
   assert.match(render(v), new RegExp(`\\ninstead: fix finding 1\\nok closes: finding 1 on the report ${s}, finding 2 on the report ${s}, finding 3 on the report ${s}\\npredicate: `));
 });
+
+// Issue #25: a workspace snapshot leaves out the output directory, so a tracked file under it
+// (the .gitignore Sudus writes there) was missing from the projection and from the manifest, and
+// the adversary could not tell it was left out on purpose.
+test('the brief names a tracked file under the output directory in its exclusion manifest', async () => {
+  const r = await reviewed();
+  await r.write('.sudus/output/.gitignore', '*\n!.gitignore\n');
+  await git(['add', '-f', '.sudus/output/.gitignore'], { cwd: r.cwd });
+  await r.commit('track the output gitignore');
+  const dir = await tmp();
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code', dir });
+  assert.match(b.text, /## Exclusion manifest \(classes and paths, never contents\)\noutput \.sudus\/output\/\.gitignore\n/);
+  await assert.rejects(fs.stat(path.join(dir, '.sudus/output/.gitignore')));
+  const manifest = { classes: ['output'], paths: [{ path: '.sudus/output/.gitignore', class: 'output' }] };
+  assert.equal(decodeRecord(await catCommit(r.cwd, b.sha)).payload.exclusions_digest, sha256(canonicalize(manifest)));
+});

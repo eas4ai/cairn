@@ -74,6 +74,21 @@ test('S5: AKIA is the real AWS key-id shape with no separator, and long hyphenat
   // [A-Za-z0-9_-]{32,} alternative: a false positive the old regex would have flagged.
   assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model: 'claude-opus-5-1-20260301-preview' } }), []);
 });
+// Review of 3.8.2: SECRET_VALUE only caught a few literal prefixes plus a plain [A-Za-z0-9_]{32,}
+// run, so an AWS secret-access-key shape (mixed case with a "/"), a base64 blob (with "+", "/" or
+// "="), and a JWT (three dot-separated segments) all passed as settings values.
+test('refuses an AWS secret-key shape, a long base64 blob, and a JWT, in a harness adversary_model', () => {
+  refuses((s) => { s.harness.claude_code.adversary_model = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'; }, /secret-shaped value/);
+  refuses((s) => { s.harness.claude_code.adversary_model = 'QmFzZTY0K1Rlc3QvVmFsdWU9MTIzNDU2Nzg5MEFCQ0RFRmFiY2RlZg=='; }, /secret-shaped value/);
+  refuses((s) => { s.harness.claude_code.adversary_model = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U'; }, /secret-shaped value/);
+});
+// Plain lower-case, dotted or hyphenated model ids -- none of them mixing in an upper-case letter
+// -- stay valid, matching the task's own examples.
+test('plain lower-case model ids stay valid: they are never secret-shaped', () => {
+  for (const model of ['claude-opus-5-5', 'jev-1.13.0', 'gpt-5.1-codex']) {
+    assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model } }), []);
+  }
+});
 test('overlaps follows glob-vs-glob language intersection, not literal-stem containment', () => {
   assert.ok(overlaps('src/**', 'src/api/**') && overlaps('docs/spec/**', 'docs/spec/a.md') && overlaps('a/b', 'a/b') && overlaps('config/*.json', 'config/x.json'));
   assert.ok(!overlaps('src/**', 'srcx/**') && !overlaps('README.md', 'bin/**') && !overlaps('**/*.md', '**/*.js'));

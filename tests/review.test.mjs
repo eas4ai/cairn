@@ -604,6 +604,34 @@ test('an open finding carries across a supersede and can be declined in the succ
   assert.deepEqual(await supersededToSecond(d), []);
 });
 
+// Issue #32: a commitment read every supersession's carried list, so a finding carried into
+// another, finished commitment sat in a later commitment's ledger and review report, a refusal
+// named that record instead of the commitment's own, and an escalation could concern it.
+import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
+test('only the supersession that opened a commitment carries findings into it (issue #32)', async () => {
+  const r = await reported();
+  assert.deepEqual(await supersededToSecond(r), [r.rep]);
+  await decline(r.cwd, 'second', 1, 'whitespace names are valid');
+  await r.add('done', 'second', { slug: 'second', snapshot: await writeWorkspaceSnapshot(r.cwd) });
+  const roadmap = await fs.readFile(path.join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
+  await r.write('docs/spec/roadmap.md', roadmap.replace(/^Current: .*$/m, 'Current: third') + '\n## third\n\nRequirements: DEMO-001\n\nMore of the demo.\n');
+  await r.commit('third section');
+  await authorize(r.cwd, { quote: 'ok', env: {} });
+  await startCommitment(r.cwd, 'third');
+  await r.write('src/api/x.mjs', 'export const x = 3;\n');
+  await r.commit('change the interface under third');
+  r.slug = 'third';
+  r.revPayload = decodeRecord(await catCommit(r.cwd, await review(r.cwd, 'third', await claims(r), { env: { SUDUS_SESSION: 's-builder' } }))).payload;
+  r.b = await brief(r.cwd, 'third', { harness: 'claude_code' });
+  r.bp = decodeRecord(await catCommit(r.cwd, r.b.sha)).payload;
+  const rep = await report(r.cwd, 'third', adversary(r));
+  assert.deepEqual(ledger(await r.log(), 'third').map((f) => [f.source, f.status]), [[rep, 'open']]);
+  const res = await resolve(r.cwd, 'third', 1, 'rejects whitespace-only names');
+  await assert.rejects(resolve(r.cwd, 'third', 1, 'again'), { message: `sudus: resolve: finding 1 on ${rep} is resolved by ${res}` });
+  await assert.rejects(escalate(r.cwd, disputeOf(r.rep, 1, 'third')), { message: `sudus: no record ${r.rep} in the open range or carried into it` });
+  assert.equal(await predicates.find((p) => p.name === 'resolve').test(await readState(r.cwd)), null);
+});
+
 // Issue #23: closing N findings took N escalations, since an escalation naming several findings
 // closed none. One escalation naming several findings holds them all and one ok closes them.
 test('one escalation naming two findings holds both while it waits and closes both on ok', async () => {

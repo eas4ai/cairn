@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 4.0.1 - 2026-09-25
+
+- Only the supersession that opened a commitment carries findings into it (issue #32). The ledger, wake and an escalation's `finding:` concern read the carried list of every supersession in the log. So a finding carried into another, finished commitment showed up in a later commitment's ledger and in the review report `sudus done` prints; a refusal from `sudus resolve` or `sudus decline` could name that record instead of the commitment's own; and an escalation could concern it. They now read only the supersession the commitment's start names. In 3.x the same read made `sudus resolve` without `--source` refuse with "awaits acceptance"; 4.0.0 had already removed that refusal.
+
 ## 4.0.0 - 2026-09-25
 
 Spec revision 16, on the developer's rulings of 2026-09-25. The adversary changes, and with it what Done needs and what earlier acceptance records mean.

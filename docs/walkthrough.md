@@ -413,7 +413,7 @@ sudus wake
 ```text
 verdict: Resolvable
 action: promote names-node-test-runner
-reason: backlog item names-node-test-runner waits and no commitment is open
+reason: backlog item names-node-test-runner waits for promotion and no commitment is open
 predicate: no commitment is open; one promotion names a backlog item and decision; Current: and a one-item successor start were written transactionally
 ```
 

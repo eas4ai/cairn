@@ -7,7 +7,17 @@
 # and ~/.local/share/cairn, by package.json version.
 newer() { awk -v a="$1" -v b="$2" 'BEGIN{split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){p=x[i]+0;q=y[i]+0;if(p>q)exit 0;if(p<q)exit 1}exit 1}'; }
 ver() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$1/package.json" 2>/dev/null | head -n 1; }
-root="${SUDUS_ROOT:-${CAIRN_ROOT:-}}"
+# A pin ($SUDUS_ROOT, or $CAIRN_ROOT) that is not an absolute path makes the file that runs depend
+# on the caller's current directory, so it is refused here rather than used as given.
+pinvar=""; pin=""
+if [ -n "$SUDUS_ROOT" ]; then pinvar="SUDUS_ROOT"; pin="$SUDUS_ROOT"
+elif [ -n "$CAIRN_ROOT" ]; then pinvar="CAIRN_ROOT"; pin="$CAIRN_ROOT"
+fi
+case "$pin" in
+  "") root="" ;;
+  /*) root="$pin" ;;
+  *) printf 'sudus: %s=%s is not an absolute path\n' "$pinvar" "$pin" >&2; exit 1 ;;
+esac
 [ -n "$root" ] && [ -f "$root/bin/sudus.mjs" ] || root=""
 if [ -z "$root" ]; then
   best=""

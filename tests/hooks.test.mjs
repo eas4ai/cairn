@@ -109,6 +109,27 @@ test("the shim runs the newest installed Sudus across the Claude Code and Codex 
   assert.equal(spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, SUDUS_ROOT: pinned } }).stdout, "pinned", "SUDUS_ROOT wins");
 });
 
+// Review of 3.8.2: `root="${SUDUS_ROOT:-${CAIRN_ROOT:-}}"` used the pin exactly as given, so a
+// relative value made which file ran depend on the shell's current directory at the moment the
+// shim was invoked. A pin that is not an absolute path is now refused before it is used at all;
+// an absolute one still works as before (the "SUDUS_ROOT wins" case just above).
+test("the shim refuses a relative SUDUS_ROOT or CAIRN_ROOT and accepts an absolute one", () => {
+  const { dir } = throwawayRepo();
+  const shim = join(dir, "shim"); writeFileSync(shim, readFileSync(join(ROOT, "bin", "sudus.sh"))); chmodSync(shim, 0o755);
+  const pinned = fakeRoot(join(dir, "pinned"), "1.0.0", "pinned");
+  for (const name of ["SUDUS_ROOT", "CAIRN_ROOT"]) {
+    // cwd is `dir` and the pin is "pinned", the real root's own basename relative to it: were the
+    // shim to use it as given, this would still resolve to a real root, proving the refusal below
+    // is about the value being relative, not about the path being missing.
+    const rel = spawnSync("sh", [shim, "wake"], { encoding: "utf8", cwd: dir, env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, [name]: "pinned" } });
+    assert.notEqual(rel.status, 0, rel.stdout);
+    assert.ok(rel.stderr.includes(`${name}=pinned is not an absolute path`), rel.stderr);
+    assert.equal(rel.stdout, "");
+  }
+  const abs = spawnSync("sh", [shim, "wake"], { encoding: "utf8", env: { HOME: dir, PATH: `${nodeDir}:/usr/bin:/bin`, SUDUS_ROOT: pinned } });
+  assert.equal(abs.stdout, "pinned");
+});
+
 // A machine with only the Muse plugin: Muse keeps it under ~/.local/share/muse/plugins/cache/<source>/
 // sudus/<digest>/package/, which the shim did not scan, so every sudus command said no Sudus was
 // installed.

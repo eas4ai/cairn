@@ -451,7 +451,12 @@ for when the attempt did not pan out.
 The lease is local to your clone; it is never pushed and does not
 coordinate two clones working at once. Two clones meet at the authority
 remote: `sudus push` refuses a non-fast-forward or losing race there,
-stopping the later writer before it publishes.
+stopping the later writer before it publishes. When the other clone only
+moved ahead, push names the fetch that catches up. When both clones
+recorded something, the logs have diverged and are never merged: push
+says how many records each side holds that the other lacks, and names the
+fetch that keeps the remote's records and drops this clone's, whose work
+is then recorded again.
 
 ## Answer a decision without guessing
 
@@ -771,7 +776,9 @@ sudus report reject-empty-names --file report.json
 This refuses a report whose workspace differs from the reviewed snapshot,
 whose brief is stale, whose model, transport, or projection digest does
 not match the brief's launch instruction, or which leaves a required
-question or interface attempt missing. There is one report per commitment.
+question or interface attempt missing. There is one report per commitment,
+and a review after it is refused: a change after the report gets a
+resolution, not a new review.
 
 The brief's changed paths and interface paths run from the commitment's
 start to the reviewed snapshot. A commitment started after a supersede
@@ -864,6 +871,10 @@ then:
 ```sh
 sudus scope <breach-sha> keep
 ```
+
+Your ok keeps the bytes the breach captured. If the path changed after
+that, keep refuses; the agent puts the captured bytes back, or restores
+the path and asks again about the new bytes as a new breach.
 
 A later `sudus declare` cannot retroactively clear an existing breach; it
 only legalizes future changes.

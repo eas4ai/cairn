@@ -221,6 +221,26 @@ test('attempts ignores a receipt in which a sibling requirement of the commitmen
   assert.equal(attempts(log, 'DEMO-001', { siblings: ['DEMO-001', 'DEMO-002'] }), 2, 'the two runs where DEMO-002 also failed are not attempts; OTHER-001 is not a sibling');
 });
 
+// Issue #28 (spec revision 15): attempts count from the requirement's turn. Mechanism M checks
+// DEMO-001 and DEMO-003, N checks DEMO-002; the set's order is DEMO-001, DEMO-002, DEMO-003.
+test('attempts count from the turn: refresh runs before every earlier requirement passes, and the first receipt of a turn begun after the start, are not attempts', () => {
+  const m = (sha, digest, one, three) => ({ sha, kind: 'receipt', payload: { status: 'ran', product_digest: digest, results: [{ requirement: 'DEMO-001', result: one }, { requirement: 'DEMO-003', result: three }] } });
+  const n = (sha, digest, two) => ({ sha, kind: 'receipt', payload: { status: 'ran', product_digest: digest, results: [{ requirement: 'DEMO-002', result: two }] } });
+  const S = { sha: 'S', kind: 'start', payload: {} };
+  const opts = { since: 'S', siblings: ['DEMO-001', 'DEMO-002', 'DEMO-003'], before: ['DEMO-001', 'DEMO-002'] };
+  const noTurn = [S, m('r1', 'sha256:a', 'pass', 'fail'), m('r2', 'sha256:b', 'pass', 'fail'), m('r3', 'sha256:c', 'pass', 'fail')];
+  assert.equal(attempts(noTurn, 'DEMO-003', opts), 0, 'DEMO-002 never passed, so DEMO-003 has had no turn');
+  assert.equal(attempts(noTurn, 'DEMO-003', { since: 'S' }), 3, 'without the order, the three refresh runs count');
+  const turn = [S, m('r1', 'sha256:a', 'pass', 'fail'), n('r2', 'sha256:b', 'pass'), m('r3', 'sha256:c', 'pass', 'fail'), m('r4', 'sha256:d', 'pass', 'fail'), m('r5', 'sha256:e', 'fail', 'fail'), m('r6', 'sha256:f', 'pass', 'fail')];
+  assert.equal(attempts(turn.slice(0, 4), 'DEMO-003', opts), 0, 'r3 is the first receipt of the turn that began at r2: its starting point');
+  assert.equal(attempts(turn.slice(0, 5), 'DEMO-003', opts), 1);
+  assert.equal(attempts(turn.slice(0, 6), 'DEMO-003', opts), 1, 'a receipt where a sibling also fails is still not an attempt');
+  assert.equal(attempts(turn, 'DEMO-003', opts), 2);
+  const already = [m('r0', 'sha256:z', 'pass', 'fail'), n('r00', 'sha256:y', 'pass'), S, m('r1', 'sha256:a', 'pass', 'fail')];
+  assert.equal(attempts(already, 'DEMO-003', opts), 1, 'every earlier requirement passed before the start, so the turn began at the start and counts as before');
+  assert.equal(attempts([S, m('r1', 'sha256:a', 'fail', 'pass')], 'DEMO-001', { since: 'S', siblings: opts.siblings, before: [] }), 1, 'the first requirement in order counts from the start as before');
+});
+
 test('attempts counts distinct failing product digests since the last pass', async () => {
   const repo = await declared();
   const count = async () => attempts(await readLog(repo.cwd), 'DEMO-001');

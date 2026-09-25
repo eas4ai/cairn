@@ -4,8 +4,18 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 14, 2026-09-24. Nothing here is Agreed until the
+Status: Draft, revision 15, 2026-09-25. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 15 changes two rules; the developer accepted both on 2026-09-25
+("ok"). Attempts at a requirement count from its turn (section 8, Deferral
+and attempts): the refresh runs wake named for other requirements' changes
+counted as attempts at a requirement no one had worked on, and wake named
+`escalate` for it (issue #28). A backlog item may wait by the developer's ok
+(section 8, Capture and promotion): an escalation naming `wait:<item>`
+answered ok lets wake say Done while the item waits until the next Done, so
+the next feature goes ahead of it; before, Done needed every backlog item
+promoted or retired first (issue #29).
 
 Revision 14 lets the developer retire a backlog item that other work already
 delivered (section 8, Capture and promotion). An escalation whose concerns
@@ -817,7 +827,8 @@ remains Resolvable.
 When the Done rule holds, wake names `done`. `sudus done` writes the done
 record. Terminal output is not durable state: the next invocation renders the
 unread queue. With a backlog item waiting, the next wake names `promote` rather
-than Done.
+than Done, unless the developer's ok lets the item wait (section 8, Capture and
+promotion).
 
 ## 4. The record set
 
@@ -1020,7 +1031,7 @@ predicate. The table is normative.
 | `declare REQ` | a mechanism definition names the requirement and no pre-existing undeclared delta was legalized |
 | `run REQ` | a current receipt carries a result for the requirement |
 | `implement REQ` | a current receipt says pass and review metadata binds the requirement to the current detection and text digests with a fail receipt |
-| `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth; a receipt where another requirement of the commitment also failed is not an attempt |
+| `escalate REQ` | after three distinct attempts without a pass, an escalation concerns the requirement before a fourth; a receipt where another requirement of the commitment also failed is not an attempt; attempts count from the requirement's turn, which begins once every requirement before it in the set passes, and the first receipt of a turn that begins after the start record is not an attempt |
 | `review mechanism REQ` | review metadata binds the requirement to the current detection and text digests with a fail receipt |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `review SLUG` | a review names the current workspace snapshot and answers every fixed question for every target |
@@ -1113,7 +1124,8 @@ Done requires all of the following:
 
 Backlog items are not in the rule. When the rule holds, wake names `done`;
 `sudus done` writes the record. The next wake renders the queue or names one
-promotion, so one commitment is open at a time.
+promotion, so one commitment is open at a time; a backlog item the
+developer's ok let wait is listed, not named (Capture and promotion).
 
 The report is written once at the candidate snapshot. Every later fix is a
 resolution. Each acceptance examines the whole delta from that reported
@@ -1279,6 +1291,18 @@ documents or outside paths are not new attempts. Captured output may be
 truncated at a fixed byte cap; the truncation marker lives in the output
 bytes themselves, not in a separate receipt field.
 
+Attempts at a requirement are counted from its turn. The turn begins at the
+first receipt, at or after the start record, after which every requirement
+before it in the frozen set's order last passed; a requirement whose turn has
+not begun has no attempts. When the turn begins after the start record, the
+requirement's first receipt in the turn is its starting point, not an
+attempt. The first requirement in order, and one whose earlier requirements
+all passed before the start record, count from the start record as before.
+(Added 2026-09-25, revision 15: wake works the set in order, and the refresh
+runs it named for other requirements' changes, each failing on a violating
+example still waiting its turn, counted as attempts; after three, wake named
+`escalate` for a requirement no one had worked on. Issue #28.)
+
 ### Decisions and realization
 
 Consequential decisions enter the ADR queue and the agent continues. Blocking
@@ -1362,6 +1386,18 @@ Done or before a supersession's successor starts, the escalation names the
 latest commitment. An ok on an escalation that names the item as
 `item:<item>`, the capture gate's concern, does not retire it. Added
 2026-09-24 (revision 14).
+
+The developer may rank a new feature above the waiting backlog. After Done,
+while no commitment is open, the agent escalates with one `wait:<item>`
+concern per waiting item, naming the finished commitment; while a commitment
+is open the concern is refused, since the wait would end at that commitment's
+own Done. The developer's ok lets wake say Done while those items wait, so
+the next feature can be specified and started. Each item stays in the
+backlog: `sudus show items` marks it, the Done verdict lists it, and
+`sudus promote` still accepts it. The wait ends at the next done record after
+the ok: wake then names the item's promotion again. An instead answer leaves
+the item first in line; an item captured after the ok is not covered by it.
+Added 2026-09-25 (revision 15, issue #29).
 
 Model-recommended capture is fallible. Sudus does not claim a passing mechanism
 proves a captured change unnecessary. The item remains visible, the frozen

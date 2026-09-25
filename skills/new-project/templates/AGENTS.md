@@ -8,7 +8,7 @@ Run `sudus wake` first, every session, and act on the verdict only. With hooks t
 
 - Resolvable: do the one action named until its predicate holds, leave the required trace (branch commit, snapshot or log record), then run `sudus wake` again.
 - Waiting: an escalation is unanswered and wake printed its five fields verbatim. Add nothing to the work. Put the escalation to the developer as "The developer" below says, ending with `ok | instead | ask`, and when they answer, record it yourself with `sudus answer`. Never hand them a command to run.
-- Done: a done record exists and nothing waits. Report it and stop. Backlog waiting: wake names `promote` instead.
+- Done: a done record exists and nothing waits. Report it and stop. Backlog waiting: wake names `promote` instead. When the developer ranks a new feature above the waiting items, escalate with `--commitment <the finished slug> --concern wait:<item sha>` per item; the developer's `ok` lets wake say Done while they wait until the next Done.
 
 Before changing a declared input: `sudus begin <action> <target>` (`--touch <path>` declares a new file that no input of the leased mechanism covers); it prints the lease sha. After the commit: `sudus end --lease <sha>` with that sha, so a stale end never closes another session's lease. Commit before `sudus check`; an uncommitted declared input makes wake name `commit` or `record` before anything else. Push with `sudus push`: it pushes the branch and both durable refs atomically where the remote allows and in the safe order otherwise. Never push `refs/sudus/*` with plain `git push`.
 
@@ -35,7 +35,7 @@ The move for each action wake can name:
 - After three acceptance rounds without Done, an escalation names the open findings. The developer's `ok` closes them; then capture each: `sudus item --backlog --slug <s> --from <REQ> --body "<the finding>"`, then `sudus outside <item> --reason "closed by the developer's ok on escalation <sha>"`.
 - `build DECISION`: build what the decision says, commit, then `sudus realize <id> --subject "<what was built>"`.
 - `done SLUG`: `sudus done SLUG`.
-- `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text. When other work already delivered the item, escalate with `--commitment <the finished slug> --concern retire:<item sha>` instead; the developer's `ok` retires it.
+- `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text. When other work already delivered the item, escalate with `--commitment <the finished slug> --concern retire:<item sha>` instead; the developer's `ok` retires it. To let the next feature go first, escalate with `--concern wait:<item sha>` per item instead; `ok` lets Done stand while they wait until the next Done.
 - `reply SLUG`: `sudus reply SLUG "<explanation>"`; an `ask` answer authorizes an explanation only.
 
 When Sudus itself is wrong -- a command crashes, a message contradicts the manual, or wake keeps naming an action whose predicate already holds -- follow the report-sudus-issue skill: it drafts an issue for eas4ai/sudus, files it only after the developer's `ok`, and updates the plugin when the fix is released.

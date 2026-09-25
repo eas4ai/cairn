@@ -332,7 +332,7 @@ predicate: a current receipt carries a result for the requirement
 |---|---|
 | `Resolvable` | A named action can be taken now. The reason and predicate say what and why. |
 | `Waiting` | An escalation is unanswered. Wake prints its five fields verbatim; only you can close it. |
-| `Done` | The open commitment meets every recorded condition, and the backlog holds nothing to promote. |
+| `Done` | The open commitment meets every recorded condition, and the backlog holds nothing to promote, or every item it holds waits by your ok until the next Done. |
 
 Outside a project, with the durable refs missing, during a pending
 supersession, or with an interrupted transaction, `sudus wake` prints one
@@ -1094,7 +1094,7 @@ specific than the action word alone.
 | `accept SLUG` | Give the adversary the report, the resolutions, and the delta; `sudus accept --file`. |
 | `build DECISION` | Build what the decision says, commit, then `sudus realize`. |
 | `done SLUG` | Every condition holds: `sudus done SLUG`. |
-| `promote` | No commitment is open and the backlog holds an item. Choose one; `sudus promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. An item other work already delivered is retired instead: `sudus escalate --commitment <finished slug> --concern retire:<item sha> ...`, and the developer's `ok` takes it out of the backlog. |
+| `promote` | No commitment is open and the backlog holds an item. Choose one; `sudus promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. An item other work already delivered is retired instead: `sudus escalate --commitment <finished slug> --concern retire:<item sha> ...`, and the developer's `ok` takes it out of the backlog. To rank a new feature above the waiting items, the agent escalates with `--concern wait:<item sha>` per item; your `ok` lets wake say Done while they wait, `sudus show items` marks them, and after the next Done wake names them again. |
 | `reply SLUG` | You asked a question with `ask`; the agent owes an explanation: `sudus reply SLUG "..."`. |
 | `Waiting` | An escalation needs your answer. With `developer: absent` no one can answer any escalation; wake exits 4 instead of sitting there. |
 
@@ -1107,7 +1107,7 @@ prints one with its references resolved.
 | Command | Purpose |
 |---|---|
 | `show <sha>` | Print one record, with the records and snapshots it references described. |
-| `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted, fixed or retired. |
+| `show items` | List every item record: sha, kind, slug, source, body, and whether it was promoted, fixed, retired or waits until the next Done. |
 | `lint docs/spec` | Check the specification's grammar: identifiers, falsifiers, mechanisms, statuses, and the spec map. |
 | `init --remote <name>\|--local-only [--signing-key <path>] [--adopt <digest>] --quote <words>` | Create or adopt `.sudus/settings.json` and the two durable refs, with the developer's answer as flags; the command asks nothing itself. Attested unless `--signing-key` names a public key file. |
 | `migrate` | Move a project from the former layout (`.cairn/`, `refs/cairn/*`) to `.sudus/` and `refs/sudus/*`, once, between commitments; nothing to do on a Sudus project. |

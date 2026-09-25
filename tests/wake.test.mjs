@@ -1058,3 +1058,106 @@ test('the ok on a capture escalation naming an item leaves it in the backlog', a
   const v = await wake(r.cwd);
   assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'nicer-greeting']);
 });
+
+// Issue #28 (spec revision 15): attempts at a requirement count from its turn. Before, the refresh
+// runs wake named for other requirements' changes, each failing on DEMO-004's untouched
+// violation, counted as attempts, and wake named escalate for a requirement no one had worked on.
+import { attemptState as attemptsAt } from '../lib/check.mjs';
+import { render as renderVerdict } from '../lib/wake.mjs';
+
+test("a refresh run wake named for other requirements' changes is not an attempt at a requirement no one has worked on", async () => {
+  const r = await loopRepo({ reqs: ['DEMO-001', 'DEMO-002', 'DEMO-003', 'DEMO-004'] });
+  await r.failReq('DEMO-004');   // its violation is checked once, then waits its turn
+  const passed = [];
+  for (const q of ['DEMO-001', 'DEMO-002', 'DEMO-003']) {
+    await r.passReq(q);
+    passed.push(q);
+    await r.write('src/demo.mjs', `console.log("hello ${passed.length}");\n`); await r.commit(`implement ${q}`);   // the shared input changed
+    for (const p of passed) await check(r.cwd, p);   // the refresh runs wake would name
+  }
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['run', 'DEMO-004'], 'the shared input changed under DEMO-004');
+  await check(r.cwd, 'DEMO-004');   // fails on the untouched violation
+  assert.equal(attemptsAt(await r.log(), 'DEMO-004').tried, 0, 'no attempt at DEMO-004 has been made');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['implement', 'DEMO-004']);
+  for (const i of [1, 2]) {
+    await r.write('src/demo.mjs', `console.log("try ${i}");\n`); await r.commit(`attempt ${i} at DEMO-004`);
+    for (const p of passed) await check(r.cwd, p);
+    await check(r.cwd, 'DEMO-004');
+  }
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['implement', 'DEMO-004'], 'two attempts failed; a third is allowed');
+  await r.write('src/demo.mjs', 'console.log("try 3");\n'); await r.commit('attempt 3 at DEMO-004');
+  for (const p of passed) await check(r.cwd, p);
+  await check(r.cwd, 'DEMO-004');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['escalate', 'DEMO-004']);
+});
+
+// Issue #29 (spec revision 15): after Done, the developer's ok on an escalation naming
+// wait:<item> lets wake say Done while the backlog item waits, so the next feature goes ahead of
+// it. The item stays in the backlog, Done lists it, show items marks it, and after the next Done
+// wake names its promotion again.
+const waitDraft = (items, over = {}) => ({ commitment: 'first', concerns: items.map((i) => `wait:${i}`), question: 'Start the next feature before the waiting items?', recommendation: 'Yes: the feature first, the items after its Done.', because: 'the developer ranks the feature above them', if_wrong: 'the items wait one more commitment', instead: 'promote the oldest item first', options: [], named_paths: [], cited_decisions: [], ...over });
+
+test('after Done, the ok on a wait escalation lets wake say Done while the backlog items wait, listed and still shown', async () => {
+  const r = await finished();
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const a = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  const b = await r.item('backlog', 'DEMO-001', 'louder-greeting');
+  const e = await escalate(r.cwd, waitDraft([a, b]));
+  let v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.deepEqual(v.escalation.closes, ['backlog item nicer-greeting waits until the next Done', 'backlog item louder-greeting waits until the next Done']);
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok, the feature first', env: {} });
+  await r.commit('the answered line');
+  v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Done');
+  assert.deepEqual(v.waits, [{ slug: 'nicer-greeting', item: a, escalation: e }, { slug: 'louder-greeting', item: b, escalation: e }]);
+  assert.equal(v.reason, "done record closes first; 2 backlog items wait until the next Done by the developer's ok");
+  assert.match(renderVerdict(v), new RegExp(`\\nwaits: nicer-greeting \\(escalation ${e.slice(0, 12)}\\), louder-greeting \\(escalation ${e.slice(0, 12)}\\); wake names their promotion after the next Done\\npredicate: `));
+  let out = '';
+  assert.equal(await main(['show', 'items'], { cwd: r.cwd, stdout: { write: (s) => { out += s; } } }), 0);
+  assert.equal(out, `${a} backlog nicer-greeting from DEMO-001 waits until the next Done by ${e}: an idea\n${b} backlog louder-greeting from DEMO-001 waits until the next Done by ${e}: an idea\n`);
+  await assert.rejects(escalate(r.cwd, waitDraft([a])), { message: `sudus: item nicer-greeting already waits until the next Done by the developer's ok on escalation ${e}` });
+  await r.item('backlog', 'DEMO-001', 'later-idea');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'later-idea'], 'an item captured after the ok is not covered by it');
+});
+
+test('the wait lapses at the next Done: wake names the promotion again', async () => {
+  const r = await finished();
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const a = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  await escalate(r.cwd, waitDraft([a]));
+  await answer(r.cwd, 'first', 'ok', { quote: 'ok', env: {} });
+  await r.commit('the answered line');
+  assert.equal((await wake(r.cwd)).verdict, 'Done');
+  await r.write('docs/spec/roadmap.md', 'Current: second\n\n## first\n\nRequirements: DEMO-001\n\nDelivers the demo.\n\n## second\n\nRequirements: DEMO-001\n\nThe feature.\n');
+  await r.commit('the next feature');
+  const { requirements } = (await r.log()).find((x) => x.sha === r.startSha).payload;
+  await r.add('start', 'second', { slug: 'second', snapshot: await r.snap(), from_superseded: null, intent: null, results: [], requirements });
+  await r.add('done', 'second', { slug: 'second', snapshot: await r.snap() });
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'nicer-greeting']);
+});
+
+test('an instead answer on a wait escalation keeps the promotion named, and only a waiting backlog item may wait', async () => {
+  const r = await finished();
+  const idea = await r.item('next-feature', 'DEMO-001', 'colour');
+  await assert.rejects(escalate(r.cwd, waitDraft([idea])), { message: 'sudus: item colour is a next-feature item; only a backlog item waits' });
+  const early = await r.item('backlog', 'DEMO-001', 'early-idea');
+  await assert.rejects(escalate(r.cwd, waitDraft([early])), { message: 'sudus: item early-idea waits after Done; first is open' });
+  await r.add('done', 'first', { slug: 'first', snapshot: await r.snap() });
+  const a = await r.item('backlog', 'DEMO-001', 'nicer-greeting');
+  await escalate(r.cwd, waitDraft([a]));
+  await answer(r.cwd, 'first', 'instead', { quote: 'no, the item first', env: {} });
+  await r.commit('the answered line');
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'promote', 'early-idea'], 'nothing waits: the oldest backlog item is named');
+  const e = await escalate(r.cwd, retireDraft(a));
+  await answer(r.cwd, 'first', 'ok', { quote: 'retire it', env: {} });
+  await r.commit('the answered line');
+  await assert.rejects(escalate(r.cwd, waitDraft([a])), { message: `sudus: item nicer-greeting was retired by the developer's ok on escalation ${e}` });
+});

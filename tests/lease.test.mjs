@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 // called; every fixture path here is written through repo.write, which already creates its
 // directories.
 import { existsSync, writeFileSync } from 'node:fs';
+import { mkdtemp, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { makeRepo } from './helpers/repo.mjs';
 
@@ -198,6 +199,30 @@ test('a touched path whose bytes equal the start snapshot is unchanged; a modifi
   assert.deepEqual(await touchOutcome(cwd, await readLease(cwd)), { changed: [], unchanged: ['src/a.mjs'] });
   writeFileSync(join(cwd, 'src/a.mjs'), 'export const a = 2;\n');
   assert.deepEqual(await touchOutcome(cwd, await readLease(cwd)), { changed: ['src/a.mjs'], unchanged: [] });
+  await end(cwd);
+});
+// Review of 3.8.2: a --touch path that was a symlink out of the worktree was accepted, and `sudus
+// end` hashed touched files with --stdin-paths, which reads through a symlink: the outside file
+// was read, the link counted as changed, and it was declared a mechanism input.
+test('begin refuses a --touch path that escapes the worktree through a symlink', async () => {
+  const cwd = await initialized();
+  const outside = await mkdtemp(join(tmpdir(), 'sudus-outside-'));
+  writeFileSync(join(outside, 'secret.txt'), 'OUTSIDE\n');
+  await symlink(join(outside, 'secret.txt'), join(cwd, 'src/link'));
+  await symlink(outside, join(cwd, 'src/linkdir'));
+  for (const p of ['src/link', 'src/linkdir/secret.txt']) {
+    await assert.rejects(begin(cwd, { action: 'implement', target: 'X', touch: [p], env: {} }), /escapes the worktree after resolution/);
+  }
+  assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+test('a touched directory holding a symlink out of the repository is unchanged while the link is', async () => {
+  const cwd = await initialized();
+  const outside = await mkdtemp(join(tmpdir(), 'sudus-outside-'));
+  writeFileSync(join(outside, 'secret.txt'), 'OUTSIDE\n');
+  await symlink(join(outside, 'secret.txt'), join(cwd, 'src/link'));
+  await git(['add', '-A'], { cwd }); await git(['commit', '-qm', 'link'], { cwd });
+  await begin(cwd, { action: 'implement', target: 'CORE-001', touch: ['src'], env: {} });
+  assert.deepEqual(await touchOutcome(cwd, await readLease(cwd)), { changed: [], unchanged: ['src'] });
   await end(cwd);
 });
 

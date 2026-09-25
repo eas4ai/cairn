@@ -754,3 +754,12 @@ describe('escalateConsequential', () => {
     assert.match(sha, /^[0-9a-f]{40}$/);
   });
 });
+
+// Review of revision 15 (issue #29): a concern token named twice in one draft listed its item
+// twice on wake's "ok closes:" line, as if the ok covered two items.
+test('a draft that repeats a concern token is refused', () => {
+  const a = 'a'.repeat(40);
+  assert.throws(() => validateDraft(draft({ concerns: [`wait:${a}`, `wait:${a}`] })), { message: `sudus: concern token wait:${a} is repeated` });
+  assert.throws(() => validateDraft(draft({ concerns: ['DEMO-001', `finding:${a}#1`, 'DEMO-001'] })), { message: 'sudus: concern token DEMO-001 is repeated' });
+  assert.equal(validateDraft(draft({ concerns: [`finding:${a}#1`, `finding:${a}#2`] })).concerns.length, 2, 'two findings of one record are two tokens');
+});

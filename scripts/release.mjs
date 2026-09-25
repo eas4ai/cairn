@@ -8,9 +8,20 @@ import { pathToFileURL } from "node:url";
 import { loadSettings } from "../lib/settings.mjs";
 
 const FILES = ["package.json", ".claude-plugin/plugin.json", ".claude-plugin/marketplace.json", ".codex-plugin/plugin.json", ".muse-plugin/plugin.json"];
+// Review of 3.8.2: the old PATTERNS anchored only "Co-Authored-By:" and "Signed-off-by:" and kept
+// a fixed model list, so a differently named trailer ("Assisted-By: Claude ...") or a vendor name
+// outside that list ("Co-Authored-By: Fable ...") passed unnoticed. VENDOR is now checked against
+// any "<Word(s)>-By:" or "<Word(s)>-With:" trailer, not just the two named ones, and the vendor
+// list grew to match the tools this project's own no-attribution rule names. The trailer pattern
+// requires the "-By:"/"-With:" shape itself before it even looks for a vendor word, so ordinary
+// prose that merely mentions one ("Fix the opus-style parser") is never flagged, and a human
+// co-author ("Co-Authored-By: Jane Doe <jane@example.com>") is left alone since no vendor word
+// appears on that line. An @anthropic.com or @openai.com address is flagged wherever it appears.
+const VENDOR = "(?:claude|fable|opus|sonnet|haiku|codex|chatgpt|gpt|copilot|gemini|muse|openai|anthropic)";
 const PATTERNS = [
-  /^Co-Authored-By:.*\b(claude|codex|chatgpt|gpt|copilot|gemini|muse|openai|anthropic)\b/i,
-  /Generated with \[?Claude Code/i, /^Claude-Session:/i, /claude\.ai\/code\/session/i, /^Signed-off-by:.*\bnoreply@anthropic\.com/i,
+  new RegExp(`^[A-Za-z][\\w -]*-(?:By|With):.*\\b${VENDOR}\\b`, "i"),
+  new RegExp(`\\bGenerated with\\b.*\\b${VENDOR}\\b`, "i"),
+  /^Claude-Session:/i, /claude\.ai\/code\//i, /@anthropic\.com\b/i, /@openai\.com\b/i,
 ];
 const git = (cwd, ...a) => { const r = spawnSync("git", a, { cwd, encoding: "utf8" }); if (r.status !== 0) throw new Error(`git ${a[0]} failed: ${r.stderr.trim().split("\n")[0]}`); return r.stdout; };
 

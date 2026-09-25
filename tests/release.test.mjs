@@ -42,3 +42,24 @@ test("release refuses when wake is not Done", async () => {
   const r = releasable();
   await assert.rejects(release(r.dir, "2.0.1", { wake: async () => ({ verdict: "Resolvable", action: "review", target: "x" }) }), /not at Done/);
 });
+
+// Review of 3.8.2: PATTERNS only anchored "Co-Authored-By:" and "Signed-off-by:" and kept a fixed
+// model list, so a differently named trailer ("Assisted-By:") or a vendor name outside that list
+// ("Fable") passed unnoticed.
+test("scanAttribution flags a trailer named something other than Co-Authored-By or Signed-off-by", () => {
+  const r = releasable(); tainted(r, "Assisted-By: Claude <noreply@anthropic.com>");
+  const found = scanAttribution(r.dir, "HEAD~1..HEAD");
+  assert.equal(found.length, 1); assert.match(found[0].line, /^Assisted-By: Claude/);
+});
+test("scanAttribution flags a vendor name outside the old fixed model list", () => {
+  const r = releasable(); tainted(r, "Co-Authored-By: Fable <noreply@fable-model.test>");
+  const found = scanAttribution(r.dir, "HEAD~1..HEAD");
+  assert.equal(found.length, 1); assert.match(found[0].line, /^Co-Authored-By: Fable/);
+});
+// An ordinary commit message must not be flagged: plain prose that merely mentions a vendor word,
+// and a human co-author, are both left alone.
+test("scanAttribution leaves ordinary prose and a human co-author alone", () => {
+  const r = releasable();
+  tainted(r, "Fix the opus-style parser.\n\nUse the gpt tokenizer for encoding.\nCo-Authored-By: Jane Doe <jane@example.com>");
+  assert.deepEqual(scanAttribution(r.dir, "HEAD~1..HEAD"), []);
+});

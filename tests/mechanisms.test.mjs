@@ -39,6 +39,18 @@ test('requirementDigest reads only Agreed blocks as checkable', async () => {
   assert.equal((await requirementDigest(repo.cwd, 'DEMO-002')).agreed, false);
   await assert.rejects(requirementDigest(repo.cwd, 'DEMO-999'), /not in docs\/spec/);
 });
+// Review of 3.8.2: requirementDigest picked domain files by a `^Prefix:` sniff, so a byte order
+// mark before the header hid every block in the file from check, while readSpec (by file name)
+// and the commitment's frozen set still read them.
+test('requirementDigest reads the same block readSpec does, with a byte order mark before the header', async () => {
+  const repo = await project();
+  const file = join(repo.cwd, 'docs/spec/demo.md');
+  await writeFile(file, '﻿' + await readFile(file, 'utf8'));
+  const { readSpec } = await import('../lib/spec.mjs');
+  const block = (await readSpec(repo.cwd)).blocks.get('DEMO-001');
+  assert.ok(block);
+  assert.deepEqual(await requirementDigest(repo.cwd, 'DEMO-001'), { textDigest: block.textDigest, agreed: block.status?.kind === 'Agreed' });
+});
 
 for (const [name, overrides, message] of [
   ['a document that is not an input', { documents: ['other.md'] }, /must also be an input/],

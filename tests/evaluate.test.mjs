@@ -149,7 +149,8 @@ describe('the narrow floor', () => {
 });
 
 import { contractState, measureState, EgressError } from '../lib/evaluate.mjs';
-import { mkdir, writeFile, symlink } from 'node:fs/promises';
+import { mkdir, writeFile, symlink, mkdtemp, lstat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { appendRecord } from '../lib/records.mjs';
 import { writeWorkspaceSnapshot } from '../lib/snapshots.mjs';
@@ -800,7 +801,7 @@ const OVERVIEW_WITH_AUTH = `# Keystone
 // an object caller gets its extra top-level settings keys merged in alongside `data`/`typesafeai`
 // (makeProject's own settings merge is a shallow spread over DEFAULT_SETTINGS, so a sibling key
 // like `harness` merges cleanly without touching `data`/`typesafeai`).
-async function repoWithCommitment(enabled = true, extra = 60) {
+async function repoWithCommitment(enabled = true, extra = 60, files = {}) {
   const minCalibrationAgentPredictions = typeof extra === 'number' ? extra : 60;
   const extraSettings = typeof extra === 'object' && extra !== null ? extra : {};
   const p = await makeProject({ settings: { data: ['migrations/**'], typesafeai: { enabled, model: 'jev-1.13.0', weights: dims(), agent_ceiling: 0.35, confidence_floors: dims(), min_calibration_agent_predictions: minCalibrationAgentPredictions, request_cap_bytes: 48000 }, ...extraSettings },
@@ -808,6 +809,7 @@ async function repoWithCommitment(enabled = true, extra = 60) {
       'docs/spec/overview.md': OVERVIEW_WITH_AUTH,
       'docs/spec/auth.md': AUTH_DOMAIN,
       'docs/spec/roadmap.md': 'Current: auth-tokens\n\n## auth-tokens\n\nRequirements: AUTH-003\n',
+      ...files,
     } });
   await p.authorize();
   await start(p.cwd, 'auth-tokens');
@@ -839,6 +841,28 @@ describe('measure()', () => {
     for (const rec of log.slice(-3)) {
       const commit = await catCommit(cwd, rec.sha);
       assert.doesNotThrow(() => decodeRecord(commit));
+    }
+  });
+  // Review of 3.8.2: a 200 response that echoed the bearer key was recorded whole in
+  // evaluation-call.raw, which travels with refs/sudus/log; only error bodies were redacted.
+  test('a response that echoes the key is recorded without it, on a valid answer and on a model mismatch', async () => {
+    const prev = process.env.TYPESAFEAI_API_KEY;
+    process.env.TYPESAFEAI_API_KEY = 'test-placeholder-key-222';
+    try {
+      const recorded = async (cwd) => (await readLog(cwd)).map((r) => JSON.stringify(r.payload) + (r.payload.raw ? Buffer.from(unb64url(r.payload.raw)).toString() : '')).join('\n');
+      const a = await repoWithCommitment();
+      const echo = JSON.stringify({ ...JSON.parse(goodBody()), echo: 'Bearer test-placeholder-key-222' });
+      assert.equal((await measure(a, draft(), { transport: transport([echo]) })).outcome, 'composite');
+      const b = await repoWithCommitment();
+      const wrong = async () => ({ status: 200, body: '{"model":"test-placeholder-key-222"}', model: 'test-placeholder-key-222' });
+      assert.equal((await measure(b, draft(), { transport: wrong })).outcome, 'unavailable');
+      for (const cwd of [a, b]) {
+        const text = await recorded(cwd);
+        assert.ok(!text.includes('test-placeholder-key-222'), text);
+        assert.ok(text.includes('[redacted]'));
+      }
+    } finally {
+      if (prev === undefined) delete process.env.TYPESAFEAI_API_KEY; else process.env.TYPESAFEAI_API_KEY = prev;
     }
   });
   test('a veto forces developer even with a low composite', async () => {
@@ -878,6 +902,29 @@ describe('measure()', () => {
     await symlink('scripts', join(cwd, 'link-to-scripts'));
     const r = await measure(cwd, { ...draft(), named_paths: ['link-to-scripts'] }, { transport: transport([goodBody()]) });
     assert.equal(r.outcome, 'composite');
+  });
+  // Review of 3.8.2: lstat follows parent directories, so a named path under a directory symlink
+  // that points out of the repository put the outside file's text in the request.
+  test('a --path under a directory symlink out of the repository is excluded before anything is read', async () => {
+    const cwd = await repoWithCommitment();
+    const outside = await mkdtemp(join(tmpdir(), 'sudus-outside-'));
+    await writeFile(join(outside, 'file.txt'), 'OUTSIDE-BYTES\n');
+    await symlink(outside, join(cwd, 'linkdir'));
+    let sent = null;
+    const r = await measure(cwd, { ...draft(), named_paths: ['linkdir/file.txt'] }, { transport: async (req) => { sent = req; return { status: 200, body: goodBody(), model: 'jev-1.13.0' }; } });
+    assert.equal(sent, null);
+    assert.deepEqual([r.outcome, r.reason], ['unavailable', 'unavailable excluded: reserved linkdir/file.txt']);
+  });
+  // Review of 3.8.2: on a case-insensitive filesystem (macOS by default) a case variant of an
+  // excluded path opened the excluded file while the network_exclude glob missed it. Runs where
+  // the test directory ignores case; elsewhere the variant names no file at all.
+  test('a case variant of a network_exclude path is excluded under its stored name', async (t) => {
+    const cwd = await repoWithCommitment(true, { network_exclude: ['secret/**'] }, { 'secret/plain.txt': 'EXCLUDED-BYTES\n' });
+    try { await lstat(join(cwd, 'SECRET/plain.txt')); } catch { t.skip('the test directory is case-sensitive'); return; }
+    let sent = null;
+    const r = await measure(cwd, { ...draft(), named_paths: ['Secret/plain.txt'] }, { transport: async (req) => { sent = req; return { status: 200, body: goodBody(), model: 'jev-1.13.0' }; } });
+    assert.equal(sent, null);
+    assert.deepEqual([r.outcome, r.reason], ['unavailable', 'unavailable excluded: network_exclude secret/plain.txt']);
   });
   test('an incomplete-projection floor names the concern and the decision that caused it', async () => {
     const cwd = await repoWithCommitment();

@@ -365,7 +365,7 @@ flowchart TB
   waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with sudus answer. Developer: absent: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: sudus answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
-  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
+  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote, unless your ok let it wait"]]
   act["Do the named action until its predicate holds, actions are listed in precedence order"]
   cannot{"Cannot act, or cycle bound reached?"}
   escalate["Write one evidence-backed escalation. Cycle guard: fourth same-target or 28th admin transition, or third unsuccessful recovery"]
@@ -1085,7 +1085,7 @@ specific than the action word alone.
 | `declare REQ` | No mechanism speaks for this requirement yet. `sudus declare` one. |
 | `run REQ` | A check is due: `sudus check REQ`. |
 | `implement REQ` | The latest receipt is not a current pass. Read it and the captured output, then fix the code under a lease. |
-| `escalate REQ` | Three distinct failing attempts with no pass since. `sudus escalate` before a fourth. |
+| `escalate REQ` | Three distinct failing attempts with no pass since, counted from the requirement's turn: once every requirement before it in the set passes, and not counting the first check of a turn that began after the start. `sudus escalate` before a fourth. |
 | `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `sudus review mechanism REQ`; it takes the latest fail receipt, which wake's reason names, unless you pass another. |
 | `capture ITEM` | An idea outside this commitment needs a disposition: `sudus outside ITEM --reason "..."` (slug or sha), or escalate if it actually belongs. |
 | `review SLUG` | Write and record the review, answering all six questions. |

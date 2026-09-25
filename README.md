@@ -190,7 +190,7 @@ contract wait for the next feature specification, which you open.
 |---|---|---|
 | `Resolvable` | There is a named action, and the exact record or code that completes it. This is normal progress, not an error. | The agent. |
 | `Waiting` | An escalation is unanswered. Sudus prints its five fields; the agent asks you in prose and records your answer. | You. |
-| `Done` | Every requirement in the commitment has current passing evidence, an independent report found nothing left open, and the backlog holds nothing to promote. | You: open the next feature when you choose. |
+| `Done` | Every requirement in the commitment has current passing evidence, an independent report found nothing left open, and the backlog holds nothing to promote, or every item it holds waits by your ok until the next Done. | You: open the next feature when you choose. |
 
 Done does not mean the whole product is finished, deployed, or guaranteed
 correct. It means the open commitment meets Sudus's recorded conditions.
@@ -206,7 +206,8 @@ correct. It means the open commitment meets Sudus's recorded conditions.
 - No question is unanswered, no undeclared change sits unresolved, no known
   defect is unfixed, and no decision that needed building is still unbuilt.
 
-The backlog is not part of this rule. When it holds nothing to promote,
+The backlog is not part of this rule. When it holds nothing to promote, or
+every item it holds waits by your ok until the next Done,
 Sudus reports Done and stops. Ideas the agent captures during the work go
 to one of two places. An idea already covered by the agreed specification
 goes to the backlog. The agent may promote one into the next commitment on
@@ -226,7 +227,7 @@ flowchart TB
   waiting["Waiting: print the escalation's five fields verbatim; the agent adds nothing to the work, asks the developer in prose and records their answer with sudus answer. Developer: absent: same print, exit 4"]
   answer["The agent asks you in conversation and records your words: sudus answer ok, instead, or ask --quote, signed when a key exists, attested otherwise"]
   reply["reply after ask: a reply record names the escalation"]
-  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote"]]
+  stop[["Done: a done record exists and nothing waits, render unread queue and stop. Backlog waiting: wake names promote, unless your ok let it wait"]]
   act["Do the named action until its predicate holds, actions are listed in precedence order"]
   cannot{"Cannot act, or cycle bound reached?"}
   escalate["Write one evidence-backed escalation. Cycle guard: fourth same-target or 28th admin transition, or third unsuccessful recovery"]

@@ -9,13 +9,13 @@ developer confirms it.
 
 Revision 15 changes two rules; the developer accepted both on 2026-09-25
 ("ok"). Attempts at a requirement count from its turn (section 8, Deferral
-and attempts): the refresh runs wake named for other requirements' changes
-counted as attempts at a requirement no one had worked on, and wake named
-`escalate` for it (issue #28). A backlog item may wait by the developer's ok
-(section 8, Capture and promotion): an escalation naming `wait:<item>`
-answered ok lets wake say Done while the item waits until the next Done, so
-the next feature goes ahead of it; before, Done needed every backlog item
-promoted or retired first (issue #29).
+and attempts). Before, the refresh runs wake named for other requirements'
+changes counted as attempts at a requirement no one had worked on, and wake
+named `escalate` for it (issue #28). A backlog item may wait by the
+developer's ok (section 8, Capture and promotion). An escalation naming
+`wait:<item>` answered ok lets wake say Done while the item waits until the
+next Done, so the next feature goes ahead of it. Before, Done needed every
+backlog item promoted or retired first (issue #29).
 
 Revision 14 lets the developer retire a backlog item that other work already
 delivered (section 8, Capture and promotion). An escalation whose concerns
@@ -1092,7 +1092,7 @@ open commitment (`supersede`); unfixed defect (`fix`); uncovered dirty input (`r
 current review (`review`); missing report (`report`); unresolved finding or
 rejected resolution (`resolve`); post-report resolutions not examined at the
 current snapshot (`accept`); unrealized Consequential decision (`build`); Done
-rule satisfied without a done record (`done`); closed range with a backlog item
+rule satisfied without a done record (`done`); closed range with a backlog item that neither retired nor waits
 (`promote`); Done.
 
 While the latest report has an unresolved finding, a missing current receipt
@@ -1293,7 +1293,7 @@ bytes themselves, not in a separate receipt field.
 
 Attempts at a requirement are counted from its turn. The turn begins at the
 first receipt, at or after the start record, after which every requirement
-before it in the frozen set's order last passed; a requirement whose turn has
+before it in the frozen set's order last passed. A requirement whose turn has
 not begun has no attempts. When the turn begins after the start record, the
 requirement's first receipt in the turn is its starting point, not an
 attempt. The first requirement in order, and one whose earlier requirements
@@ -1389,7 +1389,7 @@ latest commitment. An ok on an escalation that names the item as
 
 The developer may rank a new feature above the waiting backlog. After Done,
 while no commitment is open, the agent escalates with one `wait:<item>`
-concern per waiting item, naming the finished commitment; while a commitment
+concern per waiting item, naming the finished commitment. While a commitment
 is open the concern is refused, since the wait would end at that commitment's
 own Done. The developer's ok lets wake say Done while those items wait, so
 the next feature can be specified and started. Each item stays in the

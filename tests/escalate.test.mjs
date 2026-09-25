@@ -492,6 +492,31 @@ test('sudus dispute refuses a missing, non-integer or non-positive --n with a me
   assert.match(notANumber.out, /^sudus: --n must be a positive integer naming the finding number/);
 });
 
+// Issue #27: one dispute may name several findings of the same record, as a comma list or a
+// repeated --n. Before, a comma list was refused and a repeated --n kept only its last value, so
+// each finding took its own escalation and its own answer, and `--n 1 --n 2` disputed finding 2
+// alone without saying so.
+test('sudus dispute names every finding a comma list or a repeated --n gives in one escalation, and one ok closes them all', async () => {
+  const r = await loopRepo();
+  const rev = await r.review([1, 2, 3, 4].map((n) => ({ n, text: `gap ${n}` })));
+  const base = ['--commitment', 'first', '--record', rev, '--question', 'Close these as answered?', '--recommendation', 'Close them; they are backlog item X.', '--because', 'the gaps predate the commitment', '--if-wrong', 'a gap ships', '--instead', 'fix them now'];
+  const d = await cliDispute(r.cwd, [...base, '--n', '3,1', '--n', '2']);
+  assert.equal(d.code, 0, d.out);
+  const esc = d.out.trim().split(' ').at(-1);
+  const log = await readLog(r.cwd);
+  assert.deepEqual(log.filter((x) => x.kind === 'escalation').map((x) => x.sha), [esc]);
+  assert.equal(log.find((x) => x.sha === esc).payload.concerns, [1, 2, 3].map((n) => `finding:${rev}#${n}`).join(' '));
+  const v = await wake(r.cwd);
+  assert.equal(v.verdict, 'Waiting');
+  assert.deepEqual(v.escalation.closes, [1, 2, 3].map((n) => `finding ${n} on the review ${rev.slice(0, 12)}`));
+  assert.equal((await cliAnswer(r.cwd, ['first', 'ok', '--quote', 'ok, close them'], { env: {} })).code, 0);
+  const after = await readLog(r.cwd);
+  assert.deepEqual([1, 2, 3, 4].map((n) => disputes(after, rev, n)), [esc, esc, esc, null]);
+  const bad = await cliDispute(r.cwd, [...base, '--n', '4,x']);
+  assert.equal(bad.code, 1);
+  assert.match(bad.out, /^sudus: --n must be a positive integer naming the finding number, not "x"/);
+});
+
 // Fix round 1 finding 12 (plan 09 review, new): a CAS refusal on refs/sudus/log (two writers
 // racing to extend the same log) used to reach the CLI as a bare
 // "sudus: refusing refs/sudus/log: expected <sha>" with no guidance and no automatic retry. Six

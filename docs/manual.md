@@ -580,8 +580,13 @@ sudus dispute --commitment reject-empty-names --record <finding-record-sha> --n 
   --question '...' --recommendation '...' --because '...' --if-wrong '...' --instead '...'
 ```
 
+Several findings of the same record that share one answer take one
+dispute: `--n 4,5,9`, or `--n` repeated. The escalation names each of
+them, and wake lists them after "ok closes:".
+
 Your `ok` on an escalation about a finding closes the finding as answered,
-and Done no longer waits on a fix for it. `instead` with a direction keeps
+and Done no longer waits on a fix for it. An `ok` on an escalation that
+names several findings closes all of them. `instead` with a direction keeps
 the finding open: the agent resolves it again that way, and the next
 acceptance judges the fix.
 
@@ -1120,7 +1125,7 @@ prints one with its references resolved.
 | `measure [--brief] [--harness <name>] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> --option <t>... [--path <file>...] [--decision <id>...]` \| `measure <slug> --file <path>` | Take one measurement of a Consequential draft before `decide` or `escalate`; `--brief` prints a launch block for the review source, `--file` completes it. |
 | `answer <slug> ok\|instead\|ask --quote <words> [--escalation <sha>]` | The developer's answer to an escalation, in their own words. |
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
-| `dispute --commitment <s> --record <sha> --n <n> --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with a specific finding or its resolution. |
+| `dispute --commitment <s> --record <sha> --n <n>[,<n>...] --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with one or more findings of a record, or their resolutions. |
 | `review <slug> --file <path>` | Record the builder's review. |
 | `review mechanism <REQ> [<fail-receipt>]` | Bind a mechanism's review metadata to its current definition and the requirement's current text; the latest fail receipt for REQ when none is given. |
 | `brief <slug> [--harness <name>]` | Write the adversary brief and projection for a reviewed commitment. |

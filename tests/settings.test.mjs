@@ -89,6 +89,13 @@ test('plain lower-case model ids stay valid: they are never secret-shaped', () =
     assert.deepEqual(validateSettings({ ...GOOD, typesafeai: { ...GOOD.typesafeai, model } }), []);
   }
 });
+// A long mixed-case model id is short words joined by hyphens, dots and slashes; a secret is one
+// dense run. The first version of the wider rule refused these valid adversary models.
+test('long mixed-case model ids stay valid as adversary models', () => {
+  for (const m of ['Llama-4-Maverick-17B-128E-Instruct-FP8', 'Qwen/Qwen3-Coder-480B-A35B-Instruct', 'meta-llama/Llama-3.3-70B-Instruct-Turbo']) {
+    assert.deepEqual(validateSettings({ ...GOOD, harness: { ...GOOD.harness, claude_code: { ...GOOD.harness.claude_code, adversary_model: m } } }), [], m);
+  }
+});
 test('overlaps follows glob-vs-glob language intersection, not literal-stem containment', () => {
   assert.ok(overlaps('src/**', 'src/api/**') && overlaps('docs/spec/**', 'docs/spec/a.md') && overlaps('a/b', 'a/b') && overlaps('config/*.json', 'config/x.json'));
   assert.ok(!overlaps('src/**', 'srcx/**') && !overlaps('README.md', 'bin/**') && !overlaps('**/*.md', '**/*.js'));

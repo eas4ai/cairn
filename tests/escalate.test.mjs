@@ -90,6 +90,15 @@ test('escalate refuses a closed or foreign commitment and a concern that names n
   await assert.rejects(escalate(r.cwd, draft({ concerns: ['item:' + rev] })), /no item record/);
   assert.match(await escalate(r.cwd, draft({ concerns: [`finding:${rev}#1`] })), /^[0-9a-f]{40}$/);
 });
+// Review of 3.8.2: a decision: token was checked for its shape only, so an escalation could name
+// a decision that never existed.
+test('escalate refuses a decision: concern that names no decision in the ADR', async () => {
+  const r = await loopRepo();
+  await assert.rejects(escalate(r.cwd, draft({ concerns: ['decision:01ARZ3NDEKTSV4RRFFQ69G5FAV'] })), /no decision 01ARZ3NDEKTSV4RRFFQ69G5FAV in docs\/decisions\.jsonl/);
+  await r.decide();
+  const id = (await readAdr(r.cwd)).find((l) => l.kind === 'decision').id;
+  assert.match(await escalate(r.cwd, draft({ concerns: [`decision:${id}`] })), /^[0-9a-f]{40}$/);
+});
 
 import { readAdr } from '../lib/adr.mjs';
 import { decideConsequential, escalateConsequential } from '../lib/escalate.mjs';

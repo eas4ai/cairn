@@ -436,7 +436,10 @@ This prints a lease sha and creates a local, unpushed ref
 (`refs/sudus/in-progress`) naming the action, its target, and the
 workspace at that moment. `sudus begin implement APP-001 --touch
 src/new-file.mjs` also declares a new file as an input for the life of the
-lease, so writing to it is not an undeclared change. After committing the
+lease, so writing to it is not an undeclared change. The target must be a
+requirement that exactly one mechanism declares, because `sudus end`
+writes the touch into that mechanism; a touch on a `resolve` or `fix`
+lease is refused, since nothing would write it. After committing the
 work:
 
 ```sh
@@ -877,6 +880,13 @@ then:
 sudus scope <breach-sha> keep
 ```
 
+Several breaches from one change take one escalation, with one
+`--concern breach:<sha>` each, one ok, and one call that names them all:
+
+```sh
+sudus scope <breach-sha> <breach-sha> <breach-sha> keep
+```
+
 Your ok keeps the bytes the breach captured. If the path changed after
 that, keep refuses; the agent puts the captured bytes back, or restores
 the path and asks again about the new bytes as a new breach.
@@ -1068,7 +1078,7 @@ specific than the action word alone.
 | `repair PATH` | A hand-written file (spec or settings) does not read under its grammar. Fix only what is broken; `sudus lint docs/spec` shows spec problems. |
 | `recover TRANSACTION` | A multi-record write (`start`, `promote`, `supersede`, `authorize`) was interrupted. Run `sudus recover <transaction>`. |
 | `reconcile ACTION` | A local action lease exists with no matching finished work, usually left by a session that ended. Finish the action and `sudus end`, or `sudus end --abandon`; a dead session's lease needs no `--lease`. |
-| `scope PATH` | An undeclared change was observed. Restore it (`sudus scope PATH restore`) or ask to keep it (`sudus escalate`, then `sudus scope PATH keep`); the breach sha wake's reason names works too. |
+| `scope PATH` | An undeclared change was observed. Restore it (`sudus scope PATH restore`) or ask to keep it (`sudus escalate`, then `sudus scope PATH keep`); the breach sha wake's reason names works too, and several breaches go in one call before the disposition. |
 | `supersede SLUG` | The Agreed text of a requirement in the open commitment was revised under it, and no check or review can bind to both the frozen and the current text. Restore the text the start froze, or ask the developer and `sudus supersede <successor> --quote "..."` so the successor freezes the revised text. |
 | `fix ITEM` | A recorded defect is still open: this commitment's own while it is open, any defect between commitments. Write a failing test, fix it, commit, check, then `sudus fix ITEM` (the slug wake prints, or the sha). |
 | `record PATH` / `commit PATH` | A declared input has uncommitted changes with no covering lease. Lease the action that changes it with `sudus begin <action> <target>` (`record` is not a begin action), then commit; or revert it. An untracked build artifact under a declared input is gitignored instead. |
@@ -1104,7 +1114,7 @@ prints one with its references resolved.
 | `authorize [ok\|instead\|ask] --quote <words>` | On ok, bind the current digests of the specification, the working agreement, and settings in one record carrying the developer's evidence; `instead` or `ask` writes a direction record with the developer's words and binds nothing. |
 | `decisions [--read <id> --quote <words>]` | Print the ADR file, or mark one decision read, quoting the developer. |
 | `recover <transaction>` | Finish or safely abandon an interrupted multi-record write. |
-| `begin <action> <target> [--touch <path>]...` | Claim the local action lease before changing a declared input; `--touch` provisionally declares a new path; `end` adds it to the inputs only when no declared input already covers it. |
+| `begin <action> <target> [--touch <path>]...` | Claim the local action lease before changing a declared input; `--touch` provisionally declares a new path, and needs a target that exactly one mechanism declares; `end` adds it to the inputs only when no declared input already covers it. |
 | `end [--abandon] [--lease <sha>]` | Release the action lease; `--lease` refuses a mismatched sha; `--abandon` releases without claiming touched paths. |
 | `check <REQ>` | Run the one mechanism declaring `REQ` and record a receipt. |
 | `declare <name> --file <path>` | Read a mechanism definition as JSON and write it under that name. |

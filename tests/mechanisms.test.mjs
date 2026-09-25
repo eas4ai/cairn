@@ -282,11 +282,15 @@ test('applyTouch reads a trailing-slash input as covering the paths under it', a
 // applyTouch throw. Now that end() removes the lease ref before running hooks, that throw would
 // lose the change with nothing left to retry against; applyTouch instead reports it as unclaimed
 // and still completes.
+//
+// Issue #30: begin now refuses these targets before any lease exists, so the lease object here is
+// a valid begin's lease with its target swapped: the case applyTouch still meets when the
+// mechanism set changed under a live lease.
 test('finding 4: applyTouch reports an unclaimable touch instead of throwing, for a review-slug target', async () => {
   const repo = await declared();
-  await begin(repo.cwd, { action: 'review', target: 'my-slug', touch: ['helper.mjs'] });
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
   await repo.write('helper.mjs', 'export const x = 1;\n');
-  const lease = await readLease(repo.cwd);
+  const lease = { ...await readLease(repo.cwd), action: 'review', target: 'my-slug' };
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
   assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares my-slug' }], covered: [] });
@@ -295,9 +299,9 @@ test('finding 4: applyTouch reports an unclaimable touch instead of throwing, fo
 
 test('finding 4: applyTouch reports an unclaimable touch for a REQ no mechanism declares', async () => {
   const repo = await declared();
-  await begin(repo.cwd, { action: 'implement', target: 'DEMO-999', touch: ['helper.mjs'] });
+  await begin(repo.cwd, { action: 'implement', target: 'DEMO-001', touch: ['helper.mjs'] });
   await repo.write('helper.mjs', 'export const x = 1;\n');
-  const lease = await readLease(repo.cwd);
+  const lease = { ...await readLease(repo.cwd), target: 'DEMO-999' };
   const outcome = await touchOutcome(repo.cwd, lease);
   const result = await applyTouch(repo.cwd, lease, outcome);
   assert.deepEqual(result, { added: [], dropped: [], unclaimed: [{ path: 'helper.mjs', reason: 'no mechanism declares DEMO-999' }], covered: [] });

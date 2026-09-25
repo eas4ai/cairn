@@ -447,15 +447,19 @@ test('sudus end --lease <sha> refuses a stale caller and leaves the newer actors
   assert.equal(normalEnd.out, 'sudus: lease ended\n');
 });
 
-test('sudus end reports an unclaimable --touch path instead of throwing, and still ends the lease', async (t) => {
+// Issue #30: this used to check that `sudus end` reported the touch as not written and still ended
+// the lease. That lease covered helper.mjs only while it lived, so the next command recorded a
+// breach; begin now refuses the touch, before any lease exists, and end's report stays for a
+// mechanism set that changed under a lease (tests/mechanisms.test.mjs).
+test('sudus begin refuses a --touch whose target no mechanism declares, on one sudus: line, and leaves no lease', async (t) => {
   const repo = await mechanismDeclared();
   t.after(repo.cleanup);
-  await run(['begin', 'implement', 'DEMO-999', '--touch', 'helper.mjs'], repo.cwd);
-  await repo.write('helper.mjs', 'export const x = 1;\n');
+  const beginResult = await run(['begin', 'implement', 'DEMO-999', '--touch', 'helper.mjs'], repo.cwd);
+  assert.equal(beginResult.code, 1);
+  assert.equal(beginResult.err, 'sudus: --touch helper.mjs: no mechanism declares DEMO-999, so end could not write it; lease implement <REQ> with the requirement the path serves, or declare the path first\n');
   const endResult = await run(['end'], repo.cwd);
-  assert.equal(endResult.code, 0);
-  assert.match(endResult.out, /sudus: lease ended/);
-  assert.match(endResult.out, /sudus: touch helper\.mjs not written: no mechanism declares DEMO-999/);
+  assert.equal(endResult.code, 1);
+  assert.equal(endResult.err, 'sudus: no action lease to end\n');
 });
 
 // Fix round 2 finding 1a (Important): checkTouch used to apply a narrower rule set than

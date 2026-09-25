@@ -670,3 +670,34 @@ test('the managed-write ledger keys entries with a tab so a path containing a sp
   const raw = await readFile(await gitPath(r.cwd, 'sudus-managed'), 'utf8');
   assert.match(raw, /(^|\n)a path with spaces\.json\tsha256:[0-9a-f]{64}\n/);
 });
+
+// Issue #30: one escalation may name several breaches and one ok covers them, but `sudus scope`
+// took one breach per call, so clearing N kept files took N commands. It now takes several
+// breaches, by sha or path, before the disposition, and writes one scope record per breach.
+test('sudus scope <breach>... keep disposes every breach the one ok covers, one record and one line each', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray-a.mjs', 'a\n');
+  await r.write('src/stray-b.mjs', 'b\n');
+  await r.write('src/stray-c.mjs', 'c\n');
+  const shas = await preflight(r.cwd, await r.log(), { command: 'check' });
+  assert.equal(shas.length, 3);
+  const esc = await r.add('escalation', r.slug, { slug: r.slug, question: 'Keep the three helpers?', recommendation: 'keep', because: 'the fix needs them', if_wrong: 'delete them', instead: 'restore', concerns: shas.map((b) => `breach:${b}`).join(' '), evaluation: null });
+  await answer(r, esc, 'ok');
+  const out = sudus(r.cwd, 'scope', shas[0], 'src/stray-b.mjs', shas[2], 'keep');
+  assert.equal(out.status, 0, out.stderr);
+  const lines = out.stdout.trim().split('\n');
+  assert.equal(lines.length, 3);
+  const log = await r.log();
+  for (const [i, line] of lines.entries()) {
+    const m = /^scope ([0-9a-f]{40}) keep (\S+)$/.exec(line);
+    assert.ok(m, line);
+    assert.deepEqual([log.find((x) => x.sha === m[1]).payload.breach, m[2]], [shas[i], [shas[0], 'src/stray-b.mjs', shas[2]][i]]);
+  }
+  assert.equal(openBreaches(log).length, 0);
+  const again = sudus(r.cwd, 'scope', shas[0], shas[1], 'keep');
+  assert.equal(again.status, 1);
+  assert.match(again.stderr, /^sudus: scope-breach [0-9a-f]{40} already has a disposition/);
+  const one = sudus(r.cwd, 'scope', shas[0]);
+  assert.equal(one.status, 1);
+  assert.match(one.stderr, /^sudus: usage: sudus scope <breach-sha or path>\.\.\. keep\|restore/);
+});

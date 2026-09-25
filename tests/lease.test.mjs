@@ -34,6 +34,11 @@ const SETTINGS = JSON.stringify({ schema: 1, authority_remote: null, outside: []
 async function initialized() {
   const { cwd } = await repoWith({ '.sudus/settings.json': SETTINGS, 'AGENTS.md': '# a\n', 'docs/spec/overview.md': '# k\n', 'src/a.mjs': 'export const a = 1;\n' });
   await init(cwd, { adopt: (await loadSettings(cwd)).digest, quote: 'ok', env: {} });
+  // Issue #30: begin refuses a --touch whose target no mechanism declares, so the target these
+  // tests touch under has one.
+  await declareMechanism(cwd, 'core-001', { command: 'node -e 0', inputs: ['src/a.mjs'], documents: [], requirements: ['CORE-001'], results: 'per-requirement', identity: {} });
+  await git(['add', '-A'], { cwd });
+  await git(['commit', '-q', '-m', 'declare core-001'], { cwd });
   return cwd;
 }
 
@@ -363,4 +368,24 @@ test('Fix round 1 finding 5: a lease ref that changed under sudus end is a CAS m
   assert.equal(rejected[0].reason.name, 'LeaseError');
   assert.match(rejected[0].reason.message, /^sudus: action lease changed under sudus end; run sudus wake and follow it/);
   assert.equal(await readRef(cwd, LEASE_REF), null);
+});
+
+// Issue #30: `sudus begin resolve <slug> --touch <path>` was accepted, covered the path only while
+// the lease lived, and `end` then printed "touch <path> not written: no mechanism declares <slug>";
+// the next command recorded the path as a breach. A touch is written into the target's one
+// mechanism, so begin refuses a target that no mechanism, or more than one, declares.
+import { declare as declareMechanism } from '../lib/mechanisms.mjs';
+import { mechanismFor as demoMechanism } from './helpers/loop.mjs';
+
+test('begin refuses a --touch whose target no mechanism, or more than one, declares', async () => {
+  const r = await loopRepo();
+  await assert.rejects(begin(r.cwd, { action: 'resolve', target: 'first', touch: ['src/extra.mjs'], env: {} }),
+    /^LeaseError: sudus: --touch src\/extra\.mjs: no mechanism declares first, so end could not write it; lease implement <REQ> with the requirement the path serves, or declare the path first$/);
+  await assert.rejects(begin(r.cwd, { action: 'implement', target: 'DEMO-009', touch: ['src/extra.mjs'], env: {} }), /no mechanism declares DEMO-009/);
+  await declareMechanism(r.cwd, 'other', { ...demoMechanism('DEMO-001'), inputs: ['src/demo.mjs'] });
+  await r.commit('second mechanism');
+  await assert.rejects(begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: ['src/extra.mjs'], env: {} }),
+    /^LeaseError: sudus: --touch src\/extra\.mjs: 2 mechanisms declare DEMO-001: demo-001, other; name one with sudus declare$/);
+  assert.equal(await readLease(r.cwd), null);
+  await assert.doesNotReject(begin(r.cwd, { action: 'implement', target: 'DEMO-001', touch: [], env: {} }));
 });

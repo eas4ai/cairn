@@ -149,6 +149,8 @@ describe('the narrow floor', () => {
 });
 
 import { contractState, measureState, EgressError } from '../lib/evaluate.mjs';
+import { git as gitCmd } from '../lib/gitx.mjs';
+import { declare as declareAuth } from '../lib/mechanisms.mjs';
 import { mkdir, writeFile, symlink, mkdtemp, lstat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -335,6 +337,10 @@ describe('C(c) and M(D)', () => {
   test('the key appearing only in the diff (removed since the lease began) throws EgressError classed key on the diff', async () => {
     const { cwd } = await makeProject();
     await mkdirAndWrite(cwd, 'src/auth/rotate.mjs', 'export const rotate = () => {};\n// test-placeholder-key-111\n');
+    // Issue #30: begin refuses a --touch whose target no mechanism declares, so AUTH-003 gets one.
+    await gitCmd(['add', '-A'], { cwd });
+    await gitCmd(['commit', '-q', '-m', 'rotate'], { cwd });
+    await declareAuth(cwd, 'auth', { command: 'node -e 0', inputs: ['src/auth/rotate.mjs'], documents: [], requirements: ['AUTH-003'], results: 'per-requirement', identity: {} });
     await begin(cwd, { action: 'implement', target: 'AUTH-003', touch: ['src/auth/rotate.mjs'] });
     const prev = process.env.TYPESAFEAI_API_KEY;
     process.env.TYPESAFEAI_API_KEY = 'test-placeholder-key-111';

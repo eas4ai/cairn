@@ -7,6 +7,14 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.9.0 - 2026-09-25
+
+Spec revision 15, accepted by the developer on 2026-09-25. Both changes alter a verdict.
+
+- Attempts at a requirement count from its turn (issue #28). Wake works the frozen set in order, and the refresh runs it named for other requirements' changes, each failing on a violating example still waiting its turn, counted as attempts: after three, wake named `escalate` for a requirement no one had worked on, and `sudus check` refused a fourth. A requirement's turn begins once every requirement before it in the set last passed; the first receipt of a turn that begins after the start record is its starting point, not an attempt. The first requirement in order, and one whose earlier requirements all passed before the start, count from the start record as before. A requirement whose old receipt is still current at its turn gets four tries before the escalation instead of three; the developer accepted that.
+- A backlog item may wait by your ok, so a new feature can go ahead of it (issue #29). Done needed every backlog item promoted or retired first. After Done, the agent escalates with one `--concern wait:<item sha>` per waiting item, naming the finished commitment; your `ok` lets wake say Done while they wait, and `/next-feature` can start. The Done verdict lists them on a `waits:` line, `sudus show items` marks them, and `sudus promote` still accepts them. The wait ends at the next Done, when wake names their promotion again. `instead` leaves them first in line. An item captured after the ok is not covered, and the concern is refused while a commitment is open.
+- From the adversarial review of this release: a requirement outside the open commitment's frozen set has no attempts under it, since wake does not name it while the commitment is open; before, its fails in a shared mechanism's refresh runs counted, and `sudus check` could refuse it as a fourth attempt. An escalation that names the same concern token twice is refused; before, wake's `ok closes:` line listed the item twice. The manual, README and walkthrough say what Done and promote now do.
+
 ## 3.8.5 - 2026-09-25
 
 - `sudus scope` takes several breaches in one call, by sha or path, before the disposition: `sudus scope <a> <b> <c> keep` (issue #30). One escalation already named several breaches and one ok covered them, but keep took one breach per call, so clearing N kept files took N commands. Each breach still gets its own scope record.

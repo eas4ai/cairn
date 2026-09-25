@@ -87,13 +87,21 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
       ];
       return add('review', s, { slug: s, session: null, snapshot: await snap(), examined: ['src/demo.mjs'], answers, findings });
     },
-    // Deviation from the plan text: the real 'brief' schema (lib/records.mjs) names its three
-    // digest fields projection_digest/payload_digest/exclusions_digest, not
-    // projection/payload/exclusions; the real 'report' schema names projection_digest (not
-    // projection), carries a nullable builder_model field the plan's payload omitted, and its
-    // attempts entries and interface_attempts entries are {question,target,text} and {path,text}
-    // objects, not bare strings/pairs. Adapted here to the schema actually committed.
-    async report(findings = []) {
+    // Sudus 4.0.0: the brief names the decisions it listed and no projection; the report attempts
+    // the five lenses ({question, target, looked_for, found, held}), rates each finding and may
+    // stop on a Sudus bug. A finding given as {n, text} is rated Major at src/demo.mjs.
+    async report(findings = [], { decisions = [], bug = null } = {}) {
+      const s = await cur();
+      const log = await readLog(cwd);
+      const rev = log.filter((x) => x.kind === 'review').at(-1);
+      const brief = await add('brief', s, { slug: s, review: rev.sha, harness: 'test-harness', model: 'test-model', payload_digest: 'sha256:' + '2'.repeat(64), decisions });
+      const pairs = bug ? [] : [...reqs.map((q) => ['falsifier', q]), ...decisions.map((d) => ['decision', d]), ...['security', 'logic', 'complexity'].map((q) => [q, s])];
+      const attempts = pairs.map(([question, target]) => ({ question, target, looked_for: 'a way around it', found: 'none', held: true }));
+      const rated = bug ? [] : findings.map((f) => ({ severity: 'Major', where: 'src/demo.mjs', remedy: null, ...f }));
+      return add('report', s, { slug: s, snapshot: rev.payload.snapshot, brief, attempts, interface_attempts: [], findings: rated, sudus_bug: bug });
+    },
+    // The 3.x brief and report, as a log written before 4.0.0 holds them.
+    async legacyReport(findings = []) {
       const s = await cur();
       const log = await readLog(cwd);
       const rev = log.filter((x) => x.kind === 'review').at(-1);
@@ -101,9 +109,10 @@ export async function loopRepo({ reqs = ['DEMO-001'], slug = 'first', settings =
       const attempts = rev.payload.answers.map(({ question, target }) => ({ question, target, text: 'attempted' }));
       return add('report', s, { slug: s, session: null, snapshot: rev.payload.snapshot, brief, model: 'test-model', transport: 'local', boundary: 'enforced', builder_model: null, projection_digest: 'sha256:' + '1'.repeat(64), attempts, findings, interface_attempts: [] });
     },
+    declineFinding: async (source, n, reason = 'out of reach of this commitment') => add('decline', await cur(), { source, finding: n, reason }),
     resolveFinding: async (source, n) => add('resolution', await cur(), { source, finding: n, snapshot: await snap(), explanation: 'fixed' }),
-    // Deviation from the plan text: the real 'acceptance' schema names its digest field
-    // delta_digest, not delta.
+    // A 3.x acceptance, as a log written before 4.0.0 holds it. Deviation from the plan text: the
+    // real 'acceptance' schema names its digest field delta_digest, not delta.
     async accept({ accepted = [], rejected = [], findings = [] } = {}) {
       const rep = (await readLog(cwd)).filter((x) => x.kind === 'report').at(-1);
       const s = await cur();

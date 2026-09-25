@@ -29,12 +29,10 @@ The move for each action wake can name:
 - `review mechanism REQ`: `sudus review mechanism REQ <fail-receipt>` after checking the failure was the stated violation.
 - `capture ITEM`: `sudus outside <item> --reason "<why it is not this commitment's work>"`, or escalate.
 - `review SLUG`: `sudus review SLUG --file <path>` naming a file that answers Q1 to Q6 for every target with observed commands, paths or outputs.
-- `report SLUG`: `sudus brief SLUG`; start one adversary with none of your context on the brief and projection only; wait; `sudus report SLUG --file <its report>`.
-- `resolve SLUG N`: fix finding N as its own work, commit, then `sudus resolve SLUG N "<how>"`; or dispute it with `sudus escalate`, which may name several findings, one `--concern finding:<sha>#<n>` each.
-- `accept SLUG`: give the adversary the report, the resolutions and the cumulative delta; `sudus accept SLUG --file <its acceptance>`.
-- After three acceptance rounds without Done, an escalation names the open findings. The developer's `ok` closes them; then capture each: `sudus item --backlog --slug <s> --from <REQ> --body "<the finding>"`, then `sudus outside <item> --reason "closed by the developer's ok on escalation <sha>"`.
+- `report SLUG`: `sudus brief SLUG`; start one fresh subagent as its `start:` line says, with none of your conversation and the brief file as its entire prompt; it reads only and starts no subagents; wait; `sudus report SLUG --file <its report>`. The adversary runs once per commitment, here. When its report stopped on a Sudus bug, decide what to do with the bug (the report-sudus-issue skill below), then brief again when the bug no longer blocks the review.
+- `resolve SLUG N`: finding N is yours to decide. Fix it as its own work, commit, then `sudus resolve SLUG N "<how>"`; or decline it with its reason: `sudus decline SLUG N "<why>"`. A finding of any severity may be declined; the reason is what the developer reads.
 - `build DECISION`: build what the decision says, commit, then `sudus realize <id> --subject "<what was built>"`.
-- `done SLUG`: `sudus done SLUG`.
+- `done SLUG`: `sudus done SLUG`. It prints the review report: every finding, its severity and what you did with it. Show the developer that report as printed before you promote a backlog item or start the next feature.
 - `promote`: choose one backlog item by judgment; `sudus promote <item>`. Promotion never Agrees text. When other work already delivered the item, escalate with `--commitment <the finished slug> --concern retire:<item sha>` instead; the developer's `ok` retires it. To let the next feature go first, escalate with `--concern wait:<item sha>` per item instead; `ok` lets Done stand while they wait until the next Done.
 - `reply SLUG`: `sudus reply SLUG "<explanation>"`; an `ask` answer authorizes an explanation only.
 

@@ -97,7 +97,7 @@ test('a pending supersession and an interrupted transaction are not verdicts', a
 });
 
 test('the precedence order is the one section 5 states', () => {
-  assert.deepEqual(ORDER, ['repair', 'recover', 'reconcile', 'scope', 'waiting', 'supersede', 'fix', 'record', 'declare', 'run', 'review mechanism', 'capture', 'review', 'report', 'resolve', 'accept', 'build', 'done', 'promote']);
+  assert.deepEqual(ORDER, ['repair', 'recover', 'reconcile', 'scope', 'waiting', 'supersede', 'fix', 'record', 'declare', 'run', 'review mechanism', 'capture', 'review', 'report', 'resolve', 'build', 'done', 'promote']);
 });
 
 async function treeHash(dir) {
@@ -596,66 +596,87 @@ test('report is named until a brief and report name the reviewed snapshot with e
   assert.equal(v.action, 'report');
   assert.match(v.reason, /interface src\/api\/index\.mjs/);
   const log = await r.log();
-  await r.add('report', 'first', { ...log.find((x) => x.sha === rep).payload, interface_attempts: [{ path: 'src/api/index.mjs', text: 'attempted' }] });
+  await r.add('report', 'first', { ...log.find((x) => x.sha === rep).payload, interface_attempts: [{ path: 'src/api/index.mjs', looked_for: 'a caller the change breaks', found: 'none', held: true }] });
   assert.notEqual((await wake(r.cwd)).action, 'report');
 });
 
-test('every finding on the review, report or an acceptance needs a resolution or a dispute; a rejection reopens it', async () => {
+test('every finding on the review or the report needs a resolution or a decline; an escalation holds it while it waits', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
   await r.review([{ n: 1, text: 'builder finding' }]);
-  const rep = await r.report([{ n: 1, text: 'adversary finding' }]);
+  const rep = await r.report([{ n: 1, text: 'adversary finding', severity: 'Critical' }]);
   let v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
   const rev = (await r.log()).find((x) => x.kind === 'review').sha;
   await r.resolveFinding(rev, 1);
   v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
-  assert.match(v.reason, /report/);
-  const res = await r.resolveFinding(rep, 1);
-  assert.equal((await wake(r.cwd)).action, 'accept');
-  await r.accept({ rejected: [res] });
-  v = await wake(r.cwd);
-  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  assert.match(v.reason, /finding 1 \(Critical\) on the report .* has no resolution and no decline/);
+  assert.equal(v.predicate, PREDICATES.resolve);
   await r.escalate(`finding:${rep}#1`);
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
 
-// Fix round 1, item 9(a): a second rejection of resolutions for the same finding names 'escalate'
-// itself, not just a longer 'resolve' reason.
-// Fix round 2, finding 5: the predicate text is PREDICATES.resolve itself, the spec's own section
-// 5 row for this action ("a resolution names finding N of its exact source record, or an
-// escalation disputes it"), not an invented sentence.
-test('a second rejection of a resolution for the same finding escalates', async () => {
+// Sudus 4.0.0 (developer's ruling, 2026-09-25): "The builder is the decision maker and Sudus will
+// judge". A decline with its reason closes a finding of any severity; nothing waits on anyone.
+test('a decline closes a finding, a Critical one too, and wake moves on without an acceptance', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
   await r.review();
-  const rep = await r.report([{ n: 1, text: 'finding' }]);
-  const res1 = await r.resolveFinding(rep, 1);
-  await r.accept({ rejected: [res1] });
-  const res2 = await r.resolveFinding(rep, 1);
-  await r.accept({ rejected: [res2] });
-  const v = await wake(r.cwd);
-  assert.deepEqual([v.action, v.target], ['escalate', 'first 1']);
-  assert.equal(v.predicate, PREDICATES.resolve);
+  const rep = await r.report([{ n: 1, text: 'a blank name prints a bare comma', severity: 'Critical' }, { n: 2, text: 'no test for a long name', severity: 'Minor' }]);
+  await r.declineFinding(rep, 1, 'the falsifier names a missing name, not a blank one');
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 2']);
+  await r.resolveFinding(rep, 2);
+  v = await wake(r.cwd);
+  assert.deepEqual([v.verdict, v.action, v.target], ['Resolvable', 'done', 'first']);
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
 });
 
-test('post-report resolutions or a changed workspace need an acceptance at the current snapshot', async () => {
+// A log written before 4.0.0 keeps its meaning: a 3.x acceptance that rejected a resolution
+// leaves its finding open, and a 3.x report still counts as the report.
+test('a 3.x report still completes the review, and a resolution a 3.x acceptance rejected leaves its finding open', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  const rep = await r.legacyReport([{ n: 1, text: 'finding' }]);
+  const res = await r.resolveFinding(rep, 1);
+  assert.equal((await wake(r.cwd)).action, 'done');
+  await r.accept({ rejected: [res] });
+  const v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  await r.declineFinding(rep, 1);
+  assert.equal((await wake(r.cwd)).action, 'done');
+});
+
+// Sudus 4.0.0: an adversary that finds a Sudus bug stops and reports only the bug. That report
+// does not complete the review; wake names a new report and quotes the bug.
+test('a report that stopped on a Sudus bug does not complete the review; wake names report with the bug', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.review();
+  const bug = await r.report([], { bug: 'sudus brief lists no receipt for DEMO-001\nthough one ran' });
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['report', 'first']);
+  assert.match(v.reason, new RegExp(`the report ${bug} stopped on a Sudus bug: sudus brief lists no receipt for DEMO-001 though one ran`));
+  assert.ok((await doneRule(await readState(r.cwd))).failed.includes('review-report'));
+  await r.report();
+  v = await wake(r.cwd);
+  assert.equal(v.action, 'done');
+});
+
+test('after the report, a fix and a change need no acceptance: a stale receipt is run, then Done holds', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
   await r.review();
   const rep = await r.report([{ n: 1, text: 'finding' }]);
   await r.write('src/demo.mjs', 'console.log("hello");\n// fixed\n'); await r.commit('fix');
-  await check(r.cwd, 'DEMO-001');                                   // the fix touched an input: refresh the pass first
-  const res = await r.resolveFinding(rep, 1);
+  await r.resolveFinding(rep, 1);
   let v = await wake(r.cwd);
-  assert.deepEqual([v.action, v.target], ['accept', 'first']);
-  await r.accept({ accepted: [res] });
-  assert.notEqual((await wake(r.cwd)).action, 'accept');
-  await r.write('src/demo.mjs', 'console.log("hello");\n// again\n'); await r.commit('unreviewed change');
+  assert.deepEqual([v.action, v.target], ['run', 'DEMO-001']);
   await check(r.cwd, 'DEMO-001');
   v = await wake(r.cwd);
-  assert.deepEqual([v.action, v.target], ['accept', 'first']);
+  assert.deepEqual([v.action, v.target], ['done', 'first']);
 });
 
 // Deviation from the plan text: lib/adr.mjs's real appendDecision(cwd, line, {command}) takes a
@@ -668,12 +689,10 @@ test('an unrealized Consequential decision is build until a realized line names 
   await r.passReq('DEMO-001'); await r.review(); await r.report();
   const id = await r.decide();
   await r.commit('record decision');
-  await r.accept();                       // docs/decisions.jsonl is in the workspace: the delta needs an acceptance first
   let v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['build', id]);
   await appendDecision(r.cwd, { kind: 'realized', of: id, base_snap: r.startSnapshot, snap: await r.snap(), subject: 'map in place', interfaces: [] }, { command: 'realize' });
   await r.commit('realized');
-  await r.accept();
   assert.notEqual((await wake(r.cwd)).action, 'build');
 });
 
@@ -686,15 +705,12 @@ test('a read line does not close a Consequential decision for the Done rule, but
   await r.passReq('DEMO-001'); await r.review(); await r.report();
   const id = await r.decide();
   await r.commit('record decision');
-  await r.accept();
   assert.ok((await doneRule(await readState(r.cwd))).failed.includes('obligations'));
   await appendDecision(r.cwd, { kind: 'read', of: id, record: r.startSha }, { command: 'decisions --read' });
   await r.commit('read decision');
-  await r.accept();
   assert.ok((await doneRule(await readState(r.cwd))).failed.includes('obligations'));   // a read line alone never closes it
   await appendDecision(r.cwd, { kind: 'realized', of: id, base_snap: r.startSnapshot, snap: await r.snap(), subject: 'done', interfaces: [] }, { command: 'realize' });
   await r.commit('realize decision');
-  await r.accept();
   assert.equal((await doneRule(await readState(r.cwd))).holds, true);
 });
 
@@ -709,18 +725,17 @@ async function finished() {
 // `doneRule(st).failed` and `doneRule(await readState(...)).holds` without awaiting doneRule
 // itself, which reads properties off a pending Promise (always undefined) rather than the
 // resolved object.
-test('Done rule: a clean report with no change after it needs no acceptance record (documented exception)', async () => {
+test('Done rule: a change after the report needs no acceptance; the checks judge it', async () => {
   const r = await finished();
-  assert.equal((await r.log()).some((x) => x.kind === 'acceptance'), false);
   assert.equal((await doneRule(await readState(r.cwd))).holds, true);
   await r.write('README.md', '# demo, changed after the report\n'); await r.commit('a change after the report');
-  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
+  assert.equal((await doneRule(await readState(r.cwd))).holds, true);
 });
 test('Done rule bullet 1: every frozen requirement has a current bound pass', async () => {
   const r = await finished();
   await r.write('src/demo.mjs', 'console.log("changed");\n'); await r.commit('stale the receipt');
   const st = await readState(r.cwd);
-  assert.deepEqual((await doneRule(st)).failed, ['evidence', 'acceptance']);
+  assert.deepEqual((await doneRule(st)).failed, ['evidence']);
   assert.equal((await wake(r.cwd)).action, 'run');
 });
 
@@ -732,16 +747,14 @@ test('Done rule bullet 2: a review and report exist at the reviewed snapshot', a
   assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['review-report']);
 });
 
-test('Done rule bullet 3: the latest acceptance is at the final snapshot with every resolution accepted and every finding answered', async () => {
+test('Done rule bullet 3: every finding is resolved or declined', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001'); await r.review();
-  const rep = await r.report([{ n: 1, text: 'f' }]);
-  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
-  const res = await r.resolveFinding(rep, 1);
-  await r.accept({ rejected: [res] });
-  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['acceptance']);
-  const res2 = await r.resolveFinding(rep, 1);
-  await r.accept({ accepted: [res2] });
+  const rep = await r.report([{ n: 1, text: 'f' }, { n: 2, text: 'g' }]);
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['findings']);
+  await r.resolveFinding(rep, 1);
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['findings']);
+  await r.declineFinding(rep, 2);
   assert.equal((await doneRule(await readState(r.cwd))).holds, true);
 });
 
@@ -797,20 +810,17 @@ test('sudus wake prints verdict, action or party, one reason line and the predic
 });
 
 // Fix round 1, item 11(b), pulled forward as a dependency of item 3: under wake's own cascading
-// precedence, 'report' and 'accept' are only ever reached once 'review' (respectively 'report')
-// has already been satisfied, so their unmet(...) messages could safely dereference rev.payload /
-// rep.payload unconditionally. lib/cycle.mjs's guardKernelWrite (item 3) now asks every predicate
-// about a scratch state independently of that cascade, so it can reach 'report' with no review yet
-// or 'accept' with no report yet; both used to throw a raw TypeError there instead of returning a
-// clean unmet/null.
-test('the report and accept predicates do not crash when asked about a state with no review or report yet', async () => {
+// precedence, 'report' is only ever reached once 'review' has already been satisfied, so its
+// unmet(...) message could safely dereference rev.payload unconditionally. lib/cycle.mjs's
+// guardKernelWrite (item 3) now asks every predicate about a scratch state independently of that
+// cascade, so it can reach 'report' with no review yet; it used to throw a raw TypeError there
+// instead of returning a clean unmet.
+test('the report and resolve predicates do not crash when asked about a state with no review or report yet', async () => {
   const r = await loopRepo();
   const st = await readState(r.cwd);
-  const reportP = predicates.find((p) => p.name === 'report');
-  const acceptP = predicates.find((p) => p.name === 'accept');
-  const rv = await reportP.test(st);
+  const rv = await predicates.find((p) => p.name === 'report').test(st);
   assert.equal(rv.action, 'report');
-  assert.equal(await acceptP.test(st), null);
+  assert.equal(await predicates.find((p) => p.name === 'resolve').test(st), null);
 });
 
 // Fix round 1, item 8: a fifth exit-3 case beyond section 2's four. makeProject() (plan 01/03)
@@ -948,7 +958,7 @@ test('wake reads a mechanism input tree and probes its tools once, however many 
 // fix for a finding makes receipts stale, and naming a full check run before every next
 // resolution cost an agent twenty runs for twenty findings. While the latest report has an
 // unresolved finding, a stale receipt waits; a current receipt that fails does not.
-test('while a report has an unresolved finding, wake names resolve before a stale run, and run before accept once the last finding is resolved', async () => {
+test('while a report has an unresolved finding, wake names resolve before a stale run, and run once the last finding is resolved', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001');
   await r.review();
@@ -963,7 +973,7 @@ test('while a report has an unresolved finding, wake names resolve before a stal
   v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target], ['run', 'DEMO-001'], JSON.stringify(v));
   await check(r.cwd, 'DEMO-001');
-  assert.equal((await wake(r.cwd)).action, 'accept');
+  assert.equal((await wake(r.cwd)).action, 'done');
 });
 
 test('a current receipt that fails is named at once even while findings are unresolved', async () => {

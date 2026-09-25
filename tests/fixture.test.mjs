@@ -26,7 +26,7 @@ test("the CLI registers every flag the fixture uses", () => {
   assertFlags("realize", ["--subject"]);
   assertFlags("review", ["--file"]);
   assertFlags("report", REPORT_FLAGS);
-  assertFlags("accept", ["--file"]);
+  assertFlags("decline", ["--source"]);
   assertFlags("supersede", ["--quote"]);
   assertFlags("scope", ["restore", "keep"]);
 });
@@ -229,12 +229,12 @@ test("work loop: implement, capture, fix, escalation, scope, decision", async ()
   await work(p);
 });
 
-// Task 4: review, brief, fake adversary report, resolve, accept, build, accept, done.
+// Task 4: review, brief, fake adversary report, decline, resolve, build, done.
 // Deviation from the plan text throughout this task, recorded in the report: lib/review.mjs's
 // real `review` schema takes `answers` as an array of {question, target, status, text} (not an
-// object keyed by "Q1:tests"); `report`'s real body needs `projection_digest` (from the brief)
-// and a `model`/`transport` that match the brief's launch instruction; `accept`'s real body key
-// is `resolutions: [{sha, verdict, reason}]` (not `accepted`/`rejected` arrays of plain shas).
+// object keyed by "Q1:tests"). Sudus 4.0.0 (spec revision 16): the brief carries no projection and
+// the report reads by five lenses; the builder resolves or declines each finding and no adversary
+// judges the fixes afterwards.
 const REVIEW = {
   examined: ["src/add.mjs", "tests/req.test.mjs"],
   answers: [
@@ -258,29 +258,30 @@ export async function finish(p) {
   // Deviation: the harness-detection env var is CLAUDECODE (lib/review.mjs's HARNESS_ENV), not
   // CLAUDE_CODE.
   const briefOut = p.sudus(["brief", "fixture"], { env: { CLAUDECODE: "1" } }).stdout;
-  const briefSha = /^sudus: brief \S+ ([0-9a-f]{40})/m.exec(briefOut)[1];
-  const projection = /^projection: (.+)$/m.exec(briefOut)[1];
-  const projectionDigest = /^projection digest: (\S+)$/m.exec(briefOut)[1];
-  assert.equal(existsSync(join(projection, ".git")), false);
-  assert.equal(existsSync(join(projection, "src/add.mjs")), true);
+  assert.match(briefOut, /^sudus: brief fixture [0-9a-f]{40}$/m);
+  assert.doesNotMatch(briefOut, /projection/);
+  assert.match(briefOut, /^start: in claude_code, start one fresh subagent running as claude-fable-5-1 with none of your conversation, .* It reads only and starts no subagents\./m);
+  const brief = readFileSync(/^brief: (.+)$/m.exec(briefOut)[1], "utf8");
+  for (const s of ["## Your role", "Your task is READ-ONLY in the repo.", "Do not start subagents.", "## Receipts (what already ran; do not run it again)", "## Agent decisions", "## Paths not to read"]) assert.ok(brief.includes(s), s);
   await p.wakeIs("Resolvable", "report", "fixture");
 
+  // Every pair the brief names, read back from its own Report section, attempted by reading.
+  const pairs = brief.slice(brief.indexOf("## Report")).split("\n").filter((l) => /^  (falsifier|decision|security|logic|complexity) /.test(l)).map((l) => l.trim().split(" "));
+  assert.deepEqual(pairs.filter(([q]) => q === "falsifier").map(([, t]) => t), ["REQ-001", "REQ-002"]);
   const report = {
-    brief: briefSha, model: "claude-fable-5-1", transport: "remote", projection_digest: projectionDigest,
-    attempts: [
-      { question: "Q1", target: "tests", text: "tried making it pass without the behavior; it still requires add(2,3)===5" },
-      { question: "Q2", target: "tests", text: "tried an input the mechanism reads but does not declare; none found" },
-      { question: "Q3", target: "REQ-001", text: "tried add(2, 3.5); no escape from the falsifier as written" },
-      { question: "Q4", target: "REQ-001", text: "checked for touched paths the claim omitted; none" },
-      { question: "Q3", target: "REQ-002", text: "tried add(\"2\", 3); throws as claimed" },
-      { question: "Q4", target: "REQ-002", text: "checked for touched paths the claim omitted; none" },
-      { question: "Q5", target: "fixture", text: "looked where the builder said not to; overflow and bigint untested" },
-      { question: "Q6", target: "fixture", text: "confirmed not-checked areas: overflow, bigint" },
-    ],
+    attempts: pairs.map(([question, target]) => ({ question, target, looked_for: `a way around ${question} ${target}`, found: "none beyond the findings", held: true })),
     interface_attempts: [],
-    findings: [{ n: 1, text: "add(2, 3.5) is accepted; the falsifier of REQ-001 says numbers, but the sum of an integer and a float is not specified." }],
+    findings: [
+      { n: 1, severity: "Major", where: "REQ-001", text: "add(2, 3.5) is accepted; the falsifier of REQ-001 says numbers, but the sum of an integer and a float is not specified.", remedy: "say in the glossary which numbers are summed" },
+      { n: 2, severity: "Minor", where: "src/add.mjs", text: "no test sums two numbers whose sum overflows to Infinity.", remedy: null },
+    ],
+    sudus_bug: null,
   };
   p.sudus(["report", "fixture", "--file", p.outFile("report.json", report)]);
+  await p.wakeIs("Resolvable", "resolve", "fixture 1");
+
+  // The builder decides each finding itself: finding 2 is outside what the commitment promised.
+  p.sudus(["decline", "fixture", "2", "overflow is not in REQ-001 or REQ-002; the next commitment that names limits takes it"]);
   await p.wakeIs("Resolvable", "resolve", "fixture 1");
 
   // The resolution edits docs/spec/glossary.md, a developer-owned protected path (section 2).
@@ -295,33 +296,23 @@ export async function finish(p) {
   p.commit("Say that any finite numbers are summed");
   await p.developer.authorize();
 
-  // A Consequential decision: queued in the ADR, agent continues; built after acceptance.
-  // Deviation from the plan text, recorded in the report: the CLI's own flag is --rests-on
-  // (comma-separated), not --wrong-if paired with a plan-invented --because; the printed line is
-  // "decide <ulid>\n", not "... id <ulid>". Also a deviation in placement: the plan calls decide
-  // at the end of the work loop (before review/report/resolve). lib/adr.mjs's decide() captures
-  // its own base_snap from the CURRENT workspace at the moment it runs, and lib/commitment.mjs's
-  // realize() later refuses when anything protected changed since that base_snap. Calling decide
-  // before the glossary.md resolution above would let that unrelated protected-path edit into the
-  // decision's own delta and make realize refuse "touches docs/spec/glossary.md (protected); the
-  // decision is the developer's" -- correct behavior, not a defect, but it means decide must run
-  // after every protected-path edit this commitment still intends to make, not before.
+  // A Consequential decision: queued in the ADR, agent continues; built once the findings are
+  // settled. Deviation from the plan text, recorded in the report: the CLI's own flag is
+  // --rests-on (comma-separated), not --wrong-if paired with a plan-invented --because; the
+  // printed line is "decide <ulid>\n", not "... id <ulid>". Also a deviation in placement: the
+  // plan calls decide at the end of the work loop (before review/report/resolve). lib/adr.mjs's
+  // decide() captures its own base_snap from the CURRENT workspace at the moment it runs, and
+  // lib/commitment.mjs's realize() later refuses when anything protected changed since that
+  // base_snap. Calling decide before the glossary.md resolution above would let that unrelated
+  // protected-path edit into the decision's own delta and make realize refuse "touches
+  // docs/spec/glossary.md (protected); the decision is the developer's" -- correct behavior, not a
+  // defect, but it means decide must run after every protected-path edit this commitment still
+  // intends to make, not before.
   const decideOut = p.sudus(["decide", "--consequential", "--title", "Export add as default too", "--rests-on", "callers import default", "--wrong-if", "no caller does", "--body", "Add a default export of add."]);
   const decisionId = /^decide ([0-9A-Z]{26})/.exec(decideOut.stdout)[1];
   p.commit("Record the decision");
 
-  const resolveOut = p.sudus(["resolve", "fixture", "1", "The glossary now says any finite numbers; the requirement text is unchanged."]);
-  const resolutionSha = /^sudus: resolution fixture ([0-9a-f]{40})/.exec(resolveOut.stdout)[1];
-  // Carried item (a): confirm the Done outcome still agrees end to end while this resolution is
-  // "submitted" (unjudged). lib/wake.mjs's own openFindings() and lib/review.mjs's ledger()
-  // disagree on whether an unjudged resolution counts as "resolved" (wake's looser helper says
-  // yes; review's ledger says "submitted"), but wake's 'resolve' precedence still correctly
-  // proceeds to 'accept' rather than skipping ahead to Done, because doneRule's own acceptance
-  // check separately requires every resolution to be judged (accepted or rejected) before Done.
-  await p.wakeIs("Resolvable", "accept", "fixture");
-
-  const acceptance1 = { resolutions: [{ sha: resolutionSha, verdict: "accepted", reason: "the glossary now bounds sum to finite numbers" }], findings: [] };
-  p.sudus(["accept", "fixture", "--file", p.outFile("accept1.json", acceptance1)]);
+  p.sudus(["resolve", "fixture", "1", "The glossary now says any finite numbers; the requirement text is unchanged."]);
   await p.wakeIs("Resolvable", "build", decisionId);
 
   p.sudus(["begin", "build", decisionId]);
@@ -334,14 +325,14 @@ export async function finish(p) {
   // answer's `answered` line (written before `sudus decide` ran, in work()), so the full sequence
   // is ["answered", "decision", "realized"], not the plan's ["decision", "answered", "realized"].
   assert.deepEqual(adr.map((l) => l.kind), ["answered", "decision", "realized"]);
-  await p.wakeIs("Resolvable", "accept", "fixture");
-  p.sudus(["accept", "fixture", "--file", p.outFile("accept2.json", { resolutions: [], findings: [] })]);
   await p.wakeIs("Resolvable", "done", "fixture");
-  p.sudus(["done", "fixture"]);
+  const doneOut = p.sudus(["done", "fixture"]).stdout;
+  assert.match(doneOut, /^review report for fixture: 2 findings, 1 fixed, 1 declined \(adversary report [0-9a-f]{12}\)$/m);
+  assert.match(doneOut, /^- Minor, finding 2 of the report [0-9a-f]{12} at src\/add\.mjs: no test sums .*\n  declined: overflow is not in REQ-001 or REQ-002; .* \(decline [0-9a-f]{12}\)$/m);
   assert.equal((await p.kinds()).at(-1), "done");
 }
 
-test("review, report, resolve, accept, build, accept, done", async () => {
+test("review, report, decline, resolve, build, done", async () => {
   const p = buildProject();
   await tail(p);
   await work(p);
@@ -352,6 +343,9 @@ test("review, report, resolve, accept, build, accept, done", async () => {
 const EVALUATOR = ["evaluation-intent", "evaluation-call", "measurement", "calibration"];
 // Kinds the full fixture cannot reach, and why.
 const UNREACHABLE = {
+  // Sudus 4.0.0 removed the acceptance rounds; a 3.x log still holds acceptance records, which
+  // tests/wake.test.mjs and tests/cycle.test.mjs read through the loop fixture's own writer.
+  acceptance: "Sudus 4.0.0 writes none: the adversary reports once and the builder resolves or declines each finding",
   "command-abort": "written only when a multi-store command dies before any planned write; the crash fixture variant B reaches it",
   read: "excluded by the task: the developer's queue read is a developer-authenticated act tested in plan 03",
   // Spec revision 6, "Direction": `sudus authorize instead|ask` writes this instead of an
@@ -453,18 +447,16 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
     // work(): the stray-file scope breach (recorded by the very next state-changing command's own
     // preflight, before that command's own record), its restore, and its own outside record.
     "scope-breach", "item", "scope", "outside",
-    // finish(): review, brief, report.
-    "review", "brief", "report",
+    // finish(): review, brief, report, and the builder's decline of finding 2.
+    "review", "brief", "report", "decline",
     // finish(): re-authorizing before the glossary.md resolution -- transactional, like the first
     // authorize -- is not in the plan's own list at all (the plan never accounted for the
     // protected-path re-authorization finish() needs; see finish()'s own deviation comment).
     "command-intent", "authorization",
-    // finish(): the resolution and its acceptance.
-    "resolution", "acceptance",
-    // finish(): the build check (confirms REQ-001 after the default-export edit).
-    "receipt",
-    // finish(): the second acceptance (examining the realize commit's delta) and done.
-    "acceptance", "done",
+    // finish(): the resolution of finding 1.
+    "resolution",
+    // finish(): the build check (confirms REQ-001 after the default-export edit), then done.
+    "receipt", "done",
     // promote(): transactional (command-intent), the promotion record, and the successor start.
     "command-intent", "promotion", "start",
     // full-loop test: the carried-over add-nan fix stands under fixture-2 (issue #4), so nothing

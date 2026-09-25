@@ -45,9 +45,12 @@ Git, with no build step, runtime packages, database, or service.
 For example, you might agree that a form must reject an empty name. The
 agent writes a check that actually submits an empty name. Sudus records
 whether that check passed and whether its result still applies after the
-code changes. Before the work is called complete, an independent reviewer,
-started with none of the builder's context, also attacks what the check
-might have missed.
+code changes. Once per commitment, right before Done, an independent
+reviewer, started with none of the builder's conversation, reads the code
+and the whole specification and attacks what the check might have missed.
+It reads only: it runs nothing, and the receipts tell it what already ran.
+The agent fixes or declines each finding it raises, with its reason, and
+you read what it decided when the commitment is done.
 
 ## The evaluator: the agent's gut check
 
@@ -200,9 +203,9 @@ correct. It means the open commitment meets Sudus's recorded conditions.
 - Every requirement in the commitment's frozen set has a current passing
   check, bound to that requirement's exact text.
 - A review and an independent report exist at the same point in the work,
-  and every finding either has a fix or a developer ruling.
-- The latest acceptance looked at everything that changed since the report,
-  including every fix, and accepted each one.
+  and the agent fixed or declined every finding, with its reason. `sudus
+  done` prints each one and what the agent did with it, for you to read
+  before the next feature or commitment.
 - No question is unanswered, no undeclared change sits unresolved, no known
   defect is unfixed, and no decision that needed building is still unbuilt.
 

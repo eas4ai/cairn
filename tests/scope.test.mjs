@@ -412,13 +412,10 @@ test('a breach is a log fact: squashing the branch does not clear it', async () 
 // are restored alongside the behavioral one -- naming every state-changing command explicitly
 // still catches a command silently dropped from the set even if the loop below happens not to
 // exercise it for some other reason.
-// Fix round 1 finding 3 (plan 09 review): 'dispute' added alongside 'escalate', 'answer' and
-// 'reply' -- dispute() (lib/escalate.mjs) calls the same escalate() they do and writes the same
-// 'escalation' record kind, so section 5's "before any state-changing command" scope preflight
-// applies to it identically. Before this fix, `sudus dispute` wrote an escalation record with no
-// preflight scope check and no cycle-counter settle.
+// Sudus 4.0.0: 'decline' writes a record the way 'resolve' does, so section 5's "before any
+// state-changing command" scope preflight applies to it; 'accept' and 'dispute' are gone.
 test('runWithPreflight invokes the preflight for every state-changing command and skips it for a reader', async () => {
-  for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'accept', 'escalate', 'answer', 'reply', 'dispute', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
+  for (const c of ['begin', 'end', 'check', 'declare', 'review-mechanism', 'review', 'brief', 'report', 'resolve', 'decline', 'escalate', 'answer', 'reply', 'item', 'outside', 'fix', 'decide', 'realize', 'promote', 'authorize', 'start', 'done', 'supersede', 'scope', 'calibrate']) assert.ok(STATE_CHANGING.has(c), c);
   for (const c of ['wake', 'show', 'lint', 'decisions', 'recover', 'init']) assert.ok(!STATE_CHANGING.has(c), c);
   const r = await loopRepo();
   for (const command of STATE_CHANGING) {

@@ -13,7 +13,7 @@ import { preflight, dispose } from '../lib/scope.mjs';
 
 test('the counter lives below the Git directory, counts by class and target, and never travels', async () => {
   const r = await loopRepo();
-  assert.deepEqual(BOUNDS, { sameTarget: 4, total: 28, acceptanceRounds: 3 });
+  assert.deepEqual(BOUNDS, { sameTarget: 4, total: 28 });
   assert.equal(ADMIN.size, 9);
   const refsBefore = (await git(['for-each-ref'], { cwd: r.cwd })).stdout;
   let last;
@@ -71,22 +71,17 @@ test('a rotating cycle is caught at the twenty-eighth transition', async () => {
   assert.ok(n <= 29);   // 28 completions are observed by the 29th settle
 });
 
-test('the third acceptance round without Done is the same escalation', async () => {
+// Sudus 4.0.0 removed the acceptance rounds and their bound (issue #23): the adversary reports
+// once, and a 3.x log's acceptance records never write a cycle escalation of their own.
+test('acceptance records from a 3.x log never trip a cycle bound', async () => {
   const r = await loopRepo();
   await r.passReq('DEMO-001'); await r.review();
-  const rep = await r.report([{ n: 1, text: 'f' }]);
+  const rep = await r.legacyReport([{ n: 1, text: 'f' }]);
   for (let i = 0; i < 3; i++) { const res = await r.resolveFinding(rep, 1); await r.accept({ rejected: [res], findings: [{ n: i + 2, text: 'new' }] }); }
   const st = await readState(r.cwd);
-  const { bound } = await settle(r.cwd, await verdictOf(st), st);
-  assert.deepEqual(bound, { kind: 'acceptanceRounds', actionClass: 'accept', target: 'first' });
-  assert.equal((await wake(r.cwd)).verdict, 'Waiting');
-  // An ok answer restarts the count: the next round is the first of a new three, not a new escalation.
-  const esc = openCycleEscalation(await r.log()); await r.answer(esc.sha, 'ok');
-  const res = await r.resolveFinding(rep, 4); await r.accept({ rejected: [res], findings: [{ n: 5, text: 'new' }] });
-  const st2 = await readState(r.cwd);
-  assert.deepEqual(await settle(r.cwd, await verdictOf(st2), st2), { bound: null });
-  assert.equal((await r.log()).filter((x) => x.kind === 'escalation' && x.payload.concerns.split(' ').includes('cycle')).length, 1);
-  assert.notEqual((await wake(r.cwd)).verdict, 'Waiting');
+  assert.deepEqual(await settle(r.cwd, await verdictOf(st), st), { bound: null });
+  assert.equal(openCycleEscalation(await r.log()), null);
+  assert.deepEqual([(await wake(r.cwd)).verdict, (await wake(r.cwd)).action], ['Resolvable', 'resolve']);
 });
 
 test('semantic progress resets the count; a snapshot or record alone does not', async () => {

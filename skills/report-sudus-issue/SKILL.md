@@ -5,7 +5,7 @@ description: Report a defect in Sudus itself to the eas4ai/sudus issue tracker a
 
 # Report a Sudus issue
 
-This skill is for a defect in Sudus itself. A failing check, an adversary finding, a scope breach or an escalation is Sudus working as designed: follow the working agreement for those, not this skill.
+This skill is for a defect in Sudus itself. A failing check, an adversary finding, a scope breach or an escalation is Sudus working as designed: follow the working agreement for those, not this skill. An adversary report that stopped on a Sudus bug is the exception: its `sudus_bug` text names a defect, and this skill is how it reaches eas4ai/sudus.
 
 Everything this skill sends to GitHub -- a search, an issue, a comment -- is public or leaves the machine, so it keeps out the project's code, spec text and record contents; any secret, key or token, including one inside a remote URL; hostnames, IP addresses and remote URLs; the developer's name and email; and any path under their home directory (write `~` instead). Nothing is posted -- no issue, no comment -- until the developer answers `ok`.
 

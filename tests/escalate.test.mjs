@@ -357,20 +357,24 @@ test('reply names the open ask; after it the escalation awaits the developer aga
   assert.equal(escalationState(await r.log(), esc).final.payload.text, 'Fourteen days.');
 });
 
-import { dispute, disputes } from '../lib/escalate.mjs';
+import { escalate as escalateDraft, disputes } from '../lib/escalate.mjs';
 
+// Sudus 4.0.0 removed `sudus dispute`: the builder declines a finding itself. An escalation may
+// still name a finding when the builder chooses to ask, and the developer's ok closes it.
 const disputeFields = (record, n) => ({
-  commitment: 'first', record, n,
+  commitment: 'first', concerns: [`finding:${record}#${n}`],
   question: `Is finding ${n} a defect?`, recommendation: 'No: the check reads the declared fixture.',
   because: 'hello.txt is in the mechanism inputs.', if_wrong: 'A hidden input goes undeclared.', instead: 'Declare it and re-run.',
+  options: [], named_paths: [], cited_decisions: [],
 });
+const dispute = (cwd, d) => escalateDraft(cwd, d);
 
 // Fix round 1 finding 5 (plan 09 review, ruling): a dispute is settled ONLY by the developer's
 // ok answer, not by any non-ask final answer. An `instead` answer is the developer declining the
 // agent's reading and directing different work; treating it as "the finding is answered" would
 // close a finding the developer just refused to dismiss. Matches the codebase's only other
 // precedent, lib/scope.mjs's keep disposition, which requires "an escalation answered ok".
-test('a dispute names finding N on its exact source record and is settled only by the developer\'s ok answer', async () => {
+test('an escalation naming finding N on its exact source record is settled only by the developer\'s ok answer', async () => {
   const r = await loopRepo();
   const rev = await r.review([{ n: 1, text: 'reads an undeclared fixture' }, { n: 2, text: 'no test for empty input' }]);
   await assert.rejects(dispute(r.cwd, disputeFields(rev, 3)), /has no finding 3/);
@@ -442,7 +446,7 @@ test('the five fields reach the terminal byte for byte: double spaces, trailing 
   assert.ok(stdout.indexOf(expected) >= 0, 'stdout carries the exact bytes');
 });
 
-import { parseEscalateArgs, cliEscalate, cliAnswer, cliReply, cliDispute } from '../lib/escalate.mjs';
+import { parseEscalateArgs, cliEscalate, cliAnswer, cliReply } from '../lib/escalate.mjs';
 
 const argv = ['--commitment', 'first', '--concern', 'DEMO-001', '--question', draft().question, '--recommendation', draft().recommendation,
   '--because', draft().because, '--if-wrong', draft().if_wrong, '--instead', draft().instead, '--path', 'src/demo.mjs'];
@@ -454,7 +458,7 @@ test('the escalate command parses the five fields and concern tokens into the ca
   assert.deepEqual(parseEscalateArgs([...argv, '--concern', 'cycle']).concerns, ['DEMO-001', 'cycle']);
 });
 
-test('escalate, answer, reply and dispute commands print one line and use exit codes 0 and 1', async () => {
+test('escalate, answer and reply commands print one line and use exit codes 0 and 1', async () => {
   const r = await loopRepo();
   const e = await cliEscalate(r.cwd, argv);
   assert.equal(e.code, 0);
@@ -466,55 +470,23 @@ test('escalate, answer, reply and dispute commands print one line and use exit c
   assert.match(ask.out, /^sudus: answer first [0-9a-f]{40}\n$/);
   const rp = await cliReply(r.cwd, ['first', 'Because.']);
   assert.match(rp.out, /^sudus: reply first [0-9a-f]{40}\n$/);
-  await cliAnswer(r.cwd, ['first', 'ok', '--quote', 'ok'], { env: {} });
-  const rev = await r.review([{ n: 1, text: 'x' }]);
-  const d = await cliDispute(r.cwd, ['--commitment', 'first', '--record', rev, '--n', '1', '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it']);
-  assert.match(d.out, /^sudus: escalation first [0-9a-f]{40}\n$/);
 });
 
-// Fix round 1 finding 10 (plan 09 review): cliDispute coerced --n with bare Number() and let a
-// missing or malformed value flow straight into the concern token, so the refusal named the
-// record ("concern token finding:<sha>#NaN needs a log SHA") instead of the actual problem: --n
-// itself. Reproduced exactly as the review found it (no --n, --n 0, --n abc); each now refuses
-// with a message naming the finding number, before dispute() or escalate() ever runs.
-test('sudus dispute refuses a missing, non-integer or non-positive --n with a message naming the finding number', async () => {
-  const r = await loopRepo();
-  const rev = await r.review([{ n: 1, text: 'x' }]);
-  const base = ['--commitment', 'first', '--record', rev, '--question', 'Defect?', '--recommendation', 'No.', '--because', 'declared', '--if-wrong', 'hidden input', '--instead', 'declare it'];
-  const noN = await cliDispute(r.cwd, base);
-  assert.equal(noN.code, 1);
-  assert.match(noN.out, /^sudus: --n must be a positive integer naming the finding number/);
-  const zero = await cliDispute(r.cwd, [...base, '--n', '0']);
-  assert.equal(zero.code, 1);
-  assert.match(zero.out, /^sudus: --n must be a positive integer naming the finding number/);
-  const notANumber = await cliDispute(r.cwd, [...base, '--n', 'abc']);
-  assert.equal(notANumber.code, 1);
-  assert.match(notANumber.out, /^sudus: --n must be a positive integer naming the finding number/);
-});
-
-// Issue #27: one dispute may name several findings of the same record, as a comma list or a
-// repeated --n. Before, a comma list was refused and a repeated --n kept only its last value, so
-// each finding took its own escalation and its own answer, and `--n 1 --n 2` disputed finding 2
-// alone without saying so.
-test('sudus dispute names every finding a comma list or a repeated --n gives in one escalation, and one ok closes them all', async () => {
+// Issue #27, kept after 4.0.0 removed `sudus dispute`: one escalation may name several findings of
+// the same record, and one ok closes them all.
+test('one escalation names several findings with repeated --concern, and one ok closes them all', async () => {
   const r = await loopRepo();
   const rev = await r.review([1, 2, 3, 4].map((n) => ({ n, text: `gap ${n}` })));
-  const base = ['--commitment', 'first', '--record', rev, '--question', 'Close these as answered?', '--recommendation', 'Close them; they are backlog item X.', '--because', 'the gaps predate the commitment', '--if-wrong', 'a gap ships', '--instead', 'fix them now'];
-  const d = await cliDispute(r.cwd, [...base, '--n', '3,1', '--n', '2']);
+  const base = ['--commitment', 'first', '--question', 'Close these as answered?', '--recommendation', 'Close them; they are backlog item X.', '--because', 'the gaps predate the commitment', '--if-wrong', 'a gap ships', '--instead', 'fix them now'];
+  const d = await cliEscalate(r.cwd, [...base, ...[1, 2, 3].flatMap((n) => ['--concern', `finding:${rev}#${n}`])]);
   assert.equal(d.code, 0, d.out);
   const esc = d.out.trim().split(' ').at(-1);
-  const log = await readLog(r.cwd);
-  assert.deepEqual(log.filter((x) => x.kind === 'escalation').map((x) => x.sha), [esc]);
-  assert.equal(log.find((x) => x.sha === esc).payload.concerns, [1, 2, 3].map((n) => `finding:${rev}#${n}`).join(' '));
   const v = await wake(r.cwd);
   assert.equal(v.verdict, 'Waiting');
   assert.deepEqual(v.escalation.closes, [1, 2, 3].map((n) => `finding ${n} on the review ${rev.slice(0, 12)}`));
   assert.equal((await cliAnswer(r.cwd, ['first', 'ok', '--quote', 'ok, close them'], { env: {} })).code, 0);
   const after = await readLog(r.cwd);
   assert.deepEqual([1, 2, 3, 4].map((n) => disputes(after, rev, n)), [esc, esc, esc, null]);
-  const bad = await cliDispute(r.cwd, [...base, '--n', '4,x']);
-  assert.equal(bad.code, 1);
-  assert.match(bad.out, /^sudus: --n must be a positive integer naming the finding number, not "x"/);
 });
 
 // Fix round 1 finding 12 (plan 09 review, new): a CAS refusal on refs/sudus/log (two writers
@@ -525,7 +497,7 @@ test('sudus dispute names every finding a comma list or a repeated --n gives in 
 // simultaneous writers to the same ref from the same expected old value loses. Every loser's
 // message now ends with "; run the command again" (one line, no automatic retry); every winner's
 // escalation record is still written normally.
-test('a CAS refusal on refs/sudus/log from escalate, answer, reply or dispute ends its message with "; run the command again" (finding 12)', async () => {
+test('a CAS refusal on refs/sudus/log from escalate, answer or reply ends its message with "; run the command again" (finding 12)', async () => {
   const r = await loopRepo();
   const argvFor = (i) => ['--commitment', 'first', '--concern', 'DEMO-001', '--question', `Racer ${i}?`,
     '--recommendation', 'R', '--because', 'B', '--if-wrong', 'W', '--instead', 'I'];

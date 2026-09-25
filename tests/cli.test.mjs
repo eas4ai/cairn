@@ -538,18 +538,55 @@ test('sudus start refuses an extra positional and writes no start record', async
   assert.deepEqual(await readLog(repo.cwd), before);
 });
 
-test('sudus done prints one line and closes the open commitment once wake names done; before that it refuses with what wake names', async (t) => {
+test('sudus done closes the open commitment once wake names done and prints the review report; before that it refuses with what wake names', async (t) => {
   const repo = await loopRepo();
   const early = await run(['done', 'first'], repo.cwd);
   assert.equal(early.code, 1); assert.match(early.err, /^sudus: first is not at Done; wake names run DEMO-001: /);
-  await repo.passReq('DEMO-001'); await repo.review(); await repo.report();
+  await repo.passReq('DEMO-001'); await repo.review();
+  const rep = await repo.report();
   const r = await run(['done', 'first'], repo.cwd);
   assert.equal(r.code, 0, r.err);
   const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'done').at(-1);
-  assert.equal(r.out, `done ${rec.sha} first\n`);
+  assert.equal(r.out, `done ${rec.sha} first\nreview report for first: 0 findings, 0 fixed, 0 declined (adversary report ${rep.slice(0, 12)})\n`);
   const missingSlug = await run(['done'], repo.cwd);
   assert.equal(missingSlug.code, 1);
   assert.equal(missingSlug.err, 'sudus: done needs a slug\n');
+});
+
+// Sudus 4.0.0: the builder decides every finding (resolve or decline, with its reason), and the
+// developer reads what it decided in the review report sudus done prints before anything else.
+test('sudus decline records the reason; done lists every finding with its severity and what the builder did', async () => {
+  const repo = await loopRepo();
+  await repo.passReq('DEMO-001'); await repo.review([{ n: 1, text: 'the builder saw no\nlong-name test' }]);
+  const rep = await repo.report([{ n: 1, text: 'a blank name prints a bare comma', severity: 'Critical', where: 'src/demo.mjs:1' }, { n: 2, text: 'no test for a long name', severity: 'Minor' }]);
+  const rev = (await readLog(repo.cwd)).find((x) => x.kind === 'review').sha;
+  const bad = await run(['decline', 'first', '1'], repo.cwd);
+  assert.equal(bad.code, 1); assert.equal(bad.err, 'sudus: decline: a decline needs its reason\n');
+  const d = await run(['decline', 'first', '1', 'the falsifier names a missing name, not a blank one', '--source', rep], repo.cwd);
+  assert.equal(d.code, 0, d.err);
+  const dec = (await readLog(repo.cwd)).find((x) => x.kind === 'decline');
+  assert.equal(d.out, `sudus: decline first ${dec.sha}\n`);
+  assert.deepEqual(dec.payload, { source: rep, finding: 1, reason: 'the falsifier names a missing name, not a blank one' });
+  const again = await run(['decline', 'first', '1', 'twice', '--source', rep], repo.cwd);
+  assert.equal(again.err, `sudus: decline: finding 1 on ${rep} was declined by ${dec.sha}\n`);
+  const res = await repo.resolveFinding(rep, 2);
+  const res2 = await repo.resolveFinding(rev, 1);
+  const r = await run(['done', 'first'], repo.cwd);
+  assert.equal(r.code, 0, r.err);
+  const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'done').at(-1);
+  assert.equal(r.out, [`done ${rec.sha} first`,
+    `review report for first: 3 findings, 2 fixed, 1 declined (adversary report ${rep.slice(0, 12)})`,
+    `- finding 1 of the review ${rev.slice(0, 12)}: the builder saw no long-name test`, `  fixed: fixed (resolution ${res2.slice(0, 12)})`,
+    `- Critical, finding 1 of the report ${rep.slice(0, 12)} at src/demo.mjs:1: a blank name prints a bare comma`, `  declined: the falsifier names a missing name, not a blank one (decline ${dec.sha.slice(0, 12)})`,
+    `- Minor, finding 2 of the report ${rep.slice(0, 12)} at src/demo.mjs: no test for a long name`, `  fixed: fixed (resolution ${res.slice(0, 12)})`, ''].join('\n'));
+});
+
+test('sudus accept and sudus dispute are gone in 4.0.0 and say what replaces them', async () => {
+  const repo = await loopRepo();
+  const a = await run(['accept', 'first', '--file', 'x.json'], repo.cwd);
+  assert.equal(a.code, 1); assert.match(a.err, /^sudus: accept was removed in Sudus 4\.0\.0: .*sudus decline/);
+  const d = await run(['dispute', '--commitment', 'first'], repo.cwd);
+  assert.equal(d.code, 1); assert.match(d.err, /^sudus: dispute was removed in Sudus 4\.0\.0: .*sudus decline <slug> <n> "<why>"/);
 });
 
 test('sudus item prints one line and records a backlog item; refuses with no kind flag', async (t) => {

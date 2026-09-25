@@ -414,9 +414,8 @@ Actions are attempted in this order:
 | review mechanism REQ | review metadata binds command, working directory, results mode and text to a fail receipt that ran under them; product inputs unchanged |
 | capture ITEM | outside record or escalation names it |
 | review SLUG | current workspace snapshot; every fixed question answered for each target |
-| report SLUG | isolated projection; current brief and report; all question and interface attempts present |
-| resolve SLUG N | resolution or developer dispute names N on its exact source record |
-| accept SLUG | current acceptance examines cumulative delta and every submitted resolution; it may add findings |
+| report SLUG | a report at the reviewed snapshot through the latest brief; every lens, decision and interface attempted; a report stopped on a Sudus bug is not one |
+| resolve SLUG N | a resolution, or a decline with its reason, names N on its exact source record |
 | build DECISION | realized line names base and result snapshots; actual delta passes protected-category check |
 | done SLUG | Done rule holds; sudus done writes the final record |
 | promote | one backlog item, decision, roadmap move and successor start are one transaction |
@@ -575,23 +574,11 @@ move `sudus migrate` made from `.cairn/` to `.sudus/` is not the
 decision's change, even when the decision's starting snapshot predates it;
 a moved file changed after the move is judged as the path it is now.
 
-If a resolution to a finding is rejected twice, or you want to contest one
-directly, that becomes an escalation of its own:
-
-```sh
-sudus dispute --commitment reject-empty-names --record <finding-record-sha> --n 2 \
-  --question '...' --recommendation '...' --because '...' --if-wrong '...' --instead '...'
-```
-
-Several findings of the same record that share one answer take one
-dispute: `--n 4,5,9`, or `--n` repeated. The escalation names each of
-them, and wake lists them after "ok closes:".
-
-Your `ok` on an escalation about a finding closes the finding as answered,
-and Done no longer waits on a fix for it. An `ok` on an escalation that
-names several findings closes all of them. `instead` with a direction keeps
-the finding open: the agent resolves it again that way, and the next
-acceptance judges the fix.
+An escalation may also name a finding, when the agent chooses to ask you
+about one: `--concern finding:<record sha>#<n>`, one per finding. Your `ok`
+closes each finding it names, and wake lists them after "ok closes:".
+`instead` with a direction keeps the finding open, and the agent resolves or
+declines it that way.
 
 This is next-feature: it starts from Done and specifies the next
 commitment.
@@ -752,44 +739,81 @@ is a list of `{"n": 1, "text": "..."}`, numbered from 1, or `[]` for none.
 Sudus checks this shape, never truth: it cannot tell a careful review from
 an empty claim.
 
-Once the review exists, wake names `report reject-empty-names`. First:
+Once the review exists, wake names `report reject-empty-names`. The
+**adversary** runs once per commitment, here, right before Done. First:
 
 ```sh
 sudus brief reject-empty-names
 ```
 
-This writes a brief record and a materialized **adversary projection**: a
-copy of the reviewed workspace with every `network_exclude` path and
-built-in credential pattern (`.env`, `.env.*`, private-key files,
-conventional SSH key names) removed, and no `.git` directory. It prints
-the brief file's path, the projection directory, and the exact instruction
-for starting the adversary: which harness, which model and transport (or
-`any`, when settings do not pin one), and to use the brief file as that
-session's entire prompt. The agent starts that adversary with none of the
-builder's conversation context and waits. For each mechanism, the adversary
-tries to make it pass without the behavior, fail for a setup reason instead
-of the real one, and find an input it reads but the declaration omits. For
-each implemented requirement, it tries to reach the falsifier anyway. For
-every changed interface, it gives a caller-level attempt whether or not the
-builder raised it. Its findings, in a JSON file shaped like the
-review's but with `attempts` (one `{"question", "target", "text"}` per
-required pair) in place of `answers`, plus `interface_attempts` (one
-`{"path", "text"}` per changed interface path) and the `model` and
-`projection_digest`, are recorded. The brief ends with a Report section
-that gives the adversary this shape, its projection digest and every
-required pair as the report spells it, so the file goes to `sudus report`
-unchanged:
+This writes a brief record and the brief file, and prints the file's path
+and the instruction for starting the adversary: one fresh subagent in the
+same harness, with none of the builder's conversation, the brief file as
+its entire prompt, and the model settings name (`any` when they name none).
+The adversary works in the project itself and reads only. It builds
+nothing, runs no tests and no project code, and starts no subagents. The
+brief lists the receipts, so it knows what already ran. It reads the whole
+specification first and judges the commitment as part of the whole system.
+
+The brief opens with the adversary's role, in your words: it has no stake in
+Done, and its job is to prove the commitment is not production ready. It
+judges the work through five lenses: the falsifier, the builder's decisions,
+security, logic, and complexity and spec adherence. The brief then lists the
+roadmap section, the frozen requirements and falsifiers, the mechanism
+definitions, the receipts, the builder's claims and findings, the agent's
+decisions (its `sudus decide` records and the backlog and next-feature
+items it captured in this commitment), the changed paths and interface
+paths, and the paths it must not read: tracked files under
+`network_exclude` or a credential pattern (`.env`, `.env.*`, private-key
+files, conventional SSH key names), and the patterns themselves. It ends
+with a Report section that spells the report file's shape and every
+required pair, so the file goes to `sudus report` unchanged:
 
 ```sh
 sudus report reject-empty-names --file report.json
 ```
 
-This refuses a report whose workspace differs from the reviewed snapshot,
-whose brief is stale, whose model, transport, or projection digest does
-not match the brief's launch instruction, or which leaves a required
-question or interface attempt missing. There is one report per commitment,
-and a review after it is refused: a change after the report gets a
-resolution, not a new review.
+```json
+{
+  "attempts": [
+    { "question": "falsifier", "target": "APP-001", "looked_for": "...", "found": "...", "held": true },
+    { "question": "security", "target": "reject-empty-names", "looked_for": "...", "found": "...", "held": true },
+    { "question": "logic", "target": "reject-empty-names", "looked_for": "...", "found": "...", "held": false },
+    { "question": "complexity", "target": "reject-empty-names", "looked_for": "...", "found": "...", "held": true }
+  ],
+  "interface_attempts": [],
+  "findings": [
+    { "n": 1, "severity": "Major", "where": "src/names.mjs:14", "text": "...", "remedy": null }
+  ],
+  "sudus_bug": null
+}
+```
+
+`attempts` needs one entry for every pair the brief names: `falsifier`
+once per requirement, `decision` once per decision the brief lists, and
+`security`, `logic` and `complexity` once for the commitment. Each says
+what the adversary looked for, what it found, and whether the work held.
+`interface_attempts` needs one entry per changed interface path. Each
+finding says where, what is wrong and why, and is `Critical` (a
+requirement is unmet, the falsifier is reachable, or a security exposure
+ships), `Major` (an uncovered defect in a touched path, or a decision that
+was yours) or `Minor` (an edge the commitment did not promise, or
+complexity the next commitment pays for); `remedy` is one line or `null`.
+
+`sudus report` refuses a report whose brief is stale or already used, one
+with fields the shape does not name, and one that leaves a pair or an
+interface path without an attempt. It also refuses a report once the
+workspace differs from the reviewed snapshot: the adversary reads only, so
+the adversary writes its report file outside the repository. There is one
+report per commitment, and a review after it is refused: a change after
+the report gets a resolution, not a new review.
+
+When the adversary finds a defect in Sudus itself, it stops and reports
+only that: `"sudus_bug"` holds the bug and the lists are empty. That
+report does not complete the review. Wake names `report` again and quotes
+the bug. The agent decides what to do with it (the report-sudus-issue
+skill files it after your `ok`), then briefs again when the bug no longer
+blocks the review.
 
 The brief's changed paths and interface paths run from the commitment's
 start to the reviewed snapshot. A commitment started after a supersede
@@ -797,59 +821,39 @@ carries the work of the one it superseded, committed before its own
 start, so its brief, its report and wake measure from the first start of
 that chain instead.
 
-Every finding, from the review or the report, is answered:
+Every finding, from the review or the report, is the agent's to decide. It
+fixes it:
 
 ```sh
 sudus resolve reject-empty-names 1 "fixed by validating with String.prototype.trim first" --source <sha of the review or report>
 ```
 
-or disputed with `sudus escalate` when you and the agent disagree that it
-is a real finding. Fixes make the checks out of date, but wake does not ask
-for a full run after every fix: while a finding is unresolved it names the
-next resolution, and once the last one is resolved it names each check to
-run again, then the acceptance. A check that ran and failed is named at
-once. After fixes, give the same adversary session the
-report, every resolution since it, and the cumulative delta; it judges
-each submitted resolution and may raise new findings anywhere in that
-delta, in a JSON file:
+or declines it with its reason:
 
 ```sh
-sudus accept reject-empty-names --file acceptance.json
+sudus decline reject-empty-names 2 "APP-001 names an empty name, not a long one; the next commitment takes limits"
 ```
 
-```json
-{
-  "resolutions": [
-    { "sha": "<resolution sha>", "verdict": "accepted", "reason": "the fix matches the finding" }
-  ],
-  "findings": []
-}
-```
+A finding of any severity may be declined, and nothing waits on you for it:
+the agent decides, and Sudus judges through its checks. Fixes make the
+checks out of date, but wake does not ask for a full run after every fix:
+while a finding is open it names the next resolution, and once the last
+one is resolved or declined it names each check to run again. A check that
+ran and failed is named at once. No adversary judges the fixes: the checks
+do.
 
-A rejected verdict needs a `reason`. A resolution rejected twice for the
-same finding raises its own escalation automatically. Three acceptance
-rounds without reaching Done raise one more: it names the findings still
-open and recommends closing them. Your `ok` closes them, Done needs no
-further round, and the agent captures each as a backlog item. Answer
-`instead` to take another round. One escalation may also name several
-findings; your `ok` closes each, and wake lists them on an `ok closes:`
-line, which the agent reads to you with the recommendation.
-
-Done requires the latest acceptance to examine the final workspace
-snapshot with every resolution accepted and every finding, anywhere,
-resolved or disputed by you. A report with no findings and no change after
-it needs no acceptance: there is nothing to examine. The lines Sudus
-appends to `docs/decisions.jsonl` for your answer to an escalation, your
-read of a decision and a decision's realization are not work to examine: a
-workspace that differs from the accepted snapshot only by those lines is
-still at it, so answering an escalation or realizing a decision after the
-last acceptance costs no further round. When it holds:
+Done requires a report at the reviewed snapshot and every finding,
+anywhere, resolved or declined. When it holds:
 
 ```sh
 sudus done reject-empty-names
 ```
 
-Ask for a completion report that answers:
+`sudus done` prints the **review report**: every finding, its severity and
+where it is, and what the agent did with it, fixed with its explanation or
+declined with its reason. The agent shows it to you as printed before it
+promotes a backlog item or starts the next feature. Ask as well for a
+completion report that answers:
 
 > What can I do now? What changed? What was tested? What did the review
 > and the report examine? Is anything important still outside this
@@ -857,8 +861,8 @@ Ask for a completion report that answers:
 
 Try the behavior yourself where that gives you useful information. Sudus
 cannot tell a careful review from an empty claim, or a thoughtful
-adversary from a rubber stamp; the shape of the record, the model's
-identity, and the projection boundary are the evidence it can show you.
+adversary from a rubber stamp; the shape of the record and the reasons
+the agent gave are the evidence it can show you.
 
 ## Scope: work Sudus did not expect
 
@@ -966,8 +970,8 @@ bound to the loop. Until then wake names the repair.
 | `signing_key` | `null` | `null` means attested mode: your words, quoted by the agent, with the harness name and your Git author. A public key (PEM) means every developer answer and authorization must be signed with its private key; see Attested or signed. |
 | `attribution` | `"forbidden"` | Whether commit messages may carry AI attribution; the release script refuses when forbidden and any is found. |
 | `developer` | `"present"` | `"absent"` for an autonomous run: any unanswered escalation prints as Waiting and wake exits 4 instead of waiting for an answer no one can give. |
-| `adversary_rules` | absent | Optional. One-line rules the machine sets for the adversary, such as a cap on parallel build jobs or a separate build directory. `sudus brief` prints them under Host rules, inside the brief its record digests, so you never edit the brief by hand. |
-| `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) and `adversary_transport` (`"local"` or `"remote"`), used by `sudus brief` and by the review source of the evaluator. |
+| `adversary_rules` | absent | Optional. One-line rules the machine sets for the adversary, such as a path to stay out of or a file size it should not read. `sudus brief` prints them under Host rules, inside the brief its record digests, so you never edit the brief by hand. |
+| `harness` | `{}` | Per-harness review settings: `harness.<name>.adversary_model` (string or `null`) names the model the adversary subagent runs as in `sudus brief`'s start line, and, with `adversary_transport` (`"local"` or `"remote"`), the reviewer the evaluator's review source starts. |
 | `typesafeai.enabled` | `false` | `true` sends each Consequential measurement to TypeSafe's jev model; `false` uses your harness's review model through `sudus measure --brief`. |
 | `typesafeai.model` | `null` | The versioned model id, required when enabled: `"jev-1.13.0"` at the time of writing. An alias such as `"jev"` is refused. |
 | `typesafeai.weights` | 0.2 each | The five dimension weights (`evidence`, `reach`, `contract`, `surface`, `ambiguity`); they must sum to 1. |
@@ -1092,9 +1096,8 @@ specific than the action word alone.
 | `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `sudus review mechanism REQ`; it takes the latest fail receipt that ran under the current command, working directory and results mode, which wake's reason names, unless you pass another. When none did, wake says so: make the violating example fail again and check. |
 | `capture ITEM` | An idea outside this commitment needs a disposition: `sudus outside ITEM --reason "..."` (slug or sha), or escalate if it actually belongs. |
 | `review SLUG` | Write and record the review, answering all six questions. |
-| `report SLUG` | `sudus brief`, start an adversary with none of your context, then `sudus report --file`. |
-| `resolve SLUG N` | An open finding needs a fix or a dispute. |
-| `accept SLUG` | Give the adversary the report, the resolutions, and the delta; `sudus accept --file`. |
+| `report SLUG` | `sudus brief`, start one fresh read-only subagent with none of your context, then `sudus report --file`. Once per commitment, and again only after a report that stopped on a Sudus bug. |
+| `resolve SLUG N` | An open finding is the agent's to decide: fix it and `sudus resolve`, or `sudus decline` it with its reason. |
 | `build DECISION` | Build what the decision says, commit, then `sudus realize`. |
 | `done SLUG` | Every condition holds: `sudus done SLUG`. |
 | `promote` | No commitment is open and the backlog holds an item. Choose one; `sudus promote ITEM` (slug or sha). It refuses while any defect is unfixed, and while `Current:` names a section that is neither the finished commitment nor the item. An item other work already delivered is retired instead: `sudus escalate --commitment <finished slug> --concern retire:<item sha> ...`, and the developer's `ok` takes it out of the backlog. To rank a new feature above the waiting items, the agent escalates with `--concern wait:<item sha>` per item; your `ok` lets wake say Done while they wait, `sudus show items` marks them, and after the next Done wake names them again. |
@@ -1138,13 +1141,12 @@ prints one with its references resolved.
 | `measure [--brief] [--harness <name>] --commitment <s> --concern <token>... --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i> --option <t>... [--path <file>...] [--decision <id>...]` \| `measure <slug> --file <path>` | Take one measurement of a Consequential draft before `decide` or `escalate`; `--brief` prints a launch block for the review source, `--file` completes it. |
 | `answer <slug> ok\|instead\|ask --quote <words> [--escalation <sha>]` | The developer's answer to an escalation, in their own words. |
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
-| `dispute --commitment <s> --record <sha> --n <n>[,<n>...] --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with one or more findings of a record, or their resolutions. |
 | `review <slug> --file <path>` | Record the builder's review. |
 | `review mechanism <REQ> [<fail-receipt>]` | Bind a mechanism's review metadata to its current command, working directory and results mode and the requirement's current text; the latest fail receipt for REQ that ran under them when none is given. |
-| `brief <slug> [--harness <name>]` | Write the adversary brief and projection for a reviewed commitment. |
+| `brief <slug> [--harness <name>]` | Write the adversary brief for a reviewed commitment and print how to start the adversary. |
 | `report <slug> --file <path>` | Record the adversary's report. |
-| `resolve <slug> <n> "<how>" [--source <sha>]` | Record a fix for finding `n` of a specific review, report, or acceptance record. |
-| `accept <slug> --file <path>` | Record the adversary's verdict on the post-report delta. |
+| `resolve <slug> <n> "<how>" [--source <sha>]` | Record a fix for finding `n` of a specific review or report record. |
+| `decline <slug> <n> "<why>" [--source <sha>]` | Record that the agent declines finding `n`, with its reason. |
 | `push` | Push the branch and both durable refs to the authority remote. |
 | `wake` | Print the current verdict. Writes nothing. |
 | `--help` | Print the command list. `sudus <command> --help` (or `-h`) prints that command's usage line and runs nothing. |
@@ -1167,10 +1169,11 @@ Sudus reads it back; the full field list is in
 | `start` | Slug, roadmap workspace snapshot, the frozen requirement set with text digests. | Every wake; opens the range. |
 | `receipt` | Mechanism and definition digest, input snapshot, per-requirement result and text digest, output digest. | Freshness and attempt counting. |
 | `review` | Slug, workspace snapshot, the six answers, findings. | Brief, report, Done. |
-| `brief` | Slug, review sha, projection and payload digests. | Report validation. |
-| `report` | Slug, workspace snapshot, brief sha, model, attempts, findings. | Done and resolution. |
-| `resolution` | Source record sha, finding number, workspace snapshot, explanation. | Acceptance and Done. |
-| `acceptance` | Slug, report sha, workspace snapshot, accepted/rejected resolutions, new findings. | The next resolve, accept, and Done. |
+| `brief` | Slug, review sha, harness, model, brief digest, the decisions it lists. | Report validation. |
+| `report` | Slug, workspace snapshot, brief sha, attempts, interface attempts, rated findings, or the Sudus bug it stopped on. | Done, resolution and decline. |
+| `resolution` | Source record sha, finding number, workspace snapshot, explanation. | Done and the review report. |
+| `decline` | Source record sha, finding number, the agent's reason. | Done and the review report. |
+| `acceptance` | Written by Sudus 3 only: report sha, workspace snapshot, accepted/rejected resolutions, new findings. A rejected resolution leaves its finding open; its findings still count. | Done. |
 | `escalation` | Slug, the five fields, concern reference. | Every wake, until answered. |
 | `answer` | Escalation sha, `ok`/`instead`/`ask`, the developer's words, developer-auth evidence. | Wake, ADR, calibration. |
 | `reply` | Escalation sha, text. | Wake, after `ask`. |

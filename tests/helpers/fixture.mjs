@@ -39,9 +39,8 @@ export const PREDICATE = {
   "review mechanism": "review metadata binds the requirement to the current detection and text digests with a fail receipt",
   capture: "an outside record names the item, or an escalation concerns it",
   review: "a review names the current workspace snapshot and answers every fixed question for every target",
-  report: "a current brief and report name the reviewed snapshot and projection; every question and interface obligation has an attempt",
-  resolve: "a resolution names finding N of its exact source record, or an escalation disputes it",
-  accept: "an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action",
+  report: "a report names the reviewed snapshot through the latest brief and attempts every lens for every target and every interface obligation; a report that stopped on a Sudus bug is not one",
+  resolve: "a resolution, or a decline with its reason, names finding N of its exact source record",
   build: "a realized ADR line names the decision's base and resulting snapshots and the realization check passed",
   done: "a done record names the commitment and final workspace snapshot",
   promote: "no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally",
@@ -51,7 +50,6 @@ export const PREDICATE = {
 // docs/spec/sudus-v2.md section 5's exact table text for the three rows where it differs from
 // lib/wake.mjs's real PREDICATES strings (backticks around `resolve`, `Current:` and `ask`).
 export const SPEC_PREDICATE = {
-  accept: "an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action",
   promote: "no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally",
   reply: "a reply record names the open `ask` escalation",
 };

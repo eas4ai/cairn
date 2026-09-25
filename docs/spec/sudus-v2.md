@@ -4,8 +4,25 @@ Prefix: SUDUS
 Scope: the Sudus 2 kernel: its records, verdicts, commands, skills and evaluator
 
 
-Status: Draft, revision 15, 2026-09-25. Nothing here is Agreed until the
+Status: Draft, revision 16, 2026-09-25. Nothing here is Agreed until the
 developer confirms it.
+
+Revision 16 changes the adversary (section 9); the developer set each rule on
+2026-09-25 and accepted the design ("ok"). The adversary is one fresh
+subagent in the builder's harness with none of the builder's conversation. It
+reads the project and the whole specification and runs nothing: "The
+adversery should be read only code review and agent decision review". The
+brief lists the receipts, so it knows what already ran, and the decisions the
+agent recorded. It attacks through five lenses: the falsifier, the decisions,
+security, logic, and complexity and spec adherence. Each finding carries a
+severity. It runs once, "right before Done unless there is a Sudus bug
+reported and the step requires repeating". The builder resolves or declines
+each finding with its reason, and no finding waits on anyone: "The builder is
+the decision maker and Sudus will judge". `sudus done` prints the review
+report for the developer. Before, the adversary worked in a projection, tried
+to make each mechanism pass by building and running, and judged every fix
+after the report in acceptance rounds; revision 13's round bound goes with
+them, and `sudus accept` and `sudus dispute` are removed.
 
 Revision 15 changes two rules; the developer accepted both on 2026-09-25
 ("ok"). Attempts at a requirement count from its turn (section 8, Deferral
@@ -76,7 +93,7 @@ that adds inputs, documents, tool identity or requirements keeps it bound
 (sections 2 and 8).
 
 Revision 9 measures a successor's brief from the first start of its
-supersession chain (section 9, Brief and projection). The work a successor
+supersession chain (section 9, Brief). The work a successor
 carries was committed before its own start, so its changed paths and
 interface obligations went unreviewed.
 
@@ -257,8 +274,9 @@ after the developer confirms it. Its fields are:
 - `data`: paths whose change is a persisted-data change and therefore the
   developer's decision.
 - `network_exclude`: paths whose bytes Sudus must not place in an evaluator
-  request, adversary brief or adversary projection. It does not govern the
-  project's ordinary Git remotes or the primary coding agent.
+  request or adversary brief; the brief also tells the adversary not to read
+  them. It does not govern the project's ordinary Git remotes or the primary
+  coding agent.
 - `signing_key`: the developer's public verification key, or `null`, the
   default. With a key in force, developer-only records must verify against
   it. The key in force is the one in the settings the latest init or
@@ -276,11 +294,12 @@ after the developer confirms it. Its fields are:
   "the command requires an explicit controlling-terminal confirmation", which
   the developer had to type as a command.
 - `attribution`: `forbidden` or `allowed`, for the release script.
-- `harness`: one entry per supported harness, including the adversary model and
-  whether the adversary is local or remote.
+- `harness`: one entry per supported harness: the model the adversary
+  subagent runs as, and the model and transport of the evaluator's review
+  source (section 10).
 - `adversary_rules`: optional, a list of one-line rules. The host's limits
-  for the adversary, such as a cap on parallel build jobs or a separate build
-  directory. The brief prints them under Host rules, so they are part of the
+  for the adversary, such as a path to stay out of. The brief prints them
+  under Host rules, so they are part of the
   text its record digests. Every other key is required; this is the one a
   settings file may leave out. Added 2026-09-24 (issue #13).
 - `developer`: `present` or `absent`, default `present`. `absent` declares
@@ -493,22 +512,23 @@ and readable schema equal those computed now.
 answers to the fixed questions in section 9, and findings.
 
 **Brief.** The record `sudus brief` writes for a review: the review it names,
-the projection and payload digests, the exclusion manifest digest, and the
-launch instruction (the detected harness and the adversary model, transport
-and projection boundary fixed for that harness).
+the detected harness and the adversary model its start line names, the brief
+digest, and the agent decisions it lists.
 
-**Report.** The adversary's attempts against those claims at the same workspace
-snapshot. One report is written per commitment.
+**Report.** The adversary's attempts against the work at the reviewed
+workspace snapshot, and its findings; or the Sudus bug it stopped on. One
+complete report is written per commitment.
 
-**Finding.** A numbered entry on a review, report or acceptance. A finding is
-answered by a **resolution**, which names the snapshot after a fix and explains
-it, or by a **dispute**, which is an escalation naming the finding and resolved
-by the developer. One escalation may name several findings; the developer's
-`ok` closes each of them.
+**Finding.** A numbered entry on a review or report (or on a Sudus 3
+acceptance). A report's finding carries a severity: Critical, Major or Minor.
+The builder settles a finding with a **resolution**, which names the snapshot
+after a fix and explains it, or a **decline**, which gives its reason for not
+fixing it. An escalation may also name a finding, when the builder asks; one
+escalation may name several, and the developer's `ok` closes each of them.
 
-**Acceptance.** The adversary's record at a later workspace snapshot. It
-examines the cumulative post-report delta, accepts or rejects each submitted
-resolution with a reason, and may raise new findings anywhere in that delta.
+**Acceptance.** Written by Sudus 3 only, before revision 16: the adversary's
+verdict on each resolution after the report. A 3.x log still holds them; a
+resolution one rejected leaves its finding open, and its findings count.
 
 **Escalation, answer and reply.** An escalation has five one-line fields:
 question, recommendation, because, if wrong, and instead. Wake prints them
@@ -821,8 +841,8 @@ only when one is configured. Wake names the first work-loop action.
 `work-loop.dot` begins at wake. Wake names one action and its predicate; the
 agent performs that action until the predicate holds, leaves the required code,
 snapshot or log record, then wakes again. An unanswered escalation is Waiting
-and the agent stops. A pending report or acceptance is the agent's wait and
-remains Resolvable.
+and the agent stops. A pending report is the agent's wait and remains
+Resolvable.
 
 When the Done rule holds, wake names `done`. `sudus done` writes the done
 record. Terminal output is not durable state: the next invocation renders the
@@ -879,10 +899,11 @@ The table names logical payload fields. `<ws>` is a workspace snapshot SHA,
 | `start` | slug, `<ws>` roadmap snapshot, repeated `{requirement,text_digest}`, optional `from_superseded:<sha>`, intent SHA or null, results | every wake; opens the range |
 | `receipt` | mechanism, definition digest, `<input>`, `ran|error`, observed declared environment, repeated requirement text digest and `pass|fail|unverified`, output digest, exit code or signal | freshness and attempts |
 | `review` | slug, `<ws>`, examined entries, one answer for every fixed question and target, findings | brief, report and Done |
-| `brief` | slug, review SHA, launch instruction (harness, model, transport, boundary), projection digest, payload digest, exclusion manifest digest | report validation |
-| `report` | slug, `<ws>`, brief SHA, model, projection digest, one attempt per question, findings, interface attempts | Done and resolution |
-| `resolution` | source record SHA, finding number, `<ws>`, explanation | acceptance and Done |
-| `acceptance` | slug, report SHA, `<ws>`, cumulative-delta digest, accepted and rejected resolution SHAs with reasons, new findings | subsequent resolution, acceptance and Done |
+| `brief` | slug, review SHA, harness, adversary model or null, payload digest, the decisions it lists (revision 16; a 3.x brief also holds transport, boundary, projection and exclusion manifest digests) | report validation |
+| `report` | slug, `<ws>`, brief SHA, one attempt per lens and target (looked for, found, held), interface attempts, findings with severity, where and remedy, or the Sudus bug it stopped on (revision 16; a 3.x report holds model, transport, session, projection digest and Q1 to Q6 attempts) | Done, resolution and decline |
+| `resolution` | source record SHA, finding number, `<ws>`, explanation | Done and the review report |
+| `decline` | source record SHA, finding number, the builder's reason | Done and the review report |
+| `acceptance` | written by Sudus 3 only: slug, report SHA, `<ws>`, cumulative-delta digest, accepted and rejected resolution SHAs with reasons, new findings | Done: its findings count, and a rejection reopens a finding |
 | `escalation` | slug, five fields, concern reference, optional evaluation SHA | every wake until answered |
 | `answer` | escalation SHA, `ok|instead|ask`, the developer's words, optional owner label, developer-auth evidence | wake, ADR and calibration |
 | `direction` | `instead|ask`, the developer's words, harness, Git author | nothing; the log keeps it |
@@ -948,8 +969,8 @@ whole set and digests it before writing anything.
 ### Commands and crash recovery
 
 `sudus begin` and `sudus end` manage the local action lease. `sudus check`
-writes receipts. `sudus review`, `brief`, `report`, `resolve` and `accept` write
-the review chain. `sudus escalate`, `answer` and `reply` write the decision
+writes receipts. `sudus review`, `brief`, `report`, `resolve` and `decline`
+write the review chain. `sudus escalate`, `answer` and `reply` write the decision
 chain. `sudus item`, `outside` and `fix` manage items. `sudus decide`, `realize`,
 `decisions --read` and `promote` manage the ADR. `sudus authorize` binds the
 protected digests in one record; a settings change is a new authorization
@@ -1035,9 +1056,8 @@ predicate. The table is normative.
 | `review mechanism REQ` | review metadata binds the requirement to the current detection and text digests with a fail receipt |
 | `capture ITEM` | an outside record names the item, or an escalation concerns it |
 | `review SLUG` | a review names the current workspace snapshot and answers every fixed question for every target |
-| `report SLUG` | a current brief and report name the reviewed snapshot and projection; every question and interface obligation has an attempt |
-| `resolve SLUG N` | a resolution names finding N of its exact source record, or an escalation disputes it |
-| `accept SLUG` | an acceptance at the current workspace snapshot examines the cumulative post-report delta and gives a verdict on every submitted resolution; new findings may remain for the next `resolve` action |
+| `report SLUG` | a report names the reviewed snapshot through the latest brief and attempts every lens for every target and every interface obligation; a report that stopped on a Sudus bug is not one |
+| `resolve SLUG N` | a resolution, or a decline with its reason, names finding N of its exact source record |
 | `build DECISION` | a realized ADR line names the decision's base and resulting snapshots and the realization check passed |
 | `done SLUG` | a done record names the commitment and final workspace snapshot |
 | `promote` | no commitment is open; one promotion names a backlog item and decision; `Current:` and a one-item successor start were written transactionally |
@@ -1089,15 +1109,14 @@ open commitment (`supersede`); unfixed defect (`fix`); uncovered dirty input (`r
 `commit`); missing declaration (`declare`); missing or failing receipt (`run`,
 `implement`, or `escalate` after three attempts); stale mechanism review
 (`review mechanism`); uncaptured item from the commitment (`capture`); missing
-current review (`review`); missing report (`report`); unresolved finding or
-rejected resolution (`resolve`); post-report resolutions not examined at the
-current snapshot (`accept`); unrealized Consequential decision (`build`); Done
+current review (`review`); missing report (`report`); a finding neither
+resolved nor declined (`resolve`); unrealized Consequential decision (`build`); Done
 rule satisfied without a done record (`done`); closed range with a backlog item that neither retired nor waits
 (`promote`); Done.
 
-While the latest report has an unresolved finding, a missing current receipt
-waits: wake names the next `resolve` instead of `run`, so the checks run once,
-after the last finding is resolved and before `accept`, not after every fix. A
+While the report has an open finding, a missing current receipt waits: wake
+names the next `resolve` instead of `run`, so the checks run once, after the
+last finding is resolved or declined, not after every fix. A
 current receipt that fails is still `implement`, and three failing attempts are
 still `escalate`. The Done rule is unchanged: every requirement needs a current
 passing receipt.
@@ -1109,15 +1128,12 @@ Done requires all of the following:
 - Every requirement in the start record's frozen set has a current passing
   receipt whose review metadata binds the current mechanism definition to that
   frozen text digest.
-- A review and report exist at the reviewed workspace snapshot.
-- The latest acceptance examines the cumulative delta at the final workspace
-  snapshot; every resolution is accepted; every finding on the review, report
-  or any acceptance is resolved or developer-disputed. When no resolution
-  exists and the workspace still equals the reported snapshot, there is no
-  delta to examine and no acceptance is required. (Revised 2026-09-22: the
-  kernel always held this exception; the text said the acceptance was
-  unconditional. The developer accepted documenting the exception over
-  demanding an empty acceptance record.)
+- A review and a complete report exist at the reviewed workspace snapshot.
+- Every finding on the review, the report or a Sudus 3 acceptance is resolved,
+  declined with its reason, or closed by the developer's ok on an escalation
+  naming it. (Revised 2026-09-25, revision 16: previously the latest
+  acceptance had to examine the cumulative delta at the final workspace
+  snapshot and accept every resolution.)
 - No escalation is unanswered, scope breach undisposed, defect unfixed,
   transaction incomplete, action lease stale, Consequential decision
   unrealized, or administrative-cycle escalation unresolved.
@@ -1128,11 +1144,10 @@ promotion, so one commitment is open at a time; a backlog item the
 developer's ok let wait is listed, not named (Capture and promotion).
 
 The report is written once at the candidate snapshot. Every later fix is a
-resolution. Each acceptance examines the whole delta from that reported
-snapshot to the current one, not only the named fix, and may add findings.
-There is no unreviewed final mutation because Done requires the latest
-acceptance at the final snapshot whenever anything changed after the report. A second rejection of a resolution for the
-same finding escalates.
+resolution, and every finding the builder does not fix is a decline with its
+reason. No adversary examines the change after the report: the checks judge
+it, since Done needs a current passing receipt for every requirement at the
+final snapshot, and `sudus done` prints the review report for the developer.
 
 ### Waiting and liveness
 
@@ -1179,16 +1194,9 @@ The second bound is three occurrences of each of the nine administrative
 classes: the same three-attempt rule the loop applies everywhere, summed over
 the classes, so a cycle that rotates targets is caught as soon as one that
 repeats them.
-Three acceptance rounds after the report without reaching Done create the same
-kind of escalation, even when each round raises a newly numbered finding; the
-developer's ok or instead answer restarts that count. The escalation names
-every open finding that no other unanswered escalation names, and recommends
-closing them. The developer's ok closes them, so Done needs no further round,
-and the agent captures each as a backlog item; instead takes another round or
-supersedes the commitment. Revised 2026-09-24 (revision 13): previously the
-escalation named no finding and ok only restarted the count, so rounds that
-each ended with one narrower finding ran on without bound. These constants
-are in the kernel, not settings.
+These constants are in the kernel, not settings. Revised 2026-09-25
+(revision 16): the bound on acceptance rounds (revision 13) is gone with the
+rounds themselves.
 
 Before committing a kernel-managed mutation, the kernel evaluates the
 post-state. If its specified bookkeeping alone would create a new Sudus
@@ -1319,8 +1327,8 @@ escalates regardless of the evaluation. Named paths in the draft do not limit
 the comparison: every changed path in the actual delta is classified.
 
 An interface hit does not automatically make the decision Blocking. The kernel
-records it on the decision and on the realized delta, and the adversary must
-attempt the changed interface explicitly in the report or next acceptance.
+records it on the decision and on the realized delta; a changed interface
+path is an interface obligation the adversary attempts in the report.
 
 The realization check is a postcondition. A measurement only informs the
 agent's own decision on a draft; neither the measurement nor the agent's
@@ -1407,9 +1415,9 @@ requirements remain binding, and the adversary can challenge the omission.
 ### Review and evidence
 
 The builder answers the fixed questions and lists findings. The adversary
-attacks every answer and lists its own findings. Each finding is resolved or
-developer-disputed, and the adversary examines every post-report realization at
-the final tree. Receipts live on the log; ignored output lives in
+attacks the work by reading and lists its own findings. The builder resolves
+or declines each finding, and the checks judge every change after the report.
+Receipts live on the log; ignored output lives in
 `.sudus/output/` and is addressed by digest.
 
 ## 9. Self-evaluation and one adversarial review
@@ -1417,7 +1425,7 @@ the final tree. Receipts live on the log; ignored output lives in
 The loop takes the builder's word at three points: that a falsifier is
 observable, that a mechanism failed for the right reason, and that a change
 makes its falsifier unreachable. The builder records claims at each point; one
-adversary attacks them at Done.
+adversary attacks the work right before Done.
 
 ### Builder claims
 
@@ -1434,16 +1442,18 @@ Each question is answered `observed` with a command, path or output, or
 - Q5, per commitment: what could still be wrong while every check passes.
 - Q6, per commitment: what was not tested.
 
-### Brief and projection
+### Brief
 
 When the review exists, wake names `report SLUG`. `sudus brief <slug>` writes a
-brief record and renders the roadmap section, frozen requirements and
-falsifiers, mechanism definitions, builder claims and findings, interface
-obligations, exclusion manifest and brief digest. It ends with the report
-the adversary writes: its fields, the projection digest, every required
-(question, target) pair as the report spells it, and the interface paths,
-so the adversary's file reaches `sudus report` unchanged. Settings'
-`adversary_rules`, when present, appear under Host rules before the work.
+brief record and the brief file. The brief opens with the adversary's role in
+the developer's words of 2026-09-25, quoted as written except for two spelling
+fixes, and the rules that bind it (Adversary work). It then renders the
+roadmap section, frozen requirements and falsifiers, mechanism definitions,
+the receipts, builder claims and findings, the agent's decisions, interface
+obligations, changed paths and the paths not to read. It ends with the report
+the adversary writes: its fields and every required pair as the report spells
+it, so the adversary's file reaches `sudus report` unchanged. Settings'
+`adversary_rules`, when present, appear under Host rules.
 Revised 2026-09-24 (issue #13): previously the brief named none of these. The changed paths and the
 interface obligations run from the commitment's start snapshot to the reviewed
 snapshot. A successor started after a supersede carries the superseded
@@ -1451,81 +1461,112 @@ commitment's work, so for it both run from the first start of its
 supersession chain; `sudus report` and wake's report predicate measure the
 interface attempts from the same start.
 
-Before any remote adversary starts, Sudus creates an **adversary projection**:
-a materialized export of the reviewed workspace snapshot with every
-`network_exclude` path and built-in credential path omitted. It contains no
-`.git` directory, Git object store, host path, evaluator key, built-in credential
-path, or command-output body. The built-ins are the credential patterns named
-in section 2. The exclusion manifest names omitted
-path classes and paths but never their contents. Experiments may initialize a
-new throwaway Git repository inside the projection. Projection reads Git object
-bytes, never live filesystem targets: it preserves safe relative symlinks as
-link text without following them, and refuses absolute or out-of-tree symlinks,
-special files and unresolved gitlinks.
+The receipts are, per requirement, the latest receipt that carries its result
+and the fail receipt its mechanism review binds, so the adversary knows what
+already ran. The agent's decisions are the decision lines the agent added to
+`docs/decisions.jsonl` between the start of the supersession chain and the
+reviewed snapshot, and the backlog and next-feature items it captured in that
+range, with any outside reason. A developer's decision line is a ruling and is
+not listed. The brief record names each listed decision, and each is a
+required pair. A decision the agent never recorded is the adversary's to find
+in the code.
 
-A remote adversary receives only the brief and projection. Where the harness
-can restrict the adversary's filesystem tools to that projection, the adapter
-does so and denies the original repository and host paths. Where it cannot,
-the brief names the projection as the only path the adversary may read and the
-report records `boundary: unenforced`; Sudus does not refuse the report, because
-no supported harness can confine a subagent and every configured adversary is
-remote. A local adversary still receives the projection by default; the
-developer may explicitly authorize broader local access. The report records the
-projection digest, transport and whether the boundary was enforced.
+The paths not to read are the tracked files under `network_exclude` or a
+built-in credential pattern (section 2), and the patterns themselves. Sudus
+places none of their bytes in the brief. The adversary runs in the builder's
+own harness and reads the project the builder reads, so it sends nothing to a
+model provider the builder does not already use; the list is an instruction,
+not a confinement.
 
-This is a Sudus egress boundary, not an information-flow proof. It prevents
-Sudus from directly sending excluded file bytes. It cannot detect a secret a
-person or primary coding agent copied into ordinary prose, and it does not
-govern normal Git pushes. The brief warns about that limitation.
+Revised 2026-09-25 (revision 16): previously `sudus brief` materialized an
+adversary projection, a Git-less copy of the reviewed snapshot without the
+excluded paths, for a remote adversary, and the brief invited experiments in
+a throwaway repository inside it.
 
 ### Adversary work
 
-The agent starts an adversary with none of the builder's conversation context
-and waits. For each mechanism (Q1 and Q2), the adversary tries to make it pass
-without the behavior, make it fail for a setup reason, and find an input it
-reads but does not declare. For each Q3 it tries to reach the falsifier with an
-input. For each Q4 it finds touched paths the claim omitted. For Q5 and Q6 it
-looks where the builder said not to. Every changed interface gets a caller-level
-attempt whether or not the builder raised it.
+The agent starts one fresh subagent in its own harness, with none of the
+builder's conversation and the brief file as its entire prompt, and waits.
+The adversary reads only: it builds nothing, runs no tests or project code,
+and starts no subagents. It keeps its scratchpad and its report file outside
+the repository. It reads the whole specification, with its glossary and
+roadmap, and `docs/decisions.jsonl` before it judges, and it judges the
+commitment as part of the whole system. It treats every claim in the
+builder's account as something to disprove.
 
-`sudus report` refuses a report whose snapshot differs from the review, whose
-brief or projection is stale, whose model or transport does not match the
-brief record's own launch instruction, or which leaves a required question or
-interface unattempted. The comparison reads the brief record, never the
-report's own body. Where the harness reports the builder's model, the report
-records it beside the adversary model. A matching model is recorded, not
-refused: the developer chose the adversary model in settings.
+It attempts by reading, through five lenses: the falsifier (one attempt per
+requirement), the decisions (one per listed decision), and security, logic,
+and complexity and spec adherence (one each per commitment), plus one attempt
+per changed interface path. Each attempt says what it looked for, what it
+found, and whether the work held. Each finding names where it is, what is
+wrong and why, quoting the requirement or decision it contradicts, and has a
+severity: Critical (a requirement is unmet, the falsifier is reachable, or a
+security exposure ships), Major (an uncovered defect in a touched path, or a
+decision that was the developer's) or Minor (an edge the commitment did not
+promise, or complexity the next commitment pays for). A remedy is one line
+and optional. When the adversary finds a defect in Sudus itself, it stops and
+reports only that bug.
 
-### Post-report delta
+`sudus report` refuses a report whose brief is stale, was written by Sudus 3,
+or already has a report; one with fields the shape does not name; one that
+leaves a required pair or interface unattempted; and one taken once the
+workspace differs from the reviewed snapshot. A report that stopped on a
+Sudus bug carries no attempts or findings and does not complete the review:
+wake names `report` again and quotes the bug, the builder decides what to do
+with it, and the review goes on through a new brief. That is the one case in
+which the adversary runs twice for a commitment.
 
-Every fix after the report gets a resolution at a new workspace snapshot. At
-acceptance the adversary receives the report, all resolutions since it, and the
-entire cumulative delta from the reported snapshot to the current one. It
-accepts or rejects each submitted resolution and may add a finding anywhere in
-the delta, related to an old finding or not. New findings are resolved; the next
-acceptance examines the cumulative delta again. Done requires the last
-acceptance at the final snapshot. A resolution rejected twice for the same
-finding escalates, and the three-round liveness bound in section 5 prevents an
-unbounded stream of newly numbered findings.
+Revised 2026-09-25 (revision 16, the developer's rulings): previously a fresh
+adversary attempted Q1 to Q6 inside the projection, tried to make each
+mechanism pass without the behavior by building and running it, and its
+model, transport and session were checked against the brief. The developer:
+"The adversery should be read only code review and agent decision review";
+"the reviewer should run once right before Done unless there is a Sudus bug
+reported and the step rquires repeating"; "it needs access to the
+specification to attack the falsifier". The builder's own claims (Q1 to Q6)
+are unchanged.
+
+### After the report
+
+Every finding on the review or the report is the builder's to decide. It
+fixes the finding and records a resolution at a new workspace snapshot, or it
+declines the finding with its reason. A finding of any severity may be
+declined, and no verdict waits on the adversary or the developer for either:
+the builder is the decision maker, and Sudus judges through its checks. The
+fixes make receipts stale, and the run predicate (section 5) names them once
+the last finding is settled. An escalation may still name a finding when the
+builder chooses to ask; the developer's `ok` closes it. `sudus done` prints
+the review report: every finding, its severity and where it is, and what the
+builder did with it. The developer reads it before the next feature or
+commitment.
+
+Revised 2026-09-25 (revision 16): previously each fix went back to the
+adversary in acceptance rounds over the cumulative delta, a resolution
+rejected twice escalated, and three rounds without Done escalated (revision
+13). The developer: "Declining a Critical needs your ok <-- this is giving the
+reviewer the power to stop the builder. We are not doing that. Just as with
+the evaluator. The builder is the decision maker and Sudus will judge", and
+"Not every commit". A log written before revision 16 still reads: a 3.x
+report completes the review, a 3.x acceptance's findings count, and a
+resolution one rejected leaves its finding open.
 
 ### Model identity and limits of proof
 
-Settings name the exact adversary model each harness accepts and whether it is
-local or remote. `sudus brief` detects the harness adapter from its environment or `--harness`. `sudus
-brief` passes the model string through; it never maps aliases. A null or unknown
-entry means any model and any transport, subject to the projection boundary;
-`sudus brief` prints this state explicitly, as `model: any` and `transport:
-any`. The report records the actual model and transport. Where a harness
-reports session identity, the report refuses the session that wrote the review.
+`sudus brief` detects the harness adapter from its environment or
+`--harness`. When settings name an adversary model for that harness, the start
+line names it; otherwise the harness's default subagent model runs, printed as
+`model: any`. `sudus brief` passes the model string through; it never maps
+aliases.
 
-The kernel cannot prove that a reported model has different blind spots, or
-that a human did not relay extra context. The report's shape, model field,
-session evidence, brief digest and isolated projection are the available
-evidence.
+The kernel cannot prove that the adversary read what the brief names, ran
+nothing, or has different blind spots from the builder, or that a human did
+not relay extra context. The report's shape, the unchanged workspace, the
+brief digest and the reasons the builder gave for each decline are the
+available evidence.
 
-The cost is one adversary per commitment plus bounded acceptance rounds. A
-mechanism that passes without the behavior may survive until Done; the
-fail-receipt rule and Q1 output reduce, but do not remove, that gap.
+The cost is one adversary per commitment. A mechanism that passes without the
+behavior may survive until Done; the fail-receipt rule, Q1 output and the
+falsifier lens reduce, but do not remove, that gap.
 
 ## 10. The evaluator: a composite measurement at Consequential
 
@@ -1630,11 +1671,10 @@ answering the same five dimensions in the same shape:
   silent retry past that bound.
 - `review`: otherwise, the agent starts the harness's configured review
   model, the adversary model named in `settings.harness` for the running
-  harness, exactly as `sudus brief` starts the adversary: through the
-  harness, with none of the agent's own conversation context, answering the
-  same five dimensions in the same shape as `jev` would. The launch
-  instruction and the resolved model are recorded the way a report already
-  records them. When no harness can be detected, the draft is
+  harness, through the harness, with none of the agent's own conversation
+  context, answering the same five dimensions in the same shape as `jev`
+  would. The launch instruction, with its model and transport, and the
+  resolved model are recorded on the evaluation records. When no harness can be detected, the draft is
   `unavailable <class>` and routes to the developer like any other
   technical no-call.
 
@@ -1758,8 +1798,8 @@ install through the skills CLI. The runtime is Node and Git, with no build,
 package dependency or service. Linux and macOS are supported.
 
 The evaluator is opt-in and makes zero, one or two POSTs per admitted draft from
-one file. The adversary is started through the current harness, subject to the
-projection boundary. Two durable refs travel to one confirmed authority remote;
+one file. The adversary is a subagent of the current harness that reads the
+project and runs nothing. Two durable refs travel to one confirmed authority remote;
 the action lease, transaction staging and cycle counter remain local.
 
 How this repository develops and releases Sudus, including its attribution
@@ -1779,7 +1819,9 @@ specification.
 - Markdown record parsing, findings sweeps and record formatting rules.
 - Copying report findings into a review by number. A resolution references the
   exact source record and finding number.
-- A second full report after fixes. Cumulative acceptance replaces it.
+- A second full report after fixes. The builder resolves or declines each
+  finding and the checks judge the fixes (revision 16; before it, cumulative
+  acceptance rounds).
 - `Revised <date>` history paragraphs inside requirement blocks. Git is history.
 - Agreement by promotion. Promotion never Agrees text.
 - Decision files at Judged and reversals as an authority label.
@@ -1812,7 +1854,8 @@ specification.
 6. Command output is ignored local data; a receipt can be current without it.
 7. This repository develops v2 on its v2 branch and archives 1.x at cutover.
 8. One adversarial report per commitment, plus bounded cumulative acceptance;
-   there is no per-spec, per-mechanism or per-commit report.
+   there is no per-spec, per-mechanism or per-commit report. (Superseded by
+   57.)
 9. Promotion never Agrees text and promotes one backlog item at a time.
 10. Verdicts are Resolvable, Waiting and Done; Waiting alone is the developer's
     turn.
@@ -1828,7 +1871,7 @@ specification.
 15. Code references are typed commits on `refs/sudus/snapshots`; the working
     branch may be rebased, squashed or amended.
 16. The report is written once; resolutions and acceptances cover the cumulative
-    post-report delta.
+    post-report delta. (Superseded by 57.)
 17. `docs/commitments/` is gone; a roadmap section and start/close records define
     a commitment.
 18. The optional Jev evaluator applies only at Consequential and may make an
@@ -1836,6 +1879,7 @@ specification.
 19. `.sudus/settings.json` is the only settings file; the TypeSafe key is
     `TYPESAFEAI_API_KEY` in the environment.
 20. The adversary model and transport are selected per harness and recorded.
+    (Superseded by 58.)
 21. Backlog items do not block Done; the next wake promotes at most one.
 22. Wake is read-only. Start, done and other commands write state.
 23. `sudus escalate` writes the evaluation route it selected; evaluation is its
@@ -1853,6 +1897,7 @@ specification.
 31. A later declaration never legalizes an earlier observed scope breach.
 32. A commitment may close by a superseded record with explicit carry-over.
 33. Acceptance examines the whole cumulative delta and may create findings.
+    (Superseded by 57.)
 34. Realization checks the actual delta against protected categories.
 35. Start freezes requirement-set membership and text digests.
 36. Mechanism review binds to the detection digest: command, working
@@ -1870,7 +1915,7 @@ specification.
 42. Calibration is a first-class record bound to an evaluation-policy digest and
     uses a one-sided confidence bound over predicted-agent cases.
 43. A remote adversary receives a Git-less, excluded-path projection; the
-    report records whether the harness isolated it.
+    report records whether the harness isolated it. (Superseded by 58.)
 44. First-observed undeclared work is a log fact, so branch rewriting cannot
     erase it.
 45. Evaluator intent precedes network I/O; calls are recorded separately and an
@@ -1885,7 +1930,7 @@ specification.
     requires finish or supersession.
 50. Administrative recurrence and acceptance rounds have fixed escalation
     bounds counted locally, and valid Sudus bookkeeping may not generate its
-    own violation.
+    own violation. (The acceptance-round bound is superseded by 57.)
 51. Composite option scores, weights and code tiers are absent; raw gate answers
     are the only evaluator assistance shown. (Superseded by 56.)
 52. Only log and snapshots refs travel; the action lease remains local and
@@ -1918,6 +1963,21 @@ specification.
     decides in every other case. Supersedes 51. The developer's reason:
     "The reason I wanted this design was to be able to use Sudus in an
     autonomous benchmark."
+57. One adversarial report per commitment, right before Done; a second only
+    after a report that stopped on a Sudus bug. The builder resolves or
+    declines each finding, a decline carries its reason, no finding of any
+    severity waits on the adversary or the developer, and the checks judge
+    the change after the report. `sudus done` prints the review report.
+    Supersedes 8, 16, 33 and the acceptance-round bound in 50. The
+    developer's reason: "The builder is the decision maker and Sudus will
+    judge."
+58. The adversary is one fresh, read-only subagent in the builder's harness,
+    with none of the builder's conversation and no subagents of its own. It
+    reads the project and the whole specification, runs nothing, and attacks
+    through five lenses: the falsifier, the decisions, security, logic, and
+    complexity and spec adherence. Settings may name its model. Supersedes
+    20 and 43. The developer's reason: "The adversery should be read only
+    code review and agent decision review."
 
 ## 14. Next steps
 

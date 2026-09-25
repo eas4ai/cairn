@@ -308,49 +308,39 @@ sudus wake
 sudus brief reject-empty-names
 ```
 
-`sudus brief` writes a brief file and an adversary **projection**: a copy
-of the reviewed workspace with `network_exclude` and built-in credential
-paths removed, with no `.git` directory. It prints exactly how to start
-the adversary:
+`sudus brief` writes the brief file and prints exactly how to start the
+adversary:
 
 ```text
 sudus: brief reject-empty-names <brief-sha>
 brief: <path>/.sudus/output/brief-<digest>.md
 brief digest: sha256:<digest>
-projection: <a fresh temporary directory>
-projection digest: sha256:<digest>
 harness: claude_code
 model: any
-transport: any
-boundary: unenforced
-start: in claude_code, start a fresh adversary with model any over any, working directory <projection>, with the file <brief path> as its entire prompt; when it finishes, run: sudus report reject-empty-names --file <its report>
+start: in claude_code, start one fresh subagent with none of your conversation, working in <project>, with the file <brief path> as its entire prompt. It reads only and starts no subagents. When it hands back its report file, run: sudus report reject-empty-names --file <its report>
 ```
 
-Start that adversary exactly as printed: a fresh session, none of the
-builder's conversation, only the brief file as its prompt, confined to
-the projection directory. It tries, for each mechanism, to make it pass
-without the behavior, fail for the wrong reason, or find an undeclared
-input; for each requirement, to reach the falsifier anyway. Its answer is
-a JSON file shaped like the review's, with `attempts` in place of
-`answers`, plus `interface_attempts` and the `projection_digest` and
-`model` the brief named:
+Start that adversary exactly as printed: one fresh subagent, none of the
+builder's conversation, only the brief file as its prompt. It runs once,
+here, right before Done. It reads the project and the whole specification,
+and it runs nothing: the brief's receipts say what already ran. It judges
+the work through five lenses: the falsifier, the builder's decisions,
+security, logic, and complexity and spec adherence. Its answer is a JSON
+file, written outside the repository, with one attempt for each pair the
+brief's Report section names:
 
 ```sh
 cat > /tmp/report.json <<'EOF'
 {
-  "model": "the adversary's model name",
-  "transport": "local",
-  "projection_digest": "sha256:<the digest the brief's Report section gives>",
   "attempts": [
-    { "question": "Q1", "target": "names", "text": "reverted src/names.mjs to always return true inside the projection; the check printed sudus: APP-001: fail" },
-    { "question": "Q2", "target": "names", "text": "the failure is the empty-string assertion; deleting the Ada assertion still fails on the empty-name line" },
-    { "question": "Q3", "target": "APP-001", "text": "tried '', a tab, and a zero-width space; only the true empty string reaches the falsifier" },
-    { "question": "Q4", "target": "APP-001", "text": "no other module in the projection calls validName" },
-    { "question": "Q5", "target": "reject-empty-names", "text": "confirmed a three-space name is accepted; APP-001's falsifier is only the empty string, so this is not a violation of it" },
-    { "question": "Q6", "target": "reject-empty-names", "text": "no further untested behavior found" }
+    { "question": "falsifier", "target": "APP-001", "looked_for": "a way for validName to accept '' while tests/names.mjs passes", "found": "the check asserts validName('') is false; nothing else decides it", "held": true },
+    { "question": "security", "target": "reject-empty-names", "looked_for": "input crossing a trust boundary", "found": "validName takes a string and touches nothing else", "held": true },
+    { "question": "logic", "target": "reject-empty-names", "looked_for": "the input that takes the other side of name.length > 0", "found": "a three-space name passes; APP-001's falsifier names only the empty string", "held": true },
+    { "question": "complexity", "target": "reject-empty-names", "looked_for": "behavior no requirement names", "found": "none", "held": true }
   ],
   "interface_attempts": [],
-  "findings": []
+  "findings": [],
+  "sudus_bug": null
 }
 EOF
 sudus report reject-empty-names --file /tmp/report.json
@@ -360,11 +350,11 @@ sudus report reject-empty-names --file /tmp/report.json
 sudus: report reject-empty-names <report-sha>
 ```
 
-`sudus report` refuses a report whose workspace differs from the
-reviewed snapshot, whose brief is stale, or whose model, transport, or
-projection digest does not match the brief's own launch instruction. With
-no findings and the workspace unchanged since the report, no acceptance
-round is needed; `sudus wake` goes straight to Done.
+`sudus report` refuses a report once the workspace differs from the
+reviewed snapshot, since the adversary reads only; it also refuses a stale
+brief and a pair left without an attempt. A finding would be the agent's
+to decide: `sudus resolve` with the fix, or `sudus decline` with its
+reason. This report has none, so `sudus wake` goes on toward Done.
 
 ## Capture what is outside this commitment, then finish
 
@@ -402,7 +392,12 @@ sudus done reject-empty-names
 
 ```text
 done <sha> reject-empty-names
+review report for reject-empty-names: 0 findings, 0 fixed, 0 declined (adversary report <report-sha>)
 ```
+
+The review report lists every finding, its severity, and what the agent
+did with it. The agent shows it to you before the next feature or
+commitment.
 
 ## Promote the backlog item
 

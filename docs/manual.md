@@ -410,7 +410,7 @@ Actions are attempted in this order:
 | declare REQ | mechanism definition names REQ; no prior undeclared delta was legalized |
 | run REQ | current receipt matches input snapshot, definition, text and declared execution identity |
 | implement REQ | current pass plus review metadata bound to current definition and frozen text, with fail receipt |
-| escalate REQ | after three failing attempts, an escalation exists before a fourth; a run where a sibling requirement also failed is not an attempt |
+| escalate REQ | after three failing attempts in the requirement's turn, an escalation exists before a fourth; a run where a sibling requirement also failed is not an attempt, nor is the first check of a turn that began after the start |
 | review mechanism REQ | review metadata binds definition and text to a fail receipt; product inputs unchanged |
 | capture ITEM | outside record or escalation names it |
 | review SLUG | current workspace snapshot; every fixed question answered for each target |

@@ -241,6 +241,21 @@ test('attempts count from the turn: refresh runs before every earlier requiremen
   assert.equal(attempts([S, m('r1', 'sha256:a', 'fail', 'pass')], 'DEMO-001', { since: 'S', siblings: opts.siblings, before: [] }), 1, 'the first requirement in order counts from the start as before');
 });
 
+// Review of revision 15: a requirement outside the open commitment's frozen set (a defect against
+// an earlier commitment's requirement) is not named by wake while the commitment is open, so it
+// has no turn under it. Its fails in a shared mechanism's refresh runs, made by the in-set
+// requirement's work, counted as attempts, and check refused it as a fourth attempt.
+import { attemptState } from '../lib/check.mjs';
+
+test('a requirement outside the frozen set has no attempts under the open commitment', () => {
+  const m = (sha, digest, one, two) => ({ sha, kind: 'receipt', payload: { status: 'ran', product_digest: digest, results: [{ requirement: 'DEMO-001', result: one }, { requirement: 'DEMO-002', result: two }] } });
+  const start = { sha: 'S', kind: 'start', payload: { slug: 'second', requirements: [{ requirement: 'DEMO-002', text_digest: 'sha256:t' }] } };
+  const log = [start, m('r1', 'sha256:a', 'fail', 'pass'), m('r2', 'sha256:b', 'fail', 'pass'), m('r3', 'sha256:c', 'fail', 'pass')];
+  assert.deepEqual(attemptState(log, 'DEMO-001'), { tried: 0, escalated: false, needed: false });
+  assert.equal(attemptState(log, 'DEMO-002').tried, 0, 'the in-set requirement passes');
+  assert.equal(attemptState([start, m('r1', 'sha256:a', 'pass', 'fail'), m('r2', 'sha256:b', 'pass', 'fail'), m('r3', 'sha256:c', 'pass', 'fail')], 'DEMO-002').needed, true, 'the in-set requirement is still gated');
+});
+
 test('attempts counts distinct failing product digests since the last pass', async () => {
   const repo = await declared();
   const count = async () => attempts(await readLog(repo.cwd), 'DEMO-001');

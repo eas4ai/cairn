@@ -1296,7 +1296,8 @@ first receipt, at or after the start record, after which every requirement
 before it in the frozen set's order last passed. A requirement whose turn has
 not begun has no attempts. When the turn begins after the start record, the
 requirement's first receipt in the turn is its starting point, not an
-attempt. The first requirement in order, and one whose earlier requirements
+attempt. A requirement outside the frozen set has no turn under the open
+commitment, and so no attempts under it. The first requirement in order, and one whose earlier requirements
 all passed before the start record, count from the start record as before.
 (Added 2026-09-25, revision 15: wake works the set in order, and the refresh
 runs it named for other requirements' changes, each failing on a violating

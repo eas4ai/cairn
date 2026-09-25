@@ -7,6 +7,11 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.5 - 2026-09-25
+
+- `sudus scope` takes several breaches in one call, by sha or path, before the disposition: `sudus scope <a> <b> <c> keep` (issue #30). One escalation already named several breaches and one ok covered them, but keep took one breach per call, so clearing N kept files took N commands. Each breach still gets its own scope record.
+- `sudus begin` refuses a `--touch` whose target no mechanism, or more than one, declares (issue #30). `sudus end` writes a touch into the target's one mechanism, so such a lease covered the path only while it lived: end said "touch <path> not written" and the next command recorded the path as a breach. The refusal names the lease to take instead, or the declaration to make first.
+
 ## 3.8.4 - 2026-09-25
 
 - One `sudus dispute` can name several findings of the same record: `--n 4,5,9`, or `--n` repeated (issue #27). The one escalation names each finding, wake lists them after "ok closes:", and your one `ok` closes them all. Before, each finding took its own escalation and its own answer, a comma list was refused, and a repeated `--n` kept only its last value, so `--n 1 --n 2` disputed finding 2 alone without saying so.

@@ -308,6 +308,20 @@ test('keep is refused without an escalation answered ok, and closes the breach w
   assert.equal(await allowedBase(r.cwd, await r.log()), rec.payload.snapshot);
 });
 
+// Review of 3.8.2: keep sealed whatever was on disk when it ran, so bytes swapped in after the
+// developer's ok were kept as if approved. The ok keeps the bytes the breach captured.
+test('keep refuses when the path no longer holds the bytes the breach captured', async () => {
+  const r = await loopRepo();
+  await r.write('src/stray.mjs', 'x\n');
+  const [b] = await preflight(r.cwd, await r.log(), { command: 'check' });
+  await answer(r, await escalate(r, b), 'ok');
+  await r.write('src/stray.mjs', 'something else\n');
+  await assert.rejects(dispose(r.cwd, b, 'keep'), (e) => e instanceof ScopeError && e.message.startsWith(`sudus: src/stray.mjs differs from the bytes breach ${b} captured`));
+  assert.equal(openBreaches(await r.log()).length, 1);
+  await r.write('src/stray.mjs', 'x\n');
+  await assert.doesNotReject(dispose(r.cwd, b, 'keep'));
+});
+
 test('a kept path is not observed again while another breach is still open, and is again once its content changes', async () => {
   const r = await loopRepo();
   await r.write('src/stray1.mjs', 'x\n'); await r.write('src/stray2.mjs', 'y\n');

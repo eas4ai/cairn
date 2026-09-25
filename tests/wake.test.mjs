@@ -399,6 +399,31 @@ test('an unfixed defect against a set requirement is named before dirty inputs',
   assert.notEqual((await wake(r.cwd)).action, 'fix');
 });
 
+// Issue #26 (3.8.1): the manual orders a defect fix "commit, check, then sudus fix", but the fix
+// predicate read "at or after it" as log order alone, so a pass checked before the fix record never
+// counted, even when it ran on the inputs the fix record holds, and one more check was needed.
+test('a pass checked before the fix record counts when it ran on the inputs the fix holds, and not after the fix is reverted (issue #26)', async () => {
+  const r = await loopRepo();
+  const item = await r.item('defect', 'DEMO-001', 'wrong-greeting');
+  await r.write('src/demo.mjs', 'console.log("hey");\n'); await r.commit('fix greeting');
+  await r.passReq('DEMO-001');
+  await r.add('fix', 'wrong-greeting', { item, snapshot: await r.snap() });
+  let v = await wake(r.cwd);
+  assert.notEqual(v.action, 'fix', JSON.stringify(v));
+  const after = v.action;
+  await r.write('notes/n.md', 'a note\n'); await r.commit('a note');
+  v = await wake(r.cwd);
+  assert.equal(v.action, after, JSON.stringify(v));   // a path no mechanism reads leaves the pass at the fix
+
+  // A reverted fix: the pass ran on the inputs from before this fix, and the workspace went back to them.
+  const item2 = await r.item('defect', 'DEMO-001', 'wrong-greeting-2');
+  await r.write('src/demo.mjs', 'console.log("hi");\n'); await r.commit('second fix');
+  await r.add('fix', 'wrong-greeting-2', { item: item2, snapshot: await r.snap() });
+  await r.write('src/demo.mjs', 'console.log("hey");\n'); await r.commit('revert the second fix');
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target, v.reason], ['fix', 'wrong-greeting-2', 'DEMO-001 has no current pass at or after the fix'], JSON.stringify(v));
+});
+
 // Fix round 1, item 4: protectedChanged used to treat every docs/spec/** path as protected, with
 // no exception for the roadmap (docs/spec/roadmap.md), so a fix snapshot that happened to also
 // touch the roadmap was refused forever -- there was no way to ever satisfy 'fix' again. It now
@@ -823,6 +848,8 @@ test('a defect against a requirement outside the last commitment\'s set is disch
   await r.passReq('DEMO-001'); await r.passReq('DEMO-002'); await r.review(); await r.report();
   await done(r.cwd, 'first');
   await item(r.cwd, { kind: 'defect', slug: 'gate', source: 'DEMO-001', body: 'x' });
+  // The fix changes an input, so the pass from before it is not at the fix (issue #26).
+  await r.write('src/demo.mjs', 'console.log("hey");\n'); await r.commit('fix gate');
   await fix(r.cwd, 'gate');
   const roadmap = await readFile(join(r.cwd, 'docs/spec/roadmap.md'), 'utf8');
   await r.write('docs/spec/roadmap.md', roadmap.replace('Current: first', 'Current: second') + '\n## second\n\nRequirements: DEMO-002\n\nOnly the name.\n'); await r.commit('second');

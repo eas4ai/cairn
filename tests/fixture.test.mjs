@@ -177,13 +177,12 @@ export async function work(p) {
   p.sudus(["begin", "fix", defect]);
   p.write("src/add.mjs", ADD_OK.replace("typeof b !== \"number\")", "typeof b !== \"number\" || Number.isNaN(a) || Number.isNaN(b))"));
   p.commit("Refuse NaN"); p.sudus(["end"]);
-  // Deviation from the plan text, recorded in the report: the fix predicate ("its requirement has
-  // a current pass at or after it", section 5) reads "at or after" literally -- the pass receipt
-  // must sit at or after the fix record in the log, not before it. `sudus fix` must run before
-  // the confirming `sudus check`, the reverse of the plan's own order.
-  p.sudus(["fix", defect]);
+  // The manual's order: commit, check, then `sudus fix`. Issue #26: the pass checked before the
+  // fix record ran on the inputs the fix record holds, so it is "at" the fix and no second check
+  // is needed.
   p.sudus(["check", "REQ-002"]);
-  assert.equal((await p.kinds()).at(-1), "receipt");
+  p.sudus(["fix", defect]);
+  assert.equal((await p.kinds()).at(-1), "fix");
   await p.wakeIs("Resolvable", "review", "fixture");
 
   // Escalation: Waiting, ask, reply, ok. Deviation from the plan text: an escalation's `slug` is
@@ -446,10 +445,9 @@ test("full loop: promote, second start, supersede; exact kind sequence and cover
     // tail()'s own deviation comment), then start (also transactional).
     "init", "receipt", "command-intent", "authorization", "command-intent", "start",
     // work(): the implement check; the fixture-2 backlog item and its outside record; the
-    // add-nan defect item, its fix record, and the confirming check -- fix before its confirming
-    // check, the reverse of the plan's own "receipt, fix" order (see work()'s "at or after"
-    // deviation comment).
-    "receipt", "item", "outside", "item", "fix", "receipt",
+    // add-nan defect item, the confirming check, and the fix record, in the manual's order
+    // (issue #26).
+    "receipt", "item", "outside", "item", "receipt", "fix",
     // work(): the nan-policy escalation, ask, reply, ok.
     "escalation", "answer", "reply", "answer",
     // work(): the stray-file scope breach (recorded by the very next state-changing command's own

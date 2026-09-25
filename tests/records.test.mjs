@@ -252,3 +252,16 @@ test('chainStart follows every supersede back to the first start, and returns a 
   const lost = rec('x', 'start', { slug: 'lost', from_superseded: 'missing' });
   assert.equal(chainStart([lost], lost), lost);
 });
+
+// Review of 3.8.2: `git replace` swapped a log record for another commit under its unchanged SHA,
+// and every reader followed the replacement: a parentless forged copy of the last record cut the
+// records before it out of the log and changed its payload, with refs/sudus/log untouched.
+test('readLog ignores replacement objects: a replaced record neither truncates the log nor changes its payload', async (t) => {
+  const repo = await makeRepo(); t.after(repo.remove);
+  const s1 = await appendRecord(repo.dir, 'start', 'hooks', START);
+  const s2 = await appendRecord(repo.dir, 'done', 'hooks', { slug: 'hooks', snapshot: WS });
+  const { subject, body, trailers } = encodeRecord('done', 'forged', { slug: 'forged', snapshot: WS });
+  const forged = await commitTree(repo.dir, { tree: await emptyTree(repo.dir), parents: [], subject, body, trailers });
+  await repo.git('replace', s2, forged);
+  assert.deepEqual((await readLog(repo.dir)).map((r) => [r.sha, r.kind, r.payload.slug ?? null]), [[s1, 'start', START.slug], [s2, 'done', 'hooks']]);
+});

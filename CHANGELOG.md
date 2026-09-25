@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.2 - 2026-09-25
+
+- A defect fix done in the manual's order (commit, check, then `sudus fix`) is accepted without a second check (issue #26). Wake required the passing check to come after the fix record in the log, so a check run just before `sudus fix` never counted, and wake named the same fix again. A current pass recorded before the fix record now counts when no input its mechanism reads differs between the fix record's snapshot and the workspace. A pass from before a fix that was later reverted still does not count.
+
 ## 3.8.1 - 2026-09-24
 
 - The brief's exclusion manifest names every tracked file under the output directory (`.sudus/output/`), such as the `.gitignore` Sudus writes there, with class `output`. The projection leaves those files out, and the manifest said nothing about them, so the adversary could not tell a path Sudus left out from one missing in the repository, and raised it as a finding (issue #25).

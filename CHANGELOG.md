@@ -7,6 +7,29 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.3 - 2026-09-25
+
+Fixes from an adversarial review of 3.8.2. Each has a test that fails on 3.8.2.
+
+- The evaluator no longer records the TypeSafe key when a response echoes it. A 200 response that echoed the bearer key was stored whole in the evaluation-call record, which travels with the log; only error bodies were redacted.
+- The evaluator refuses a `--path` that reaches outside the worktree through a directory symlink, and on a case-insensitive filesystem (macOS by default) it classifies a path under the name it is stored as. Before, the first sent an outside file's text to the model, and the second let a case variant of a `network_exclude` or credential path through.
+- Sudus reads its log as written. `git replace` could swap a record for a forged one, or cut records out of the log, under an unchanged SHA, and every reader followed it.
+- `sudus begin --touch` refuses a path that escapes the worktree through a symlink, and `sudus end` hashes a link by its target text. Before, end read the outside file and declared the link a mechanism input.
+- `sudus scope <breach> keep` keeps the bytes the breach captured. Before, it kept whatever was on disk when it ran, so bytes changed after the developer's ok were kept as approved.
+- A review after the report is refused. A second review made wake ask for a report forever, which report refused.
+- An escalation's `decision:` concern must name a decision in docs/decisions.jsonl.
+- The three-attempts gate needs an escalation after the third failing attempt. Any earlier escalation naming the requirement, even one answered about something else, let a fourth attempt through.
+- A defect's fix needs a pass recorded after the defect item. 3.8.2 let a pass from before the defect was known count for a fix that changed nothing (issue #26 follow-up).
+- `sudus check` reads a requirement through the same spec reader as `sudus start` and lint. A byte order mark before a domain file's `Prefix:` line made check say the requirement was not in docs/spec.
+- Wake's predicate text for `fix`, `implement` and `review mechanism` matches the spec's rows.
+- A `sudus migrate` stopped part way is named as migrate again, and finishes; `sudus init` refuses while the former refs remain. Before, wake named init, which made a second snapshot history that migrate then refused.
+- Attested `sudus init` asks for the quote before it writes the settings file, and wake names `sudus init --adopt` for settings an unfinished init left.
+- `sudus push` tells a clone that is behind from one whose log diverged, and for a divergence says how many records each side lacks and which fetch keeps the remote's records. Before, it named a fetch that git refused.
+- Every command refuses an unknown flag or a positional it does not take, before it writes anything. Before, `sudus item`, `check`, `supersede`, `start` and others wrote their record and ignored the extra argument.
+- The settings check refuses more secret shapes: an AWS secret access key, a long base64 blob and a JWT. A long model id such as `Llama-4-Maverick-17B-128E-Instruct-FP8` stays valid.
+- The release attribution scan catches any `-By:` or `-With:` trailer naming an AI tool or vendor, a vendor mail address, and a "Generated with" line; before, it knew two trailer names and a short model list.
+- The `sudus` shim refuses a relative `$SUDUS_ROOT` or `$CAIRN_ROOT`, which made the file that ran depend on the current directory.
+
 ## 3.8.2 - 2026-09-25
 
 - A defect fix done in the manual's order (commit, check, then `sudus fix`) is accepted without a second check (issue #26). Wake required the passing check to come after the fix record in the log, so a check run just before `sudus fix` never counted, and wake named the same fix again. A current pass recorded before the fix record now counts when no input its mechanism reads differs between the fix record's snapshot and the workspace. A pass from before a fix that was later reverted still does not count.

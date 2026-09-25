@@ -129,6 +129,21 @@ describe('the narrow floor', () => {
     assert.equal(f.lease, null);
     assert.deepEqual(f.openObligations, { escalations: 0, findings: 0, defects: 0, breaches: 0 });
   });
+  // Review of 4.0.0: the open-findings count settles a finding the way the ledger does. A resolution
+  // a 3.x acceptance rejected leaves it open; a decline closes it.
+  test('kernelFacts counts a finding whose only fix a 3.x acceptance rejected as open, and a declined one as settled', async () => {
+    const r = await loopRepo();
+    await r.passReq('DEMO-001'); await r.review();
+    const rep = await r.legacyReport([{ n: 1, text: 'f' }, { n: 2, text: 'g' }]);
+    const res = await r.resolveFinding(rep, 1);
+    await r.accept({ rejected: [res] });
+    const facts = () => kernelFacts(r.cwd, normalizeDraft({ ...draft(), commitment: 'first', concerns: ['cycle'], named_paths: [] }));
+    assert.equal((await facts()).openObligations.findings, 2);
+    await r.declineFinding(rep, 2);
+    assert.equal((await facts()).openObligations.findings, 1);
+    await r.declineFinding(rep, 1);
+    assert.equal((await facts()).openObligations.findings, 0);
+  });
   // Fix round 1, Important 2: the only test that touched kernelFacts's own `read: !unread.has(id)`
   // line called authorityProjection directly against a hand-built facts() fixture with `read`
   // supplied literally -- it never exercised kernelFacts's real readAdr/queue computation, so an

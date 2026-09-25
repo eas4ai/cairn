@@ -145,6 +145,10 @@ test('report records the attempts, interface attempts and rated findings at the 
   assert.deepEqual(p.attempts.map((a) => `${a.question} ${a.target}`), ['falsifier DEMO-001', 'security first', 'logic first', 'complexity first']);
   assert.deepEqual(p.findings, [{ n: 1, severity: 'Critical', where: 'DEMO-001', text: 'blank passes', remedy: 'trim first' }]);
   await assert.rejects(report(r.cwd, 'first', adversary(r)), /one report per commitment; first has/);
+  // Review of 4.0.0: a brief after the complete report wrote an orphan brief record.
+  const head = (await readLog(r.cwd)).length;
+  await assert.rejects(brief(r.cwd, 'first', { harness: 'claude_code' }), new RegExp(`one report per commitment; first has ${sha}, so it takes no new brief`));
+  assert.equal((await readLog(r.cwd)).length, head);
 });
 // Review of 3.8.2: a second review after the report made wake name `report` for the new review
 // forever, while report refused a second report, and no cycle escalation fired.

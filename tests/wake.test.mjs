@@ -617,6 +617,23 @@ test('every finding on the review or the report needs a resolution or a decline;
   assert.equal((await wake(r.cwd)).verdict, 'Waiting');
 });
 
+// Review of 4.0.0: a second review before the report hid the first review's findings from the Done
+// rule, while sudus done printed them open and a closed commitment could never settle them.
+test('a finding on an earlier review of the commitment stays open until resolved or declined, whatever a later review says', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  const first = await r.review([{ n: 1, text: 'the mechanism could pass without the behavior' }]);
+  await r.review();
+  await r.report();
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['resolve', 'first 1']);
+  assert.match(v.reason, new RegExp(`on the review ${first}`));
+  assert.deepEqual((await doneRule(await readState(r.cwd))).failed, ['findings']);
+  await r.declineFinding(first, 1);
+  v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target], ['done', 'first']);
+});
+
 // Sudus 4.0.0 (developer's ruling, 2026-09-25): "The builder is the decision maker and Sudus will
 // judge". A decline with its reason closes a finding of any severity; nothing waits on anyone.
 test('a decline closes a finding, a Critical one too, and wake moves on without an acceptance', async () => {

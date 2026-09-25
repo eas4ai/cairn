@@ -363,6 +363,17 @@ test('sudus check writes a receipt; a non-Agreed requirement is refused', async 
   assert.equal(bad.code, 1);
   assert.match(bad.err, /^sudus: DEMO-002 is not Agreed; only Agreed requirements are checked\n$/);
 });
+// Review of 3.8.2: checkCommand destructured only the first positional ([REQ]) and never checked
+// for a leftover one, so a stray extra argument still ran the check and wrote a receipt.
+test('sudus check refuses an extra positional before running the check or writing a receipt', async (t) => {
+  const repo = await mechanismDeclared();
+  t.after(repo.cleanup);
+  const before = await readLog(repo.cwd);
+  const r = await run(['check', 'DEMO-001', 'extra-positional-garbage'], repo.cwd);
+  assert.equal(r.code, 1);
+  assert.equal(r.err, 'sudus: check: unknown argument extra-positional-garbage\n');
+  assert.deepEqual(await readLog(repo.cwd), before);
+});
 
 test('sudus end writes a --touch path that is a directory once a file exists below it, and drops it when nothing was written', async (t) => {
   const repo = await mechanismDeclared();
@@ -511,6 +522,17 @@ test('sudus start prints one line and writes a start record reachable only throu
   assert.equal(bad.code, 1);
   assert.match(bad.err, /^sudus: commitment first is open/);
 });
+// Review of 3.8.2: startCommand destructured only the first positional ([slug]) and never checked
+// for a leftover one, so a stray extra argument still opened the commitment.
+test('sudus start refuses an extra positional and writes no start record', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const before = await readLog(repo.cwd);
+  const r = await run(['start', 'first', 'extra'], repo.cwd);
+  assert.equal(r.code, 1);
+  assert.equal(r.err, 'sudus: start: unknown argument extra\n');
+  assert.deepEqual(await readLog(repo.cwd), before);
+});
 
 test('sudus done prints one line and closes the open commitment once wake names done; before that it refuses with what wake names', async (t) => {
   const repo = await loopRepo();
@@ -537,6 +559,18 @@ test('sudus item prints one line and records a backlog item; refuses with no kin
   const noKind = await run(['item', '--slug', 'x', '--from', 'DEMO-001', '--body', 'x'], repo.cwd);
   assert.equal(noKind.code, 1);
   assert.equal(noKind.err, 'sudus: item needs one of --backlog, --next-feature or --defect\n');
+});
+// Review of 3.8.2: itemCommand read --slug/--from/--body with flagValue() and never checked for
+// anything left over, so an unknown flag such as --bogus-flag was silently ignored and the item
+// record was written anyway.
+test('sudus item refuses an unknown flag and writes no item record', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  const before = await readLog(repo.cwd);
+  const r = await run(['item', '--backlog', '--slug', 'ideax', '--from', 'DEMO-001', '--body', 'idea', '--bogus-flag', 'surprise'], repo.cwd);
+  assert.equal(r.code, 1);
+  assert.equal(r.err, 'sudus: item: unknown argument --bogus-flag\n');
+  assert.deepEqual(await readLog(repo.cwd), before);
 });
 
 test('sudus promote prints one line and opens the successor commitment, after done', async (t) => {
@@ -600,6 +634,18 @@ test('sudus supersede prints one line and closes the open commitment without mov
   assert.equal(r.code, 0);
   const rec = (await readLog(repo.cwd)).filter((x) => x.kind === 'superseded').at(-1);
   assert.equal(r.out, `supersede ${rec.sha} second\n`);
+});
+// Review of 3.8.2: supersedeCommand read --quote with flagValue() and never checked for anything
+// left over, so an unknown flag still closed the commitment and wrote the superseded record.
+test('sudus supersede refuses an unknown flag and writes no superseded record', async (t) => {
+  const repo = await project();
+  t.after(repo.cleanup);
+  await run(['start', 'first'], repo.cwd);
+  const before = await readLog(repo.cwd);
+  const r = await run(['supersede', 'second', '--quote', 'ok', '--unknown-thing', 'xyz'], repo.cwd, { env: {} });
+  assert.equal(r.code, 1);
+  assert.equal(r.err, 'sudus: supersede: unknown argument --unknown-thing\n');
+  assert.deepEqual(await readLog(repo.cwd), before);
 });
 
 test('--help lists the newly wired commands', async (t) => {
@@ -1132,6 +1178,27 @@ describe('the measure brief and the CLI', () => {
       const log = await readLog(cwd);
       assert.equal(log.filter((x) => x.kind === 'measurement').length, 1, 'no second measurement was written');
       assert.equal(log.filter((x) => x.kind === 'evaluation-call').length, 1, 'no second call was written');
+    });
+  });
+
+  // Review of 3.8.2: measureCommand's <slug> --file <path> branch (completing a pending review
+  // measurement) destructured only the first leftover positional (`[slug] = rest`) and never
+  // looked at anything after it, so a stray extra positional was silently dropped and the
+  // measurement completed anyway. measure is also the command whose other, draft-taking shape
+  // keeps several flags repeatable (--concern, --option, --path, --decision); this exercises its
+  // positional-taking shape instead, the one that had no such check at all.
+  test('sudus measure <slug> --file <path> refuses a leftover positional and writes nothing', async () => {
+    await withSudusSession('sess-leftover', async () => {
+      const cwd = await repoWithCommitment(false);
+      const briefRun = await run(['measure', '--brief', ...draftFlags(draft())], cwd, { env: { SUDUS_HARNESS: 'claude_code' } });
+      assert.equal(briefRun.code, 0, briefRun.err);
+      const answersPath = join(cwd, '.sudus/output', 'answers.json');
+      await writeFile(answersPath, reviewAnswers());
+      const before = await readLog(cwd);
+      const r = await run(['measure', 'auth-tokens', 'extra-positional-garbage', '--file', answersPath], cwd);
+      assert.equal(r.code, 1);
+      assert.equal(r.err, 'sudus: measure: unknown argument extra-positional-garbage\n');
+      assert.deepEqual(await readLog(cwd), before);
     });
   });
 });

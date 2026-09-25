@@ -174,6 +174,15 @@ test('report records attempts, model, transport, boundary and session at the rev
   assert.deepEqual([p.brief, p.snapshot, p.model, p.transport, p.boundary, p.session, p.builder_model], [r.b.sha, r.revPayload.snapshot, 'claude-fable-5-1', 'remote', 'unenforced', 's-adversary', null]);
   await assert.rejects(report(r.cwd, 'first', adversary(r)), /one report per commitment; first has/);
 });
+// Review of 3.8.2: a second review after the report made wake name `report` for the new review
+// forever, while report refused a second report, and no cycle escalation fired.
+test('a review after the report is refused: changes after it are resolutions', async () => {
+  const r = await briefed();
+  await report(r.cwd, 'first', adversary(r));
+  const head = (await readLog(r.cwd)).length;
+  await assert.rejects(review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } }), /first has a report; a change after it gets a resolution/);
+  assert.equal((await readLog(r.cwd)).length, head);
+});
 
 // Issue #13: the brief is the adversary's entire prompt, and it never said what file sudus report
 // accepts. An adversary that reads only the brief text can now write a report that is accepted.

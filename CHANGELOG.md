@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.1 - 2026-09-24
+
+- The brief's exclusion manifest names every tracked file under the output directory (`.sudus/output/`), such as the `.gitignore` Sudus writes there, with class `output`. The projection leaves those files out, and the manifest said nothing about them, so the adversary could not tell a path Sudus left out from one missing in the repository, and raised it as a finding (issue #25).
+
 ## 3.8.0 - 2026-09-24
 
 - A backlog item that other work already delivered can be retired instead of promoted (issue #24). The agent escalates with the concern `retire:<item sha>`; your `ok` takes the item out of the backlog, wake stops naming its promotion, `sudus promote` refuses it, and `sudus show items` marks it retired. An `instead` answer leaves it in the backlog. When no commitment is open, after Done, the escalation names the finished commitment. Before, the only way out of the backlog was promotion: a roadmap section, a commitment and a full review with the adversary for work already done. Spec revision 14.

@@ -1177,7 +1177,9 @@ Sudus (`$SUDUS_ROOT` or `$CAIRN_ROOT` when set, else the newest Claude Code or
 Codex plugin cache entry under either name or the checkout, by version), so
 a plugin update never strands the command. A pin does: `$SUDUS_ROOT` or
 `$CAIRN_ROOT` set to a versioned plugin cache entry keeps running that
-version after an update. When the pinned version is older than the plugin,
+version after an update. The pin must be an absolute path; a relative one
+is refused, since the file it named would depend on the current directory.
+When the pinned version is older than the plugin,
 the hooks run the plugin's own copy and name the variable to unset. The skill replaces only a symlink an earlier Sudus made or an
 older copy of the shim, never another file; no hook writes it. Claude Code and
 Codex read `hooks/hooks.json` (SessionStart, UserPromptSubmit, Stop);

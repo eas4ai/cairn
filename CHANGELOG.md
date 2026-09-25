@@ -7,6 +7,19 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 4.0.0 - 2026-09-25
+
+Spec revision 16, on the developer's rulings of 2026-09-25. The adversary changes, and with it what Done needs and what earlier acceptance records mean.
+
+- The adversary reads only. `sudus brief` starts one fresh subagent in the builder's own harness, with none of the builder's conversation and no subagents of its own. It reads the project and the whole specification, and it builds nothing and runs no tests or project code: the brief lists the receipts, so it knows what already ran. No projection is written. Before, it worked in a copy of the project and tried to make each check pass by building and running it, which ran several heavy builds at once on a consumer project.
+- The brief opens with the adversary's role in the developer's words: no stake in Done, and five lenses: the falsifier, the builder's decisions, security, logic, and complexity and spec adherence. It lists the agent's decisions (its `sudus decide` records and the backlog and next-feature items it captured) and the paths not to read.
+- The report attempts each lens by reading: `{question, target, looked_for, found, held}` for `falsifier <REQ>`, `decision <id>`, and `security`, `logic` and `complexity` for the commitment, plus one per changed interface path. Each finding has a severity (Critical, Major or Minor), a `where`, and an optional one-line `remedy`. `sudus report` refuses a report once the workspace differs from the reviewed snapshot, so the adversary writes its report outside the repository.
+- A report that stops on a Sudus bug (`sudus_bug`) records only the bug and does not complete the review; wake names `report` again with the bug, and a new brief takes the review on. That is the one case in which the adversary runs twice.
+- The builder decides every finding: fix it and `sudus resolve`, or `sudus decline <slug> <n> "<why>"`. A finding of any severity may be declined, and nothing waits on the adversary or the developer for it. `sudus accept`, `sudus dispute`, the rejected-twice escalation and the three-round bound (revision 13) are removed; the two commands now say what replaces them. An escalation may still name a finding when the builder chooses to ask.
+- `sudus done` prints the review report: every finding, its severity and where it is, and what the builder did with it. The agent shows it to the developer before the next feature or commitment.
+- Logs from 3.x still read. A 3.x report completes the review, a 3.x acceptance's findings still count, and a resolution one rejected leaves its finding open. A 3.x brief takes no new report: brief again. `settings.harness` keeps its keys: `adversary_model` names the model the adversary runs as, and both keys still configure the evaluator's review source.
+- From the adversarial review of this release: every review's findings count toward Done, not only the latest review's; before, a second review before the report hid the first one's findings from the Done rule while `sudus done` printed them open. The evaluator's count of open findings settles a finding the way the ledger does, so a fix a 3.x acceptance rejected no longer reads as settled. `sudus brief` refuses after the complete report.
+
 ## 3.9.1 - 2026-09-25
 
 - A fail receipt from before a redeclare that kept the command, working directory and results mode binds a mechanism review (issue #31). A review binds those three since revision 10, but `sudus review mechanism` compared the receipt's whole definition digest, so adding a requirement to a mechanism made every older fail receipt unusable for the requirements not yet bound, and wake still named the latest one. Wake and `review mechanism`'s default now name only a fail receipt that binds; when none does, they say to make the violating example fail and check.

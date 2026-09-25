@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.9.1 - 2026-09-25
+
+- A fail receipt from before a redeclare that kept the command, working directory and results mode binds a mechanism review (issue #31). A review binds those three since revision 10, but `sudus review mechanism` compared the receipt's whole definition digest, so adding a requirement to a mechanism made every older fail receipt unusable for the requirements not yet bound, and wake still named the latest one. Wake and `review mechanism`'s default now name only a fail receipt that binds; when none does, they say to make the violating example fail and check.
+
 ## 3.9.0 - 2026-09-25
 
 Spec revision 15, accepted by the developer on 2026-09-25. Both changes alter a verdict.

@@ -294,6 +294,17 @@ test('a fourth distinct failing attempt is refused by sudus check until an escal
   await r.escalate('DEMO-001');
   await assert.doesNotReject(check(r.cwd, 'DEMO-001'));
 });
+// Review of 3.8.2: any escalation naming the requirement after its last pass counted, so one
+// answered before the failures began, about something else, let a fourth attempt through.
+test('an escalation answered before the three failing attempts does not let a fourth through', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  await r.answer(await r.escalate('DEMO-001'), 'ok');
+  for (let i = 1; i <= 3; i++) { await r.write('src/demo.mjs', `console.log(${i});\n`); await r.write('flags/DEMO-001', 'fail\n'); await r.commit(`attempt ${i}`); await check(r.cwd, 'DEMO-001'); }
+  assert.deepEqual([(await wake(r.cwd)).action, (await wake(r.cwd)).target], ['escalate', 'DEMO-001']);
+  await r.write('src/demo.mjs', 'console.log(4);\n'); await r.commit('attempt 4');
+  await assert.rejects(check(r.cwd, 'DEMO-001'), /a fourth attempt needs an escalation first/);
+});
 test('review mechanism names the latest fail receipt in its reason', async () => {
   const r = await loopRepo();
   const fail = await r.failReq('DEMO-001');
@@ -422,6 +433,19 @@ test('a pass checked before the fix record counts when it ran on the inputs the 
   await r.write('src/demo.mjs', 'console.log("hey");\n'); await r.commit('revert the second fix');
   v = await wake(r.cwd);
   assert.deepEqual([v.action, v.target, v.reason], ['fix', 'wrong-greeting-2', 'DEMO-001 has no current pass at or after the fix'], JSON.stringify(v));
+});
+// Review of 3.8.2: a pass recorded before the defect item itself counted as "at" a fix that
+// changed nothing, so a defect was closed with no check run after it was known.
+test('a pass recorded before the defect item does not count for its fix; a check after the item does', async () => {
+  const r = await loopRepo();
+  await r.passReq('DEMO-001');
+  const item = await r.item('defect', 'DEMO-001', 'wrong-greeting');
+  await r.add('fix', 'wrong-greeting', { item, snapshot: await r.snap() });
+  let v = await wake(r.cwd);
+  assert.deepEqual([v.action, v.target, v.reason], ['fix', 'wrong-greeting', 'DEMO-001 has no current pass at or after the fix'], JSON.stringify(v));
+  await check(r.cwd, 'DEMO-001');
+  v = await wake(r.cwd);
+  assert.notEqual(v.action, 'fix', JSON.stringify(v));
 });
 
 // Fix round 1, item 4: protectedChanged used to treat every docs/spec/** path as protected, with

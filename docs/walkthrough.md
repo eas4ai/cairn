@@ -247,7 +247,7 @@ start <sha> reject-empty-names
 verdict: Resolvable
 action: implement APP-001
 reason: the current receipt for APP-001 says fail
-predicate: a current receipt says pass and review metadata binds the requirement to the current definition and text digests with a fail receipt
+predicate: a current receipt says pass and review metadata binds the requirement to the current detection and text digests with a fail receipt
 ```
 
 ## Fix it, check it, review it

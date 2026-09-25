@@ -49,4 +49,4 @@ export function runHook(name, { cwd, env = {}, stdin = "{}" }) {
   return { stdout: r.stdout, stderr: r.stderr, status: r.status };
 }
 
-export const RESOLVABLE = "Resolvable: implement REQ-001\nreason: the current receipt for REQ-001 says fail\npredicate: a current receipt says pass and review metadata binds the requirement to the current definition and text digests with a fail receipt\n";
+export const RESOLVABLE = "Resolvable: implement REQ-001\nreason: the current receipt for REQ-001 says fail\npredicate: a current receipt says pass and review metadata binds the requirement to the current detection and text digests with a fail receipt\n";

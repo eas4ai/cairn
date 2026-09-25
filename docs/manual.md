@@ -409,9 +409,9 @@ Actions are attempted in this order:
 | commit PATH | path is clean, or the action lease covers it; docs/decisions.jsonl is named here whenever it has uncommitted lines |
 | declare REQ | mechanism definition names REQ; no prior undeclared delta was legalized |
 | run REQ | current receipt matches input snapshot, definition, text and declared execution identity |
-| implement REQ | current pass plus review metadata bound to current definition and frozen text, with fail receipt |
+| implement REQ | current pass plus review metadata bound to the current command, working directory, results mode and frozen text, with fail receipt |
 | escalate REQ | after three failing attempts in the requirement's turn, an escalation exists before a fourth; a run where a sibling requirement also failed is not an attempt, nor is the first check of a turn that began after the start |
-| review mechanism REQ | review metadata binds definition and text to a fail receipt; product inputs unchanged |
+| review mechanism REQ | review metadata binds command, working directory, results mode and text to a fail receipt that ran under them; product inputs unchanged |
 | capture ITEM | outside record or escalation names it |
 | review SLUG | current workspace snapshot; every fixed question answered for each target |
 | report SLUG | isolated projection; current brief and report; all question and interface attempts present |
@@ -705,7 +705,10 @@ the bound mechanism file. A revised requirement, or a changed command,
 working directory or results mode, unbinds this and `review mechanism REQ`
 becomes the next wake action before another check counts. Declaring more
 inputs, documents, tool versions or requirements keeps it bound; those only
-make receipts stale, so wake names `run` instead.
+make receipts stale, so wake names `run` instead. For the same reason, a
+fail receipt from before such a redeclare still binds a requirement that
+was not bound yet, as long as the command, working directory and results
+mode are the same.
 
 ## Review, the adversary, and Done
 
@@ -1086,7 +1089,7 @@ specific than the action word alone.
 | `run REQ` | A check is due: `sudus check REQ`. |
 | `implement REQ` | The latest receipt is not a current pass. Read it and the captured output, then fix the code under a lease. |
 | `escalate REQ` | Three distinct failing attempts with no pass since, counted from the requirement's turn: once every requirement before it in the set passes, and not counting the first check of a turn that began after the start. `sudus escalate` before a fourth. |
-| `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `sudus review mechanism REQ`; it takes the latest fail receipt, which wake's reason names, unless you pass another. |
+| `review mechanism REQ` | The requirement or the mechanism definition changed. Compare the check against the new text, then `sudus review mechanism REQ`; it takes the latest fail receipt that ran under the current command, working directory and results mode, which wake's reason names, unless you pass another. When none did, wake says so: make the violating example fail again and check. |
 | `capture ITEM` | An idea outside this commitment needs a disposition: `sudus outside ITEM --reason "..."` (slug or sha), or escalate if it actually belongs. |
 | `review SLUG` | Write and record the review, answering all six questions. |
 | `report SLUG` | `sudus brief`, start an adversary with none of your context, then `sudus report --file`. |
@@ -1137,7 +1140,7 @@ prints one with its references resolved.
 | `reply <slug> <text> [--escalation <sha>]` | The agent's explanation after a developer `ask`. |
 | `dispute --commitment <s> --record <sha> --n <n>[,<n>...] --question <q> --recommendation <r> --because <b> --if-wrong <w> --instead <i>` | Escalate disagreement with one or more findings of a record, or their resolutions. |
 | `review <slug> --file <path>` | Record the builder's review. |
-| `review mechanism <REQ> [<fail-receipt>]` | Bind a mechanism's review metadata to its current definition and the requirement's current text; the latest fail receipt for REQ when none is given. |
+| `review mechanism <REQ> [<fail-receipt>]` | Bind a mechanism's review metadata to its current command, working directory and results mode and the requirement's current text; the latest fail receipt for REQ that ran under them when none is given. |
 | `brief <slug> [--harness <name>]` | Write the adversary brief and projection for a reviewed commitment. |
 | `report <slug> --file <path>` | Record the adversary's report. |
 | `resolve <slug> <n> "<how>" [--source <sha>]` | Record a fix for finding `n` of a specific review, report, or acceptance record. |

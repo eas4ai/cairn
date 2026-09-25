@@ -1161,3 +1161,52 @@ test('an instead answer on a wait escalation keeps the promotion named, and only
   await r.commit('the answered line');
   await assert.rejects(escalate(r.cwd, waitDraft([a])), { message: `sudus: item nicer-greeting was retired by the developer's ok on escalation ${e}` });
 });
+
+// Issue #31: after a redeclare that only added a requirement, wake named review mechanism with the
+// latest fail receipt, which review mechanism refused on the whole definition digest. The receipt
+// binds now, since its command, working directory and results mode are the current ones; and when
+// no fail receipt ran under them, wake says a new violating example is needed instead of naming one.
+import { parseDomainFile as parseDomain } from '../lib/spec.mjs';
+import { writeWorkspaceSnapshot as snapshotNow } from '../lib/snapshots.mjs';
+import { reviewMechanism as bindReview } from '../lib/mechanisms.mjs';
+import { appendRecord as appendLogRecord } from '../lib/records.mjs';
+
+test('wake names a fail receipt from before a redeclare that kept the command, and review mechanism binds it', async () => {
+  const { cwd, write, commit } = await makeProject({ settings: { outside: ['README.md'], source: ['src/**'] } });
+  const reqs = ['A-001', 'A-002', 'A-003'];
+  const line = (q) => `process.stdout.write('sudus: ${q}: '+require('fs').readFileSync('flags/${q}','utf8').trim()+'\\n');`;
+  const mech = (rs, command = `node -e "${reqs.map(line).join('')}"`) => ({ command, inputs: ['src/demo.mjs', 'flags'], documents: [], requirements: rs, results: 'per-requirement', identity: {} });
+  await write('docs/spec/overview.md', '# Demo\n\nA demo program.\n\n| Domain | Prefix | File |\n|---|---|---|\n| a | A | a.md |\n');
+  await write('docs/spec/glossary.md', '# Glossary\n\n- demo: the sample program.\n');
+  await write('docs/spec/roadmap.md', `Current: first\n\n## first\n\nRequirements: ${reqs.join(' ')}\n\nDelivers the demo.\n`);
+  await write('docs/spec/a.md', 'Prefix: A\n\n' + reqs.map((q) => `[${q}] The demo prints hello for ${q}.\nFalsifier: the flag file for ${q} says fail.\nMechanism: m\nStatus: Agreed 2026-09-19\n`).join('\n'));
+  await write('README.md', '# demo\n'); await write('src/demo.mjs', 'console.log("hello");\n');
+  for (const q of reqs) await write(`flags/${q}`, 'fail\n');
+  await commit('Demo project');
+  await declare(cwd, 'm', mech(['A-001', 'A-002'])); await commit('declare m');
+  const old = await check(cwd, 'A-001');
+  await bindReview(cwd, 'm', 'A-001', old); await commit('A-001 reviewed');
+  await declare(cwd, 'm', mech(reqs)); await commit('add A-003, same command');
+  const fail3 = await check(cwd, 'A-003');
+  await bindReview(cwd, 'm', 'A-003', fail3); await commit('A-003 reviewed');
+  const { blocks } = parseDomain(await readFile(join(cwd, 'docs/spec/a.md'), 'utf8'));
+  await appendLogRecord(cwd, 'start', 'first', { slug: 'first', snapshot: await snapshotNow(cwd), from_superseded: null, intent: null, results: [], requirements: blocks.map((b) => ({ requirement: b.id, text_digest: b.textDigest })) });
+  for (const q of reqs) await write(`flags/${q}`, 'pass\n');
+  await commit('implement all three');
+  await check(cwd, 'A-001');
+  let v = await wake(cwd);
+  assert.deepEqual([v.action, v.target], ['review mechanism', 'A-002']);
+  assert.match(v.reason, new RegExp(`; its latest fail receipt is ${fail3}$`), 'the latest usable fail receipt: A-003\'s binding check also failed A-002');
+  let out = '', err = '';
+  assert.equal(await main(['review', 'mechanism', 'A-002'], { cwd, stdout: { write: (s) => { out += s; } }, stderr: { write: (s) => { err += s; } } }), 0, err);
+  await commit('A-002 reviewed');
+  assert.notEqual((await wake(cwd)).action, 'review mechanism');
+  await declare(cwd, 'm', mech(reqs, `node -e "${reqs.map(line).join('')}void 0;"`)); await commit('another command, the same output');
+  await check(cwd, 'A-001');
+  v = await wake(cwd);
+  assert.deepEqual([v.action, v.target], ['review mechanism', 'A-001']);
+  assert.match(v.reason, /; no fail receipt for A-001 ran under the current command, working directory, results mode and text: make its violating example fail, run sudus check A-001, then review mechanism A-001 with that receipt$/);
+  err = '';
+  assert.equal(await main(['review', 'mechanism', 'A-001'], { cwd, stdout: { write: () => {} }, stderr: { write: (s) => { err += s; } } }), 1);
+  assert.match(err, /^sudus: no fail receipt for A-001 ran under the current command, working directory, results mode and text; make its violating example fail/);
+});

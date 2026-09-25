@@ -152,7 +152,7 @@ test('review mechanism refuses a pass receipt, an error receipt, another mechani
   await declare(repo.cwd, 'greeter', { ...DEFINITION, cwd: 'missing' });
   const err = await check(repo.cwd, 'DEMO-001');
   await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', err), /error receipt never counts/);
-  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /definition digest/);
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', good), /^Error: receipt [0-9a-f]{40} ran under .*; make DEMO-001's violating example fail, run sudus check DEMO-001, then review mechanism DEMO-001 with that receipt$/);
   await declare(repo.cwd, 'greeter', DEFINITION);
   await declare(repo.cwd, 'other', { ...DEFINITION, requirements: ['DEMO-003'] });
   await assert.rejects(reviewMechanism(repo.cwd, 'other', 'DEMO-003', good), /names mechanism greeter/);
@@ -323,4 +323,53 @@ test('carriedReviews keeps a review whose command, working directory and results
   assert.deepEqual(carriedReviews(entry(def, { 'APP-001': legacy }), { ...def, command: 'node other.mjs' }), {});
   assert.deepEqual(carriedReviews(entry(def, { 'APP-001': legacy }), { ...moreInputs, requirements: ['APP-002'] }), {});
   assert.deepEqual(carriedReviews(undefined, def), {});
+});
+
+// Issue #31: a review binds the detection digest (spec revision 10), but review mechanism compared
+// the fail receipt's whole definition digest, so a redeclare that only added a requirement made
+// every older fail receipt unusable, and wake still named it. The receipt's detection now comes from
+// the entry, a review accepted against its definition, or the mechanism file's committed history.
+import { SPEC, CHECK } from './helpers/mechanism-fixture.mjs';
+import { usableFailReceipt } from '../lib/mechanisms.mjs';
+
+async function twoRequirementGreeter() {
+  const repo = await project();
+  await repo.write('docs/spec/demo.md', SPEC.replace('Mechanism: greeter\nStatus: Draft', 'Mechanism: greeter\nStatus: Agreed 2026-09-19'));
+  await repo.write('check.mjs', CHECK + "console.log('sudus: DEMO-002: ' + (text === 'hello' ? 'pass' : 'fail'));\n");
+  await declare(repo.cwd, 'greeter', DEFINITION);
+  await repo.commit('declare greeter');
+  return repo;
+}
+
+test('a fail receipt from before a redeclare that kept the command binds a review, found through a review of its definition or the committed history', async () => {
+  const repo = await twoRequirementGreeter();
+  const old = await failReceipt(repo);
+  await reviewMechanism(repo.cwd, 'greeter', 'DEMO-001', old);
+  await repo.commit('DEMO-001 reviewed');
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-001', 'DEMO-002', 'DEMO-003'] });
+  await repo.commit('add DEMO-003, same command');
+  await assert.doesNotReject(reviewMechanism(repo.cwd, 'greeter', 'DEMO-002', old), "DEMO-001's review was accepted against the receipt's definition");
+  const fresh = await twoRequirementGreeter();
+  const unbound = await failReceipt(fresh);
+  await declare(fresh.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-001', 'DEMO-002', 'DEMO-003'] });
+  await fresh.commit('add DEMO-003 before any review');
+  await assert.doesNotReject(reviewMechanism(fresh.cwd, 'greeter', 'DEMO-002', unbound), 'the committed history holds the receipt\'s definition');
+  const { textDigest } = await requirementDigest(fresh.cwd, 'DEMO-001');
+  assert.deepEqual(await usableFailReceipt(fresh.cwd, await readLog(fresh.cwd), await readMechanisms(fresh.cwd), 'DEMO-001', textDigest), { sha: unbound, any: true });
+});
+
+test('a fail receipt whose definition is gone or ran another command is refused with the way forward, and is not offered', async () => {
+  const repo = await twoRequirementGreeter();
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-001', 'DEMO-002', 'DEMO-003'] });
+  const uncommitted = await failReceipt(repo);   // its definition is never committed
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-001', 'DEMO-002', 'DEMO-003'], inputs: [...DEFINITION.inputs, 'extra.txt'] });
+  await repo.commit('another input');
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-002', uncommitted), /ran under definition sha256:[0-9a-f]{64}, which neither greeter's review metadata nor its committed history holds; make DEMO-002's violating example fail, run sudus check DEMO-002, then review mechanism DEMO-002 with that receipt$/);
+  const { textDigest } = await requirementDigest(repo.cwd, 'DEMO-002');
+  assert.deepEqual(await usableFailReceipt(repo.cwd, await readLog(repo.cwd), await readMechanisms(repo.cwd), 'DEMO-002', textDigest), { sha: null, any: true });
+  const stale = await failReceipt(repo);
+  await declare(repo.cwd, 'greeter', { ...DEFINITION, requirements: ['DEMO-001', 'DEMO-002', 'DEMO-003'], inputs: [...DEFINITION.inputs, 'extra.txt'], command: 'node check.mjs --strict' });
+  await repo.commit('another command');
+  await assert.rejects(reviewMechanism(repo.cwd, 'greeter', 'DEMO-002', stale), /ran under another command, working directory or results mode than greeter declares now/);
+  assert.equal((await usableFailReceipt(repo.cwd, await readLog(repo.cwd), await readMechanisms(repo.cwd), 'DEMO-002', textDigest)).sha, null);
 });

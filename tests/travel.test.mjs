@@ -202,8 +202,12 @@ describe('push', () => {
     await appendRecord(other, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'from the other clone' });
     sh(other, 'push', '-q', 'authority', 'refs/sudus/log:refs/sudus/log');
     const remoteLog = remoteRef(remote, 'refs/sudus/log');
-    await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'from this clone' });
+    // Behind: this clone has nothing the remote lacks, and the fetch named fast-forwards.
     await assert.rejects(push(cwd), /refs\/sudus\/log on authority is ahead of this clone; run: git fetch authority refs\/sudus\/log:refs\/sudus\/log/);
+    // Review of 3.8.2: with a record of its own this clone has diverged, and the same fetch was
+    // named, which git refuses as a non-fast-forward. The refusal now says what diverged.
+    await appendRecord(cwd, 'item', 'first-slug', { kind: 'backlog', slug: 'first-slug', source: 'test', body: 'from this clone' });
+    await assert.rejects(push(cwd), /refs\/sudus\/log on authority and this clone have diverged: 1 record\(s\) here are not on authority and 1 there are not here; the log is append-only and never merged\. To keep authority's records, run: git fetch authority \+refs\/sudus\/log:refs\/sudus\/log; the 1 here are then dropped and their work is recorded again/);
     assert.equal(remoteRef(remote, 'refs/sudus/log'), remoteLog, 'the remote log did not move');
   });
   test('a race at the same base loses at the remote, not silently', async () => {

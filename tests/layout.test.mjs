@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { makeProject } from './helpers/repo.mjs';
+import { makeProject, makeRepo } from './helpers/repo.mjs';
 import { loopRepo, mechanismFor } from './helpers/loop.mjs';
 import { throwawayRepo, runHook, fakeSudus } from './helpers/hookenv.mjs';
 import { layoutOf, forgetLayout, SUDUS, CAIRN } from '../lib/layout.mjs';
@@ -118,13 +118,54 @@ test('a clone whose branch already carries .sudus/ but whose refs are still refs
   await git(['mv', '.cairn', '.sudus'], { cwd: p.cwd }); await p.commit('another clone migrated and pushed');
   forgetLayout(p.cwd);
   assert.equal(layoutOf(p.cwd), SUDUS);
-  assert.match(await missingRefsLine(p.cwd), /^sudus migrate  \(this clone still holds refs\/cairn\/log; /);
+  assert.match(await missingRefsLine(p.cwd), /^sudus migrate  \(this clone still holds refs\/cairn\/log, refs\/cairn\/snapshots; /);
   const w = await wake(p.cwd);
   assert.equal(w.exit, 3);
   const r = await migrate(p.cwd);
   assert.equal(r.dir, null); assert.equal(r.commit, null); assert.equal(r.moves.length, 2);
   assert.equal(await missingRefsLine(p.cwd), null);
   assert.equal((await readLog(p.cwd))[0].kind, 'init');
+});
+
+// Review of 3.8.2: a crash between migrate's two ref moves left refs/sudus/log moved and
+// refs/cairn/snapshots not. Wake named `sudus init`, which made a new, unrelated snapshots root,
+// and migrate then refused both refs forever.
+test('a migrate that stopped between its ref moves is named migrate again, init refuses, and migrate finishes it', async (t) => {
+  const p = await makeProject({ layout: 'cairn' });
+  t.after(p.cleanup);
+  await git(['mv', '.cairn', '.sudus'], { cwd: p.cwd }); await p.commit('moved');
+  forgetLayout(p.cwd);
+  const log = await readRef(p.cwd, CAIRN.log), snaps = await readRef(p.cwd, CAIRN.snapshots);
+  await git(['update-ref', SUDUS.log, log], { cwd: p.cwd }); await git(['update-ref', '-d', CAIRN.log], { cwd: p.cwd });
+  assert.match(await missingRefsLine(p.cwd), /^sudus migrate  \(this clone still holds refs\/cairn\/snapshots; /);
+  const { init } = await import('../lib/init.mjs');
+  await assert.rejects(init(p.cwd, { quote: 'ok', env: {} }), /this clone still holds refs\/cairn\/snapshots; run sudus migrate/);
+  assert.equal(await readRef(p.cwd, SUDUS.snapshots), null);
+  await migrate(p.cwd);
+  assert.deepEqual([await readRef(p.cwd, SUDUS.log), await readRef(p.cwd, SUDUS.snapshots), await readRef(p.cwd, CAIRN.snapshots)], [log, snaps, null]);
+  assert.equal(await missingRefsLine(p.cwd), null);
+});
+// Review of 3.8.2: a crash after a move's new ref was written and before the old one was deleted
+// left both naming the same commit, and migrate refused them as two logs.
+test('migrate finishes a move whose old and new refs already name the same commit', async (t) => {
+  const p = await makeProject({ layout: 'cairn' });
+  t.after(p.cleanup);
+  const log = await readRef(p.cwd, CAIRN.log);
+  await git(['update-ref', SUDUS.log, log], { cwd: p.cwd });
+  await migrate(p.cwd);
+  forgetLayout(p.cwd);
+  assert.deepEqual([await readRef(p.cwd, SUDUS.log), await readRef(p.cwd, CAIRN.log)], [log, null]);
+  assert.equal(await missingRefsLine(p.cwd), null);
+});
+// Review of 3.8.2: for a local-only project, settings written by an unfinished init were
+// diagnosed as a bare `sudus init`, which refuses without --adopt.
+test('settings written by an unfinished local-only init name init --adopt, not a bare init', async (t) => {
+  const repo = await makeRepo();
+  t.after(repo.remove);
+  await repo.write('README.md', 'r\n'); await repo.commit('first');
+  const { DEFAULT_SETTINGS } = await import('../lib/init.mjs');
+  await repo.write('.sudus/settings.json', JSON.stringify(DEFAULT_SETTINGS(null, null), null, 2) + '\n');
+  assert.match(await missingRefsLine(repo.dir), /^sudus init --adopt sha256:[0-9a-f]{64}  \(/);
 });
 
 // Issue #5 (johnwlockwood, 3.0.0): the last start transaction's closing record names its stores as

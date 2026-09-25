@@ -108,6 +108,9 @@ test('attested mode without a quote refuses', async () => {
   await assert.rejects(init(cwd, fresh({ quote: undefined })),
     /^AuthError: sudus: init needs --quote <the developer's words>: quote what the developer said in the conversation, such as their ok$/);
   assert.equal(await readRef(cwd, 'refs/sudus/log'), null);
+  // Review of 3.8.2: the settings file was written before the quote was asked for, and the
+  // half-made project that remained was diagnosed as a plain `sudus init`, which then failed.
+  assert.equal(existsSync(join(cwd, '.sudus/settings.json')), false);
 });
 
 test('existing settings without refs need --adopt matching the loaded settings digest', async () => {

@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 3.8.4 - 2026-09-25
+
+- One `sudus dispute` can name several findings of the same record: `--n 4,5,9`, or `--n` repeated (issue #27). The one escalation names each finding, wake lists them after "ok closes:", and your one `ok` closes them all. Before, each finding took its own escalation and its own answer, a comma list was refused, and a repeated `--n` kept only its last value, so `--n 1 --n 2` disputed finding 2 alone without saying so.
+
 ## 3.8.3 - 2026-09-25
 
 Fixes from an adversarial review of 3.8.2. Each has a test that fails on 3.8.2.

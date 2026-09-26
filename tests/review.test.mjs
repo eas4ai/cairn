@@ -91,7 +91,7 @@ test('brief writes the record and the rendered file, and prints the launch block
   const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
   const p = decodeRecord(await catCommit(r.cwd, b.sha)).payload;
   const receipts = (await r.log()).filter((x) => x.kind === 'receipt');
-  assert.ok(b.text.includes(`\n## Receipts (what already ran; do not run it again)\nDEMO-001: latest receipt ${receipts.at(-1).sha} from mechanism demo-001: pass\nDEMO-001: fail receipt ${receipts.at(-2).sha} from mechanism demo-001, the violating example its review binds\n`), b.text);
+  assert.ok(b.text.includes(`\n## Receipts (what already ran; do not run it again)\nDEMO-001: current receipt ${receipts.at(-1).sha} from mechanism demo-001: pass\nDEMO-001: fail receipt ${receipts.at(-2).sha} from mechanism demo-001, the violating example its review binds\n`), b.text);
   assert.deepEqual(p, { slug: 'first', review: r.rev, harness: 'claude_code', model: 'claude-fable-5-1', payload_digest: sha256(b.text), decisions: [] });
   assert.ok(b.briefPath.startsWith(path.join(r.cwd, '.sudus/output/brief-')));
   assert.equal(await fs.readFile(b.briefPath, 'utf8'), b.text);
@@ -106,6 +106,24 @@ test('brief writes the record and the rendered file, and prints the launch block
   assert.deepEqual(await interfaceObligations(r.cwd, SETTINGS, r.startSnapshot, r.revPayload.snapshot), ['src/api/x.mjs']);
   const any = await brief(r.cwd, 'first', { harness: 'codex' });
   assert.match(any.launch, /\nmodel: any\nstart: in codex, start one fresh subagent with none of your conversation, /);
+});
+
+// Issue #33: the brief named a requirement's newest receipt, so a violating example checked after
+// the fix and then restored read as a current failure while wake held the pass current. It names
+// the receipt wake decides with and marks the newer one as not current.
+import { check } from '../lib/check.mjs';
+test('the brief names the current receipt, not a newer one a restored violating example left (issue #33)', async () => {
+  const r = await loopRepo({ settings: SETTINGS });
+  await r.write('src/api/x.mjs', 'export const x = 2;\n');
+  await r.commit('change an interface');
+  const pass = await r.passReq('DEMO-001');
+  await r.write('flags/DEMO-001', 'fail\n');
+  const violating = await check(r.cwd, 'DEMO-001');
+  await r.write('flags/DEMO-001', 'pass\n');
+  r.rev = await review(r.cwd, 'first', await claims(r), { env: { SUDUS_SESSION: 's-builder' } });
+  const b = await brief(r.cwd, 'first', { harness: 'claude_code' });
+  assert.ok(b.text.includes(`DEMO-001: current receipt ${pass} from mechanism demo-001: pass\nDEMO-001: newest receipt ${violating} from mechanism demo-001: fail, not current\n`), b.text);
+  assert.equal(b.text.includes('latest receipt'), false);
 });
 
 // The developer's role text of 2026-09-25, quoted as written except "imperative" and "your

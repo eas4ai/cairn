@@ -1461,9 +1461,11 @@ commitment's work, so for it both run from the first start of its
 supersession chain; `sudus report` and wake's report predicate measure the
 interface attempts from the same start.
 
-The receipts are, per requirement, the latest receipt that carries its result
-and the fail receipt its mechanism review binds, so the adversary knows what
-already ran. The agent's decisions are the decision lines the agent added to
+The receipts are, per requirement, the receipt current at the reviewed
+snapshot, the one wake decides with, and the fail receipt its mechanism review
+binds, so the adversary knows what already ran. A newer receipt that is not
+current, such as a violating example checked after the fix and then restored,
+is listed as not current. The agent's decisions are the decision lines the agent added to
 `docs/decisions.jsonl` between the start of the supersession chain and the
 reviewed snapshot, and the backlog and next-feature items it captured in that
 range, with any outside reason. A developer's decision line is a ruling and is

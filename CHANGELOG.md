@@ -7,6 +7,10 @@ or document meaning; a minor adds or revises requirements, verdicts, or
 record shapes and still reads earlier records; a major changes what
 earlier records mean.
 
+## 4.0.2 - 2026-09-25
+
+- The brief names each requirement's current receipt, not its newest (issue #33). A violating example checked after the fix and then restored left a fail receipt newer than the current pass, so the brief's Receipts section told the adversary the requirement failed while wake held the pass current. The brief now names the receipt current at the workspace, the one wake decides with, and lists a newer receipt that is not current as "not current".
+
 ## 4.0.1 - 2026-09-25
 
 - Only the supersession that opened a commitment carries findings into it (issue #32). The ledger, wake and an escalation's `finding:` concern read the carried list of every supersession in the log. So a finding carried into another, finished commitment showed up in a later commitment's ledger and in the review report `sudus done` prints; a refusal from `sudus resolve` or `sudus decline` could name that record instead of the commitment's own; and an escalation could concern it. They now read only the supersession the commitment's start names. In 3.x the same read made `sudus resolve` without `--source` refuse with "awaits acceptance"; 4.0.0 had already removed that refusal.
